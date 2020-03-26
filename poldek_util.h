@@ -23,6 +23,7 @@ EXPORT const char *poldek_util_lc_lang(const char *category);
 EXPORT int poldek_util_get_gmt_offs(void);
 EXPORT int poldek_util_is_rwxdir(const char *path);
 EXPORT time_t poldek_util_mtime(const char *path);
+EXPORT int poldek_util_set_mtime(const char *path, time_t t);
 
 EXPORT const char *poldek_util_ngettext_n_packages_fmt(int n);
 

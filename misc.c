@@ -31,6 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <utime.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -504,6 +505,15 @@ time_t poldek_util_mtime(const char *path)
         return 0;
 
     return st.st_mtime;
+}
+
+int poldek_util_set_mtime(const char *path, time_t t)
+{
+    struct utimbuf ut;
+
+    n_assert(t > 0);
+    ut.actime = ut.modtime = t;
+    return utime(path, &ut) == 0;
 }
 
 const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
