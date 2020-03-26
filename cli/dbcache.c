@@ -239,7 +239,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
         dir = pkgdb_to_pkgdir(cctx->ctx->pmctx, ts->rootdir, NULL, ldflags,
                               "prev_pkgdir", prev_dir, NULL);
 
-        timethis_end(0, t, "rpmdb.load");
+        timethis_end(3, t, "rpmdb.load");
     }
 
     //MEMINF("%s", "after rpmdbload\n");
