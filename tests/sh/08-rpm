@@ -9,19 +9,40 @@ ORIGREPO=
 DESTINATION_REPO=
 DEPENDENCY_SOLVER=3
 
-#XXX for some reason rpm5 does not create its database correctly if running as ordinary user
+# XXX for some reason rpm5 does not create its database correctly if running as ordinary user:
+#  $ rpm --root /tmp/root --initdb
+#  $ rpm --root /tmp/root -ivh --justdb foo-1-1.noarch.rpm
+#  rpmdb: BDB0577 The primary and secondary must be opened in the same environment
+#  error: db3associate:db3.c:1674: db->associate(22): Invalid argument
+#  BDB0624 DBcursor->pget may only be used on secondary indices
+#  error: db3cpget:db3.c:1537: dbcursor->pget(22): Invalid argument
+#  error: error(22) getting keys from Triggername index
+#
+# ...and fakeroot does not help with above
+
 SUDO="sudo"
 [ $(id -u) == "0" ] && SUDO=""
 
 setUp() {
+    if [ -n "$SUDO" ]; then
+        # skip testing if no sudo configured
+        $SUDO -n /bin/rpm --version >/dev/null 2>/dev/null
+        local ec=$?
+        [ $ec -eq 0 ] || exit 0
+
+        $SUDO -n /bin/rm --version >/dev/null 2>/dev/null
+        local ec=$?
+        [ $ec -eq 0 ] || exit 0
+    fi
+
     [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
     [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
-    rm -rf $ORIGREPO/*
 
     REPO="$ORIGREPO/src"
     DESTINATION_REPO="$ORIGREPO-rpm";
 
     $SUDO rm -rf $DESTINATION_REPO
+    rm -rf $ORIGREPO/*
     rm -rf $REPO $DESTINATION_REPO
 
     mkdir -p $REPO || fail "mkdir $REPO failed"
@@ -33,8 +54,6 @@ setUp() {
 
     # provide /bin/sh auto requirement
     build_installed sh -p /bin/sh
-    #$RPM -qa
-
     RAW_POLDEK="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER -Oupgrade_multiple_instances=y --noask"
     POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --root $DESTINATION_REPO --justdb"
 }
@@ -95,6 +114,45 @@ try_install() {
       #msg "kept  $i"
       $RPMQ $i || fail "$i: package expected to be kept"
   done
+}
+
+testRPMdbcache() {
+    $RAW_POLDEK --root $DESTINATION_REPO --cmd reload >/dev/null
+    local rpmdb_cachedirname="$(echo $DESTINATION_REPO | sed -e 's|^/||' -e 's|/|.|g').var.lib.rpm"
+    local suffix="rpmdbcache$(echo $DESTINATION_REPO | sed 's|/|.|g').var.lib.rpm"
+
+    # check presence of dbcache
+    for i in zst md zst.md5; do
+        local name="packages.$suffix.$i"
+        [ -f "$CACHEDIR/$name" ] || fail "missing expected $name in $CACHEDIR"
+    done
+
+    # check presence of dbcache's dirindex
+    for i in tndb tndb.md5; do
+        local name="dirindex.$suffix.$i"
+        [ -f "$CACHEDIR/$name" ] || fail "missing expected $name in $CACHEDIR"
+    done
+
+    local dirindex_path="$CACHEDIR/$rpmdb_cachedirname/dirindex.rpmdb.tndb"
+    local md5=$(md5sum $dirindex_path | cut -f1 -d' ')
+
+    # will die (we're in test mode) if dirindex is missing
+    $RAW_POLDEK --st dir -s $REPO --root $DESTINATION_REPO --cmd llu >/dev/null
+    assertEquals "died" "$?" "0"
+
+    local md=$(md5sum $dirindex_path | cut -f1 -d' ')
+    assertEquals "dirindex changed" "$md5" "$md"
+
+    build a "1-1"
+    try_install a "a-1-1" ""
+
+    # should load rpmdb and update dirindex
+    $RAW_POLDEK --st dir -s $REPO --root $DESTINATION_REPO --cmd llu >/dev/null
+
+    local md=$(md5sum $dirindex_path | cut -f1 -d' ')
+    if [ "$md5" = "$md" ]; then
+        fail "$dirindex_path: dirindex not changed ($md5)"
+    fi
 }
 
 testUpgradeMultipleInstalled() {

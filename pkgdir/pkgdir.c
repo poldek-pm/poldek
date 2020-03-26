@@ -634,15 +634,18 @@ static void do_ignore(struct pkgdir *pkgdir)
         packages_score_ignore(pkgdir->pkgs, pkgdir->src->ign_patterns, 1);
 }
 
-static void do_open_dirindex(struct pkgdir *pkgdir)
+static void do_open_dirindex(struct pkgdir *pkgdir, unsigned ldflags)
 {
     /* XXX: a workaround - tndb cannon create empty files */
     if (n_array_size(pkgdir->pkgs) == 0)
         return;
 
-    pkgdir->dirindex = pkgdir__dirindex_open(pkgdir);
-}
+    unsigned flags = PKGDIR_DIRINDEX_OCREATE;
+    if ((ldflags & PKGDIR_LD_DIRINDEX_NOCREATE))
+        flags = 0;
 
+    pkgdir->dirindex = pkgdir__dirindex_open(pkgdir, flags);
+}
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 {
@@ -724,7 +727,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         pkgdir->_ldflags = ldflags;
 
         if (ldflags & PKGDIR_LD_DIRINDEX)
-            do_open_dirindex(pkgdir);
+            do_open_dirindex(pkgdir, ldflags);
 
         if (ldflags & PKGDIR_LD_UPDATE_STUBINDEX)
             pkgdir__stubindex_update(pkgdir);

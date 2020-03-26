@@ -31,8 +31,9 @@ struct pkguinf;                 /* defined in pkgu.h   */
 struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 
 #define PKG_HAS_SRCFN       (1 << 4) /* set source package filename? */
-#define PKG_HAS_PKGUINF     (1 << 5) /* user-level info (pkgu.c) */
-#define PKG_HAS_SELFCAP     (1 << 6) /* name = e:v-r cap */
+#define PKG_HAS_PKGUINF     (1 << 5) /* loaded user-level info (pkgu.c) */
+#define PKG_HAS_ALLFILES    (1 << 6) /* loaded all files */
+#define PKG_HAS_SELFCAP     (1 << 7) /* name = e:v-r cap */
 
 #define PKG_HELD            (1 << 12) /* non upgradable */
 #define PKG_IGNORED         (1 << 13) /* invisible      */
@@ -71,6 +72,10 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 #define pkg_has_ldpkguinf(pkg) ((pkg)->flags & PKG_HAS_PKGUINF)
 #define pkg_set_ldpkguinf(pkg) ((pkg)->flags |= PKG_HAS_PKGUINF)
 #define pkg_clr_ldpkguinf(pkg) ((pkg)->flags &= (~PKG_HAS_PKGUINF))
+
+#define pkg_has_ldallfiles(pkg) ((pkg)->flags & PKG_HAS_ALLFILES)
+#define pkg_set_ldallfiles(pkg) ((pkg)->flags |= PKG_HAS_ALLFILES)
+#define pkg_clr_ldallfiles(pkg) ((pkg)->flags &= (~PKG_HAS_ALLFILES))
 
 struct pkg {
     uint32_t     flags;

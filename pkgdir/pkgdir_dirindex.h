@@ -17,12 +17,18 @@
 #include <trurl/narray.h>
 
 struct pkgdir;
+/* build dirindex path based on pkgdir one */
+int pkgdir__dirindex_make_path(char *path, int size, const struct pkgdir *pkgdir);
+
 struct pkgdir_dirindex;
 
-struct pkgdir_dirindex *pkgdir__dirindex_open(struct pkgdir *pkgdir);
+#define PKGDIR_DIRINDEX_OCREATE (1 << 0)
+struct pkgdir_dirindex *pkgdir__dirindex_open(struct pkgdir *pkgdir, unsigned flags);
 void pkgdir__dirindex_close(struct pkgdir_dirindex *dirindex);
 
 void pkgdir__dirindex_update(struct pkgdir *pkgdir);
+
+const char *pkgdir__dirindex_path(struct pkgdir_dirindex *dirindex);
 
 /* returns path providers */
 tn_array *pkgdir_dirindex_get(const struct pkgdir *pkgdir,

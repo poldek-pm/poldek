@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -31,7 +32,9 @@
 #include "pkgu.h"
 #include "pkgfl.h"
 #include "pkgdir.h"
+#include "pkgdir_dirindex.h"
 #include "pkgdir_intern.h"
+#include "poldek_util.h"
 #ifdef HAVE_RPMORG
 # include "pm/rpmorg/pm_rpm.h"
 #else
@@ -41,6 +44,8 @@
 
 extern struct pkgdir_module pkgdir_module_pndir;
 static struct pkgdir_module *init_rpmdbcache(struct pkgdir_module *mod);
+
+#define MOD_COMPR COMPR_ZST
 
 struct pkgdir_module pkgdir_module_rpmdbcache = {
     init_rpmdbcache,
@@ -101,7 +106,6 @@ static Header ldhdr_bynevr(const struct pkg *pkg, void *foo)
     struct pm_dbrec  dbrec;
     Header           h = NULL;
 
-    DBGF("%s\n", pkg_snprintf_s(pkg));
     foo = foo;
     pmctx = pm_new("rpm");
 
@@ -188,15 +192,79 @@ int dbcache_load(struct pkgdir *pkgdir, unsigned ldflags)
     return rc;
 }
 
+/* symlink original dirindex as rpmdbcache's one */
+static bool symlink_dirindex(const struct pkgdir *pkgdir, const char *path)
+{
+    bool ok = true;
+
+    n_assert(pkgdir->dirindex);
+
+    struct pkgdir *saved = pkgdir_malloc();
+    saved->path = n_strdup(path);
+    saved->idxpath = n_strdup(path);
+    saved->compr = n_strdup(MOD_COMPR);
+    saved->mod = &pkgdir_module_pndir;
+    saved->type = "rpmdbcache";
+
+    if (pkgdir_module_pndir.open(saved, 0)) {
+        const char *src = pkgdir__dirindex_path(pkgdir->dirindex);
+        char dest[PATH_MAX];
+        int n = pkgdir__dirindex_make_path(dest, sizeof(dest), saved);
+
+        const char *cachedir = vf_cachedir();
+        size_t cachedir_len = strlen(cachedir);
+
+        DBGF("cachedir %s\n", cachedir);
+        DBGF("%s -> %s\n", dest, src);
+        n_assert(strlen(src) > cachedir_len + 1);
+
+        const char *linkto = &src[cachedir_len + 1];
+        int rc = symlink(linkto, dest);
+
+        if (rc != 0) {
+            ok = false;
+        } else {
+            /* symlink .md5 too */
+            char md_src[PATH_MAX];
+
+            n = n_snprintf(&dest[n], sizeof(dest) - n, "%s", ".md5");
+            n_assert(n == 4);
+
+            n = n_snprintf(md_src, sizeof(md_src), "%s.md5", src);
+            n_assert((size_t)n == strlen(src) + 4);
+
+            DBGF("%s -> %s\n", dest, md_src);
+            n_assert(strlen(md_src) > cachedir_len + 1);
+
+            linkto = &md_src[cachedir_len + 1];
+            if (symlink(linkto, dest) != 0)
+                ok = false;
+        }
+    }
+
+    pkgdir_free(saved);
+
+    return ok;
+}
+
 static
-int dbcache_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
+int dbcache_create(struct pkgdir *pkgdir, const char *path, unsigned flags)
 
 {
     flags |= PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
         PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC | PKGDIR_CREAT_NOFL |
         PKGDIR_CREAT_wRECNO;
 
-    return pkgdir_module_pndir.create(pkgdir, pathname, flags);
+    int ok = pkgdir_module_pndir.create(pkgdir, path, flags);
+
+    /* set same mtime as rpmdb (to use symlinked dirindex) */
+    poldek_util_set_mtime(path, pkgdir_mtime(pkgdir));
+
+    /* symlink original dirindex as rpmdbcache's one */
+    if (pkgdir->dirindex)
+        symlink_dirindex(pkgdir, path);
+
+    return ok;
 }
 
 struct pkgdir_module *init_rpmdbcache(struct pkgdir_module *mod)
@@ -207,7 +275,7 @@ struct pkgdir_module *init_rpmdbcache(struct pkgdir_module *mod)
     mod->aliases = NULL;
     mod->description = "RPM package database cache";
 
-    mod->default_compr = COMPR_ZST;
+    mod->default_compr = MOD_COMPR;
     mod->update = NULL;
     mod->update_a = NULL;
     mod->unlink = NULL;

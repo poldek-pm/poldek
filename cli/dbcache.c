@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/errno.h>
 #include <signal.h>
 #include <time.h>
@@ -47,7 +48,6 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload);
 int poclidek__load_installed(struct poclidek_ctx *cctx, int reload)
 {
     struct pkgdir *pkgdir;
-    DBGF("%d\n", reload);
 
     if (cctx->dbpkgdir && !reload)
         return 0;
@@ -119,12 +119,90 @@ char *mkrpmdb_path(char *path, size_t size, const char *root, const char *dbpath
     return *path ? path : NULL;
 }
 
+static
+struct pkgdir *load_rpmdbcache(const char *cachedir,
+                               const char *dbpath,
+                               const char *rpmdb_path, time_t rpmdb_mtime,
+                               unsigned ldflags)
+{
+    struct pkgdir    *dir = NULL;
+    const char       *lc_lang;
+    char             path[PATH_MAX];
+
+    n_assert(rpmdb_mtime > 0);
+
+    if (mkdbcache_path(path, sizeof(path), cachedir, rpmdb_path) == NULL)
+        return NULL;
+
+    time_t mtime = poldek_util_mtime(path);
+    DBGF("dbcache mtime=%lu, %s\n", (unsigned long) mtime, path);
+
+    if (mtime >= rpmdb_mtime) {
+        lc_lang = poldek_util_lc_lang("LC_MESSAGES");
+        if (lc_lang == NULL)
+            lc_lang = "C";
+
+        dir = pkgdir_open_ext(path, NULL, RPMDBCACHE_PDIRTYPE, dbpath,
+                              NULL, 0, lc_lang);
+
+        if (dir) {
+            /* rpmdbcache use symlinked rpmdb's dirindex,
+               (see pkgdir/rpmdb/rpmdbcache.c)              */
+            ldflags |= PKGDIR_LD_DIRINDEX_NOCREATE;
+
+            if (!pkgdir_load(dir, NULL, ldflags)) {
+                pkgdir_free(dir);
+                dir = NULL;
+            }
+        }
+    }
+
+#if 0
+    /*
+      outdated cache could be reused as a base for loading raw database,
+      BUT there is no performance gain, as we have to load complete
+      rpm headers from db
+    */
+    if (0 && rpmdb_mtime > mtime) {
+        prev_dir = dir;
+        dir = NULL;
+    }
+#endif
+
+    return dir;
+}
+
+/* copied from ../misc.h */
+static void *timethis_begin(void)
+{
+    struct timeval *tv;
+
+    tv = n_malloc(sizeof(*tv));
+    gettimeofday(tv, NULL);
+    return tv;
+}
+
+static void timethis_end(int verbose_level, void *tvp, const char *prefix)
+{
+    struct timeval tv, *tv0 = (struct timeval *)tvp;
+
+    gettimeofday(&tv, NULL);
+
+    tv.tv_sec -= tv0->tv_sec;
+    tv.tv_usec -= tv0->tv_usec;
+    if (tv.tv_usec < 0) {
+        tv.tv_sec--;
+        tv.tv_usec = 1000000 + tv.tv_usec;
+    }
+
+    msgn(verbose_level, "time [%s] %ld.%ld\n", prefix, tv.tv_sec, tv.tv_usec);
+    free(tvp);
+}
 
 static
 struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
 {
-    char             rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
-    const char       *lc_lang;
+    char             dbpath[PATH_MAX], rpmdb_path[PATH_MAX];
     struct pkgdir    *dir = NULL, *prev_dir = NULL;
     struct pm_ctx    *pmctx;
     struct poldek_ts *ts = cctx->ctx->ts; /* for short */
@@ -135,8 +213,6 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
 
     pmctx = poldek_get_pmctx(cctx->ctx);
 
-    DBGF("reload %d\n", reload);
-
     /* not dbpath based pm? */
     if (!pm_dbpath(pmctx, dbpath, sizeof(dbpath)))
         return poldek_load_destination_pkgdir(cctx->ctx, ldflags);
@@ -145,50 +221,28 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
                      dbpath) == NULL)
         return NULL;
 
-    if (mkdbcache_path(dbcache_path, sizeof(dbcache_path), ts->cachedir,
-                       rpmdb_path) == NULL)
-        return NULL;
-
-    lc_lang = poldek_util_lc_lang("LC_MESSAGES");
-    if (lc_lang == NULL)
-        lc_lang = "C";
-
-    ldflags |= PKGDIR_LD_DIRINDEX;
-
+    //MEMINF("%s", "before rpmdbload\n");
     if (!reload) {              /* use cache */
-        time_t mtime_rpmdb, mtime_dbcache;
-        mtime_dbcache = mtime(dbcache_path);
-        mtime_rpmdb = pm_dbmtime(pmctx, rpmdb_path);
-
-        if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache) {
-            dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
-                                  dbpath, NULL, 0, lc_lang);
-            if (dir)
-                if (!pkgdir_load(dir, NULL, ldflags)) {
-                    pkgdir_free(dir);
-                    dir = NULL;
-                }
-        }
-        DBGF("%ld > %ld\n", mtime_rpmdb, mtime_dbcache);
-
-
-        /*
-           outdated cache, use it as prev_dir
-           DISABLED due to no performance gain, as we have to
-           load whole rpm headers from db
-        */
-        if (0 && mtime_rpmdb > mtime_dbcache) {
-            prev_dir = dir;
-            dir = NULL;
+        time_t mtime_rpmdb = pm_dbmtime(pmctx, rpmdb_path);
+        if (mtime_rpmdb > 0) {
+            dir = load_rpmdbcache(ts->cachedir, dbpath,
+                                  rpmdb_path, mtime_rpmdb,
+                                  ldflags);
         }
     }
 
     if (dir == NULL) {          /* load database */
+        void *t = timethis_begin();
         DBGF("loading rpmdb %p\n", prev_dir);
+        /* load whole packages here as it speeds 2x up rpmdb dirindex creation */
+        ldflags |= PKGDIR_LD_FULLFLIST;
         dir = pkgdb_to_pkgdir(cctx->ctx->pmctx, ts->rootdir, NULL, ldflags,
                               "prev_pkgdir", prev_dir, NULL);
+
+        timethis_end(0, t, "rpmdb.load");
     }
 
+    //MEMINF("%s", "after rpmdbload\n");
     if (dir == NULL) {
         logn(LOGERR, _("Load installed packages failed"));
 

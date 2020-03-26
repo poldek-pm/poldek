@@ -53,14 +53,15 @@
 #define PKGT_HAS_REQ      (1 << 4)
 #define PKGT_HAS_CNFL     (1 << 5)
 #define PKGT_HAS_FILES    (1 << 6)
-#define PKGT_HAS_ARCH     (1 << 7)
-#define PKGT_HAS_OS       (1 << 8)
-#define PKGT_HAS_SIZE     (1 << 9)
-#define PKGT_HAS_FSIZE    (1 << 10)
-#define PKGT_HAS_BTIME    (1 << 11)
-#define PKGT_HAS_GROUPID  (1 << 12)
-#define PKGT_HAS_FN       (1 << 13)
-#define PKGT_HAS_SRCFN    (1 << 14)
+#define PKGT_HAS_ALLFILES (1 << 7)
+#define PKGT_HAS_ARCH     (1 << 8)
+#define PKGT_HAS_OS       (1 << 9)
+#define PKGT_HAS_SIZE     (1 << 10)
+#define PKGT_HAS_FSIZE    (1 << 11)
+#define PKGT_HAS_BTIME    (1 << 12)
+#define PKGT_HAS_GROUPID  (1 << 13)
+#define PKGT_HAS_FN       (1 << 14)
+#define PKGT_HAS_SRCFN    (1 << 15)
 
 struct pkgtags_s {
     unsigned   flags;
@@ -624,6 +625,8 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
         } else {
             pkg->fl = pkgt->pkgfl;
             n_tuple_sort_ex(pkg->fl, (tn_fn_cmp)pkgfl_ent_cmp);
+            if (pkgt->flags & PKGT_HAS_ALLFILES)
+                pkg_set_ldallfiles(pkg);
             //pkgfl_dump(pkg->fl);
             pkgt->pkgfl = NULL;
         }

@@ -1011,7 +1011,9 @@ struct pkgflist *pkg_get_flist(const struct pkg *pkg)
     tn_alloc *na;
 
     na = n_alloc_new(16, TN_ALLOC_OBSTACK);
-    fl = do_pkg_other_fl(na, pkg);
+
+    if (!pkg_has_ldallfiles(pkg))
+        fl = do_pkg_other_fl(na, pkg);
 
     if (pkg->fl == NULL) {
         if (fl == NULL) {

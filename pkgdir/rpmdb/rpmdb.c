@@ -142,12 +142,16 @@ tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
 
 /* load package from header and add it to pkgdir */
 static
-int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir)
+int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir, unsigned ldflags)
 {
     struct pkg  *pkg;
     tn_array    *langs;
+    unsigned    pkg_ldflags = PKG_LDCAPREQS;
 
-    pkg = pm_rpm_ldhdr(pkgdir->na, header, NULL, 0, PKG_LDCAPREQS);
+    if (ldflags & PKGDIR_LD_FULLFLIST)
+        pkg_ldflags = PKG_LDWHOLE;
+
+    pkg = pm_rpm_ldhdr(pkgdir->na, header, NULL, 0, pkg_ldflags);
 
     if (pkg == NULL)
         return 0;
@@ -174,7 +178,7 @@ int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir)
 
 static
 int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
-                     const char *rootdir)
+                     const char *rootdir, unsigned ldflags)
 {
     struct pkgdb       *db;
     struct pkgdb_it    it;
@@ -198,7 +202,7 @@ int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
     n = 0;
     while ((dbrec = pkgdb_it_get(&it))) {
         if (dbrec->hdr) {
-            if (load_package(dbrec->recno, dbrec->hdr, pkgdir))
+            if (load_package(dbrec->recno, dbrec->hdr, pkgdir, ldflags))
                 n++;
         }
 
@@ -258,7 +262,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     DBGF("prev_dir %p\n", pkgdir->prev_pkgdir);
 
-    if (!load_db_packages(pkgdir->mod_data, pkgdir, "/"))
+    if (!load_db_packages(pkgdir->mod_data, pkgdir, "/", ldflags))
         return 0;
 
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {

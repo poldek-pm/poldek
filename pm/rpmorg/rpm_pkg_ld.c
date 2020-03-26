@@ -578,6 +578,8 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
 
         } else if (pkg->fl && n_tuple_size(pkg->fl) > 0) {
             n_tuple_sort_ex(pkg->fl, (tn_fn_cmp)pkgfl_ent_cmp);
+            if (fl_ldflags == PKGFL_ALL)
+                pkg_set_ldallfiles(pkg);
         }
     }
 

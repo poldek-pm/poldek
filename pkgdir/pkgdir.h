@@ -124,7 +124,8 @@ EXPORT struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 #define PKGDIR_LD_NOUNIQ             (1 << 3) /* don't perform pkgdir_uniq() */
 #define PKGDIR_LD_DOIGNORE           (1 << 4) /* honour src->ign_patterns */
 #define PKGDIR_LD_DIRINDEX           (1 << 5) /* handle rpm 4.4.6 auto deps */
-#define PKGDIR_LD_UPDATE_STUBINDEX   (1 << 6) /* update stub index */
+#define PKGDIR_LD_DIRINDEX_NOCREATE  (1 << 6) /* do not auto-create dirindex */
+#define PKGDIR_LD_UPDATE_STUBINDEX   (1 << 7) /* update stub index */
 #define PKGDIR_LD_ALLDESC            (1 << 8) /* load all i18n descriptions
 				                  (see PKGDIR_OPEN_ALLDESC)
 				               */

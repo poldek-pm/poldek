@@ -24,7 +24,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <utime.h>
 
 #include <tndb/tndb.h>
 #include <trurl/nassert.h>
@@ -64,6 +63,10 @@ struct pkgdir_dirindex {
     tn_hash  *idmap;             /* { package_no => pkg } pairs */
     tn_hash  *keymap;            /* { package_key => package_no } */
 };
+
+const char *pkgdir__dirindex_path(struct pkgdir_dirindex *dirindex) {
+    return tndb_path(dirindex->db);
+}
 
 static
 const char **get_package_directories(struct tndb *db, const char *key, size_t klen,
@@ -212,6 +215,9 @@ void store_package(uint32_t package_no, struct pkg *pkg, struct tndb *db,
     if ((flist = pkg_get_flist(pkg)) == NULL)
         return;
 
+    //    DBGF("store %s\n", pkg_id(pkg));
+    //   pkgfl_dump(flist->fl);
+
     if (pkgfl_owned_and_required_dirs(flist->fl, &owned, &required) == 0) {
         DBGF("%s: NULL\n", pkg_id(pkg));
         pkgflist_free(flist);
@@ -283,13 +289,17 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
         return 1;
 
     MEMINF("START");
-    msgn_i(2, 2, "%s directory index of %s...",
-           prev_dirindex ? "Updating" : "Creating", pkgdir_idstr(pkgdir));
+    int verbosity = 2;
+    if (prev_dirindex == NULL && n_array_size(pkgdir->pkgs) > 1000)
+        verbosity = 1;
+
+    msgn(verbosity, _("%s directory index of %s..."),
+         prev_dirindex ? _("Updating") : _("Creating"), pkgdir_idstr(pkgdir));
 
     n_strdupap(path, &tmp);
     dir = n_dirname(tmp);
 
-    DBGF("mkdir %s %s\n", path, dir);
+    DBGF("path %s (dir %s)\n", path, dir);
     DBGF("pkgdir %p, %d packages\n", pkgdir, n_array_size(pkgdir->pkgs));
 
     if ((lock = vf_lock_mkdir(dir)) == NULL)
@@ -352,10 +362,7 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     n_hash_free(path_index);
     n_alloc_free(na);
     tndb_close(db);
-
-    struct utimbuf ut;
-    ut.actime = ut.modtime = pkgdir_mtime(pkgdir);
-    utime(path, &ut);
+    poldek_util_set_mtime(path, pkgdir_mtime(pkgdir));
 
     vf_lock_release(lock);
 
@@ -363,9 +370,7 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     return 1;
 }
 
-
-/* build dirindex path based on pkgdir one */
-static int dirindex_path(char *path, int size, const struct pkgdir *pkgdir)
+int pkgdir__dirindex_make_path(char *path, int size, const struct pkgdir *pkgdir)
 {
     char tmp[PATH_MAX];
     char *ofpath, *suffix = NULL;
@@ -419,16 +424,16 @@ static int dirindex_path(char *path, int size, const struct pkgdir *pkgdir)
             }
         }
         suffix = bn;
-        DBGF("basename3 %s\n", bn);
+        DBGF("suffix (basename3) %s\n", bn);
     }
 
-    DBGF("path = %s\n", ofpath);
+    DBGF("ofpath = %s\n", ofpath);
     n = vf_cachepath(path, size, ofpath);
     DBGF("cache path = %s\n", path);
 
     n_assert(n > 0);
     n += n_snprintf(&path[n], size - n, "/%s.%s.%stndb", pkgdir_dirindex_basename,
-                    pkgdir->type, suffix);
+                    pkgdir->type, suffix ? suffix : "");
     DBGF("result = %s\n", path);
     n_assert(n > 0);
 
@@ -616,7 +621,7 @@ l_error_end:
 }
 
 /* load package dir-based requirements and add them to pkg */
-static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
+static int update_pkgdir_pkg(struct pkg *pkg, struct tndb *db,
                             const char *key, size_t klen)
 {
     const char **tl, **tl_save;
@@ -763,31 +768,40 @@ static void update_pkgdir_packages(const struct pkgdir *pkgdir,
         int          klen;
 
         klen = package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_REQDIR);
-        update_pkdir_pkg(pkg, dirindex->db, key, klen);
+        update_pkgdir_pkg(pkg, dirindex->db, key, klen);
     }
 }
 
 static
 struct pkgdir_dirindex *open_dirindex(struct pkgdir *pkgdir,
-                                      const char *path, int update_pkgs)
+                                      const char *path, int create)
 {
     struct pkgdir_dirindex *dirindex;
     time_t mtime = poldek_util_mtime(path);
 
     n_assert(pkgdir->ts > 0);
+    DBGF("open_dirindex %s, create=%d, mtime=%ld\n", path, create, mtime);
+    if (mtime == 0) {             /* not exists */
+        if (!create) {
+            if (poldek__is_in_testing_mode())
+                n_die("%s: missing dirindex", path);
 
-    if (mtime == 0)             /* not exists */
+            msgn(2, "%s: missing dirindex", path);
+            return NULL;
+        }
+
         dirindex_create(pkgdir, path, NULL);
+    }
 
     dirindex = load_dirindex(pkgdir, path, UPDATE_IFNEEDED);
 
     if (mtime != 0 && dirindex == NULL) {     /* broken? */
-        if (dirindex_create(pkgdir, path, NULL))
+        if (poldek__is_in_testing_mode())
+            n_die("%s: broken dirindex", path);
+
+        if (create && dirindex_create(pkgdir, path, NULL))
             dirindex = load_dirindex(pkgdir, path, 0);
     }
-
-    if (dirindex && update_pkgs)
-        update_pkgdir_packages(pkgdir, dirindex);
 
     if (dirindex && poldek__is_in_testing_mode()) {
         msgn(1, "Verifying dirindex....");
@@ -797,12 +811,21 @@ struct pkgdir_dirindex *open_dirindex(struct pkgdir *pkgdir,
     return dirindex;
 }
 
-struct pkgdir_dirindex *pkgdir__dirindex_open(struct pkgdir *pkgdir)
+struct pkgdir_dirindex *pkgdir__dirindex_open(struct pkgdir *pkgdir, unsigned flags)
 {
-    char path[1024];
-    dirindex_path(path, sizeof(path), pkgdir);
+    struct pkgdir_dirindex *dirindex;
+    char path[PATH_MAX];
 
-    return open_dirindex(pkgdir, path, 1);
+    pkgdir__dirindex_make_path(path, sizeof(path), pkgdir);
+    dirindex = open_dirindex(pkgdir, path, flags & PKGDIR_DIRINDEX_OCREATE);
+
+    /* add dir-based deps to pkgdir's packages */
+    if (dirindex) {
+        DBGF("updating packages\n");
+        update_pkgdir_packages(pkgdir, dirindex);
+    }
+
+    return dirindex;
 }
 
 void pkgdir__dirindex_close(struct pkgdir_dirindex *dirindex)
@@ -820,14 +843,14 @@ void pkgdir__dirindex_update(struct pkgdir *pkgdir)
 {
     struct pkgdir_dirindex *index;
     time_t idx_mtime, mtime;
-    char path[1024];
+    char path[PATH_MAX];
 
-    dirindex_path(path, sizeof(path), pkgdir);
+    pkgdir__dirindex_make_path(path, sizeof(path), pkgdir);
 
     idx_mtime = pkgdir_mtime(pkgdir);
     mtime = poldek_util_mtime(path);
 
-    if (mtime == idx_mtime) {
+    if (mtime >= idx_mtime) {
         return;
     }
 
@@ -841,14 +864,11 @@ void pkgdir__dirindex_update(struct pkgdir *pkgdir)
     if (n_array_size(pkgdir->pkgs) == 0)
         goto l_end;
 
-    if ((index = open_dirindex(pkgdir, path, 0))) {
+    if ((index = open_dirindex(pkgdir, path, 1))) {
         pkgdir__dirindex_close(index);
-
         /* set mtime to dirindex created by previous
            poldek versions */
-        struct utimbuf ut;
-        ut.actime = ut.modtime = idx_mtime;
-        utime(path, &ut);
+        poldek_util_set_mtime(path, idx_mtime);
     }
 
  l_end:
