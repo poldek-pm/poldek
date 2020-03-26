@@ -64,6 +64,10 @@ static inline const char *vfile_cachedir(void)
     return vfile_conf._cachedir;
 }
 
+const char *vf_cachedir(void) {
+    return vfile_cachedir();
+}
+
 static int do_cachedir_clean(const char *dirpath)
 {
     struct dirent *ent;

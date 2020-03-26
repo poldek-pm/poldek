@@ -196,6 +196,9 @@ EXPORT int vf_mksubdir(char *path, int size, const char *dirpath);
 EXPORT int vf_localpath(char *path, size_t size, const char *url);
 EXPORT int vf_localdirpath(char *path, size_t size, const char *url);
 
+/* return configured cache directory */
+EXPORT const char *vf_cachedir(void);
+
 /* ofdirpath to path under cache dirctory  */
 EXPORT int vf_cachepath(char *path, size_t size, const char *ofdirpath);
 
