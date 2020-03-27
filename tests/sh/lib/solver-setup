@@ -5,7 +5,6 @@ build_package() {
     name=$1; shift
     version=""
 
-
     [ $# -gt 0 ] && version="$1";
     #echo "v $version"
     if [ -n "$version" ]; then
@@ -21,7 +20,7 @@ build_package() {
     [ $# -gt 0 ] && params="$@";
 
     #echo ./build-test-rpm.sh -d $destdir -n $name -v $version $params
-    if [ "$VERBOSE" != "-v -v" ]; then
+    if [ "$VERBOSE" != "vv" ]; then
         eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
     else
         eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params
@@ -95,5 +94,42 @@ try_install_package() {
         typeset n=$(echo  $out | sed 's|%|\n%|g' | egrep "^%R ($rm_regexp)" | wc -l)
         assertEquals "unexpected ($n_all) number of packages removed (expected $n)" "$n_all" "$n"
         assertEquals "not all or non expected packages removed (expected $rm_expected)" "$n" "$rm_n_expected"
+    fi
+}
+
+try_uninstall_package() {
+    typeset mode="$1"; shift
+    typeset poldek_opts="$1"; shift
+    typeset package="$1"; shift
+    typeset expected="$1"; shift
+    [ $expected == "none" ] && expected=""
+
+    typeset regexp=$(echo $expected | sed 's/,/|/g')
+    typeset n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
+
+    typeset cmd="$poldek_opts $package"
+    if [ $# -gt 0 ]; then
+        cmd="$1 $cmd"
+        shift
+    fi
+
+    # run to check exit code
+    [ "$mode" != "rpm" ] && runpoldek $cmd
+
+    # run again to check installation results
+    if is_verbose_mode; then
+        msg "# parsable"
+        #gdb --ex run --args
+        $POLDEK_UNINSTALL $cmd --test
+    fi
+
+    typeset out=$($POLDEK_UNINSTALL $cmd --parsable-tr-summary | egrep "^%[DR]")
+    [ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
+
+    if [ -n "$expected" ]; then
+        typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[RD]' | wc -l)
+        typeset n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[RD] ($regexp)" | wc -l)
+        assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
+        assertEquals "not all or non expected packages uninstalled (expected $expected)" "$n" "$n_expected"
     fi
 }

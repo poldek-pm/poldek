@@ -163,7 +163,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_GREEDY:
             if (!arg) {
                 ts->setop(ts, POLDEK_OP_GREEDY, 1);
-
+            } else if (*arg == 'g') { /* -ggg form */
+                int v = 1;
+                while (*arg++ == 'g')
+                    v++;
+                ts->setop(ts, POLDEK_OP_GREEDY, v);
             } else {
                 int v, bool;
 

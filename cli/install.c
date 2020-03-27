@@ -58,8 +58,7 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_NOHOLD           (OPT_GID + 25)
 #define OPT_INST_IGNORE           (OPT_GID + 26)
 #define OPT_INST_NOIGNORE         (OPT_GID + 27)
-#define OPT_INST_OLDGREEDY        'G'
-#define OPT_INST_GREEDY           (OPT_GID + 28)
+#define OPT_INST_GREEDY           'g'
 #define OPT_INST_UNIQNAMES        'Q'
 #define OPT_INST_UNIQNAMES_ALIAS  (OPT_GID + 30)
 #define OPT_INST_ROOTDIR          'r'
@@ -90,11 +89,6 @@ N_("Install packages ignoring broken dependencies, conflicts, etc"), OPT_GID },
      N_("Install packages required by selected ones"), OPT_GID },
 
 {"greedy", OPT_INST_GREEDY, "[yes|no]", OPTION_ARG_OPTIONAL,
-        N_("Automatically upgrade packages which dependencies "
-           "are broken by unistalled ones"), OPT_GID },
-
-/* legacy, -G w/o parameter */
-{"oldgreedy", OPT_INST_OLDGREEDY, NULL, OPTION_HIDDEN,
         N_("Automatically upgrade packages which dependencies "
            "are broken by unistalled ones"), OPT_GID },
 
@@ -434,15 +428,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             }
             break;
 
-        case OPT_INST_OLDGREEDY:
-            ts->setop(ts, POLDEK_OP_GREEDY, 1);
-            break;
-
         case OPT_INST_GREEDY:
             if (!arg) {
                 ts->setop(ts, POLDEK_OP_GREEDY, 1);
+            } else if (*arg == 'g') { /* -ggg form */
+                int v = 1;
+                while (*arg++ == 'g')
+                    v++;
+                ts->setop(ts, POLDEK_OP_GREEDY, v);
 
-            } else {
+            } else {            /* = */
                 int v, bool;
 
                 if (sscanf(arg, "%u", &v) == 1) {

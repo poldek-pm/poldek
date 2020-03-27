@@ -62,7 +62,7 @@ while test $# -gt 0 ; do
             shift; SOURCE_REPO="${1}"; shift ;;
 
         -v)
-            shift; VERBOSE="$VERBOSE -v";;
+            shift; VERBOSE="${VERBOSE}v";;
 
 
         -n) shift; MAXLOOP="${1}"; shift ;;
@@ -84,4 +84,4 @@ while test $# -gt 0 ; do
             echo "unknown option ${1}; try -h"; exit 1;
     esac
 done
-[ -n "$VERBOSE" ] && QUIET="$VERBOSE"
+[ -n "$VERBOSE" ] && QUIET="-$VERBOSE"

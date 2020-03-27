@@ -139,12 +139,16 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
             break;
 
         case POLDEK_OP_GREEDY:
-            DBGF("set (touch=%d) greedy ts=%p (ctx=%p) greedy=%d val=%d\n",
-                 touch, ts, ts->ctx, optv, on);
+            DBGF("set (touch=%d) greedy ts=%p (ctx=%p) greedy=%d val=%d, act=%d\n",
+                 touch, ts, ts->ctx, optv, on, ts->uninstall_greedy_deep);
             if (on)
                 poldek_ts_xsetop(ts, POLDEK_OP_FOLLOW, 1, touch);
 
-            ts->uninstall_greedy_deep = on;
+            if (on == 1) {
+                ts->uninstall_greedy_deep++;
+            } else {
+                ts->uninstall_greedy_deep = on;
+            }
             break;
 
         case POLDEK_OP_CONFLICTS:
@@ -842,7 +846,6 @@ static int ts_run_install(struct poldek_ts *ts)
         return 0;
     }
 
-
     ts->db = poldek_ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
@@ -868,7 +871,8 @@ static int ts_run_uninstall(struct poldek_ts *ts)
     ts->db = poldek_ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
-    pkgdb_tx_commit(ts->db);
+
+    pkgdb_tx_begin(ts->db, ts);
 
     rc = do_poldek_ts_uninstall(ts);
 

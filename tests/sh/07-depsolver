@@ -33,6 +33,7 @@ setUp() {
 
     RAW_POLDEK="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER --noask"
     POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --st dir -s $REPO2 --dt dir --destination $DESTINATION_REPO"
+    POLDEK_UNINSTALL="$RAW_POLDEK --dt dir --destination $DESTINATION_REPO"
 }
 
 build() {
@@ -56,6 +57,11 @@ try_install() {
 try_install_a() {
     try_install "a" $@
 }
+
+try_uninstall() {
+  try_uninstall_package "dir" -evt $@
+}
+
 
 # 'c' has unmet requirement
 testChooseTheRightAlternative_1() {
@@ -616,6 +622,35 @@ testUpgradeMultipleInstalled() {
 
     POLDEK_INSTALL="$POLDEK_INSTALL -Oupgrade_multiple_instances=y"
     try_install a "a-1.1.1k-1" "a-1.1.1j-1"
+}
+
+testUninstall() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1
+    build_installed a-devel 1-1 -r "a = 1"
+
+    try_uninstall a "a-1-1,a-devel-1-1"
+}
+
+testUninstallGreedy() {
+    msgn "Preparing repositories..."
+    build_installed d 1-1       # to prevent sh from uninstalling
+    build_installed c 1-1
+    build_installed b 1-1 -r "'c = 1'"
+    build_installed a 1-1 -r "'b = 1'"
+    build_installed a-devel 1-1 -r "'a = 1'"
+
+    msgn "--greedy"
+    try_uninstall_package "dir" "-evt --greedy" a "a-1-1,a-devel-1-1,b-1-1"
+
+    msgn "-g"
+    try_uninstall_package "dir" -evtg  a "a-1-1,a-devel-1-1,b-1-1"
+
+    msgn "--greedy=2"
+    try_uninstall_package "dir" "-evt --greedy=2" a "a-1-1,a-devel-1-1,b-1-1,c-1-1"
+
+    msgn "--gg"
+    try_uninstall_package "dir" "-evtgg" a "a-1-1,a-devel-1-1,b-1-1,c-1-1"
 }
 
 
