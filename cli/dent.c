@@ -402,7 +402,6 @@ struct pkg_dent *poclidek_dent_setup(struct poclidek_ctx *cctx,
     if (!add_subdirs)
         return dest;
 
-    cctx->homedir = dest;       /* POCLIDEK_AVAILDIR */
     if (cctx->currdir == NULL)
         cctx->currdir = dest;
 
@@ -557,7 +556,7 @@ struct pkg_dent *poclidek_dent_ldfind(struct poclidek_ctx *cctx, const char *pat
         path = dent->path;
     } else {
         n_assert(cctx->homedir);
-        if (path == NULL && cctx->homedir == NULL)
+        if (path == NULL)
             path = POCLIDEK_HOMEDIR;
     }
 
