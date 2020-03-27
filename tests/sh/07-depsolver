@@ -627,7 +627,7 @@ testUpgradeMultipleInstalled() {
 testUninstall() {
     msgn "Preparing repositories..."
     build_installed a 1-1
-    build_installed a-devel 1-1 -r "a = 1"
+    build_installed a-devel 1-1 -r "'a = 1'"
 
     try_uninstall a "a-1-1,a-devel-1-1"
 }
