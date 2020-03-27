@@ -200,7 +200,9 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                               const struct pkg *marker, tn_array *candidates)
 {
     int *conflicts, min_nconflicts, j, i_best, *scores;
-    int i, max_score, npkgs, same_packages_different_arch = 0;
+    int i, max_score, npkgs;
+    int nsame_differ_arch = 0;
+    int nsame_differ_evr  = 0;
 
     npkgs = n_array_size(candidates);
     tracef(indent, "marker is %s, ncandidates=%d",
@@ -263,13 +265,16 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
 
         if (i > 0) {
             struct pkg *prev = n_array_nth(candidates, i - 1);
-            if (pkg_cmp_name_evr(pkg, prev) == 0)
-                same_packages_different_arch++;
-            else
-                same_packages_different_arch--;
+            int rv;
+            if ((rv = pkg_cmp_name_evr(pkg, prev)) == 0)
+                nsame_differ_arch++;
 
-            trace(indent, "cmp %s %s -> %d, %d", pkg_id(pkg), pkg_id(prev),
-                 pkg_cmp_name_evr(pkg, prev), same_packages_different_arch);
+            trace(indent, "cmp.arch %s %s -> %d", pkg_id(pkg), pkg_id(prev), rv);
+
+            if ((rv = pkg_cmp_name(pkg, prev)) == 0)
+                nsame_differ_evr++;
+
+            trace(indent, "cmp.name %s %s -> %d", pkg_id(pkg), pkg_id(prev), rv);
         }
 
         if (i3_is_pkg_installed(ictx->ts, pkg, &cmprc) && cmprc > 0) {
@@ -278,7 +283,7 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
         }
 
         trace(indent, "  %d %d %d\n", i, scores[i], conflicts[i]);
-        if (pkg->cnflpkgs != NULL)
+        if (pkg->cnflpkgs != NULL) {
             for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
                 struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
                 if (i3_is_marked(ictx, cpkg->pkg)) {
@@ -287,7 +292,7 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                     trace(indent, "conflicts:  %d %d %d %s\n", i, scores[i], conflicts[i], pkg_id(cpkg->pkg));
                 }
             }
-
+        }
 
         if (min_nconflicts == -1)
             min_nconflicts = conflicts[i];
@@ -320,13 +325,26 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
         }
     }
 
-    if (same_packages_different_arch == npkgs - 1) /* choose now then */
-        goto l_end;
+    /* all the same package -> remove all candidates with differ version */
+    if (nsame_differ_evr == npkgs - 1 && nsame_differ_arch == 0) {
+        struct pkg *best = n_array_nth(candidates, i_best);
 
-    if (i_best == -1)
-        i_best = 0;
+        if (pkg_cmp_ver(best, marker) == 0) {
+            trace(indent, "- candidates are the same, just take %s", pkg_id(best));
+            while (n_array_size(candidates) > 0) {
+                struct pkg *pkg = n_array_pop(candidates);
+                if (pkg != best)
+                    pkg_free(pkg);
+            }
+            n_array_push(candidates, best);
+            i_best = 0;
+        }
+    }
 
-l_end:
+    n_assert(i_best >= 0);
+    n_assert(i_best < n_array_size(candidates));
+
+    //l_end:
     trace(indent, "RET %d. %s\n", i_best,
           pkg_id(n_array_nth(candidates, i_best)));
     return i_best;
@@ -494,6 +512,14 @@ struct pkg *i3_choose_equiv(struct poldek_ts *ts,
 
     if (hint == NULL)
         hint = n_array_nth(pkgs, 0);
+
+    /* tests automation */
+    if (poldek__is_in_testing_mode()) {
+        for (int i=0; i < n_array_size(pkgs); i++) {
+            msgn(0, "%%choose %s", pkg_id(n_array_nth(pkgs, i)));
+        }
+        return hint;
+    }
 
     if (!ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER))
         return hint;

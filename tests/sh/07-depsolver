@@ -31,7 +31,7 @@ setUp() {
     # provide /bin/sh auto requirement
     build_installed sh -p /bin/sh
 
-    RAW_POLDEK="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER --noask"
+    RAW_POLDEK="$POLDEK_NOCONF"
     POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --st dir -s $REPO2 --dt dir --destination $DESTINATION_REPO"
     POLDEK_UNINSTALL="$RAW_POLDEK --dt dir --destination $DESTINATION_REPO"
 }
@@ -622,6 +622,35 @@ testUpgradeMultipleInstalled() {
 
     POLDEK_INSTALL="$POLDEK_INSTALL -Oupgrade_multiple_instances=y"
     try_install a "a-1.1.1k-1" "a-1.1.1j-1"
+}
+
+# user should not be asked about
+testAskEquivalents() {
+    msgn "Preparing repositories..."
+    build a 1-1
+    build a-devel 1-1 -r "'a = 1'"
+    build a-static 1-1 -r "'a-devel = 1'"
+    build a 1-2
+    build a-devel 1-2 -r "'a = 1'"
+    build a-static 1-2 -r "'a-devel = 1'"
+
+    msgn "1"
+    try_install a-static-1-2 "a-1-2,a-devel-1-2,a-static-1-2" ""
+    n=$($POLDEK_INSTALL -ivt a-static-1-2 | grep -P '^%choose ' | wc -l)
+    assertEquals "user should not be asked to choose equivalents ($n)" "$n" "0"
+
+    msgn "2"
+    try_install a-static-1-1 "a-1-1,a-devel-1-1,a-static-1-1" ""
+    n=$($POLDEK_INSTALL -ivt a-static-1-1 | grep -P '^%choose ' | wc -l)
+    assertEquals "user should not be asked to choose equivalents ($n)" "$n" "0"
+
+    msgn "3"
+    build b 1-1 -p "'a = 1'"
+    try_install a-static-1-1 "a-1-1,a-devel-1-1,a-static-1-1" ""
+
+    n=$($POLDEK_INSTALL -ivt a-static-1-1 | grep -P '^%choose ' | wc -l)
+    # equivalents to choose from: a-1-2, a-1-1 and b-1-1
+    assertEquals "user should be asked to choose equivalents" "$n" "3"
 }
 
 testUninstall() {
