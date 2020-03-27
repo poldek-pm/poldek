@@ -117,6 +117,8 @@ try_install() {
 }
 
 testRPMdbcache() {
+    build foo
+
     $RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO --cmd reload >/dev/null
     local rpmdb_cachedirname="$(echo $DESTINATION_REPO | sed -e 's|^/||' -e 's|/|.|g').var.lib.rpm"
     local suffix="rpmdbcache$(echo $DESTINATION_REPO | sed 's|/|.|g').var.lib.rpm"
