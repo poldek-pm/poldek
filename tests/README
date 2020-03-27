@@ -1,7 +1,7 @@
 poldek test suite
 
 BuildRequires: check-devel
-Reqires: fakeroot
+Reqires: fakeroot, sudo (for sh/08-rpm tests)
 
 To run all tests:
 
@@ -15,3 +15,6 @@ $ ./sh/07-depsolver -h
 Particular tests may be choosen:
 
 $ ./sh/07-depsolver -v -t testSuggests
+
+Notes:
+*) set CK_FORK=no to run C-based test without fork
