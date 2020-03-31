@@ -54,6 +54,17 @@ tn_array *filter_out_olders(struct i3ctx *ictx, tn_array *pkgs,
     return tmp;
 }
 
+static int req_score(int indent, struct i3ctx *ictx, const struct pkg *pkg)
+{
+    int iscore = iset_reqs_score(ictx->inset, pkg);
+    int uscore = iset_reqs_score(ictx->unset, pkg);
+
+    tracef(indent, "- %s -> iscore %d, uscore %d => %d", pkg_id(pkg),
+           iscore, uscore, iscore - uscore);
+
+    return iscore - uscore;
+}
+
 static
 struct pkg *choose_successor(int indent, struct i3ctx *ictx,
                              const struct pkg *pkg, tn_array *candidates)
@@ -64,12 +75,13 @@ struct pkg *choose_successor(int indent, struct i3ctx *ictx,
     selected_pkg = n_array_nth(candidates, 0); /* first default */
 
     for (i=0; i < n_array_size(candidates); i++) {
-        struct pkg *p = n_array_nth(candidates, i);
-        int score = iset_reqs_score(ictx->inset, p);
-        trace(indent, "- %d. %s -> score %d", i, pkg_id(p), score);
+        struct pkg *cpkg = n_array_nth(candidates, i);
+        int score = req_score(indent+1, ictx, cpkg);
+        trace(indent, "- %d. %s -> score %d", i, pkg_id(cpkg), score);
+
         if (max_score < score) {
             max_score = score;
-            selected_pkg = p;
+            selected_pkg = cpkg;
 	}
     }
     tracef(indent, "RET %s (for %s)",
@@ -88,38 +100,39 @@ struct pkg *choose_successor_MULTILIB(int indent, struct i3ctx *ictx,
     int i;
 
     scores = alloca(sizeof(*scores) * n_array_size(candidates));
+
     for (i=0; i < n_array_size(candidates); i++) {
-        struct pkg *p = n_array_nth(candidates, i);
+        struct pkg *cpkg = n_array_nth(candidates, i);
         scores[i] = 0;
 
 	// extra 100 points for arch compatible
-	if (pkg_is_kind_of(p, pkg) && pkg_is_arch_compat(p, pkg)) {
+	if (pkg_is_kind_of(cpkg, pkg) && pkg_is_arch_compat(cpkg, pkg)) {
 	    scores[i] += 100;
 	}
 
-	// extra points for reqs marked to install
-	scores[i] += iset_reqs_score(ictx->inset, p);
+        int rscore = req_score(indent+1, ictx, cpkg);
+        scores[i] += rscore;
 
-        if (pkg->color == 0 && p->color == 0) { /* both uncolored  */
+        if (pkg->color == 0 && cpkg->color == 0) { /* both uncolored  */
             scores[i] += 1;
-            if (pkg_is_kind_of(p, pkg))
+            if (pkg_is_kind_of(cpkg, pkg))
                 scores[i] += 2;
             nuncolored++;
 
         } else if (pkg->color == 0) {  /* no color -> use arch */
-            if (pkg_is_kind_of(p, pkg))
+            if (pkg_is_kind_of(cpkg, pkg))
                 scores[i] += 1;
 
-        } else if (pkg_is_colored_like(p, pkg)) {
+        } else if (pkg_is_colored_like(cpkg, pkg)) {
             scores[i] += 2;
         }
 
-        trace(indent, "- %d. %s -> color %d, score %d", i, pkg_id(p),
-              p->color, scores[i]);
+        trace(indent, "- %d. %s -> color %d, score %d", i, pkg_id(cpkg),
+              cpkg->color, scores[i]);
 
 	if (max_score < scores[i]) {
 	    max_score = scores[i];
-	    selected_pkg = p;
+	    selected_pkg = cpkg;
 	}
 
         nconsidered++;

@@ -440,6 +440,35 @@ testUpgradeOrphanGiveUp() {
 
 }
 
+# multiple 'b' alternatives to choose from
+testUpgradeOrphanMultipleAvailable()
+{
+    build_installed a 1-1 -r "'a-libs = 1'"
+    build_installed a-libs 1-1 -p "liba.so.1"
+    build_installed b 1-1 -r "'a-libs = 1'"
+
+    build a 2-1 -r "'a-libs = 2'"
+    build a-libs 2-1 -r "'a-libs = 2'" -p "liba.so.2"
+    build b 3 -r "'a-libs = 2'"
+
+    build a 2-2 -r "'a-libs = 2'"
+    build a-libs 2-2 -p "liba.so.2"
+    build b 2 -r "'a-libs = 2'" -r "'c'" -r "d"
+    build c
+    build d
+
+    # b-3-1 should be choosen as it's newer and requires less
+    try_install a "a-2-2,a-libs-2-2,b-3-1" "a-1-1,a-libs-1-1,b-1-1"
+
+    # rebuild b-3-1 with req liba.so.1
+    build b 3 -r "'a-libs = 2'" -r "a-libs" -r "liba.so.1"
+
+    # b-2-1 should be choosen => a-libs-1-1 is beeing upgraded to 2-2 and
+    # liba.so.1 will not be available anymore
+    try_install a "a-2-2,a-libs-2-2,b-2-1,c-1-1,d-1-1" "a-1-1,a-libs-1-1,b-1-1"
+
+}
+
 # alternatives suggested by noarch packages should be scored by rpmArchScore
 # https://bugs.pld-linux.org/show_bug.cgi?id=127
 testMultilibSuggestedByNoarchShouldUseArchScore() {
