@@ -133,7 +133,7 @@ int i3_unmark_package(struct i3ctx *ictx, struct pkg *pkg);
 
 #define i3_is_marked_for_removal(iictx, p) iset_has_pkg(iictx->unset, p)
 
-int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
+int i3_is_other_version_marked(struct i3ctx *ictx, const struct pkg *pkg,
                                struct capreq *req);
 
 /* marks with PKGMARK_MARK all pkgs with same name prefix */
@@ -143,8 +143,8 @@ int i3_mark_namegroup(struct i3ctx *ictx,
 /* misc.c */
 int i3_pkgdb_match_req(struct i3ctx *ictx, const struct capreq *req);
 
-int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc);
-int i3_is_pkg_installable(struct poldek_ts *ts, struct pkg *pkg,
+int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc);
+int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
                           int is_hand_marked);
 
 int i3_select_best_pkg(int indent, struct i3ctx *ictx,

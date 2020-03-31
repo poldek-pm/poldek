@@ -17,8 +17,8 @@
 #include "ictx.h"
 
 /* is there marked instance of pkg which satisfies req? */
-int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
-                                struct capreq *req)
+int i3_is_other_version_marked(struct i3ctx *ictx, const struct pkg *pkg,
+                               struct capreq *req)
 {
     int i;
     tn_array *avpkgs = ictx->ps->pkgs;
