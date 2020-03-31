@@ -354,15 +354,16 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
         if (sc->satscore > best_satscore) {
             best_satscore = sc->satscore;
             i_best_sat = i;
-        } else if (sc->satscore < worst_satscore) {
-            worst_satscore = sc->satscore;
         }
 
-        if (sc->conflicts < best_conflicts) {
+        if (sc->satscore < worst_satscore)
+            worst_satscore = sc->satscore;
+
+        if (sc->conflicts < best_conflicts)
             best_conflicts = sc->conflicts;
-        } else if (sc->conflicts > worst_conflicts) {
+
+        if (sc->conflicts > worst_conflicts)
             worst_conflicts = sc->conflicts;
-        }
     }
 
     trace(indent, "satscore: best=%d, worst=%d", best_satscore, worst_satscore);

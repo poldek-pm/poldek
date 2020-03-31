@@ -70,6 +70,7 @@ try_install_package() {
     fi
 
     if is_verbose_mode; then
+        GDB=${GDB:-""}
         if [ -n "$GDB" ]; then
             gdb --ex run --args $POLDEK_INSTALL $cmd --test
         else
@@ -78,8 +79,10 @@ try_install_package() {
     fi
 
     # run to check exit code
-    [ "$mode" != "rpm" ] && runpoldek $cmd
-    [ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
+    if [ "$mode" != "rpm" ]; then
+      runpoldek $cmd
+      [ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
+    fi
 
     # run again to check installation results
     typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
