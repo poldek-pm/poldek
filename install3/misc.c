@@ -16,7 +16,7 @@
 
 #include "ictx.h"
 
-int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)
+int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc)
 {
     tn_array *dbpkgs = NULL;
     int n = 0, freshen = 0;
@@ -77,7 +77,7 @@ int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)
 }
 
 /* RET: 0 - not installable,  1 - installable,  -1 - something wrong */
-int i3_is_pkg_installable(struct poldek_ts *ts, struct pkg *pkg,
+int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
                           int is_hand_marked)
 {
     int cmprc = 0, npkgs, installable = 1, freshen = 0, force;
@@ -142,29 +142,58 @@ int i3_is_pkg_installable(struct poldek_ts *ts, struct pkg *pkg,
     return installable;
 }
 
+static
+bool req_satisfiable(int indent, struct i3ctx *ictx,
+                     const struct pkg *pkg, const struct capreq *req) {
+
+    if (pkgset_find_match_packages(ictx->ps, pkg, req, NULL, 1)) {
+        tracef(indent, "%s %s => iset", pkg_id(pkg), capreq_stra(req));
+        return true;
+    }
+
+    if (i3_pkgdb_match_req(ictx, req)) {
+        tracef(indent, "%s %s => dbset", pkg_id(pkg), capreq_stra(req));
+        return true;
+    }
+
+    tracef(indent, "%s %s => none", pkg_id(pkg), capreq_stra(req));
+    return false;
+}
+
 /* i.e score how many marker's requirements are satisfied by pkg */
 static
-int satisfiability_score(const struct pkg *marker, const struct pkg *pkg)
+int satisfiability_score(int indent, struct i3ctx *ictx,
+                         const struct pkg *marker, const struct pkg *pkg)
 {
     struct pkg_req_iter  *it = NULL;
     const struct capreq  *req = NULL;
     unsigned itflags = PKG_ITER_REQIN | PKG_ITER_REQDIR | PKG_ITER_REQSUG;
-    int nyes = 0, nno = 0;
-
+    int nyes = 0, nno = 0, nunmet = 0;
 
     n_assert(marker->reqs);
 
     it = pkg_req_iter_new(marker, itflags);
     while ((req = pkg_req_iter_get(it))) {
-        if (pkg_satisfies_req(pkg, req, 1))
+        if (pkg_satisfies_req(pkg, req, 1)) {
             nyes++;
-        else
+        } else {
             nno++;
+        }
+    }
+    pkg_req_iter_free(it);
+
+    it = pkg_req_iter_new(pkg, itflags);
+    while ((req = pkg_req_iter_get(it))) {
+        if (!req_satisfiable(indent, ictx, pkg, req))
+            nunmet++;
     }
     pkg_req_iter_free(it);
 
     if (nyes > 2 && nno == 0)               /* all requirements satisfied */
         return 3;
+
+    if (nunmet > 0)
+        return -1;
 
     if (nyes > 1)
         return 2;
@@ -172,37 +201,106 @@ int satisfiability_score(const struct pkg *marker, const struct pkg *pkg)
     return 0;
 }
 
-/* scores must be the same size of n_array_size(pkgs) */
-static void add_arch_scores(int *scores, const tn_array *pkgs)
+struct candidate_score {
+    int score;                  /* overall score */
+    int satscore;               /* satisfiability score */
+    int conflicts;              /* no of conflicts */
+    int prefix_evr;             /* similarity score (name and/or EVR */
+    int color;                  /* "color" score (multilib) */
+    int arch;                   /* raw pm_arch_score() result */
+    bool upgrade;               /* is candidate being upgraded */
+    bool oth;                   /* are oth instances of pkg being installed */
+};
+
+static void score_candidate(int indent, struct i3ctx *ictx,
+                           const struct pkg *marker, const struct pkg *pkg,
+                           struct candidate_score *sc)
 {
-    int i, min_score = INT_MAX;
-    int *arch_scores;
+    memset(sc, 0, sizeof(*sc));
 
-    arch_scores = alloca(n_array_size(pkgs) * sizeof(*arch_scores));
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
+    tracef(indent, "%s, marker=%s", pkg_id(pkg), marker ? pkg_id(marker) : "(null)");
+    indent += 1;
 
-        arch_scores[i] = pkg_arch_score(pkg);
-        if (min_score > arch_scores[i])
-            min_score = arch_scores[i];
+    if (pkg_isset_mf(ictx->processed, pkg, PKGMARK_BLACK)) {
+        trace(indent, "%s score=-999", pkg_id(pkg));
+        sc->score = -999;
+        return;
     }
 
-    for (i=0; i < n_array_size(pkgs); i++) {
-        if (arch_scores[i] == min_score)
-            scores[i] += 1;      /* 1 point for best fit */
-        DBGF("%s %d\n", pkg_id(n_array_nth(pkgs, i)), arch_scores[i]);
+    /* same prefix  */
+    if (marker && pkg_eq_name_prefix(marker, pkg)) {
+        sc->prefix_evr += 1;
+        if (pkg_cmp_evr(marker, pkg) == 0) /* same prefix && evr */
+            sc->prefix_evr += 2;
+        else if (pkg_cmp_ver(marker, pkg) == 0) /* same prefix && ver */
+            sc->prefix_evr += 1;
+
+        trace(indent, "- %s (prefix_evr=%d)", pkg_id(pkg), sc->prefix_evr);
     }
+
+    /* same color or arch */
+    if (marker && poldek_conf_MULTILIB) {
+        if (pkg_is_colored_like(pkg, marker))
+            sc->color += 2;
+        else if (pkg_cmp_arch(pkg, marker) == 0)
+            sc->color += 1;
+
+        // extra 100 points for arch compatible
+        if (/*pkg_is_kind_of(pkg, marker) && */pkg_is_arch_compat(pkg, marker))
+            sc->color += 100;
+
+        trace(indent, "- %s (color=%d)", pkg_id(pkg), sc->color);
+
+        /* noarch score is 0, take pm's arch score */
+        if (n_str_eq(pkg_arch(marker), "noarch")) {
+            sc->arch = pkg_arch_score(pkg);
+        }
+        trace(indent, "- %s (arch=%d)", pkg_id(pkg), sc->arch);
+    }
+
+    if (marker) {
+        sc->satscore = satisfiability_score(indent, ictx, marker, pkg);
+        trace(indent, "- %s (satscore=%d)", pkg_id(pkg), sc->satscore);
+    }
+
+    int cmprc = 0;
+    if (i3_is_pkg_installed(ictx->ts, pkg, &cmprc) && cmprc > 0) {
+        if (!iset_has_kind_of_pkg(ictx->unset, pkg)) {
+            sc->upgrade = true; /* already installed and upgradeable - sweet */
+        }
+    }
+
+    trace(indent, "- %s (upgrade=%d)", pkg_id(pkg), sc->upgrade);
+
+    if (pkg->cnflpkgs != NULL) {
+        for (int j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
+            struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
+            if (i3_is_marked(ictx, cpkg->pkg)) {
+                sc->conflicts++;
+            }
+        }
+
+        if (sc->conflicts > 0)
+            trace(indent, "- %s (conflicts=%d)", pkg_id(pkg), sc->conflicts);
+    }
+
+    if (i3_is_other_version_marked(ictx, pkg, NULL)) {
+        trace(indent + 4, "%s: other version is already marked, skipped", pkg_id(pkg));
+        sc->oth = true;
+    }
+
+    sc->score = sc->satscore - (5 * sc->conflicts) + sc->prefix_evr + sc->color +
+               (sc->upgrade ? 5 : 0) + (sc->oth ? -10 : 0);
+
+    trace(indent, "=> %s's score=%d", pkg_id(pkg), sc->score);
 }
-
 
 
 static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                               const struct pkg *marker, tn_array *candidates)
 {
-    int *conflicts, min_nconflicts, j, i_best, *scores;
-    int i, max_score, npkgs;
-    int nsame_differ_arch = 0;
-    int nsame_differ_evr  = 0;
+    int npkgs, nsame = 1, min_arch_score = INT_MAX;
+    struct candidate_score *scores;
 
     npkgs = n_array_size(candidates);
     tracef(indent, "marker is %s, ncandidates=%d",
@@ -213,140 +311,119 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
         return 0;
 
     scores = alloca(npkgs * sizeof(*scores));
-    conflicts = alloca(npkgs * sizeof(*conflicts));
-    min_nconflicts = 0;
+    memset(scores, 0, npkgs * sizeof(*scores));
 
-
-    i_best = -1;
-    for (i=0; i < n_array_size(candidates); i++) {
+    for (int i=0; i < n_array_size(candidates); i++) {
         struct pkg *pkg = n_array_nth(candidates, i);
-        int cmprc = 0;
+        struct candidate_score *sc = &scores[i];
 
-        conflicts[i] = 0;
-        scores[i] = 0;
+        score_candidate(indent+2, ictx, marker, pkg, sc);
+        trace(indent, "- %d. %s (marked=%d, satscore=%d, score=%d)", i, pkg_id(pkg),
+              i3_is_marked(ictx, pkg), sc->satscore, sc->score);
 
-        trace(indent, "- %d. %s (marked=%d)", i, pkg_id(pkg),
-              i3_is_marked(ictx, pkg));
-
-        //not needed any more?
-        if (pkg_isset_mf(ictx->processed, pkg, PKGMARK_BLACK))
-            scores[i] = -999;
-
-        trace(indent, "- %d. %s (pts=%d), marker: %d, multilib %d", i, pkg_id(pkg),scores[i], marker ? -1 : 0, poldek_conf_MULTILIB ? -1:0);
-
-        /* same prefix  */
-        if (marker && pkg_eq_name_prefix(marker, pkg)) {
-            scores[i] += 1;
-            trace(indent, "- %d. %s (pts=%d)", i, pkg_id(pkg),scores[i]);
-            if (pkg_cmp_evr(marker, pkg) == 0) /* same prefix && evr */
-                scores[i] += 2;
-
-            else if (pkg_cmp_ver(marker, pkg) == 0) /* same prefix && ver */
-                scores[i] += 1;
-            trace(indent, "- %d. %s (pts=%d)", i, pkg_id(pkg),scores[i]);
-        }
-
-        /* same color or arch */
-        if (marker && poldek_conf_MULTILIB) {
-            if (pkg_is_colored_like(pkg, marker))
-                scores[i] += 2;
-            else if (pkg_cmp_arch(pkg, marker) == 0)
-                scores[i] += 1;
-
-            // extra 100 points for arch compatible
-            if (/*pkg_is_kind_of(pkg, marker) && */pkg_is_arch_compat(pkg, marker))
-                        scores[i] += 100;
-            trace(indent, "- %d. %s (pts=%d)", i, pkg_id(pkg),scores[i]);
-        }
-
-        //DBGF_F("xxx %s %d %d\n", pkg_id(pkg), pkg_arch_score(pkg), arch_scores[i]);
-        scores[i] += satisfiability_score(marker, pkg);
-        trace(indent, "- %d. %s (pts=%d)", i, pkg_id(pkg),scores[i]);
+        if (min_arch_score > sc->arch)
+            min_arch_score = sc->arch;
 
         if (i > 0) {
             struct pkg *prev = n_array_nth(candidates, i - 1);
-            int rv;
-            if ((rv = pkg_cmp_name_evr(pkg, prev)) == 0)
-                nsame_differ_arch++;
-
-            trace(indent, "cmp.arch %s %s -> %d", pkg_id(pkg), pkg_id(prev), rv);
-
-            if ((rv = pkg_cmp_name(pkg, prev)) == 0)
-                nsame_differ_evr++;
-
-            trace(indent, "cmp.name %s %s -> %d", pkg_id(pkg), pkg_id(prev), rv);
-        }
-
-        if (i3_is_pkg_installed(ictx->ts, pkg, &cmprc) && cmprc > 0) {
-            if (!iset_has_kind_of_pkg(ictx->unset, pkg))
-                scores[i] += 5; /* already installed and upgradeable - sweet */
-        }
-
-        trace(indent, "  %d %d %d\n", i, scores[i], conflicts[i]);
-        if (pkg->cnflpkgs != NULL) {
-            for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
-                struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-                if (i3_is_marked(ictx, cpkg->pkg)) {
-                    conflicts[i] += 1;
-                    scores[i] -= 5;
-                    trace(indent, "conflicts:  %d %d %d %s\n", i, scores[i], conflicts[i], pkg_id(cpkg->pkg));
-                }
+            if (pkg_cmp_name(pkg, prev) == 0 && pkg_cmp_same_arch(pkg, prev)) {
+                nsame++;
+                trace(indent, "- same %s %s", pkg_id(pkg), pkg_id(prev));
             }
         }
-
-        if (min_nconflicts == -1)
-            min_nconflicts = conflicts[i];
-        else if (conflicts[i] < min_nconflicts)
-            min_nconflicts = conflicts[i];
-
-        if (i3_is_other_version_marked(ictx, pkg, NULL)) {
-            trace(indent + 4, "%s: other version is already marked, skipped",
-                  pkg_id(pkg));
-            scores[i] -= 10;
-        }
-        trace(indent, "%d %d %d\n", i, scores[i], conflicts[i]);
     }
 
-    /* marker noarch -> suggests architecture not */
-    if (poldek_conf_MULTILIB && marker && n_str_eq(pkg_arch(marker), "noarch"))
-        add_arch_scores(scores, candidates);
+    int best_score = scores[0].score;
+    int best_satscore = scores[0].satscore, worst_satscore = INT_MAX;
+    int best_conflicts = INT_MAX, worst_conflicts = 0;
+    int i_best = 0, i_best_sat = 0;
 
-    max_score = scores[0];
-    i_best = 0;
+    /* need second loop to apply min_arch_score bonus */
+    for (int i=0; i < npkgs; i++) {
+        struct candidate_score *sc = &scores[i];
 
-    for (i=0; i < n_array_size(candidates); i++) {
-        struct pkg *pkg = n_array_nth(candidates, i);
-        trace(indent, "- %d. %s -> score %d, conflicts %d", i, pkg_id(pkg),
-              scores[i], conflicts[i]);
+        /* bump best architecture */
+        if (sc->arch == min_arch_score)
+            sc->score += 1;
 
-        if (scores[i] > max_score) {
-            max_score = scores[i];
+        if (sc->score > best_score) {
+            best_score = sc->score;
             i_best = i;
         }
-    }
 
-    /* all the same package -> remove all candidates with differ version */
-    if (nsame_differ_evr == npkgs - 1 && nsame_differ_arch == 0) {
-        struct pkg *best = n_array_nth(candidates, i_best);
+        if (sc->satscore > best_satscore) {
+            best_satscore = sc->satscore;
+            i_best_sat = i;
+        } else if (sc->satscore < worst_satscore) {
+            worst_satscore = sc->satscore;
+        }
 
-        if (pkg_cmp_ver(best, marker) == 0) {
-            trace(indent, "- candidates are the same, just take %s", pkg_id(best));
-            while (n_array_size(candidates) > 0) {
-                struct pkg *pkg = n_array_pop(candidates);
-                if (pkg != best)
-                    pkg_free(pkg);
-            }
-            n_array_push(candidates, best);
-            i_best = 0;
+        if (sc->conflicts < best_conflicts) {
+            best_conflicts = sc->conflicts;
+        } else if (sc->conflicts > worst_conflicts) {
+            worst_conflicts = sc->conflicts;
         }
     }
+
+    trace(indent, "satscore: best=%d, worst=%d", best_satscore, worst_satscore);
+    trace(indent, "conflicts: best=%d, worst=%d", best_conflicts, worst_conflicts);
+    trace(indent, "best: i=%d, score=%d, sat=%d", i_best, best_score, scores[i_best].satscore);
+    trace(indent+1, "bestsat: i=%d, sat=%d",i_best_sat, best_satscore);
+
+    struct pkg *best = n_array_nth(candidates, i_best);
+
+    /* all are the same package with different version, so do not even ask user about */
+    if (nsame == npkgs && (pkg_cmp_ver(best, marker) == 0 || i_best == i_best_sat)) {
+        trace(indent, "- candidates are the same, just take best fit %s", pkg_id(best));
+        best = pkg_link(best);
+        n_array_clean(candidates);
+        n_array_push(candidates, best);
+        i_best = 0;
+    } else {
+        bool trim_satscore = false;
+        bool trim_conflicts = false;
+
+        /* are there are packages with reqs that cannot be met?  */
+        if (worst_satscore < 0 && best_satscore >= 0)
+            trim_satscore = true;
+
+        if (worst_conflicts > 0 && best_conflicts == 0)
+            trim_conflicts = true;
+
+        if (trim_satscore || trim_conflicts) {
+            tn_array *copy = n_array_clone(candidates);
+            i_best = -1;
+            for (int i = 0; i < npkgs; i++) {
+                struct candidate_score *sc = &scores[i];
+                if (trim_satscore && sc->satscore < 0) {
+                    trace(indent, "removed %s with negative satscore",
+                          i, pkg_id(n_array_nth(candidates, i)));
+                } else if (trim_conflicts && sc->conflicts > 0) {
+                    trace(indent, "removed %s with conflicts",
+                          i, pkg_id(n_array_nth(candidates, i)));
+                } else {
+                    struct pkg *pkg = n_array_nth(candidates, i);
+                    if (pkg == best)
+                        i_best = n_array_size(copy);
+                    n_array_push(copy, pkg_link(pkg));
+                }
+            }
+            n_assert(i_best >= 0);
+            n_array_clean(candidates);
+            n_array_concat_ex(candidates, copy, (tn_fn_dup)pkg_link);
+            n_array_free(copy);
+        }
+    }
+
+    struct pkg *xbest = n_array_nth(candidates, i_best);
+    n_assert(xbest == best);
 
     n_assert(i_best >= 0);
     n_assert(i_best < n_array_size(candidates));
 
-    //l_end:
-    trace(indent, "RET %d. %s\n", i_best,
-          pkg_id(n_array_nth(candidates, i_best)));
+    trace(indent, "RET %d. %s, candidates=%d\n", i_best, pkg_id(best),
+          n_array_size(candidates));
+
     return i_best;
 }
 
@@ -361,7 +438,8 @@ int i3_select_best_pkg(int indent, struct i3ctx *ictx,
     for (i=0; i < n_array_size(candidates); i++) {
         struct pkg *cand = n_array_nth(candidates, i);
 
-        if (!pkg_isset_mf(ictx->processed, cand, PKGMARK_BLACK) && pkg_is_colored_like(cand, marker)) {
+        if (!pkg_isset_mf(ictx->processed, cand, PKGMARK_BLACK) &&
+            pkg_is_colored_like(cand, marker)) {
             if (tmp == NULL)
                 tmp = n_array_clone(candidates);
 
@@ -455,8 +533,8 @@ int i3_find_req(int indent, struct i3ctx *ictx,
     if (!any_is_marked(ictx, suspkgs)) {
         int best_i;
         best_i = do_select_best_pkg(indent, ictx, pkg, suspkgs);
-
         *best_pkg = n_array_nth(suspkgs, best_i);
+
         if (i3_is_other_version_marked(ictx, *best_pkg, NULL)) {
             found = 0;
             *best_pkg = NULL;

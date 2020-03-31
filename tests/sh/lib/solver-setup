@@ -69,19 +69,20 @@ try_install_package() {
         shift
     fi
 
-    # run to check exit code
-    [ "$mode" != "rpm" ] && runpoldek $cmd
-
-    # run again to check installation results
     if is_verbose_mode; then
-        msg "# parsable"
-        #gdb --ex run --args
-        $POLDEK_INSTALL $cmd --test
+        if [ -n "$GDB" ]; then
+            gdb --ex run --args $POLDEK_INSTALL $cmd --test
+        else
+            $POLDEK_INSTALL $cmd --test
+        fi
     fi
 
-    typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
+    # run to check exit code
+    [ "$mode" != "rpm" ] && runpoldek $cmd
     [ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
 
+    # run again to check installation results
+    typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
     if [ -n "$expected" ]; then
         typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[ID]' | wc -l)
         typeset n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[ID] ($regexp)" | wc -l)
