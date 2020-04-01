@@ -398,10 +398,10 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                 struct candidate_score *sc = &scores[i];
                 if (trim_satscore && sc->satscore < 0) {
                     trace(indent, "removed %s with negative satscore",
-                          i, pkg_id(n_array_nth(candidates, i)));
+                          pkg_id(n_array_nth(candidates, i)));
                 } else if (trim_conflicts && sc->conflicts > 0) {
                     trace(indent, "removed %s with conflicts",
-                          i, pkg_id(n_array_nth(candidates, i)));
+                          pkg_id(n_array_nth(candidates, i)));
                 } else {
                     struct pkg *pkg = n_array_nth(candidates, i);
                     if (pkg == best)
