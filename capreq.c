@@ -36,6 +36,9 @@
 #define __NAALLOC    (1 << 7)
 #define REL_RT_FLAGS __NAALLOC
 
+// pure rel flags
+#define capreq_relflags(c) (c->cr_relflags & REL_ALL)
+
 static int capreq_store(struct capreq *cr, tn_buf *nbuf);
 static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitted);
 
@@ -44,7 +47,6 @@ static tn_strdalloc *capname_allocator = NULL;
 static void capname_allocator_free(void) {
     if (capname_allocator != NULL)
         n_strdalloc_free(capname_allocator);
-
 }
 
 const tn_lstr16 *capreq__alloc_name(const char *name, size_t len)
@@ -110,7 +112,7 @@ int capreq_cmp_evr(const struct capreq *cr1, const struct capreq *cr2)
     if ((rc = pkg_version_compare(r1, r2)))
         return rc;
 
-    return cr1->cr_relflags - cr2->cr_relflags;
+    return capreq_relflags(cr1) - capreq_relflags(cr2);
 }
 
 __inline__
@@ -138,8 +140,8 @@ int capreq_strcmp_evr(const struct capreq *cr1, const struct capreq *cr2)
     if ((rc = strcmp(capreq_rel(cr1), capreq_rel(cr2))))
         return rc;
 
-    return (cr1->cr_relflags + cr1->cr_flags) -
-        (cr2->cr_relflags + cr2->cr_flags);
+    return (capreq_relflags(cr1) + cr1->cr_flags) -
+        (capreq_relflags(cr2) + cr2->cr_flags);
 }
 
 __inline__
