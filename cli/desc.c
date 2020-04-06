@@ -36,7 +36,10 @@
 #include "capreq.h"
 #include "pkgset-req.h"         /* for struct reqpkg, TOFIX */
 #include "sigint/sigint.h"
+#include "poldek_intern.h"      /* for ctx->ts->cachedir, etc, TOFIX */
+#include "pm/pm.h"
 
+#include "cmd.h"
 #include "cli.h"
 #include "sigint/sigint.h"
 
@@ -788,7 +791,6 @@ static void list_files(struct cmdctx *cmdctx, tn_tuple *fl, int term_width)
     }
 }
 
-
 static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt, int term_width)
 {
     struct pkgflist *flist;
@@ -805,49 +807,46 @@ static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt, int 
 }
 
 static
-int is_upgradeable(struct pkg *pkg, tn_array *installed_pkgs, time_t *built)
+int is_older_installed(struct poldek_ctx *ctx, const struct pkg *pkg, time_t *built)
 {
-    int n;
+    struct pkgdb *db = pkgdb_open(ctx->pmctx, ctx->ts->rootdir, NULL, O_RDONLY, NULL);
 
-    n = n_array_bsearch_idx_ex(installed_pkgs, pkg, (tn_fn_cmp)pkg_ncmp_name);
-    if (n == -1)
+    if (db == NULL)
         return 0;
 
-    while (n < n_array_size(installed_pkgs)) {
-        struct pkg *p = n_array_nth(installed_pkgs, n++);
+    int installed = 0;
+    tn_array *dbpkgs = NULL;
 
-        if (pkg_is_kind_of(p, pkg) && pkg_cmp_evr(pkg, p) > 0) {
-            *built = p->btime;
-            return 1;
+    int n = pkgdb_search(db, &dbpkgs, PMTAG_NAME, pkg->name, NULL, PKG_LDNEVR);
+    if (n > 0) {
+        for (int i=0; i < n_array_size(dbpkgs); i++) {
+            struct pkg *dbpkg = n_array_nth(dbpkgs, i);
+            DBGF("i %s\n", pkg_id(dbpkg));
+            if (pkg_cmp_same_arch(pkg, dbpkg) && pkg_cmp_evr(pkg, dbpkg) > 0) {
+                DBGF("o %s\n", pkg_id(dbpkg));
+                *built = dbpkg->btime;
+                installed = 1;
+                break;
+            }
         }
-
-        if (*p->name != *pkg->name)
-            break;
+        n_array_free(dbpkgs);
     }
 
-    return 0;
-}
+    pkgdb_close(db);
 
+    return installed;
+}
 
 static void show_changelog(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguinf *pkgu)
 {
     const char *log = NULL;
 
-    if (pkg->itime == 0) { /* install time zero? -> not installed */
-        tn_array *installed;
+    if (pkg->itime == 0) { /* /all-avail package */
         time_t btime;
-
-        installed = poclidek_get_dent_packages(cmdctx->cctx, POCLIDEK_INSTALLEDDIR, 0);
-        if (installed == NULL)
-            goto l_end;
-
-        if (is_upgradeable(pkg, installed, &btime))
+        if (is_older_installed(cmdctx->cctx->ctx, pkg, &btime))
             log = pkguinf_get_changelog(pkgu, btime);
-
-        n_array_cfree(&installed);
     }
 
-l_end:
     if (log == NULL)
         log = pkguinf_get(pkgu, PKGUINF_CHANGELOG);
 
@@ -856,8 +855,6 @@ l_end:
         cmdctx_printf(cmdctx, "%s", log);
     }
 }
-
-
 
 static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int term_width)
 {

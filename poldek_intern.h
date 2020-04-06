@@ -76,6 +76,7 @@ void poldek__ts_dump_settings(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
 tn_array *poldek__ts_install_ordered_packages(const struct poldek_ts *ts);
 
+struct pkgmark_set;
 void poldek__ts_update_summary(struct poldek_ts *ts,
                                const char *prefix, const tn_array *pkgs,
                                unsigned pmsflags, const struct pkgmark_set *pms);
