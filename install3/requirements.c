@@ -378,7 +378,8 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
         goto l_end;
     }
 
-    if (pkg_requires_cap(sucpkg, req)) {
+    const struct capreq *sureq = pkg_requires_cap(sucpkg, req);
+    if (sureq) {
         message = "successor requires req too";
         install = 0;
 
@@ -394,7 +395,8 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
 
 l_end:
     if (!install) {
-        tracef(indent, "- %s: do not upgrading orphan%s%s%s", pkg_id(sucpkg),
+        tracef(indent, "- %s: do not upgrading orphan by %s (%s) %s%s%s", pkg_id(sucpkg),
+               capreq_stra(req), sureq ? capreq_stra(sureq) : "none",
                message ? " (":"", message ? message:"", message ? ")":"");
 
     } else {

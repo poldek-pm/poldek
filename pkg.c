@@ -789,8 +789,84 @@ int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
     return 1;
 }
 
+static
+struct capreq *find_req(const struct pkg *pkg, const struct capreq *cap)
+{
+    if (pkg->reqs == NULL)
+        return NULL;
+
+    n_array_sort(pkg->reqs);
+
+    int nth = n_array_bsearch_idx_ex(pkg->reqs, cap, (tn_fn_cmp)capreq_cmp_name);
+    if (nth == -1)
+        return NULL;
+
+    for (int i = nth; i < n_array_size(pkg->reqs); i++) {
+        struct capreq *req = n_array_nth(pkg->reqs, i);
+        DBGF("%d. %s\n", i, capreq_stra(req));
+    }
+
+    struct capreq *rreq = n_array_nth(pkg->reqs, nth);
+    for (int i = nth+1; i < n_array_size(pkg->reqs); i++) {
+        struct capreq *req = n_array_nth(pkg->reqs, i);
+
+        if (strcmp(capreq_name(req), capreq_name(cap)) != 0)
+            break;
+
+        int m = cap_match_req(req, rreq, 1);
+        DBGF("%s match %s => %d\n", capreq_stra(rreq), capreq_stra(req), m);
+
+        if (m) {
+            rreq = req;
+        }
+    }
+    DBGF("RET %s\n", capreq_stra(rreq));
+
+    return rreq;
+}
+
 const struct capreq *pkg_requires_cap(const struct pkg *pkg,
                                       const struct capreq *cap)
+{
+    DBGF("%s requires %s (reqs=%p, size=%d)?\n", pkg_id(pkg),
+         capreq_snprintf_s(cap), pkg->reqs,
+         pkg->reqs ? n_array_size(pkg->reqs) : 0);
+
+    if (pkg->reqs == NULL)
+        return NULL;
+
+    struct capreq *rreq = find_req(pkg, cap);
+    if (rreq == NULL) {
+        DBGF("%s not found => null\n", capreq_stra(cap));
+        return NULL;
+    }
+
+    if (!capreq_versioned(cap)) {
+        DBGF("%s is not versioned => %s\n", capreq_stra(cap), capreq_stra(rreq));
+        return rreq;
+    }
+
+    if (!capreq_versioned(rreq)) {
+        DBGF("%s: non-versioned req => null\n", capreq_stra(rreq));
+        return NULL;
+    }
+
+    n_assert(capreq_versioned(cap) && capreq_versioned(rreq));
+
+    int m = cap_match_req(cap, rreq, 1);
+    DBGF("cap_match_req(%s, %s) => %d\n", capreq_stra(cap), capreq_stra(rreq), m);
+    if (!m) {
+        DBGF("%s not matches %s => null\n", capreq_stra(cap), capreq_stra(rreq));
+        rreq = NULL;
+    }
+
+    DBGF("ret %s\n", rreq ? capreq_stra(rreq) : NULL);
+    return rreq;
+}
+
+#if 0
+const struct capreq *old_pkg_requires_cap(const struct pkg *pkg,
+                                          const struct capreq *cap)
 {
     struct capreq *rreq = NULL;
     int i;
@@ -837,8 +913,7 @@ const struct capreq *pkg_requires_cap(const struct pkg *pkg,
 
     return rreq;
 }
-
-
+#endif
 
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg)
 {

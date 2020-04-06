@@ -245,4 +245,134 @@ START_TEST (test_cap_match) {
 }
 END_TEST
 
-NTEST_RUNNER("EVR match", test_pkg_match, test_cap_match);
+static
+struct capreq *new_capreq(const char *name, const char *evr, unsigned relflags)
+{
+    return capreq_new_evr(NULL,
+                          name,
+                          evr ? n_strdup(evr) : NULL,
+                          evr ? relflags : 0,
+                          0);
+}
+
+struct pkg *make_req_pkg(const char *name, const char *evr, unsigned relflags)
+{
+    tn_array *reqs = capreq_arr_new(4);
+    struct capreq *req = new_capreq(name, evr, relflags);
+    n_array_push(reqs, req);
+
+    struct pkg *pkg = pkg_new("foo", 0, "1", "1", NULL, NULL);
+    pkg->reqs = reqs;
+    return pkg;
+}
+
+START_TEST (test_pkg_requires_cap) {
+    struct pkg *pkg;
+    const struct capreq *cap, *req;
+
+    struct pair {
+        char *name;
+        char *req_evr;
+        unsigned req_relflags;
+
+        char *cap_evr;
+        unsigned cap_relflags;
+
+        bool expected;
+    } pairs[] = {
+        { "r", NULL, 0,                 NULL, 0,             true  },
+        { "r", NULL, 0,                "1-1", REL_EQ,        false },
+        { "r", "1-1", REL_EQ,           NULL, 0,             true  },
+        { "r", "1-1", REL_EQ,          "1-1", REL_EQ,        true  },
+        { "r", "1-1", REL_EQ|REL_GT,   "1-1", REL_EQ,        true  },
+        { "r", "1-1", REL_GT,          "1-1", REL_EQ,        false },
+        { "r", "1-1", REL_GT,          "2-1", REL_EQ,        true  },
+
+        { NULL, NULL, 0, NULL, 0, 0 }
+    };
+
+    int i = 0;
+    while (pairs[i].name) {
+        struct pair pa = pairs[i];
+        pkg = make_req_pkg(pa.name, pa.req_evr, pa.req_relflags);
+        cap = new_capreq(pa.name, pa.cap_evr, pa.cap_relflags);
+
+        req = pkg_requires_cap(pkg, cap);
+        NTEST_LOG("pkg with req %s requires cap %s => %s, expected %s\n",
+                  capreq_stra((struct capreq*)n_array_nth(pkg->reqs, 0)),
+                  capreq_stra(cap),
+                  req ? capreq_stra(req) : NULL,
+                  pa.expected ? "non-null" : "null");
+        if (pa.expected)
+            expect_notnull(req);
+        else
+            expect_null(req);
+
+        i++;
+    }
+}
+END_TEST
+
+
+struct treq {
+    char *name;
+    char *evr;
+    unsigned relflags;
+};
+
+struct pkg *make_reqs_pkg(struct treq treqs[])
+{
+    tn_array *reqs = capreq_arr_new(4);
+    for (int i = 0; treqs[i].name != NULL; i++) {
+        struct treq t = treqs[i];
+        struct capreq *req = new_capreq(t.name, t.evr, t.relflags);
+        n_array_push(reqs, req);
+    }
+
+    struct pkg *pkg = pkg_new("foo", 0, "1", "1", NULL, NULL);
+    pkg->reqs = reqs;
+    return pkg;
+}
+
+START_TEST (test_pkg_requires_cap_redundant_reqs) {
+    struct treq treqs[] = {
+        { "r", "2-2", REL_EQ },
+        { "r",  NULL, 0 },
+        { "r", "1-1", REL_EQ | REL_GT },
+        { NULL, NULL, 0 }
+    };
+    struct pkg *pkg = make_reqs_pkg(treqs);
+
+    struct tcap {
+        char *name;
+        char *evr;
+        unsigned relflags;
+        const char *expected;
+    } caps[] = {
+        { "r",  NULL, 0,       "r = 2-2" },
+        { "r", "1-1", REL_EQ,  NULL },
+        { "r", "2-2", REL_EQ,  "r = 2-2" },
+        { NULL }
+    };
+
+    const struct capreq *cap, *req;
+
+    for (int i = 0; caps[i].name != NULL; i++) {
+        cap = new_capreq(caps[i].name, caps[i].evr, caps[i].relflags);
+        req = pkg_requires_cap(pkg, cap);
+        NTEST_LOG("requires cap %s => %s, expected %s\n",
+                  capreq_stra(cap), req ? capreq_stra(req) : NULL,
+                  caps[i].expected);
+
+        if (!caps[i].expected) {
+            expect_null(req);
+        } else {
+            expect_notnull(req);
+            expect_str(capreq_stra(req), caps[i].expected);
+        }
+    }
+}
+END_TEST
+
+NTEST_RUNNER("EVR match", test_pkg_match, test_cap_match,
+             test_pkg_requires_cap, test_pkg_requires_cap_redundant_reqs);

@@ -705,6 +705,18 @@ testChooseMoreAccurateOrphanReq() {
     try_install b "a-2-2,b-2-2" "a-1-1,b-1-1"
 }
 
+testRedundantSuccessorReqs() {
+    msgn "Preparing repositories..."
+    build_installed a 2-1
+    build_installed b 2-1  -r "'a = 2-1'" -r "'a >= 1-1'" -r "a" -r "'a > 1'"
+
+    build a 2-2
+    build b 2-2 -r "'a >= 1-1'" -r "'a = 2-2'"
+
+    msgn "Upgrade"
+    try_install a "a-2-2,b-2-2" "a-2-1,b-2-1"
+}
+
 testUninstall() {
     msgn "Preparing repositories..."
     build_installed a 1-1
