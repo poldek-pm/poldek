@@ -14,10 +14,10 @@ up() {
 }
 
 load() {
-  $POLDEK_UP --skip-installed -Osource="test,type=pndir $REPOURL" -n test \
+  $POLDEK_UP -q --skip-installed -Osource="test,type=pndir $REPOURL" -n test \
            --cmd 'desc -al *' | egrep -v '^Path:' > $TMPDIR/local-dump
 
-  $POLDEK_NOCONF --skip-installed --st pndir -s $REPO \
+  $POLDEK_NOCONF -q --skip-installed --st pndir -s $REPO \
            --cmd 'desc -al *' | egrep -v '^Path:' > $TMPDIR/remote-dump
 
   #less         $TMPDIR/remote-dump
