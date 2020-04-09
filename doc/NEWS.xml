@@ -1,5 +1,20 @@
 <?xml version="1.0"?>
 <news>
+  <release version="0.42.2" date="2020/04/09" focus="bugfix release">
+    <entry><para>
+      cli: avoid loading installed packages with desc --log/-L
+    </para></entry>
+    <entry><para>
+      solver: proper handling of redundant requirements
+    </para></entry>
+    <entry><para>
+      solver: improved package scoring (fixes https://bugs.launchpad.net/poldek/+bug/1722104)
+    </para></entry>
+    <entry><para>
+      cli: optimized rpmdb cache loading (avoid double creation of directory index)
+    </para></entry>
+  </release>
+
   <release version="0.42.1" date="2020/03/16" focus="bugfix release">
     <entry><para>
       unified '--clean' and '-n repo --clean' behavior. All --clean subvariants: --clean-pkg, --clean-whole/--cleana are obsoleted now.

@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 m4_define([poldek_major_version], [0])
 m4_define([poldek_minor_version], [42])
-m4_define([poldek_micro_version], [1])
+m4_define([poldek_micro_version], [2])
 m4_define([poldek_version],
 	  [poldek_major_version.poldek_minor_version.poldek_micro_version])
 
