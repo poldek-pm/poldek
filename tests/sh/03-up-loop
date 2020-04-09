@@ -41,6 +41,15 @@ testUpLoop()
     msg "\n## up"
     up
 
+    # init repo with some packages
+    n=0
+    for i in $SOURCE_REPO/*.rpm; do
+        bn=$(basename $i)
+        ln -sf $i $REPO/$bn
+        n=$(expr $n + 1)
+        [ $n -gt 4 ] && break
+    done
+
     nloop=0
     maxloop=${MAXLOOP:-"60"}
     force_msg "# testing in $maxloop iterations"

@@ -18,11 +18,11 @@ abort() {
 build_repo_packages() {
     local n=$(find $SOURCE_REPO/ -name \*.rpm | wc -l)
     if [ $n -lt 20 ]; then
-
         for i in a b c d e f g h i j k l m n o p r s t u w x y z; do
             rpm="$i-1-1.noarch.rpm"
             [ -f "$SOURCE_REPO/$rpm" ] && continue
             ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -v 1  >/dev/null 2>&1 || abort "build package $i failed"
+            ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i" -v 1  >/dev/null 2>&1 || abort "build package $i failed"
         done
     fi
 }
@@ -179,20 +179,27 @@ remove_package_from_repo() {
     msg "removed $(basename $package)"
 }
 
+random_package() {
+    perl -e '@s=(a..z); print $s[rand(@s)]'
+}
 
 random_change_repo() {
-    to_add=$(perl -e '@s=(a..z, A..Z, 0..9); print $s[rand(@s)]')
-    to_del=$(perl -e '@s=(a..z, A..Z, 0..9); print $s[rand(@s)]')
+    to_add=$(random_package)
+    to_del=$(random_package)
 
-    while [ "$to_add" == "$to_del" ]; do
-       to_del=$(perl -e '@s=(a..z, A..Z, 0..9); print $s[rand(@s)]')
+    while [ -f $REPO/$to_add-*.rpm ]; do
+        to_add=$(random_package)
     done
 
-    #echo "- adding $to_add\*, removing $to_del\*";
+    if [ ! -f $REPO/$to_del-*.rpm ]; then
+        to_del=$(random_package)
+    fi
+
+    [ "$to_add" == "$to_del" ] && to_del="none"
+    msg "adding $to_add, removing $to_del";
 
     nadded=0
     nremoved=0
-
     for i in $SOURCE_REPO/${to_add}*.rpm; do
         bn=$(basename $i);
 
@@ -212,10 +219,12 @@ random_change_repo() {
         rm -f $i
         nremoved=$(expr $nremoved + 1)
     done
-
-
     nchanges=$(expr $nadded + $nremoved)
     [ "$nchanges" = "0" ] && random_change_repo
+
+    # avoid empty repo
+    n=$(ls $REPO/*.rpm | wc -l)
+    [ "$n" = "0" ] && random_change_repo
 
     #msg "Added $nadded and $nremoved removed"
 }

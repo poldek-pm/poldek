@@ -37,7 +37,7 @@ for i in sh/[0-9][0-9]*; do
         [ -n "$suffixed" ] && suffix=" (compr=$c)"
 
 	nth=$(expr $nth + 1)
-	sh $i -n 4 >> $LOG
+	sh $i -n 6 >> $LOG
 	if [ $? -eq 0 ]; then
 	    nok=$(expr $nok + 1)
 	    echo "${GREEN}PASS: $i$suffix$NC"
