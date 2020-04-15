@@ -819,17 +819,20 @@ int is_older_installed(struct poldek_ctx *ctx, const struct pkg *pkg, time_t *bu
 
     int n = pkgdb_search(db, &dbpkgs, PMTAG_NAME, pkg->name, NULL, PKG_LDNEVR);
     if (n > 0) {
+        time_t max_btime = 0;
         for (int i=0; i < n_array_size(dbpkgs); i++) {
             struct pkg *dbpkg = n_array_nth(dbpkgs, i);
             DBGF("i %s\n", pkg_id(dbpkg));
             if (pkg_cmp_same_arch(pkg, dbpkg) && pkg_cmp_evr(pkg, dbpkg) > 0) {
                 DBGF("o %s\n", pkg_id(dbpkg));
-                *built = dbpkg->btime;
+                if ((time_t)dbpkg->btime > max_btime)
+                    max_btime = dbpkg->btime;
+
                 installed = 1;
-                break;
             }
         }
         n_array_free(dbpkgs);
+        *built = max_btime;
     }
 
     pkgdb_close(db);
