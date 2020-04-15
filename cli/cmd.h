@@ -47,6 +47,7 @@ struct cmdctx {
     struct cmd_pipe      *pipe_right;
 };
 
+#define cmdctx_is_piped(cmdctx) cmdctx->pipe_right != NULL
 
 EXPORT int cmdctx_addtoresult(struct cmdctx *cmdctx, struct pkg *pkg);
 EXPORT int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...);

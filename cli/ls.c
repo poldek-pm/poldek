@@ -40,14 +40,15 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs, int compare_ver,
 
 
 /* cmd_state->flags */
-#define OPT_LS_LONG            (1 << 0)
-#define OPT_LS_UPGRADEABLE     (1 << 1)
-#define OPT_LS_UPGRADEABLE_VER (1 << 2)
-#define OPT_LS_UPGRADEABLE_SEC (1 << 3)
-#define OPT_LS_INSTALLED       (1 << 4)
-#define OPT_LS_SORTBUILDTIME   (1 << 5)
-#define OPT_LS_SORTBUILDAY     (1 << 6)
-#define OPT_LS_SORTREV         (1 << 7)
+#define OPT_LS_LONG             (1 << 0)
+#define OPT_LS_UPGRADEABLE      (1 << 1)
+#define OPT_LS_UPGRADEABLE_VER  (1 << 2)
+#define OPT_LS_UPGRADEABLE_SEC  (1 << 3)
+#define OPT_LS__LONGLONG        (1 << 4) /* upgradeable version in separate column */
+#define OPT_LS_INSTALLED        (1 << 5)
+#define OPT_LS_SORTBUILDTIME    (1 << 6)
+#define OPT_LS_SORTBUILDAY      (1 << 7)
+#define OPT_LS_SORTREV          (1 << 8)
 
 #define OPT_LS_GROUP           (1 << 9)
 #define OPT_LS_SUMMARY         (1 << 10)
@@ -104,8 +105,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 logn(LOGERR, "%s", errmsg_excl);
                 return EINVAL;
             }
-
-            cmdctx->_flags |= OPT_LS_LONG;
+            if (cmdctx->_flags & OPT_LS_LONG)
+                cmdctx->_flags |= OPT_LS__LONGLONG;
+            else
+                cmdctx->_flags |= OPT_LS_LONG;
             break;
 
         case 'O':
@@ -273,7 +276,6 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
     for (i=0; i < n_array_size(ls_ents); i++) {
         struct pkg_dent  *ent;
         struct pkg       *rpkg = NULL;
-        char             evr[128];
         int              cmprc = 0;
 
         ent = n_array_nth(ls_ents, i);
@@ -328,8 +330,8 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
         if (!found)
             continue;
 
-        pkg_idevr_snprintf(evr, sizeof(evr), rpkg);
-        n_array_push(evrs, n_strdup(evr));
+
+        n_array_push(evrs, pkg_link(rpkg));
         n_array_push(upgradeable, pkg_dent_link(ent));
 
         if (sigint_reached())
@@ -375,7 +377,7 @@ static int ls(struct cmdctx *cmdctx)
         if (pwd && strcmp(pwd, POCLIDEK_INSTALLEDDIR) == 0)
             cmdctx->_flags |= OPT_LS_INSTALLED;
 
-        evrs = n_array_new(n_array_size(ls_ents), free, NULL);
+        evrs = n_array_new(n_array_size(ls_ents), (tn_fn_free)pkg_free, NULL);
         tmp = do_upgradeable(cmdctx, ls_ents, evrs);
         if (tmp == NULL)
             goto l_end;
@@ -407,8 +409,6 @@ static int ls(struct cmdctx *cmdctx)
     return rc;
 }
 
-
-
 static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     struct pkguinf  *pkgu;
@@ -424,6 +424,79 @@ static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
     pkguinf_free(pkgu);
 }
 
+static void snprintf_c(int color, char *buf, size_t size,
+                       const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    if (color)
+        poldek_term_vsnprintf_c(color, buf, size, fmt, args);
+    else
+        n_vsnprintf(buf, size, fmt, args);
+
+    va_end(args);
+}
+
+static int print_pair(int colored, char *line, size_t size,
+                      struct pkg *pkg, struct pkg *old_pkg)
+{
+    int eq_ver = n_str_eq(pkg->ver, old_pkg->ver);
+    int eq_rel = n_str_eq(pkg->rel, old_pkg->rel);
+    int eq_arch = n_str_eq(pkg_arch(pkg), pkg_arch(old_pkg));
+
+    char arch[256];
+    int n = 0;
+
+    int new_color = PRCOLOR_GREEN;
+    int old_color = PRCOLOR_RED;
+
+    if (!colored) {
+        new_color = 0;
+        old_color = 0;
+    }
+
+    if (eq_arch) {
+        snprintf(arch, sizeof(arch), "%s", pkg_arch(pkg));
+    } else {
+        char old[64], new[64];
+        snprintf_c(old_color, old, sizeof(old), "%s", pkg_arch(old_pkg));
+        snprintf_c(new_color, new, sizeof(new), "%s", pkg_arch(pkg));
+
+        n_snprintf(arch, sizeof(arch), "(%s => %s)", old, new);
+    }
+
+    if (eq_ver && eq_rel) {     /* reinstallation */
+        n = n_snprintf(line, size, "%s", pkg_id(pkg));
+
+    } else if (!eq_ver && eq_rel) {
+        char old[64], new[64];
+        snprintf_c(old_color, old, sizeof(old), "%s", old_pkg->ver);
+        snprintf_c(new_color, new, sizeof(new), "%s", pkg->ver);
+
+        n = n_snprintf(line, size, "%s-(%s => %s)-%s.%s",
+                   pkg->name, old, new, pkg->rel, arch);
+
+    } else if (eq_ver && !eq_rel) {
+        char old[64], new[64];
+        snprintf_c(old_color, old, sizeof(old), "%s", old_pkg->rel);
+        snprintf_c(new_color, new, sizeof(new), "%s", pkg->rel);
+
+        n = n_snprintf(line, size, "%s-%s.(%s => %s).%s",
+                   pkg->name, pkg->ver, old, new, arch);
+
+    } else if (!eq_ver && !eq_rel) {
+        char old[64], new[64];
+        snprintf_c(old_color, old, sizeof(old), "%s-%s", old_pkg->ver, old_pkg->rel);
+        snprintf_c(new_color, new, sizeof(new), "%s-%s", pkg->ver, pkg->rel);
+
+        n = n_snprintf(line, size, "%s-(%s => %s).%s",
+                       pkg->name, old, new, arch);
+    }
+
+    return n;
+}
+
 
 static
 int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
@@ -434,7 +507,6 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
     int                  term_width, term_width_div2;
     unsigned             flags;
 
-    //printf("do_ls %d\n", n_array_size(ents));
     if (n_array_size(ents) == 0)
         return 0;
 
@@ -452,12 +524,11 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 	    snprintf(hdr, sizeof(hdr), "%-*s%-*s\n",
 		term_width_div2 + term_width_div2/10, _("package"), (term_width/7), _("source rpm"));
     } else if (flags & OPT_LS_LONG) {
-        if ((flags & OPT_LS_UPGRADEABLE) == 0) {
-            snprintf(hdr, sizeof(hdr), "%-*s %-*s%*s\n",
-		     term_width_div2 + term_width_div2/10, _("package"),
-		     (term_width/7), _("build date"),
-		     (term_width/8) + 2, _("size"));
-
+        if ((flags & OPT_LS_UPGRADEABLE) == 0 || (flags & OPT_LS__LONGLONG) == 0) {
+            snprintf(hdr, sizeof(hdr), "%-*s %*s %*s\n",
+                     term_width_div2 + term_width_div2/10, _("package"),
+                     (term_width/7), _("build date"),
+                     (term_width/8) + 2, _("size"));
         } else {
             if (flags & OPT_LS_INSTALLED)
                 snprintf(hdr, sizeof(hdr), "%-*s%-*s %-*s%*s\n",
@@ -550,16 +621,49 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
                 cmdctx_printf(cmdctx, "%-*s %*s %*s\n",
 			      term_width_div2 + term_width_div2/10, pkg_name,
 			      (term_width/7), timbuf,
-			      (term_width/8), sizbuf);
+			      (term_width/8) + 2, sizbuf);
 
             } else if (evrs) {
-                const char *evr = n_array_nth(evrs, i);
-                cmdctx_printf(cmdctx, "%-*s%-*s %-*s %*s\n",
-			      (term_width/2) - 1, pkg_name,
-			      (term_width/6) - 1, evr,
-			      (term_width/6) - 1, timbuf,
-			      (term_width/6) - 1, sizbuf);
+                struct pkg *epkg = n_array_nth(evrs, i);
 
+                /* short, colored version by default */
+                if ((flags & OPT_LS__LONGLONG) == 0) {
+                    struct pkg *old, *new;
+                    int is_piped = cmdctx_is_piped(cmdctx);
+                    char pbuf[1024];
+                    int diff = 0;
+
+                    new = epkg;
+                    old = pkg;
+
+                    if (flags & OPT_LS_INSTALLED) {
+                        new = pkg;
+                        old = epkg;
+                    }
+
+                    if (is_piped) {
+                        print_pair(0, pbuf, sizeof(pbuf), old, new);
+
+                    } else {
+                        int plen = print_pair(0, pbuf, sizeof(pbuf), old, new);
+                        int clen = print_pair(1, pbuf, sizeof(pbuf), old, new);
+                        diff = clen - plen;
+                    }
+
+                    cmdctx_printf(cmdctx, "%-*s %*s %*s\n",
+                                  term_width_div2 + term_width_div2/10 + diff, pbuf,
+                                  (term_width/7), timbuf,
+                                  (term_width/8) + 2, sizbuf);
+
+                } else {
+                    char evr[256];
+                    pkg_idevr_snprintf(evr, sizeof(evr), epkg);
+                    cmdctx_printf(cmdctx, "%-*s%-*s %-*s %*s\n",
+                                  (term_width/2) - 1, pkg_name,
+                                  (term_width/6) - 1, evr,
+                                  (term_width/6) - 1, timbuf,
+                                  (term_width/6) - 1, sizbuf);
+                }
             }
             size += pkg->size/1024;
 
