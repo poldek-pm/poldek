@@ -58,7 +58,8 @@ libpoldek_la_SOURCES = \
 	  poldek_ts.c poldek_ts.h \
 	  ts_summary.c          \
 	  poldek_intern.h \
-	  pkg_ver_cmp.h
+	  pkg_ver_cmp.h \
+	  booldep_parse.c booldep_eval.c booldep.h
 
 pkgincludedir = $(includedir)/poldek
 

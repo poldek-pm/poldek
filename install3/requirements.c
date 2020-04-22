@@ -692,7 +692,6 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
         const char *reqstr = capreq_stra(req);
 
         //trace(indent, "%d) suggested %s", i, reqstr);
-
         if (skip_boolean_dep(req))
             continue;
 
@@ -787,8 +786,9 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
 {
     struct poldek_ts    *ts = ictx->ts;
     struct pkg          *pkg = i3pkg->pkg;
-    struct pkg_req_iter *it = NULL;
-    const struct capreq *req = NULL;
+    struct i3_req_iter  iter;
+    const struct i3req  *i3req = NULL;
+
     unsigned            itflags = PKG_ITER_REQIN;
     int                 nerrors = 0, backtrack = 0;
 
@@ -802,12 +802,12 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
 
     tracef(indent, "%s as NEW", pkg_id(pkg));
 
-    it = pkg_req_iter_new(pkg, itflags);
-    while ((req = pkg_req_iter_get(it))) {
+    i3_req_iter_init(&iter, indent, ictx, pkg, itflags);
+    while ((i3req = i3_req_iter_get(&iter))) {
         int rc;
+        const struct capreq *req = i3req->req;
 
-        if (skip_boolean_dep(req))
-            continue;
+        n_assert(!capreq_is_boolean(req));
 
         if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
             nerrors++;
@@ -818,8 +818,7 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
             }
         }
     }
-
-    pkg_req_iter_free(it);
+    i3_req_iter_destroy(&iter);
 
     /* check for Suggests after processing Requires. Prevent cases where poldek
        asks for suggested package, even though it is required. */
@@ -834,7 +833,7 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
 	    for (i = 0; i < n_array_size(suggests); i++) {
 		int rc;
 
-		req = n_array_nth(suggests, i);
+		const struct capreq *req = n_array_nth(suggests, i);
 
 		if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
         	    nerrors++;

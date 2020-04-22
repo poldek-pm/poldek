@@ -2,6 +2,15 @@
 # $Id$
 # Script for quick build fake foo-packages
 
+rpm5ize_booldep() {
+    local dep="$1"
+    if echo $dep | grep -qP '^\('; then
+        dep=$(echo $dep | tr ' ' '_')
+        dep="__${dep}"
+    fi
+    echo $dep
+}
+
 name=
 version=
 release="1"
@@ -12,6 +21,7 @@ obsoletes=
 conflicts=
 files=
 arch="noarch"
+sourcedir="rpm"
 rpmdir="repo"
 
 COMMAND="$0 $@"
@@ -33,8 +43,11 @@ while test $# -gt 0 ; do
             shift; provides="$provides ${1},"; shift ;;
 
         -r)
-            shift; requires="$requires ${1},"; shift ;;
-
+            shift
+            dep=$(rpm5ize_booldep "$1")
+            requires="$requires ${dep},"
+            shift
+            ;;
         -s)
             shift; suggests="$suggests ${1},"; shift ;;
 
@@ -103,9 +116,7 @@ echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
 [ -n "$conflicts" ] && echo "Conflicts: $conflicts" >> $SPEC
 
 echo -e "%description\nPackage build by $COMMAND\n" >> $SPEC
-
 echo -e "%description -l pl\n(pl)Package build by $COMMAND\n" >> $SPEC
-
 echo -e "%description -l de\n(de)Package build by $COMMAND\n" >> $SPEC
 
 echo -e "%prep\n%pre\n" >> $SPEC
