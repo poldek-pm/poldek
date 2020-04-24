@@ -18,11 +18,12 @@ abort() {
 build_repo_packages() {
     local n=$(find $SOURCE_REPO/ -name \*.rpm | wc -l)
     if [ $n -lt 20 ]; then
-        for i in a b c d e f g h i j k l m n o p r s t u w x y z; do
+        for i in a b c d e f g h i j k l m n o p r s t u w x y v z; do
             rpm="$i-1-1.noarch.rpm"
             [ -f "$SOURCE_REPO/$rpm" ] && continue
             ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -v 1  >/dev/null 2>&1 || abort "build package $i failed"
-            ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i" -v 1  >/dev/null 2>&1 || abort "build package $i failed"
+            ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i" -v 1  >/dev/null 2>&1 || abort "build package $i$i failed"
+            ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i$i" -v 1  >/dev/null 2>&1 || abort "build package $i$i$i failed"
         done
     fi
 }

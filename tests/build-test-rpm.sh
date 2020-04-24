@@ -142,6 +142,12 @@ if [ -n "$files" ]; then
 fi
 
 echo -e "%clean\nrm -rf \$RPM_BUILD_ROOT" >> $SPEC
+
+echo "%changelog" >> $SPEC
+echo -e "* Fri Apr 24 2020 Foo <foo@example.com>\n- $name package changelog entry\n" >> $SPEC
+echo -e "* Thu Apr 23 2020 Foo <foo@example.com>\n- $name package changelog second entry\n" >> $SPEC
+echo -e "* Wed Apr 22 2020 Foo <foo@example.com>\n- $name package changelog third entry\n" >> $SPEC
+
 [ ! -d "$rpmdir" ] && rpmdir="$TMPDIR"
 
 rpmbuild --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC

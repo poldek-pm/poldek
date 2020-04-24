@@ -20,11 +20,29 @@ load() {
   $POLDEK_NOCONF -q --skip-installed --st pndir -s $REPO \
            --cmd 'desc -al *' | egrep -v '^Path:' > $TMPDIR/remote-dump
 
-  #less         $TMPDIR/remote-dump
-  #ls -l $TMPDIR/remote-dump $TMPDIR/local-dump
+
+  # comare local and remote index contents
   diff -q $TMPDIR/remote-dump $TMPDIR/local-dump
-  ec=$?
-  [ $ec -ne 0 ] && echo "repo=$REPO" && ls -l $TMPDIR/remote-dump $TMPDIR/local-dump
+  local ec=$?
+  if [ $ec -ne 0 ]; then
+      echo "repo=$REPO" && ls -l $TMPDIR/remote-dump $TMPDIR/local-dump
+      return $ec
+  fi
+
+  # check if changelogs are available (related to github#6)
+  packages=$($POLDEK_UP -q --skip-installed -Osource="test,type=pndir $REPOURL" -n test \
+                            --cmd ls --qf '%{NAME}\n')
+  $POLDEK_UP -q --skip-installed -Osource="test,type=pndir $REPOURL" -n test --cmd 'desc -L *' > $TMPDIR/changelogs
+  for p in $packages; do
+      grep -qP "^\- $p package changelog entry" $TMPDIR/changelogs
+      ec=$?
+      if [ $ec -ne 0 ]; then
+          msgn "$POLDEK_UP -q --skip-installed -Osource='test,type=pndir $REPOURL' -n test --cmd desc -L $p"
+          fail "$p: missing changelog"
+          break
+      fi
+  done
+
   return $ec
 }
 
