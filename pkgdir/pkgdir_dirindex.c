@@ -481,7 +481,8 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
 
         DBGF("%s => %s\n", key, val);
 
-        n_hash_hinsert(keymap, val, vlen, hash, id);
+        /* replace duplicates as rpm allows to install multiple instances of GPG keys */
+        n_hash_hreplace(keymap, val, vlen, hash, id);
 
         if (vlen < vlen_max)   /* to avoid needless tndb_it_rget()'s reallocs */
             vlen = vlen_max;
