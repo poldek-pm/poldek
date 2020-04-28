@@ -202,7 +202,7 @@ int print_pair(char *line, size_t size,
         poldek_term_snprintf_c(old_color, old, sizeof(old), "%s", old_pkg->rel);
         poldek_term_snprintf_c(new_color, new, sizeof(new), "%s", pkg->rel);
 
-        n = n_snprintf(line, size, "%s-%s.(%s => %s).%s",
+        n = n_snprintf(line, size, "%s-%s-(%s => %s).%s",
                    pkg->name, pkg->ver, old, new, arch);
 
     } else if (!eq_ver && !eq_rel) {
