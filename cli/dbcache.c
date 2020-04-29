@@ -195,7 +195,8 @@ static void timethis_end(int verbose_level, void *tvp, const char *prefix)
         tv.tv_usec = 1000000 + tv.tv_usec;
     }
 
-    msgn(verbose_level, "time [%s] %ld.%ld\n", prefix, tv.tv_sec, tv.tv_usec);
+    msgn(verbose_level, "time [%s] %ld.%ld\n", prefix,
+         (unsigned long)tv.tv_sec, (unsigned long) tv.tv_usec);
     free(tvp);
 }
 
@@ -291,10 +292,13 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     }
 
     DBGF("path = %s, %s, %ld, %ld, %ld\n", path, pkgdir->idxpath,
-         mtime_rpmdb, pkgdir->ts, mtime_dbcache);
+         (unsigned long)mtime_rpmdb,
+         (unsigned long)pkgdir->ts,
+         (unsigned long)mtime_dbcache);
     n_assert(*path != '\0');
     n_assert(strlen(path) > 10);
-    DBGF("%s %s, %ld %ld\n", ts->cachedir, path, mtime_rpmdb, cctx->ts_dbpkgdir);
+    DBGF("%s %s, %ld %ld\n", ts->cachedir, path,
+         (unsigned long)mtime_rpmdb, (unsigned long)cctx->ts_dbpkgdir);
 
     return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                           PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
