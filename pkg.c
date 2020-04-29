@@ -74,8 +74,11 @@ int pkgmod_register_arch(const char *arch)
 
         an_arch->score = pm_architecture_score(arch);
         n_assert(an_arch->score >= 0);
-        if (!an_arch->score)    /* make it most less preferred */
-            an_arch->score = INT_MAX - 1;
+        if (an_arch->score == 0) {
+            /* make it most less preferred, but differ from other zero-scored
+               archs (i686 and x86_64 on x32 case) */
+            an_arch->score = INT_MAX - n_array_size(architecture_a) - 1;
+        }
         DBGF("register %s with score %d\n", arch, an_arch->score);
 
         memcpy(an_arch->arch, arch, len + 1);

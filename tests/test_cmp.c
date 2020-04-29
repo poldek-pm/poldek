@@ -46,6 +46,33 @@ START_TEST (test_arch_cmp) {
 }
 END_TEST
 
+START_TEST (test_multi_arch_cmp) {
+    struct utsname un;
+    if (!arch_testable(&un))
+        return;
+
+    struct poldek_ctx *ctx = setup();
+    struct pkg *pp[4];
+
+    pp[0] = pkg_new("a", 0, "1", "1", "i686", "linux");
+    pp[1] = pkg_new("a", 0, "1", "1", "x86_64", "linux");
+    pp[2] = pkg_new("a", 0, "1", "1", "x32", "linux");
+    pp[3] = pkg_new("a", 0, "1", "1", "xfoo", "linux");
+
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            if (i != j) {
+                fail_if(pkg_cmp_arch(pp[i], pp[j]) == 0,
+                        "expected %s != %s", pkg_id(pp[i]), pkg_id(pp[j]));
+            }
+        }
+    }
+
+    teardown(ctx);
+}
+END_TEST
+
+
 START_TEST (test_arch_sort) {
     struct utsname un;
     if (!arch_testable(&un))
@@ -84,4 +111,4 @@ START_TEST (test_arch_sort) {
 }
 END_TEST
 
-NTEST_RUNNER("cmp", test_arch_cmp, test_arch_sort);
+NTEST_RUNNER("cmp", test_arch_cmp, test_multi_arch_cmp, test_arch_sort);
