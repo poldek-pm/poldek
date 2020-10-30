@@ -49,18 +49,15 @@ static void parse(const char *evrstr, EVR_t evr)
 #endif
 #endif
 
-#ifdef HAVE_RPMORG
-int main(void)
-{
-    printf("not implemented");
-    exit(EXIT_SUCCESS);
-}
-#else
 int main(int argc, char *argv[])
 {
     int cmprc;
     const char *v1, *v2;
+#ifdef HAVE_RPMORG
+    rpmver evr1, evr2;
+#else
     EVR_t evr1, evr2;
+#endif
 
     if (argc < 3) {
         printf("Usage: rpmvercmp VERSION1 VERSION2\n");
@@ -81,6 +78,12 @@ int main(int argc, char *argv[])
 	exit(2);
     }
 
+#ifdef HAVE_RPMORG
+    evr1 = rpmverParse(v1);
+    evr2 = rpmverParse(v2);
+
+    cmprc = rpmverCmp(evr1, evr2);
+#else
     evr1 = malloc(sizeof(struct EVR_s));
     evr2 = malloc(sizeof(struct EVR_s));
 
@@ -93,17 +96,22 @@ int main(int argc, char *argv[])
 #endif
 
     cmprc = rpmEVRcompare(evr1, evr2);
+#endif
 
     printf("%s %s %s\n", v1, cmprc == 0 ?  "==" : cmprc > 0 ? ">" : "<", v2);
 
     if (cmprc < 0)
         cmprc = 2;
 
+#ifdef HAVE_RPMORG
+    rpmverFree(evr1);
+    rpmverFree(evr2);
+#else
     free((char *)evr1->str);
     free((char *)evr2->str);
     free(evr1);
     free(evr2);
+#endif
 
     exit(cmprc);
 }
-#endif
