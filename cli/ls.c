@@ -368,9 +368,6 @@ static int ls(struct cmdctx *cmdctx)
         goto l_end;
     }
 
-    if ((cmpf = select_cmpf(cmdctx->_flags)))
-         n_array_sort_ex(ls_ents, cmpf);
-
     if (cmdctx->_flags & OPT_LS_UPGRADEABLE) {
         tn_array *tmp;
 
@@ -386,6 +383,9 @@ static int ls(struct cmdctx *cmdctx)
     }
 
     if (n_array_size(ls_ents)) {
+        if ((cmpf = select_cmpf(cmdctx->_flags)))
+            n_array_sort_ex(ls_ents, cmpf);
+
         rc = do_ls(ls_ents, cmdctx, evrs);
 
         if (cmpf)
