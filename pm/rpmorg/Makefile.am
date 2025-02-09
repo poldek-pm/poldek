@@ -8,7 +8,6 @@ noinst_LTLIBRARIES = libpm_rpm.la
 libpm_rpm_la_SOURCES =			\
 	mod.c				\
 	rpmdb_it.c			\
-	rpmdb_depdirs.c			\
 	install.c			\
 	signature.c			\
 	misc.c				\

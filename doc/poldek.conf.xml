@@ -441,7 +441,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
   <option name="dependency solver" type="integer" default="3" hidden="yes">
   </option>
 
-  <option name="auto directory dependencies" type="boolean3" default="auto" op="AUTODIRDEP">
+  <option name="auto directory dependencies" type="boolean3" default="no" op="AUTODIRDEP">
     <description>
     RPM 4.4.6 introduces auto dependencies based on package directories.
     Option controls this feature.
