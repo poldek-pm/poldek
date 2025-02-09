@@ -148,6 +148,15 @@ testRedundantRequirement() {
   try_install_a "a,b-1"
 }
 
+# #17
+testPrePostRequirements() {
+  build a -rpre "b" -rpost "c"
+  build b
+  build c
+  try_install_a "a,b,c"
+}
+
+
 # if packages "bar" and "baz" have Obsoletes: foo, Provides: foo, Conflicts: foo,
 # then librpm knows that you can only have "bar" or "baz" but not both
 testRpmOrgMutualExclusive() {
@@ -748,6 +757,7 @@ testUninstallGreedy() {
     msgn "-gg"
     try_uninstall_package "dir" "-evtgg" a "a-1-1,a-devel-1-1,b-1-1,c-1-1"
 }
+
 
 
 . ./sh/lib/shunit2
