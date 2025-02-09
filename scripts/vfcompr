@@ -11,7 +11,7 @@ compr() {
     typeset dest=$2
 
     cmd="bzip2 --stdout ${src}"
-    if echo ${dest} | egrep ".gz" >/dev/null; then
+    if echo ${dest} | grep -E ".gz" >/dev/null; then
         cmd="gzip -9nf --stdout ${src}"
     fi
     echo "$cmd > $dest"
@@ -34,7 +34,7 @@ uncompr() {
     fi
 
     cmd="bunzip2 --keep --stdout ${src}"
-    if echo ${src} | egrep ".gz" >/dev/null; then
+    if echo ${src} | grep -E ".gz" >/dev/null; then
         cmd="gunzip --stdout ${src}"
     fi
     rm -f "$dest"

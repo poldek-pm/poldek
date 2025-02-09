@@ -56,7 +56,7 @@ RUNTEST_ONLY=
 while test $# -gt 0 ; do
     case "${1}" in
         -l)
-           egrep -B 1 ^test $0 | sed 's|()||g;s|{||g'; exit; shift ;;
+           grep -E -B 1 ^test $0 | sed 's|()||g;s|{||g'; exit; shift ;;
 
         --source-repo)
             shift; SOURCE_REPO="${1}"; shift ;;

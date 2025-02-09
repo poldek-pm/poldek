@@ -8,7 +8,7 @@ build_package() {
     [ $# -gt 0 ] && version="$1";
     #echo "v $version"
     if [ -n "$version" ]; then
-        if echo "$version" | egrep -qv -- '^-'; then
+        if echo "$version" | grep -E -qv -- '^-'; then
             shift
         else
             version="1-1"
@@ -85,17 +85,17 @@ try_install_package() {
     fi
 
     # run again to check installation results
-    typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
+    typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | grep -E "^%[IDR]")
     if [ -n "$expected" ]; then
-        typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[ID]' | wc -l)
-        typeset n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[ID] ($regexp)" | wc -l)
+        typeset n_all=$(echo $out | sed 's|%|\n%|g' | grep -E '^%[ID]' | wc -l)
+        typeset n=$(echo $out | sed 's|%|\n%|g' | grep -E "^%[ID] ($regexp)" | wc -l)
         assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
         assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
     fi
 
     if [ -n "$rm_expected" ]; then
-        typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%R' | wc -l)
-        typeset n=$(echo  $out | sed 's|%|\n%|g' | egrep "^%R ($rm_regexp)" | wc -l)
+        typeset n_all=$(echo $out | sed 's|%|\n%|g' | grep -E '^%R' | wc -l)
+        typeset n=$(echo  $out | sed 's|%|\n%|g' | grep -E "^%R ($rm_regexp)" | wc -l)
         assertEquals "unexpected ($n_all) number of packages removed (expected $n)" "$n_all" "$n"
         assertEquals "not all or non expected packages removed (expected $rm_expected)" "$n" "$rm_n_expected"
     fi
@@ -127,12 +127,12 @@ try_uninstall_package() {
         $POLDEK_UNINSTALL $cmd --test
     fi
 
-    typeset out=$($POLDEK_UNINSTALL $cmd --parsable-tr-summary | egrep "^%[DR]")
+    typeset out=$($POLDEK_UNINSTALL $cmd --parsable-tr-summary | grep -E "^%[DR]")
     [ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
 
     if [ -n "$expected" ]; then
-        typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[RD]' | wc -l)
-        typeset n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[RD] ($regexp)" | wc -l)
+        typeset n_all=$(echo $out | sed 's|%|\n%|g' | grep -E '^%[RD]' | wc -l)
+        typeset n=$(echo $out | sed 's|%|\n%|g' | grep -E "^%[RD] ($regexp)" | wc -l)
         assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
         assertEquals "not all or non expected packages uninstalled (expected $expected)" "$n" "$n_expected"
     fi

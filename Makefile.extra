@@ -72,7 +72,7 @@ arch : mclean backup
 
 POTFILES_in:
 	-rm -f poldek-git*
-	-find . -type f -name \*.c | egrep -v '(poldek-.*/|Cellar/|intl/|trurlib/|tndb/|python/|tests/|conf_sections.c)'  | sed 's|^\./||' | LC_ALL=C sort > po/POTFILES.in
+	-find . -type f -name \*.c | grep -E -v '(poldek-.*/|Cellar/|intl/|trurlib/|tndb/|python/|tests/|conf_sections.c)'  | sed 's|^\./||' | LC_ALL=C sort > po/POTFILES.in
 
 misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z

@@ -15,10 +15,10 @@ up() {
 
 load() {
   $POLDEK_UP -q --skip-installed -Osource="test,type=pndir $REPOURL" -n test \
-           --cmd 'desc -al *' | egrep -v '^Path:' > $TMPDIR/local-dump
+           --cmd 'desc -al *' | grep -E -v '^Path:' > $TMPDIR/local-dump
 
   $POLDEK_NOCONF -q --skip-installed --st pndir -s $REPO \
-           --cmd 'desc -al *' | egrep -v '^Path:' > $TMPDIR/remote-dump
+           --cmd 'desc -al *' | grep -E -v '^Path:' > $TMPDIR/remote-dump
 
 
   # comare local and remote index contents
