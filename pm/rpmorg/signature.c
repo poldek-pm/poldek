@@ -177,6 +177,11 @@ static int do_verify_signature(const char *path, unsigned flags)
     if (fdt != NULL && Ferror(fdt) == 0) {
         ts = rpmtsCreate();
         rpmtsSetVfyFlags(ts, vfyflags);
+	if ((flags & (PKGVERIFY_PGP | PKGVERIFY_GPG)) == 0) {
+	    int vfylevel = rpmtsVfyLevel(ts);
+	    vfylevel &= ~RPMSIG_SIGNATURE_TYPE;
+	    rpmtsSetVfyLevel(ts, vfylevel);
+	}
         rc = rpmVerifySignatures(&qva, ts, fdt, n_basenam(path));
         rpmtsFree(ts);
 
