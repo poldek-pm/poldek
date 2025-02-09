@@ -14,8 +14,6 @@
 # include "config.h"
 #endif
 
-#define ENABLE_TRACE 0
-
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>          /* for PATH_MAX */

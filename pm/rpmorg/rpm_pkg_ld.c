@@ -217,10 +217,10 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
             goto l_end;
 
         } else {
-            msg(5, "%s%s: %s\n",
+            DBGF("%s%s: %s, %s\n",
                 cr->cr_flags & CAPREQ_PREREQ ?
                 (pmcap_tag == PMCAP_OBSL ? "obsl" : "pre" ):"",
-                tgs->label, capreq_snprintf_s(cr));
+                tgs->label, capreq_snprintf_s(cr), name);
             n_array_push(arr, cr);
         }
     }

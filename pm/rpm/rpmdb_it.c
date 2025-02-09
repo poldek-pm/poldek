@@ -14,7 +14,6 @@
 # include "config.h"
 #endif
 
-#define ENABLE_TRACE 0
 #include "i18n.h"
 #include "misc.h"
 #include "log.h"

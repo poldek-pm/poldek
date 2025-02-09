@@ -22,7 +22,6 @@
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
 
-#define ENABLE_TRACE 0
 #include "compiler.h"
 #include "i18n.h"
 #include "log.h"
@@ -360,9 +359,9 @@ int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2)
 
 #if ENABLE_TRACE
     if (pkg_cmp_name_evr_rev(p1, p2) == 0)
-        logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
+        logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s",
              pkg_snprintf_s(p1), pkg_arch(p1), pkg_arch_score(p1),
-             pkg_arch(p2), pkg_archscore(p2));
+             pkg_arch(p2));
 #endif
     rc = pkg_cmp_name_evr_rev(p1, p2);
 

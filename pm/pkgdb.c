@@ -409,6 +409,7 @@ static int header_cap_match_req(struct pm_ctx *ctx, void *hdr,
     struct pkg  pkg;
     int         rc;
 
+    DBGF("header_cap_match_req\n");
     rc = 0;
     memset(&pkg, 0, sizeof(pkg));
     pkg.caps = capreq_arr_new(0);
@@ -456,7 +457,7 @@ int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, unsigned ma_flag
     int is_file;
 
     is_file = (*capreq_name(req) == '/' ? 1 : 0);
-    //tracef(0, "%s %d", capreq_snprintf_s(req), n_array_size(exclude));
+    tracef(0, "%s %d", capreq_snprintf_s(req), n_array_size(exclude));
 
     if (!is_file && db_match(db, PMTAG_NAME, req, exclude, ma_flags))
         return 1;

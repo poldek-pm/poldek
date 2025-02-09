@@ -27,7 +27,6 @@
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
 
-#define ENABLE_TRACE 0
 #include "compiler.h"
 #include "i18n.h"
 #include "log.h"
@@ -683,7 +682,7 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
             }
 
             if (cap_xmatch_req(cap, req, flags)) {
-                DBGF("  cap[%d] %s -> match\n", i, capreq_snprintf_s(cap));
+                DBGF("  cap[%d] %s -> match (pkg: %s)\n", i, capreq_snprintf_s(cap), pkg->name);
                 return 1;
             }
 
