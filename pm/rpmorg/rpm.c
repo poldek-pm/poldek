@@ -286,6 +286,10 @@ time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
 
     pm_rpm = pm_rpm;
 
+    char *backend = rpmExpand("%{_db_backend}", NULL);
+    if (backend != NULL && strncmp(backend, "sqlite", 6) == 0) {
+        file = "rpmdb.sqlite";
+    }
     snprintf(path, sizeof(path), "%s/%s", dbpath, file);
 
     if (stat(path, &st) != 0)
