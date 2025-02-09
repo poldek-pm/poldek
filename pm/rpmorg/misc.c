@@ -79,6 +79,9 @@ static int get_rpm_internal_caps(tn_array *caps)
 #ifdef HAVE_RPMDSUNAME
         (rpmcap_fn)rpmdsUname,
 #endif
+#ifdef HAVE_RPMDSCPUINFO
+        (rpmcap_fn)rpmdsCpuinfo,
+#endif
         NULL,
     };
 
