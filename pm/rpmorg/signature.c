@@ -101,18 +101,18 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
             case RPMSIGTAG_RSA:
             case RPMSIGTAG_PGP5:	/* XXX legacy */
             case RPMSIGTAG_PGP:
-                flags |= VRFYSIG_SIGNPGP;
+                flags |= PKGVERIFY_PGP;
                 break;
 
             case RPMSIGTAG_DSA:
             case RPMSIGTAG_GPG:
-                flags |= VRFYSIG_SIGNGPG;
+                flags |= PKGVERIFY_GPG;
                 break;
 
             case RPMSIGTAG_LEMD5_2:
             case RPMSIGTAG_LEMD5_1:
             case RPMSIGTAG_MD5:
-                flags |= VRFYSIG_DGST;
+                flags |= PKGVERIFY_MD;
                 break;
 
             default:
@@ -137,7 +137,7 @@ static int do_verify_signature(const char *path, unsigned flags)
     int                       rc;
 
 
-    n_assert(flags & (VRFYSIG_DGST | VRFYSIG_SIGN));
+    n_assert(flags & (PKGVERIFY_MD | PKGVERIFY_GPG | PKGVERIFY_PGP));
 
     if (!rpm_signatures(path, &presented_signs, NULL))
         return 0;
@@ -146,13 +146,13 @@ static int do_verify_signature(const char *path, unsigned flags)
         char signam[255];
         int n = 0;
 
-        if (flags & VRFYSIG_DGST)
+        if (flags & PKGVERIFY_MD)
             n += n_snprintf(&signam[n], sizeof(signam) - n, "digest/");
 
-        if (flags & VRFYSIG_SIGNGPG)
+        if (flags & PKGVERIFY_GPG)
             n += n_snprintf(&signam[n], sizeof(signam) - n, "gpg/");
 
-        if (flags & VRFYSIG_SIGNPGP)
+        if (flags & PKGVERIFY_PGP)
             n += n_snprintf(&signam[n], sizeof(signam) - n, "pgp/");
 
         n_assert(n > 0);
@@ -161,29 +161,27 @@ static int do_verify_signature(const char *path, unsigned flags)
              signam);
         return 0;
     }
-    unsigned qva_flags = RPMVSF_DEFAULT;
+    unsigned vfyflags = RPMVSF_DEFAULT;
 
-    if ((flags & (VRFYSIG_SIGNPGP | VRFYSIG_SIGNGPG)) == 0) {
-        qva_flags |= RPMVSF_MASK_NOSIGNATURES;
+    if ((flags & (PKGVERIFY_PGP | PKGVERIFY_GPG)) == 0) {
+        vfyflags |= RPMVSF_MASK_NOSIGNATURES;
     }
 
     // always check digests - without them rpmVerifySignature returns error
-    //if ((flags & VRFYSIG_DGST) == 0)
-    //   qva_flags |= RPMVSF_MASK_NODIGESTS;
-
-    memset(&qva, '\0', sizeof(qva));
-    qva.qva_flags = qva_flags;
+    //if ((flags & PKGVERIFY_MD) == 0)
+    //   vfyflags |= RPMVSF_MASK_NODIGESTS;
 
     rc = -1;
     fdt = Fopen(path, "r.ufdio");
 
     if (fdt != NULL && Ferror(fdt) == 0) {
         ts = rpmtsCreate();
+        rpmtsSetVfyFlags(ts, vfyflags);
         rc = rpmVerifySignatures(&qva, ts, fdt, n_basenam(path));
         rpmtsFree(ts);
 
         DBGF("rpmVerifySignatures[md=%d, sign=%d] %s %s\n",
-             flags & VRFYSIG_DGST ? 1:0, flags & VRFYSIG_SIGN ? 1:0,
+             flags & PKGVERIFY_MD ? 1:0, flags & (PKGVERIFY_GPG | PKGVERIFY_PGP) ? 1:0,
              n_basenam(path), rc == 0 ? "OK" : "BAD");
     }
 
@@ -196,24 +194,12 @@ static int do_verify_signature(const char *path, unsigned flags)
 static
 int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
 {
-    unsigned rpmflags = 0;
-
-    pm_rpm = pm_rpm;
     if (access(path, R_OK) != 0) {
         logn(LOGERR, "%s: verify signature failed: %m", path);
         return 0;
     }
 
-    if (flags & PKGVERIFY_GPG)
-        rpmflags |= VRFYSIG_SIGNGPG;
-
-    if (flags & PKGVERIFY_PGP)
-        rpmflags |= VRFYSIG_SIGNPGP;
-
-    if (flags & PKGVERIFY_MD)
-        rpmflags |= VRFYSIG_DGST;
-
-    return do_verify_signature(path, rpmflags);
+    return do_verify_signature(path, flags);
 }
 
 extern int pm_rpm_verbose;

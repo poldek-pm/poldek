@@ -69,10 +69,6 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
                               struct poldek_ts *ts);
 
 #include <rpm/rpmcli.h>
-#define VRFYSIG_DGST     VERIFY_DIGEST
-#define VRFYSIG_SIGN     VERIFY_SIGNATURE
-#define VRFYSIG_SIGNGPG  VERIFY_SIGNATURE
-#define VRFYSIG_SIGNPGP  VERIFY_SIGNATURE
 
 int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags);
 
