@@ -145,7 +145,7 @@ testRedundantRequirement() {
   build a -r "b" -r "'b = 1'"
   build b 2-1
   build b 1-1
-  try_install_a "a,b\-1"
+  try_install_a "a,b-1"
 }
 
 # if packages "bar" and "baz" have Obsoletes: foo, Provides: foo, Conflicts: foo,
@@ -291,21 +291,24 @@ testUpgradeMultilib() {
     rm -f $DESTINATION_REPO/a-devel*i686* # remove duplicated uncolored package
 
     msgn "Multilib upgrades"
+    msgn " colored package"
     try_install_with_ask_allowed a-2-2.x86_64 "a-2-2.x86_64" "a-1-1.x86_64"
 
+    msgn " uncolored package #1"
     try_install_with_ask_allowed a-devel-2-2.x86_64 \
                                  "a-2-2.x86_64,a-devel-2-2.x86_64" \
                                  "a-1-1.x86_64,a-devel-1-1.x86_64"
 
+    msgn " uncolored package #2"
     try_install_with_ask_allowed a-devel-2-2.i686 \
                                  "a-2-2.i686,a-devel-2-2.i686" \
                                  "a-1-1.i686,a-devel-1-1.x86_64"
-
-    msgn "Testing multilib upgrade-dist"
+    msgn "  upgrade-dist"
     runpoldek --upgrade-dist
     n=$(ls $DESTINATION_REPO/a* | grep 1-1 | wc -l)
     assertEquals "not all packages were upgraded by upgrade-dist" "$n" "0"
 
+    msgn "  uncolored package #3"
     # Multilib upgrade uncolored package (arch flip-flop regardless of arch)
     try_install a-devel-2-2.i686 "a-devel-2-2.i686" "a-devel-2-2.x86_64"
 
