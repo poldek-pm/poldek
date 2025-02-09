@@ -269,10 +269,10 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
         char topath[PATH_MAX + 128], *topathp = vreq.redirected_to;
         int  foreign_proto = 0;
 
-        n_assert(cn->proto == VCN_PROTO_HTTP);
+        n_assert(cn->proto == VCN_PROTO_HTTP || cn->proto == VCN_PROTO_HTTPS);
 
         if (*vreq.redirected_to == '/') {
-            snprintf(topath, sizeof(topath), "http://%s%s", req->host,
+            snprintf(topath, sizeof(topath), "http%s://%s%s", cn->proto == VCN_PROTO_HTTPS ? "s" : "" , req->host,
                      vreq.redirected_to);
             topathp = topath;
         } else if (strncmp(vreq.redirected_to, "http://", 7) != 0)
