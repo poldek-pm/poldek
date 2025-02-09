@@ -188,6 +188,8 @@ int is_requireable_path(const char *path)
         "/usr/share/doc/*",
         "/usr/share/man/*.[0-9]",
         "/usr/src/examples/*",
+        "/usr/lib/.build-id",
+        "/usr/lib/.build-id/*",
         "*.desktop",
         "*.mo",
         "*.gz",
