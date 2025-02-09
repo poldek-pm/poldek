@@ -76,6 +76,9 @@ static int get_rpm_internal_caps(tn_array *caps)
     int       i;
     rpmcap_fn functions[] = {
         rpmdsRpmlib,
+#ifdef HAVE_RPMDSUNAME
+        (rpmcap_fn)rpmdsUname,
+#endif
         NULL,
     };
 
