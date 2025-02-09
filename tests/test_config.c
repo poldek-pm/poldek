@@ -33,7 +33,7 @@ START_TEST (test_config) {
         tags = poldek_conf_sections[i++].tags;
 
         s = poldek_conf_get_section(cnf, sname);
-        fail_if(s == NULL, "no %s section?", s);
+        fail_if(s == NULL, "no %s section?", sname);
 
         j = 0;
         while (tags[j].name) {
@@ -66,6 +66,11 @@ START_TEST (test_config) {
                 if (n_str_eq(dv, "yes"))
                     dv = "no";
                 else
+                    dv = "yes";
+            } else if (t->flags & CONF_TYPE_BOOLEAN3) { /* reverse value, see xsl */
+                if (n_str_eq(dv, "yes"))
+                    dv = "no";
+                else if (n_str_eq(dv, "no"))
                     dv = "yes";
             }
 
