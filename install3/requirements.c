@@ -16,13 +16,163 @@
 
 #include "ictx.h"
 
-static int skip_boolean_dep(const struct capreq *cr) {
-    if (capreq_is_boolean(cr)) {
-        logn(LOGWARN, "%s: skipping boolean dependency (not supported yet)",
-             capreq_stra(cr));
-        return 1;
+static struct BooleanOpComp {
+  const char *n;
+  int l;
+  uint16_t op;
+} BooleanOps[] = {
+  { "and",     3, CAPREQ_BOOL_OP_AND },
+  { "or",      2, CAPREQ_BOOL_OP_OR },
+  { "if",      2, CAPREQ_BOOL_OP_IF },
+  { "unless",  6, CAPREQ_BOOL_OP_UNLESS },
+  { "with",    4, CAPREQ_BOOL_OP_WITH },
+  { "without", 7, CAPREQ_BOOL_OP_WITHOUT },
+  { NULL, 0, 0},
+};
+
+static struct capreq* parse_single_dep(char *req, int *len) {
+    char *q, *cap, *name, *evr = NULL;
+    int name_len, evr_len;
+    struct capreq* cr = NULL;
+    uint16_t op;
+
+    cap = q = strdup(req);
+    DBGF("dep: %s", q);
+    // skip whitespace
+    while (*q == ' ')
+        q++;
+    DBGF("ltrim: %s", q);
+    name = q;
+    // look for the end of normal dep
+    while (*q != ' ')
+        q++;
+    name_len = q - name;
+    DBGF("to parse: %s, name: %s, name_len: %d", q, name, name_len);
+    while (*q == ' ')
+        q++;
+    DBGF("ltrim: %s", q);
+    op = 0;
+    while (*q != ' ') {
+        if (*q == '<')
+            op |= REL_LT;
+        else if (*q == '=')
+            op |= REL_EQ;
+        else if (*q == '>')
+            op |= REL_GT;
+        else
+            break;
+        q++;
     }
-    return 0;
+    DBGF("to parse: %s, op: %d", q, op);
+    while (*q == ' ')
+        q++;
+    DBGF("ltrim: %s", q);
+    if (op) {
+        evr = q;
+        while (*q != ' ' && *q != ')')
+            q++;
+        evr_len = q - evr;
+        DBGF("to parse: evr: %s, evr_len: %d", evr, evr_len);
+    }
+    DBGF("to parse: %s", q);
+    while (*q == ' ')
+        q++;
+    DBGF("ltrim: %s", q);
+    *len = q - cap;
+    *(name + name_len) = '\0';
+    DBGF("name: %s, name_len: %d", name, name_len);
+    if (evr) {
+        *(evr + evr_len) = '\0';
+        DBGF("evr: %s, evr_len: %d", evr, evr_len);
+    }
+    cr = capreq_new_evr(NULL, name, evr, op, 0);
+    free(cap);
+    return cr;
+}
+
+static struct boolean_req* parse_boolean_dep(const char *strreq, uint16_t op, int* len) {
+    char *p, *q, *cap;
+    struct boolean_req *breq;
+    int parsed_len;
+    struct BooleanOpComp *o;
+
+    cap = p = strdup(strreq);
+    // boolean dep must start with '(' except if we're chaining 'and' or 'or'
+    if (op != CAPREQ_BOOL_OP_AND && op != CAPREQ_BOOL_OP_OR) {
+        if (*p != '(')
+            return NULL;
+        p++;
+    }
+    DBGF("breq: %s", p);
+    breq = malloc(sizeof(struct boolean_req));
+    bzero(breq, sizeof(struct boolean_req));
+    // skip whitespace
+    while (*p == ' ')
+        p++;
+    DBGF("breq ltrim: %s", p);
+    // nested dep
+    q = p;
+    if (*p == '(')
+        breq->left = parse_boolean_dep(p, 0, &parsed_len);
+    else
+        breq->req = parse_single_dep(p, &parsed_len);
+    q += parsed_len;
+    DBGF("breq to parse: %s", q);
+    if (*q == ')') {
+        if (len)
+            *len = q - cap;
+        return breq;
+    }
+
+    for (o = BooleanOps; o->n; o++)
+        if (!strncmp(q, o->n, o->l))
+            break;
+    breq->op = o->op;
+    if (!breq->op) {
+        DBGF("fail no-op");
+        return NULL;
+    }
+    q += o->l;
+    while (*q == ' ')
+        q++;
+    if (*q == '(')
+        breq->right = parse_boolean_dep(q, breq->op, &parsed_len);
+    else {
+        breq->right = malloc(sizeof(struct boolean_req));
+        bzero(breq->right, sizeof(struct boolean_req));
+        breq->right->req = parse_single_dep(q, &parsed_len);
+    }
+    q += parsed_len;
+    if (*q == ')') {
+        if (len)
+            *len = q - cap;
+        return breq;
+    }
+
+    if (breq->op == CAPREQ_BOOL_OP_IF || breq->op == CAPREQ_BOOL_OP_UNLESS) {
+        if (!strncmp(q, "else", 4)) {
+            q += 4;
+	    while (*q == ' ')
+		q++;
+	    if (*q == '(')
+		breq->leftn = parse_boolean_dep(q, breq->op, &parsed_len);
+	    else {
+		breq->leftn = malloc(sizeof(struct boolean_req));
+		bzero(breq->leftn, sizeof(struct boolean_req));
+		breq->leftn->req = parse_single_dep(q, &parsed_len);
+	    }
+	}
+    }
+    while (*q == ' ')
+        q++;
+    if (*q != ')' && op != CAPREQ_BOOL_OP_AND && op != CAPREQ_BOOL_OP_OR) {
+        DBGF("fail no closing paren");
+        return NULL;
+    }
+
+    if (len)
+        *len = q - cap;
+    return breq;
 }
 
 static
@@ -553,8 +703,11 @@ static int number_of_non_blacks(struct i3ctx *ictx, tn_array *pkgs)
 
 }
 
+
+// i3pkg - package to be installed
+// req - dependency we are looking for
 static int process_req(int indent, struct i3ctx *ictx,
-                       struct i3pkg *i3pkg, const struct capreq *req)
+                       struct i3pkg *i3pkg, const struct capreq *req, int boolean)
 {
     struct poldek_ts *ts = ictx->ts; /* just for short */
     struct pkg       *pkg, *tomark = NULL;
@@ -644,7 +797,8 @@ static int process_req(int indent, struct i3ctx *ictx,
     else
         errfmt = _("%s: req %s not found");
 
-    i3_error(ictx, pkg, I3ERR_NOTFOUND, errfmt, pkg_id(pkg), strreq);
+    if (boolean == 0)
+        i3_error(ictx, pkg, I3ERR_NOTFOUND, errfmt, pkg_id(pkg), strreq);
     rc = 0;
 
  l_end:
@@ -653,6 +807,49 @@ static int process_req(int indent, struct i3ctx *ictx,
     return rc;
 }
 
+static int process_boolean_req(int indent, struct i3ctx *ictx,
+                               struct i3pkg *i3pkg, const struct boolean_req *breq)
+{
+    int rcl, rcr, rce;
+    if (breq->req)
+        rcl = process_req(indent, ictx, i3pkg, breq->req, 1);
+    else
+        rcl = process_boolean_req(indent, ictx, i3pkg, breq->left);
+    if (breq->op != CAPREQ_BOOL_OP_OR)
+        if (breq->right)
+            rcr = process_boolean_req(indent, ictx, i3pkg, breq->right);
+        else
+            return rcl;
+    switch (breq->op) {
+        case CAPREQ_BOOL_OP_AND:
+            return (rcl > 0 && rcr > 0) ? 1 : -1;
+        case CAPREQ_BOOL_OP_OR:
+            if (rcl <= 0 && breq->right)
+                return process_boolean_req(indent, ictx, i3pkg, breq->right);
+            return rcl;
+        case CAPREQ_BOOL_OP_IF:
+            if (rcr > 0)
+                return rcl;
+            if (breq->leftn)
+                return process_boolean_req(indent, ictx, i3pkg, breq->leftn);
+            return 1;
+        case CAPREQ_BOOL_OP_UNLESS:
+            if (rcr <= 0)
+                return rcl;
+            if (breq->leftn)
+                return process_boolean_req(indent, ictx, i3pkg, breq->leftn);
+            return 1;
+        case CAPREQ_BOOL_OP_WITH:
+	    // TODO: check that both deps are stisfied by the same package
+            return (rcl > 0 && rcr > 0) ? 1 : -1;
+        case CAPREQ_BOOL_OP_WITHOUT:
+	    // TODO: check that both deps are stisfied by the same package
+            return (rcl > 0 && rcr <= 0) ? 1 : -1;
+        default:
+            return -1;
+    }
+    return -1;
+}
 
 static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 {
@@ -660,6 +857,7 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     struct pkg *oldpkg = NULL;
     char *autochoice = NULL;    /* testing only */
     int i;
+    struct boolean_req* breq;
 
     if (pkg->sugs == NULL)
         return NULL;
@@ -693,8 +891,14 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 
         //trace(indent, "%d) suggested %s", i, reqstr);
 
-        if (skip_boolean_dep(req))
+        if (capreq_is_boolean(req)) {
+            logn(LOGWARN, "%s: skipping boolean dependency (weak deps not supported yet)",
+                capreq_stra(req));
+            // TODO
+            // breq = parse_boolean_dep(capreq_name(req), 0, NULL);
+            // process_boolean_req(indent, ictx, i3pkg, breq);
             continue;
+        }
 
         if (iset_provides(ictx->inset, req)) {
             trace(indent, "- %s: already marked", reqstr);
@@ -791,6 +995,7 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     const struct capreq *req = NULL;
     unsigned            itflags = PKG_ITER_REQIN;
     int                 nerrors = 0, backtrack = 0;
+    struct boolean_req* breq;
 
     pkg = i3pkg->pkg;
     n_assert(pkg);
@@ -806,10 +1011,18 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     while ((req = pkg_req_iter_get(it))) {
         int rc;
 
-        if (skip_boolean_dep(req))
-            continue;
+        if (capreq_is_boolean(req)) {
+            msgn_i(1, indent, "%s required by %s",
+                   capreq_stra(req), pkg->name ? pkg->name : "(null)");
+            breq = parse_boolean_dep(capreq_name(req), 0, NULL);
+            rc = process_boolean_req(indent + 2, ictx, i3pkg, breq);
+            if (rc <= 0)
+                i3_error(ictx, i3pkg->pkg, I3ERR_NOTFOUND, _("%s: req %s not found"), pkg_id(i3pkg->pkg), capreq_stra(req));
+        } else {
+            rc = process_req(indent, ictx, i3pkg, req, 0);
+        }
 
-        if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
+        if (rc <= 0) {
             nerrors++;
             if (rc < 0) {
                 backtrack = 1;
@@ -836,7 +1049,7 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
 
 		req = n_array_nth(suggests, i);
 
-		if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
+		if ((rc = process_req(indent, ictx, i3pkg, req, 0)) <= 0) {
         	    nerrors++;
         	    if (rc < 0) {
             		backtrack = 1;

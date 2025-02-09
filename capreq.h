@@ -58,6 +58,22 @@ struct capreq {
     char    _buff[0];            /* for evr, first byte is always '\0' */
 };
 
+#define CAPREQ_BOOL_OP_AND      (1 << 0)
+#define CAPREQ_BOOL_OP_OR       (1 << 1)
+#define CAPREQ_BOOL_OP_IF       (1 << 2)
+#define CAPREQ_BOOL_OP_UNLESS   (1 << 3)
+#define CAPREQ_BOOL_OP_ELSE     (1 << 4)
+#define CAPREQ_BOOL_OP_WITH     (1 << 5)
+#define CAPREQ_BOOL_OP_WITHOUT  (1 << 6)
+
+struct boolean_req {
+    uint16_t op;                  // and, or, ir (else), with, without, unless (else)
+    struct capreq* req;
+    struct boolean_req* left;     // left (and|or|with|without) right
+    struct boolean_req* leftn;    // left (if|unless) right (else leftn)
+    struct boolean_req* right;
+};
+
 /* CAUTION: side effects! */
 #define capreq_name(cr)     (cr)->name
 #define capreq_name_len(cr)     (cr)->namelen
