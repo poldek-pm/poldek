@@ -695,6 +695,7 @@ static void afile_close(struct afile *af)
 static struct afile *afile_open(const char *path, const char *parent_path,
                                 const char *section_to_load, int update)
 {
+    char incpath[PATH_MAX];
     const char    *ppath;
     struct afile  *af = NULL;
     struct vfile  *vf;
@@ -718,7 +719,7 @@ static struct afile *afile_open(const char *path, const char *parent_path,
             prepend = 1;
 
         if (prepend) {
-            char incpath[PATH_MAX], *s;
+            char *s;
             int n;
 
             n = n_snprintf(incpath, sizeof(incpath), "%s", ppath);

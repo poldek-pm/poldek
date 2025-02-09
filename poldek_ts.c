@@ -682,7 +682,7 @@ static void cp_arr_ifnull(tn_array **dst, tn_array *src)
     }
 }
 
-int poldek_ts_set_type(struct poldek_ts *ts, uint32_t type, const char *typenam)
+int poldek_ts_set_type(struct poldek_ts *ts, enum poldek_ts_type type, const char *typenam)
 {
     if (ts->type)
         return 0;

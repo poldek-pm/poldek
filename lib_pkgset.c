@@ -165,7 +165,7 @@ tn_array *poldek_search_avail_packages(struct poldek_ctx *ctx,
     if (!poldek_load_sources(ctx))
         return NULL;
 
-    return pkgset_search(ctx->ps, tag, value);
+    return pkgset_search(ctx->ps, (enum pkgset_search_tag)tag, value);
 }
 
 

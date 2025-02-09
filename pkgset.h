@@ -88,11 +88,11 @@ enum pkgset_search_tag {
     PS_SEARCH_RECNO = POLDEK_ST_RECNO,
     PS_SEARCH_NAME  = POLDEK_ST_NAME,
     PS_SEARCH_CAP   = POLDEK_ST_CAP,        /* what provides cap */
-    PS_SEARCH_REQ   = 4,        /* what requires */
-    PS_SEARCH_CNFL  = 5,
-    PS_SEARCH_OBSL  = 6,
-    PS_SEARCH_FILE  = 7,
-    PS_SEARCH_PROVIDES = 8,     /* what provides cap or file */
+    PS_SEARCH_REQ   = POLDEK_ST_REQ,        /* what requires */
+    PS_SEARCH_CNFL  = POLDEK_ST_CNFL,
+    PS_SEARCH_OBSL  = POLDEK_ST_OBSL,
+    PS_SEARCH_FILE  = POLDEK_ST_FILE,
+    PS_SEARCH_PROVIDES = POLDEK_ST_PROVIDES     /* what provides cap or file */
 };
 
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,

@@ -296,7 +296,7 @@ int pndir_open(struct pndir *idx, struct pkgdir *pkgdir, int vfmode, unsigned fl
         if ((idx->dg = pndir_digest_new(pkgdir->idxpath, vfmode, pkgdir->name)) == NULL)
             return 0;
 
-        if (idx->dg->compr) {
+        if (*idx->dg->compr) {
             DBGF("md.compr %s\n", idx->dg->compr);
             pkgdir__set_compr(pkgdir, idx->dg->compr);
         }

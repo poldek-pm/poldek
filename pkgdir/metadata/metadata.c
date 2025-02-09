@@ -51,7 +51,7 @@
 
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
-static int do_update(struct pkgdir *pkgdir, int *npatches);
+static int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc);
 static int do_update_a(const struct source *src, const char *idxpath,
                        enum pkgdir_uprc *uprc);
 static void do_free(struct pkgdir *pkgdir);

@@ -202,6 +202,7 @@ static int do_verify_signature(const char *path, unsigned flags)
 static
 int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
 {
+    (void)pm_rpm;
     if (access(path, R_OK) != 0) {
         logn(LOGERR, "%s: verify signature failed: %m", path);
         return 0;

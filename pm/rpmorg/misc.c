@@ -76,7 +76,7 @@ static int get_rpm_internal_caps(tn_array *caps)
     int       i;
     rpmcap_fn functions[] = {
         rpmdsRpmlib,
-#ifdef HAVE_RPMDSUNAME
+#ifdef HAVE_RPMDSUNAME // TODO: rpmdsUname/Cpuinfo has no second argument
         (rpmcap_fn)rpmdsUname,
 #endif
 #ifdef HAVE_RPMDSCPUINFO

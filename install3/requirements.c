@@ -810,16 +810,20 @@ static int process_req(int indent, struct i3ctx *ictx,
 static int process_boolean_req(int indent, struct i3ctx *ictx,
                                struct i3pkg *i3pkg, const struct boolean_req *breq)
 {
-    int rcl, rcr, rce;
-    if (breq->req)
+    int rcl, rcr;
+    if (breq->req) {
         rcl = process_req(indent, ictx, i3pkg, breq->req, 1);
-    else
+    } else {
         rcl = process_boolean_req(indent, ictx, i3pkg, breq->left);
-    if (breq->op != CAPREQ_BOOL_OP_OR)
+    }
+
+    if (breq->op != CAPREQ_BOOL_OP_OR) {
         if (breq->right)
             rcr = process_boolean_req(indent, ictx, i3pkg, breq->right);
         else
             return rcl;
+    }
+
     switch (breq->op) {
         case CAPREQ_BOOL_OP_AND:
             return (rcl > 0 && rcr > 0) ? 1 : -1;
@@ -857,7 +861,6 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     struct pkg *oldpkg = NULL;
     char *autochoice = NULL;    /* testing only */
     int i;
-    struct boolean_req* breq;
 
     if (pkg->sugs == NULL)
         return NULL;

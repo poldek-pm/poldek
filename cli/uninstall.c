@@ -132,7 +132,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_UNINSTALL:
-            poldek_ts_set_type(ts, POLDEK_TS_UNINSTALL, "-e");
+            poldek_ts_set_type(ts, POLDEK_TS_TYPE_UNINSTALL, "-e");
             rt->set_major_mode(rt, "erase", NULL);
             break;
 
@@ -258,7 +258,7 @@ static int uninstall(struct cmdctx *cmdctx)
     if (!ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0))
         ts_flags |= POLDEK_TS_TRACK;
 
-    poldek_ts_set_type(ts, POLDEK_TS_UNINSTALL, "uninstall");
+    poldek_ts_set_type(ts, POLDEK_TS_TYPE_UNINSTALL, "uninstall");
     if (!poldek_ts_run(ts, ts_flags))
         err++;
 
