@@ -99,6 +99,9 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
 
         switch (td.tag) {
             case RPMSIGTAG_RSA:
+                flags |= PKGVERIFY_PGP;
+                flags |= PKGVERIFY_GPG;
+                break;
             case RPMSIGTAG_PGP5:	/* XXX legacy */
             case RPMSIGTAG_PGP:
                 flags |= PKGVERIFY_PGP;
