@@ -77,8 +77,8 @@ static void progress(const unsigned long amount, const unsigned long total)
 
 static void *install_cb(const void *h __attribute__((unused)),
                         const enum rpmCallbackType_e op,
-                        const long unsigned int amount,
-                        const long unsigned int total,
+                        const rpm_loff_t amount, 
+                        const rpm_loff_t total,
                         const void *pkgpath,
                         void *data __attribute__((unused)))
 {
