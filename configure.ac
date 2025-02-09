@@ -327,7 +327,7 @@ if test "${is_rpm4_0_4}." = "no." ; then
 	#fi
 else
     if test "${is_rpmorg}." = "yes."; then
-	AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])
+	: ;
     else
         AC_CHECK_LIB(db4, db_create, [DBLIB="-ldb4" DBINCLUDE="-I/usr/include/db4"],
             [AC_CHECK_LIB(db-4.1, db_create, [DBLIB="-ldb-4.1" DBINCLUDE="-I/usr/include/db4.1"],
@@ -372,9 +372,11 @@ AC_CHECK_FUNCS(rpmtsColor, [LIBS="$LIBS -lpthread"
                             AC_DEFINE([HAVE_RPM_4_2],1,[])])
 AC_CHECK_FUNCS(hGetColor, AC_DEFINE([HAVE_RPM_HGETCOLOR],1,[]))
 
+if test "${is_rpmorg}." != "yes."; then
 AC_CHECK_HEADERS([db_185.h],,[
 	AC_MSG_WARN(["disabled synchronization with db file-dependencies"]) ])
 AC_CHECK_FUNCS(__db185_open)
+fi
 
 dnl 4.0.4 has cross dependenecies(?)
 if test "${is_rpm4_0_4}." = "yes." -a "${ENABLE_STATIC}." = "yes." ; then
