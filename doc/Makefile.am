@@ -81,7 +81,7 @@ poldek.info: manual.xml.texi.tmp
 	docbook2X2texi --xinclude $< -o $(@D) || docbook2texi --xinclude $< || true
 	perl -pi -e 's|\@emph\{|\@samp\{|g' poldek.texi
 	makeinfo --no-split --force poldek.texi -o $@
-	perl -pi -e 's/^\* poldek manual: \(poldek\)(.+)$$/* poldek: (poldek)$$1/' $@
+	perl -pi -e 's/^\* poldek manual: \(poldek\)\. *(.+)$$/* poldek: (poldek).\t\t\t$$1/' $@
 	rm -f *.texi
 
 manual.html: manual.xml.xhtml.tmp

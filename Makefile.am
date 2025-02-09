@@ -139,7 +139,7 @@ clean-local:
 poldek.pc:
 	@ ( echo 'prefix=$(prefix)'; \
 		echo 'exec_prefix=$${exec_prefix}'; \
-		echo 'libdir=$${exec_prefix}/lib'; \
+		echo 'libdir=$(libdir)'; \
 		echo 'includedir=$${includedir}'; \
 		echo ''; \
 		echo 'Name: poldek'; \
