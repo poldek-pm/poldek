@@ -137,7 +137,7 @@ if [ -n "$files" ]; then
     done
 
     for f in $files; do
-        echo "$f" >> $SPEC
+        echo "%attr(755,root,root) $f" >> $SPEC # must be executuable to get color from rpm
     done
 fi
 
