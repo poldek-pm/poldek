@@ -70,17 +70,28 @@ static int extract_rpmds(tn_array *caps, rpmds ds)
 
 typedef int (*rpmcap_fn)(rpmds *ds, const void *);
 
+/* pm_ wrappers to unify prototype */
+static int pm_rpmdsUname(rpmds *ds, const void *unused) {
+    (void)unused;
+    return rpmdsUname(ds);
+}
+
+static int pm_rpmdsCpuinfo(rpmds *ds, const void *unused) {
+    (void)unused;
+    return rpmdsCpuinfo(ds);
+}
+
 static int get_rpm_internal_caps(tn_array *caps)
 {
     rpmds     ds = NULL;
     int       i;
     rpmcap_fn functions[] = {
         rpmdsRpmlib,
-#ifdef HAVE_RPMDSUNAME // TODO: rpmdsUname/Cpuinfo has no second argument
-        (rpmcap_fn)rpmdsUname,
+#ifdef HAVE_RPMDSUNAME
+        pm_rpmdsUname,
 #endif
 #ifdef HAVE_RPMDSCPUINFO
-        (rpmcap_fn)rpmdsCpuinfo,
+        pm_rpmdsCpuinfo,
 #endif
         NULL,
     };
