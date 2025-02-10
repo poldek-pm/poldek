@@ -1,4 +1,4 @@
-name: build 
+name: build
 
 on:
   push:
@@ -10,15 +10,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: registry.gitlab.com/pld-linux/pld
-    steps:    
+    steps:
     - name: pre
-      run: poldek --noask --noprogress -Oparticle_install=no -u git-core libstdc++ fakeroot autoconf automake bzip2-devel check-devel docbook-dtd412-xml docbook2X gettext-tools libgomp-devel libtool libxml2-devel lua54-devel ncurses-devel openssl-devel pcre-devel perl-XML-Simple perl-base perl-modules pkgconfig popt-devel readline-devel rpm-devel tar texinfo xmlto xz zlib-devel zstd-devel
+      run: poldek --noask --noprogress findutils coreutils && poldek --noask --noprogress -uv ca-certificates git-core libstdc++ fakeroot autoconf automake libtool rpm-build-tools bzip2-devel check-devel docbook-dtd412-xml docbook2X gettext-autopoint gettext-tools glibc-devel libgomp-devel libxml2-devel lua54-devel ncurses-devel openssl-devel pcre-devel perl-XML-Simple perl-base perl-modules pkgconfig popt-devel readline-devel rpm-devel tar gzip texinfo xmlto xz zlib-devel zstd-devel
     - uses: actions/checkout@v4
     - name: configure
-      run: ./autogen.sh && ./configure
+      run: ./autogen.sh
     - name: make
       run: make CFLAGS="-O0"
-    - name: make check 
-      run: make check
+    - name: make check
+      run: make CFLAGS="-O0" check
     - name: make check-sh
-      run: make check-sh
+      run: make CFLAGS="-O0" check-sh
