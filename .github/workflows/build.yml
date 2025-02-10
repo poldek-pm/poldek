@@ -8,8 +8,8 @@ on:
 
 jobs:
   build:
-    runs-on: registry.gitlab.com/pld-linux/pld
-
+    runs-on: ubuntu-latest
+    container: registry.gitlab.com/pld-linux/pld
     steps:
     - uses: actions/checkout@v4
     - name: pre
