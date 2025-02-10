@@ -12,7 +12,7 @@ jobs:
     container: registry.gitlab.com/pld-linux/pld
     steps:
     - name: pre
-      run: poldek --noask --noprogress findutils coreutils && poldek --noask --noprogress -uv ca-certificates git-core libstdc++ fakeroot autoconf automake libtool rpm-build-tools bzip2-devel check-devel docbook-dtd412-xml docbook2X gettext-autopoint gettext-tools glibc-devel libgomp-devel libxml2-devel lua54-devel ncurses-devel openssl-devel pcre-devel perl-XML-Simple perl-base perl-modules pkgconfig popt-devel readline-devel rpm-devel tar gzip texinfo xmlto xz zlib-devel zstd-devel
+      run: poldek --noask --noprogress -u findutils coreutils && poldek --noask --noprogress -u ca-certificates git-core libstdc++ fakeroot autoconf automake libtool rpm-build-tools bzip2-devel check-devel docbook-dtd412-xml docbook2X gettext-autopoint gettext-tools glibc-devel libgomp-devel libxml2-devel lua54-devel ncurses-devel openssl-devel pcre-devel perl-XML-Simple perl-base perl-modules pkgconfig popt-devel readline-devel rpm-devel tar gzip texinfo xmlto xz zlib-devel zstd-devel
     - uses: actions/checkout@v4
     - name: configure
       run: ./autogen.sh
