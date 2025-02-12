@@ -6,7 +6,7 @@
 #  Index creation use cases:
 Case_a="-s /foo                   =>  dir  -> default type"
 Case_b="--st type -s /foo         =>  type -> default type"
-Case_c="--st type /foo --mt type  =>  type -> dtype"
+Case_c="--st type /foo --mt dtype =>  type -> dtype"
 Case_d="-s /foo --mt dtype        =>  dir  -> dtype"
 Case_e="-s /foo --mt dtype,dtype2 =>  dir  -> dtype"
 Case_f="-n foo                    =>  dir (or original type) -> foo's type"

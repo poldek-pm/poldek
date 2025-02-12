@@ -2,6 +2,15 @@
 # $Id$
 # Script for quick build fake foo-packages
 
+rpm5ize_booldep() {
+    local dep="$1"
+    if echo $dep | grep -qP '^\('; then
+        dep=$(echo $dep | tr ' ' '_')
+        dep="__${dep}"
+    fi
+    echo $dep
+}
+
 name=
 version=
 release="1"
@@ -14,6 +23,7 @@ obsoletes=
 conflicts=
 files=
 arch="noarch"
+sourcedir="rpm"
 rpmdir="repo"
 
 COMMAND="$0 $@"
@@ -113,9 +123,7 @@ echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
 [ -n "$requires_post" ] && echo "Requires(post): $requires_post" >> $SPEC
 
 echo -e "%description\nPackage build by $COMMAND\n" >> $SPEC
-
 echo -e "%description -l pl\n(pl)Package build by $COMMAND\n" >> $SPEC
-
 echo -e "%description -l de\n(de)Package build by $COMMAND\n" >> $SPEC
 
 echo -e "%prep\n%pre\n" >> $SPEC

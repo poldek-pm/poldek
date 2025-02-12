@@ -19,12 +19,14 @@ build_package() {
     params=""
     [ $# -gt 0 ] && params="$@";
 
-    #echo ./build-test-rpm.sh -d $destdir -n $name -v $version $params
-    if [ "$VERBOSE" != "vv" ]; then
-        eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
-    else
-        eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params
-        [ $? -eq 0 ] || fail "build package $name failed"
+    local log=$TMPDIR/$name.build.log
+
+    eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >$log 2>&1
+    [ $? -eq 0 ] || fail "build package '$name' failed with $(grep error $log | tr -d '\n')"
+
+    if [ "$VERBOSE" = "vv" ]; then
+        echo "./build-test-rpm.sh -d $destdir -n $name -v $version $params"
+        cat $log
     fi
 
     BUILT_PACKAGE_NVR="$name-$version"

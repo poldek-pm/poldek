@@ -25,25 +25,40 @@ nok=0
 for i in sh/[0-9][0-9]*; do
     [ -f $i ] || continue
     compr="gz"
-    suffixed=""
+    suffixed_compr=""
+    suffixed_imode=""
+    install_modes="dir"
 
     # run with each compression method if test uses indexes
-    grep -q compr-setup $i
-    [ $? -eq 0 ] && compr="gz zst none" && suffixed="1"
+    if grep -q compr-setup $i; then
+        compr="gz zst none"
+        suffixed_compr="1"
+    elif grep -q INSTALL_MODE $i; then
+        install_modes="dir rpm"
+        suffixed_imodel="1"
+    fi
 
-    for c in $compr; do
-	COMPR="$c"; export COMPR
-	suffix=""
-        [ -n "$suffixed" ] && suffix=" (compr=$c)"
+    for m in $install_modes; do
+        INSTALL_MODE="$m"
+        export INSTALL_MODE
+        isuffix=""
+        [ -n "$suffixed_imodel" ] && isuffix=" (mode=$INSTALL_MODE)"
 
-	nth=$(expr $nth + 1)
-	sh $i -n 6 >> $LOG
-	if [ $? -eq 0 ]; then
-	    nok=$(expr $nok + 1)
-	    echo "${GREEN}PASS: $i$suffix$NC"
-	else
-	    echo "${RED} FAIL: $i$suffix$NC"
-	fi
+        for c in $compr; do
+	    COMPR="$c"
+            export COMPR
+	    csuffix=""
+            [ -n "$suffixed_compr" ] && csuffix=" (compr=$COMPR)"
+
+	    nth=$(expr $nth + 1)
+	    sh $i -n 6 >> $LOG
+	    if [ $? -eq 0 ]; then
+	        nok=$(expr $nok + 1)
+	        echo "${GREEN}PASS: $i$csuffix$isuffix$NC"
+	    else
+	        echo "${RED} FAIL: $i$csuffix$isuffix$NC"
+	    fi
+        done
     done
 done
 

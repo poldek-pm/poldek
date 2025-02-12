@@ -45,6 +45,9 @@ symlink-modules: symlink-mod-trurlib symlink-mod-tndb
 # back to sumbmodules
 unsymlink-modules: unsymlink-mod-trurlib unsymlink-mod-tndb
 
+tags:
+	find . -name "[a-z]*.[ch]" -print | grep -v Cellar | xargs etags
+
 backup:
 	@cd $(PROJ_DIR);                                            \
 	NAME=`basename  $(PROJ_DIR)`;                               \

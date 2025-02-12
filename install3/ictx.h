@@ -153,6 +153,31 @@ int i3_find_req(int indent, struct i3ctx *ictx,
                  const struct pkg *pkg, const struct capreq *req,
                  struct pkg **best_pkg, tn_array *candidates);
 
+/* pkg_req_iter wrapper */
+#include "booldep.h"
+struct i3req {
+    const struct capreq *origin;
+    const struct capreq *req;
+};
+
+struct i3_req_iter {
+    struct pkg_req_iter *it;
+    struct i3req        i3req;
+
+    /* booldep */
+    const struct capreq     *borigin;
+    tn_array                *breqs;
+    struct booldep_eval_ctx bctx;
+};
+
+void i3_req_iter_init(struct i3_req_iter *it, int indent, struct i3ctx *ictx,
+                      struct pkg *pkg, unsigned itflags);
+
+void i3_req_iter_destroy(struct i3_req_iter *it);
+
+
+const struct i3req *i3_req_iter_get(struct i3_req_iter *it);
+
 /* conflicts.c */
 int i3_resolve_conflict(int indent, struct i3ctx *ictx,
                         struct pkg *pkg, const struct capreq *cnfl,

@@ -56,22 +56,20 @@ RUNTEST_ONLY=
 while test $# -gt 0 ; do
     case "${1}" in
         -l)
-           grep -E -B 1 ^test $0 | sed 's|()||g;s|{||g'; exit; shift ;;
-
+           grep -E ^test $0 | sed 's|()||g;s|{||g'; exit; shift ;;
         --source-repo)
             shift; SOURCE_REPO="${1}"; shift ;;
-
         -v)
             shift; VERBOSE="${VERBOSE}v";;
-
+        -vv)
+            shift; VERBOSE="${VERBOSE}vv";;
 
         -n) shift; MAXLOOP="${1}"; shift ;;
 
         -c) shift; COMPR="${1}"; shift ;;
 
         -t)
-            shift; RUNTEST_ONLY="${1}"; shift ;;
-
+            shift; RUNTEST_ONLY="${1}"; shift;;
         -h)
             echo "Usage: $(basename $0) [--source-repo REPO] [-v] [-n NUM]"
             echo '    --source-repo  - source (read-only) repository for *-repo tests'

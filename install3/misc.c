@@ -143,21 +143,26 @@ int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
 }
 
 static
-bool req_satisfiable(int indent, struct i3ctx *ictx,
+int req_satisfiable(int indent, struct i3ctx *ictx,
                      const struct pkg *pkg, const struct capreq *req) {
 
-    if (pkgset_find_match_packages(ictx->ps, pkg, req, NULL, 1)) {
+    if (iset_provides(ictx->inset, req)) {
         tracef(indent, "%s %s => iset", pkg_id(pkg), capreq_stra(req));
-        return true;
+        return 3;
     }
 
     if (i3_pkgdb_match_req(ictx, req)) {
         tracef(indent, "%s %s => dbset", pkg_id(pkg), capreq_stra(req));
-        return true;
+        return 2;
+    }
+
+    if (pkgset_find_match_packages(ictx->ps, pkg, req, NULL, 1)) {
+        tracef(indent, "%s %s => aset", pkg_id(pkg), capreq_stra(req));
+        return 1;
     }
 
     tracef(indent, "%s %s => none", pkg_id(pkg), capreq_stra(req));
-    return false;
+    return 0;
 }
 
 /* i.e score how many marker's requirements are satisfied by pkg */
@@ -482,6 +487,8 @@ int i3_find_req(int indent, struct i3ctx *ictx,
 
     //trace(indent, "PROMOTE pkg test satisfied %d", pkg_satisfies_req(pkg,req,1));
 
+    msgn_i(3, indent, "found %s: %d %x", capreq_stra(req), found,  suspkgs);
+
     if (!found)
         return 0;
 
@@ -635,4 +642,167 @@ struct pkg *i3_choose_equiv(struct poldek_ts *ts,
 int i3_is_user_choosable_equiv(struct poldek_ts *ts)
 {
     return ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER);
+}
+
+struct eval_ctx {
+    int          indent;
+    struct i3ctx *ictx;
+    struct pkg   *pkg;
+};
+
+static
+int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
+{
+    struct eval_ctx *ctx = ctxptr;
+    struct i3ctx *ictx = ctx->ictx;
+    struct pkg *pkg = ctx->pkg;
+    int indent = ctx->indent;
+
+    /* TODO: get providers from installed set too */
+    if (providers)
+        pkgset_find_match_packages(ictx->ps, pkg, req, providers, 1);
+
+    if (iset_provides(ictx->inset, req)) {
+        tracef(indent, "%s %s => iset", pkg_id(pkg), capreq_stra(req));
+        return 0;
+    }
+
+    if (i3_pkgdb_match_req(ictx, req)) {
+        tracef(indent, "%s %s => dbset", pkg_id(pkg), capreq_stra(req));
+        return 0;
+    }
+
+    if (pkgset_find_match_packages(ictx->ps, pkg, req, NULL, 1)) {
+        tracef(indent, "%s %s => aset", pkg_id(pkg), capreq_stra(req));
+        return 1;
+    }
+
+    return -1;
+}
+
+void i3_req_iter_init(struct i3_req_iter *it, int indent, struct i3ctx *ictx,
+                      struct pkg *pkg, unsigned itflags)
+{
+    it->it = pkg_req_iter_new(pkg, itflags);
+    it->i3req.origin = NULL;
+    it->i3req.req = NULL;
+    it->breqs = NULL;
+
+    struct eval_ctx *ectx = n_malloc(sizeof(*ectx));
+    ectx->indent = indent;
+    ectx->ictx = ictx;
+    ectx->pkg = pkg;
+
+    it->bctx.ctx = ectx;
+    it->bctx.req_cost = req_cost_cb;
+}
+
+void i3_req_iter_destroy(struct i3_req_iter *it)
+{
+    n_free(it->bctx.ctx);
+    pkg_req_iter_free(it->it);
+}
+
+static
+tn_array *eval_boolreq(const struct capreq *req,
+                       const struct booldep_eval_ctx *bctx)
+{
+    const char *expr = req->name;
+
+    /* to be able to test booldeps without booldeps support (rpm5) */
+    if (poldek__is_in_testing_mode() && *expr == '_') {
+        char *s;
+
+        /* memleak in testing mode */
+        n_strdupapl(expr + 2, req->namelen - 2, &s);
+        expr = s;
+        while (*s) {
+            if (*s == '_')
+                *s = ' ';
+            s++;
+        }
+        DBGF_F("%s => %s\n", req->name, expr);
+    }
+
+    struct booldep *dep = booldep_parse(expr);
+    if (!dep) {
+        logn(LOGERR, "%s: boolean dependency parse error", expr);
+        return NULL;
+    }
+
+    tn_array *reqs = booldep_eval(dep, bctx);
+
+    struct eval_ctx *ectx = bctx->ctx;
+    const char *to = NULL;
+
+    if (reqs == NULL) {
+        to = "null (error)";
+    } else if (n_array_size(reqs) == 0) {
+        to = "None";
+    } else {
+        char buf[4096];
+        int n = 0;
+
+        for (int i=0; i < n_array_size(reqs); i++) {
+            struct capreq *r = n_array_nth(reqs, i);
+            n += n_snprintf(&buf[n], sizeof(buf) - n, "%s,", capreq_stra(r));
+        }
+        buf[n-1] = '\0';
+        to = buf;
+    }
+
+    msgn_i(2, ectx->indent, "%s boolean dependency resolved to %s", expr, to);
+    booldep_free(dep);
+
+    return reqs;
+}
+
+inline static int req_is_boolean(const struct capreq *req)
+{
+    if (capreq_is_boolean(req))
+        return 1;
+
+    if (poldek__is_in_testing_mode()) {
+        if (*req->name == '_' && *(req->name + 1) == '_')
+            return 1;
+    }
+
+    return 0;
+}
+
+const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
+{
+    const struct capreq *req;
+
+    if (it->breqs) {
+        req = n_array_shift(it->breqs);
+        if (n_array_size(it->breqs) == 0)
+            n_array_cfree(&it->breqs);
+
+        it->i3req.origin = it->borigin;
+        it->i3req.req = req;
+
+        return &it->i3req;
+    }
+
+    req = pkg_req_iter_get(it->it);
+    if (req && req_is_boolean(req)) {
+        it->breqs = eval_boolreq(req, &it->bctx);
+        if (it->breqs) {
+            if (n_array_size(it->breqs) == 0) /* resolved to none => skip it */
+                n_array_cfree(&it->breqs);
+            else
+                it->borigin = req;
+
+            return i3_req_iter_get(it);
+        }
+    }
+
+    if (req == NULL)
+        return NULL;
+
+    it->i3req.origin = NULL;
+    it->i3req.req = req;
+
+    return &it->i3req;
 }
