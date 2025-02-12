@@ -1,0 +1,255 @@
+#!/bin/sh
+# $Id$
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/solver-setup
+. ./sh/lib/rpm-setup
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+INSTALL_MODE=${INSTALL_MODE:-"dir"}
+
+#tearDown() {
+#    [ -n "$REPO" ] && rm -f $REPO/*.*
+#}
+
+setUp() {
+    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
+    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
+    rm -rf $ORIGREPO/*
+
+    REPO="$ORIGREPO/src"
+    DESTINATION_REPO="$ORIGREPO/dest";
+
+    rm -rf $REPO $DESTINATION_REPO
+
+    mkdir -p $REPO || fail "mkdir $REPO failed"
+    mkdir -p $DESTINATION_REPO || fail "mkdir $DESTINATION_REPO failed"
+
+    if [ "$INSTALL_MODE" = "dir" ]; then
+        RAW_POLDEK="$POLDEK_NOCONF"
+        POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --dt dir --destination $DESTINATION_REPO"
+    elif [ "$INSTALL_MODE" = "rpm" ]; then
+        rpm_up
+    else
+        fail "$INSTALL_MODE: invalid INSTALL_MODE"
+    fi
+
+    # provide /bin/sh auto requirement
+    build_installed sh -p /bin/sh
+}
+
+build() {
+   build_package $REPO $@
+}
+
+build_installed() {
+    [ "$INSTALL_MODE" = "rpm" ] && rpm_build_installed $@
+    [ "$INSTALL_MODE" = "dir" ] && build_package $DESTINATION_REPO $@
+}
+
+# try to install package and check result
+# usage: try_install <package> <expected installed> [<expected removed>] [<extra poldek switches>]
+try_install() {
+    if [ "$INSTALL_MODE" = "rpm" ]; then
+        rpm_install $@
+    elif [ "$INSTALL_MODE" = "dir" ]; then
+        local pkg=$1
+        try_install_package "dir" -uvt $@
+
+        local n=$($POLDEK_INSTALL -uvt $pkg | grep -P '^%choose ' | wc -l)
+        assertEquals "user should not be asked to choose equivalents ($n)" "$n" "0"
+    fi
+}
+
+testOr() {
+    msgn "Preparing repositories..."
+    build a 1-1 -r "'(b or c)'"
+    build b
+    build c
+    try_install "a" "a,b" ""
+}
+
+testOrInstalled() {
+    msgn "Preparing repositories..."
+    build a 1-1 -r "'(b or c)'"
+    build b
+    build c
+    build_installed c
+    try_install "a" "a" ""
+}
+
+testOrFail() {
+    build a 1-1 -r "'(b or c)'"
+
+    is_verbose_mode && $POLDEK_INSTALL -uvt a
+    typeset out=$($POLDEK_INSTALL -uvt a)
+    echo $out | grep -q 'error' || fail "unexpected success (missing 'error')"
+    echo $out | grep 'error' | grep -q 'not found' || fail "unexpected success (missing 'not found')"
+}
+
+testAnd() {
+    build a 1-1 -r "'(b and c)'"
+    build b
+    build c
+    try_install "a" "a,b,c"
+}
+
+testAndInstalled() {
+    build a 1-1 -r "'(b and c)'"
+    build b
+    build c
+    build_installed c
+    try_install "a" "a,b"
+}
+
+testAndFail() {
+    build a 1-1 -r "'(b and c)'"
+    build b
+
+    is_verbose_mode && $POLDEK_INSTALL -uvt a
+    typeset out=$($POLDEK_INSTALL -uvt a)
+    echo $out | grep -q 'error' || fail "unexpected success (missing 'error')"
+    echo $out | grep 'error' | grep -q 'not found' || fail "unexpected success (missing 'not found')"
+}
+
+testOrAnd() {
+    build a 1-1 -r "'(b or (c and d))'"
+    build b
+    build c
+    build d
+    try_install "a" "a,b"
+}
+
+testOrAndInstalled() {
+    build a 1-1 -r "'(b or (c and d))'"
+    build b
+    build c
+    build d
+    build_installed c
+    try_install "a" "a,b"
+}
+
+testIf() {
+    build a 1-1 -r "'(b if c)'"
+    build b
+    build c
+    try_install "a" "a"
+}
+
+testIfInstalled() {
+    build a 1-1 -r "'(b if c)'"
+    build b
+    build c
+    build_installed c
+    try_install "a" "a,b"
+}
+
+testIfElse() {
+    build a 1-1 -r "'(b if c else d)'"
+    build b
+    build c
+    build d
+    try_install "a" "a,d"
+}
+
+testIfElseInstalled() {
+    build a 1-1 -r "'(b if c else d)'"
+    build b
+    build c
+    build d
+    build_installed c
+    try_install "a" "a,b"
+}
+
+# skipped as rpm gives error:
+# Illegal context for 'unless', please use 'or' instead: Requires:  (b unless c)
+xtestUnless() {
+    build a 1-1 -r "'(b unless c else d)'"
+    build b
+    build c
+    build d
+    try_install "a" "a,b"
+
+    build_installed c
+    try_install "a" "a,d"
+}
+
+# Illegal context for 'if', please use 'and' instead: Requires:  ((b if c) or d)
+xtestIfOr() {
+    build a 1-1 -r "'((b if c) or d)'"
+    build b
+    build c
+    build d
+    try_install "a" "a,d"
+
+    build_installed c
+    try_install "a" "a,b"
+}
+
+testWith() {
+    build a 1-1 -r "'(foo with bar)'"
+    build b 1-1 -p "foo"
+    build c 1-2 -p "foo" -p "bar"
+    try_install "a" "a,c"
+}
+
+testWith2() {
+    build a 1-1 -r "'(foo with bar with baz)'"
+    build b 1-1 -p "foo"
+    build c 1-1 -p "foo" -p "bar"
+    build d 1-1 -p "foo" -p "bar" -p "baz"
+    try_install "a" "a,d"
+}
+
+testWithFail() {
+    build a 1-1 -r "'(foo with bar)'"
+    build b 1-1 -p "foo"
+    build c 1-1 -p "bar"
+
+    is_verbose_mode && $POLDEK_INSTALL -uvt a
+
+    typeset out=$($POLDEK_INSTALL -uvt a)
+    echo $out | grep -q 'error' || fail "unexpected success (missing 'error')"
+    echo $out | grep 'error' | grep -q 'not found' || fail "unexpected success (missing 'not found')"
+}
+
+testWithout() {
+    build a 1-1 -r "'(foo without bar)'"
+    build b 1-1 -p "foo"
+    build c 1-2 -p "foo" -p "bar"
+    try_install "a" "a,b"
+}
+
+# error: line 13: Can only chain and/or/with ops: Requires: (foo without bar without baz)
+xtestWithout2() {
+    build a 1-1 -r "'(foo without bar without baz)'"
+    build b 1-1 -p "foo"
+    build c 1-1 -p "foo" -p "bar"
+    build d 1-1 -p "foo" -p "bar" -p "baz"
+    try_install "a" "a,b"
+}
+
+testWithoutFail() {
+    build a 1-1 -r "'(foo without bar)'"
+    build b 1-1 -p "foo" -p "bar"
+    build c 1-2 -p "foo" -p "bar"
+
+    is_verbose_mode && $POLDEK_INSTALL -uvt a
+
+    typeset out=$($POLDEK_INSTALL -uvt a)
+    echo $out | grep -q 'error' || fail "unexpected success (missing 'error')"
+    echo $out | grep 'error' | grep -q 'not found' || fail "unexpected success (missing 'not found')"
+}
+
+testWithWithout() {
+    build a 1-1 -r "'(foo with (bar without baz))'"
+    build b 1-1 -p "foo"
+    build c 1-2 -p "foo" -p "bar"
+    build d 1-2 -p "foo" -p "bar" -p "baz"
+    try_install "a" "a,c"
+}
+
+. ./sh/lib/shunit2
