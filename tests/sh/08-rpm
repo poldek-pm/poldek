@@ -116,6 +116,4 @@ xtestUpgradeMultipleInstalledIndir() {
     try_install b-1-1 "a-1.2" "a-1.1-1"
 }
 
-. ./sh/t/booldeps.sh
-
 . ./sh/lib/shunit2
