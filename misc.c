@@ -925,6 +925,9 @@ void timethis_end(int verbose_level, void *tvp, const char *prefix)
 
     gettimeofday(&tv, NULL);
 
+    //msgn(verbose_level, "time [%s]0 %ld.%ld\n", prefix, tv0->tv_sec, tv0->tv_usec);
+    //msgn(verbose_level, "time [%s]1 %ld.%ld\n", prefix, tv.tv_sec, tv.tv_usec);
+
     tv.tv_sec -= tv0->tv_sec;
     tv.tv_usec -= tv0->tv_usec;
     if (tv.tv_usec < 0) {
@@ -932,6 +935,6 @@ void timethis_end(int verbose_level, void *tvp, const char *prefix)
         tv.tv_usec = 1000000 + tv.tv_usec;
     }
 
-    msgn(verbose_level, "time [%s] %ld.%ld\n", prefix, tv.tv_sec, tv.tv_usec);
+    msgn(verbose_level, "time [%s] %ld.%06ld\n", prefix, tv.tv_sec, tv.tv_usec);
     free(tvp);
 }
