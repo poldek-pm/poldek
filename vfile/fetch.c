@@ -772,14 +772,6 @@ const char *vf_url_hidepasswd(char *buf, int size, const char *url)
     return url;
 }
 
-
-const char *vf_url_hidepasswd_s(const char *url)
-{
-    static char buf[PATH_MAX];
-    return vf_url_hidepasswd(buf, sizeof(buf), url);
-}
-
-
 const char *vf_url_slim(char *buf, int size, const char *url, int maxl)
 {
     int len;
@@ -831,12 +823,6 @@ const char *vf_url_slim(char *buf, int size, const char *url, int maxl)
     }
 
     return url;
-}
-
-const char *vf_url_slim_s(const char *url, int maxl)
-{
-    static char buf[PATH_MAX];
-    return vf_url_slim(buf, sizeof(buf), url, maxl > 50 ? maxl : 60);
 }
 
 char *vf_url_unescape(const char *url)
