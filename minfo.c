@@ -24,18 +24,18 @@
 
 static int mem_info_verbose = 1;
 
-static char *nbytes2str(char *buf, int bufsize, unsigned long nbytes) 
+static char *nbytes2str(char *buf, int bufsize, unsigned long nbytes)
 {
     char unit = 'B';
     double nb;
 
     nb = nbytes;
-    
+
     if (nb > 1024) {
         nb /= 1024;
         unit = 'K';
     }
-    
+
     if (nb > 1024) {
         nb /= 1024;
         unit = 'M';
@@ -47,12 +47,17 @@ static char *nbytes2str(char *buf, int bufsize, unsigned long nbytes)
 
 #ifdef HAVE_MALLOPT
 static
-void print_mem_info(const char *fmt, va_list args) 
+void print_mem_info(const char *fmt, va_list args)
 {
-    struct mallinfo mi = mallinfo();
     char buf[32], barena[32], bford[32], bmmap[32], bunused[32];
-    
-    nbytes2str(buf, sizeof(buf), mi.arena - mi.fordblks + mi.hblkhd); 
+
+#ifdef HAVE_MALLINFO2
+    struct mallinfo2 mi = mallinfo2();
+#else
+    struct mallinfo mi = mallinfo();
+#endif
+
+    nbytes2str(buf, sizeof(buf), mi.arena - mi.fordblks + mi.hblkhd);
 
     vfprintf(stderr, fmt, args);
     fprintf(stderr, ": %s total: %s malloc (%s un, %s used), %s mmap\n",
@@ -67,7 +72,7 @@ void poldek_meminf(int vlevel, const char *fmt, ...)
     va_list args;
     if (mem_info_verbose >= vlevel) {
         va_start(args, fmt);
-        print_mem_info(fmt, args); 
+        print_mem_info(fmt, args);
         va_end(args);
     }
 }
