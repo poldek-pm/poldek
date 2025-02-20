@@ -94,6 +94,7 @@ EXPORT int source_cmp_no(const struct source *s1, const struct source *s2);
 
 EXPORT int source_update(struct source *src, unsigned flags);
 
+EXPORT void source_printf_w(const struct source *src, int name_width);
 EXPORT void source_printf(const struct source *src);
 
 #define source_idstr(src) \

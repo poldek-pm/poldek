@@ -858,15 +858,21 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
     return n;
 }
 
-void source_printf(const struct source *src)
+void source_printf_w(const struct source *src, int name_width)
 {
-    char optstr[256];
+    char optstr[256], fmt[32];
+
+    if (name_width < 12)
+        name_width = 12;
+    else if (name_width > 32)
+        name_width = 32;
+
+    n_snprintf(fmt, sizeof(fmt), "%%-%ds %%s%%s%%s%%s\n", name_width);
 
     *optstr = '\0';
     source_snprintf_flags(optstr, sizeof(optstr), src);
 
-    printf("%-12s %s%s%s%s\n",
-           src->name ? src->name : "-", vf_url_slim_s(src->path, 0),
+    printf(fmt, src->name ? src->name : "-", vf_url_slim_s(src->path, 0),
            *optstr ? "  (" : "", optstr, *optstr ? ")" : "");
 
     if (src->pkg_prefix) {
@@ -874,6 +880,10 @@ void source_printf(const struct source *src)
         //printf("%s\n", src->pkg_prefix);
         printf("%-14s prefix => %s\n", "", vf_url_slim_s(src->pkg_prefix, 0));
     }
+}
+
+void source_printf(const struct source *src) {
+    source_printf_w(src, 12);
 }
 
 int sources_update(tn_array *sources, unsigned flags)

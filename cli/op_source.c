@@ -330,11 +330,27 @@ void print_source_list(struct poldek_ctx *ctx, tn_array *sources,
     int i;
     tn_hash *htcnf;
     tn_array *htcnf_sources;
+    tn_array *toprint = n_array_new(32, NULL, NULL);
+    int maxlen = 0;
 
     n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_name);
-    for (i=0; i < n_array_size(sources); i++)
-        source_printf(n_array_nth(sources, i));
+    for (i=0; i < n_array_size(sources); i++) {
+        struct source *src = n_array_nth(sources, i);
+        if (src->name) {
+            int n = strlen(src->name);
+            if (maxlen < n)
+                maxlen = n;
+        }
+
+        n_array_push(toprint, src);
+    }
+
     n_array_sort(sources);
+    for (i=0; i < n_array_size(toprint); i++) {
+        struct source *src = n_array_nth(toprint, i);
+        source_printf_w(src, maxlen);
+    }
+    n_array_cfree(&toprint);
 
     if (print_groups == 0)
         return;
@@ -345,6 +361,7 @@ void print_source_list(struct poldek_ctx *ctx, tn_array *sources,
     if ((htcnf_sources = poldek_conf_get_sections(htcnf, "source")) == NULL)
         return;
 
+    toprint = n_array_new(32, (tn_fn_free)source_free, NULL);
     for (i=0; i < n_array_size(htcnf_sources); i++) {
         tn_hash *ht = n_array_nth(htcnf_sources, i);
         const char *type;
@@ -354,10 +371,23 @@ void print_source_list(struct poldek_ctx *ctx, tn_array *sources,
             struct source *src = source_new_htcnf(ht);
             if (src == NULL)
                 continue;
-            source_printf(src);
-            source_free(src);
+
+            if (src->name) {
+                int n = strlen(src->name);
+                if (maxlen < n)
+                    maxlen = n;
+            }
+
+            n_array_push(toprint, src);
         }
     }
+
+    for (i=0; i < n_array_size(toprint); i++) {
+        struct source *src = n_array_nth(toprint, i);
+        source_printf_w(src, maxlen);
+    }
+
+    n_array_free(toprint);
 }
 
 
