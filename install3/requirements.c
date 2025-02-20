@@ -570,6 +570,12 @@ static int process_req(int indent, struct i3ctx *ictx,
 
     tracef(indent, "%s, req: %s", pkg_id(pkg), strreq);
 
+    if (capreq_is_rpmlib(req) && pkgset_pm_satisfies(ictx->ps, req)) {
+        trace(indentt, "- satisfied by pm");
+        msgn_i(4, indent, "%s: satisfied by pm", strreq);
+        goto l_end;
+    }
+
     if (i3_pkgdb_match_req(ictx, req)) {
         trace(indentt, "- satisfied by db");
         msgn_i(3, indent, "%s: satisfied by db", strreq);
