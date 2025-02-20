@@ -218,6 +218,8 @@ static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *c
 
 static struct dvalue *eval_with(struct node *node, const struct booldep_eval_ctx *ctx)
 {
+    tn_array *re = NULL;
+
     struct dvalue *left = eval(node->args[0], ctx);
     if (left == NULL || left->providers == NULL || n_array_size(left->providers) == 0)
         goto l_none;
@@ -229,7 +231,8 @@ static struct dvalue *eval_with(struct node *node, const struct booldep_eval_ctx
     dvalue_dump(left, "with.left");
     dvalue_dump(right, "with.right");
 
-    tn_array *re = pkgs_array_new(4);
+    re = pkgs_array_new(4);
+
     for (int i=0; i < n_array_size(left->providers); i++) {
         struct pkg *pkg = n_array_nth(left->providers, i);
         if (n_array_bsearch(right->providers, pkg))
