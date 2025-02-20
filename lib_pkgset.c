@@ -35,11 +35,10 @@
 #include "poldek.h"
 #include "poldek_intern.h"
 #include "pm/pm.h"
-#include "split.h"
 
 extern const char *poldek_conf_PKGDIR_DEFAULT_TYPE;
 
-int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flags)
+int poldek__load_sources_internal(struct poldek_ctx *ctx)
 {
     struct pkgset *ps;
     struct poldek_ts *ts;
@@ -53,8 +52,9 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flag
     if ((ps = pkgset_new(ctx->pmctx)) == NULL)
         return 0;
 
-    if (pm_get_dbdepdirs(ctx->pmctx, ctx->ts->rootdir, NULL, ps->depdirs) >= 0)
-        ps->flags |= PSET_RT_DBDIRS_LOADED;
+    if (!pm_get_dbdepdirs(ctx->pmctx, ctx->ts->rootdir, NULL, ps->depdirs)) {
+        // XXX ignored error
+    }
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
         ldflags |= PKGDIR_LD_DOIGNORE;
@@ -94,13 +94,18 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flag
 
     ctx->pkgdirs = n_ref(ps->pkgdirs);
 
-    if (ts->getop(ts, POLDEK_OP_UNIQN))
-        ps_setup_flags |= PSET_UNIQ_PKGNAME;
+    n_array_sort(ps->pkgs);
+    n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
+    int n = packages_uniq(ps->pkgs, ts->getop(ts, POLDEK_OP_UNIQN) ? true : false);
+    if (n != 0) {
+        msgn(1, ngettext(
+                         "Removed %d duplicate package from available set",
+                         "Removed %d duplicate packages from available set", n), n);
+    }
 
-    pkgset_setup(ps, ps_setup_flags);
-
-    if (ctx->ts->prifile)
-        packages_set_priorities(ps->pkgs, ctx->ts->prifile);
+    // splitting has been removed in 2025
+    //if (ctx->ts->prifile)
+    //    packages_set_priorities(ps->pkgs, ctx->ts->prifile);
 
     ctx->ps = ps;
     MEMINF("after ps setup");

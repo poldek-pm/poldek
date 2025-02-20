@@ -29,6 +29,11 @@
 #include "misc.h"
 #include "pkgmisc.h"
 #include "pkg_ver_cmp.h"
+#include "thread.h"
+
+#ifdef WITH_THREADS
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 /* utilize rel_flags as it have 5 bits unused */
 #define __SPLITTED   (1 << 7) /* same as __NAALLOC (runtime only flag) */
@@ -51,13 +56,30 @@ static void capname_allocator_free(void) {
 
 const tn_lstr16 *capreq__alloc_name(const char *name, size_t len)
 {
+    mutex_lock(&mutex);
     if (capname_allocator == NULL) {
         capname_allocator = n_strdalloc_new(1024 * 128, 0);
         atexit(capname_allocator_free);
     }
 
-    return n_strdalloc_add16(capname_allocator, name, len);
+    const tn_lstr16 *s = n_strdalloc_add16(capname_allocator, name, len);
+
+    mutex_unlock(&mutex);
+
+    return s;
 }
+
+#if 0                           /* experiments */
+const tn_lstr16 *XXXcapreq__alloc_name(const char *name, size_t len) {
+    //mutex_lock(&mutex);
+    tn_lstr16 *ent16 = malloc(sizeof(*ent16) + len + 1);
+    ent16->len = len;
+    n_strncpy(ent16->str, name, len + 1);
+    //mutex_unlock(&mutex);
+    return ent16;
+}
+#endif
+
 
 void capreq_free_na(tn_alloc *na, struct capreq *cr)
 {
@@ -74,6 +96,9 @@ void capreq_free(struct capreq *cr)
 __inline__
 int capreq_cmp_name(const struct capreq *cr1, const struct capreq *cr2)
 {
+    if (cr1->name == cr2->name)
+        return 0;
+
     return strcmp(capreq_name(cr1), capreq_name(cr2));
 }
 
@@ -147,10 +172,15 @@ int capreq_strcmp_evr(const struct capreq *cr1, const struct capreq *cr2)
 __inline__
 int capreq_strcmp_name_evr(const struct capreq *cr1, const struct capreq *cr2)
 {
-    register int rc;
+    if (cr1->name != cr2->name) {
+        register int rc;
+        register int maxlen = cr1->namelen;
+        if (cr2->namelen > maxlen)
+            maxlen = cr2->namelen;
 
-    if ((rc = strcmp(capreq_name(cr1), capreq_name(cr2))))
-        return rc;
+        if ((rc = strncmp(capreq_name(cr1), capreq_name(cr2), maxlen)))
+            return rc;
+    }
 
     return capreq_strcmp_evr(cr1, cr2);
 }
@@ -276,21 +306,6 @@ char *capreq_str(char *str, size_t size, const struct capreq *cr)
         return str;
     return NULL;
 }
-
-char *capreq_snprintf_s(const struct capreq *cr)
-{
-    static char str[256];
-    capreq_snprintf(str, sizeof(str), cr);
-    return str;
-}
-
-char *capreq_snprintf_s0(const struct capreq *cr)
-{
-    static char str[256];
-    capreq_snprintf(str, sizeof(str), cr);
-    return str;
-}
-
 
 struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,

@@ -201,14 +201,13 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
         return NULL;
     }
 
-    /*  */
     recno = 1;
     for (i=0; i < n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         pkg->recno = recno++;
     }
 
-    pkgset_setup(ps, PSET_VRFY_MERCY);
+    /* pkgset_setup(ps, PSET_VRFY_MERCY); */
     db = n_malloc(sizeof(*db));
     db->ts = NULL;
     db->ps = ps;

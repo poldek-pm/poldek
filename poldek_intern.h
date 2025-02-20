@@ -74,8 +74,6 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch);
 
 void poldek__ts_dump_settings(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
-tn_array *poldek__ts_install_ordered_packages(const struct poldek_ts *ts);
-
 struct pkgmark_set;
 void poldek__ts_update_summary(struct poldek_ts *ts,
                                const char *prefix, const tn_array *pkgs,
@@ -100,6 +98,6 @@ int poldek__choose_suggests(const struct poldek_ts *ts,
                             tn_array *choices, int hint);
 
 void poldek__setup_default_ask_callbacks(struct poldek_ctx *ctx);
-int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flags);
+int poldek__load_sources_internal(struct poldek_ctx *ctx);
 
 #endif

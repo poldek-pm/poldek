@@ -1243,13 +1243,6 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                 vfile_configure(VFILE_CONF_PROGRESS, vv);
             break;
 
-        case POLDEK_CONF_LAZY_DEPPROCESS:
-            vv = va_arg(ap, char*);
-            if (vv) {
-                ctx->_ps_setup_flags |= PSET_NODEPS;
-            }
-            break;
-
         case POLDEK_CONF_CONFIRM_CB:
             if ((vv = va_arg(ap, void*)))
                 ctx->confirm_fn = vv;
@@ -1738,14 +1731,9 @@ int poldek_load_sources(struct poldek_ctx *ctx)
         return 1;
     }
 
-    rc = poldek__load_sources_internal(ctx, ctx->_ps_setup_flags);
+    rc = poldek__load_sources_internal(ctx);
     ctx->_iflags |= SOURCES_LOADED;
     return rc;
-}
-
-/* if lazy deps processing */
-int poldek_setup_pkgset_deps(struct poldek_ctx *ctx) {
-    return pkgset_setup_deps(ctx->ps, 0);
 }
 
 struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx,

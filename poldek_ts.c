@@ -31,9 +31,7 @@
 #include "poldek.h"
 #include "poldek_intern.h"
 #include "pkgset.h"
-#include "pkgset-req.h"
 #include "pkgmisc.h"
-#include "pkgset-req.h"
 #include "arg_packages.h"
 #include "misc.h"
 #include "log.h"
@@ -67,11 +65,10 @@ struct ts_run {
     unsigned   flags;
 };
 
-#define TS_RUN_NEEDAVSET (1 << 0)
-#define TS_RUN_NOPRERUN  (1 << 3)
+#define NOPRERUN     (1 << 3)
 struct ts_run ts_run_tbl[] = {
-    { POLDEK_TS_VERIFY, (ts_run_fn)ts_run_verify, TS_RUN_NOPRERUN | TS_RUN_NEEDAVSET },
-    { POLDEK_TS_INSTALL, (ts_run_fn)ts_run_install, TS_RUN_NEEDAVSET },
+    { POLDEK_TS_VERIFY, (ts_run_fn)ts_run_verify, NOPRERUN },
+    { POLDEK_TS_INSTALL, (ts_run_fn)ts_run_install, 0 },
     { POLDEK_TS_UNINSTALL, (ts_run_fn)ts_run_uninstall, 0 },
     { 0, 0, 0 },
 };
@@ -287,7 +284,7 @@ static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     DBGF("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
 
 
-    ts->pms = pkgmark_set_new(1024, 0);
+    ts->pms = pkgmark_set_new(ctx ? ctx->ps : NULL, 1024, 0);
 
     ts->ts_summary = n_hash_new(4, (tn_fn_free)n_array_free);
     ts->pkgs_installed = pkgs_array_new(16);
@@ -653,7 +650,7 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
             msgn(1, _("Processing dependencies..."));
 
         if (n_array_size(pkgs)) {
-            rc = packages_mark(ts->pms, pkgs, flags & TS_MARK_DEPS);
+            rc = packages_mark(ts->pms, pkgs, ts->ctx->ps, flags & TS_MARK_DEPS);
             if (!rc && ts->getop_v(ts, POLDEK_OP_NODEPS, POLDEK_OP_FORCE, 0))
                 rc = 1;
         }
@@ -662,9 +659,6 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
 
     return rc;
 }
-
-
-
 
 static void cp_str_ifnull(char **dst, const char *src)
 {
@@ -783,25 +777,21 @@ static int ts_prerun(struct poldek_ts *ts)
     return rc;
 }
 
-tn_array *poldek__ts_install_ordered_packages(const struct poldek_ts *ts)
+static int load_sources(struct poldek_ctx *ctx)
 {
-    tn_array *pkgs = n_array_new(512, (tn_fn_free)pkg_free, NULL);
-    int i;
-
-    for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
-
-        if (pkg_is_marked(ts->pms, pkg))
-            n_array_push(pkgs, pkg_link(pkg));
-    }
-
-    return pkgs;
+    return poldek_load_sources(ctx);
 }
 
 static int ts_run_install_dist(struct poldek_ts *ts)
 {
-    if (!ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_CAPSINLINE))
+    if (!load_sources(ts->ctx)) {
         return 0;
+    }
+
+    if (!ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_CAPSINLINE)) {
+        pkgmark_log_unsatisfied_dependecies(ts->pms);
+        return 0;
+    }
 
     return do_poldek_ts_install_dist(ts);
 }
@@ -811,6 +801,10 @@ static int ts_run_upgrade_dist(struct poldek_ts *ts)
     int rc;
 
     n_assert(poldek_ts_issetf(ts, POLDEK_TS_UPGRADEDIST));
+
+    if (!load_sources(ts->ctx)) {
+        return 0;
+    }
 
     ts->db = poldek_ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
@@ -839,6 +833,10 @@ static int ts_run_install(struct poldek_ts *ts)
 
     if (poldek_ts_issetf_all(ts, POLDEK_TS_INSTALLDIST))
         return ts_run_install_dist(ts);
+
+    if (!load_sources(ts->ctx)) {
+        return 0;
+    }
 
     DBGF("%p follow = %d\n", ts, ts->getop(ts, POLDEK_OP_FOLLOW));
     if (!ts_mark_arg_packages(ts, 0)) {
@@ -887,89 +885,70 @@ static int ts_run_uninstall(struct poldek_ts *ts)
     return rc;
 }
 
-static int do_load_sources(struct poldek_ctx *ctx)
-{
-    int rc = poldek_load_sources(ctx);
-
-    if (rc && (ctx->_ps_setup_flags & PSET_NODEPS))
-        pkgset_setup_deps(ctx->ps, 0);
-
-    return rc;
-}
-
 /* just verify deps, conflicts, ordering, etc */
 static int ts_run_verify(struct poldek_ts *ts)
 {
-    tn_array *pkgs = NULL, *pkgs_unordered = NULL;
     int nerr = 0, rc = 1;
 
-    DBGF("%p\n", ts);
     //n_assert(poldek_ts_issetf(ts, POLDEK_TS_VERIFY));
 
     if (poldek_ts_get_arg_count(ts) == 0) {
-        do_load_sources(ts->ctx);
+        logn(LOGERR, _("Nothing to do"));
+        return 0;
+        // XXX disabled feature of whole set verification, does anybody needs that?
+        //load_sources(ts->ctx);
 
     } else {
         if (!ts_prerun(ts))
             return 0;
 
-        if (!do_load_sources(ts->ctx))
+        if (!load_sources(ts->ctx))
             return 0;
 
-        rc = ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_VERBOSE |
-                                  TS_MARK_CAPSINLINE);
+        unsigned flags = TS_MARK_DEPS | TS_MARK_VERBOSE | TS_MARK_CAPSINLINE;
+        rc = ts_mark_arg_packages(ts, flags);
         (void)rc;               /* XXX unused for now */
     }
 
+    /* XXX disabled feature of whole set verification
     if (poldek_ts_get_arg_count(ts) > 0) {
         pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
-        if (pkgs)
-            pkgs_unordered = n_ref(pkgs);
 
     } else {
-        pkgs = n_ref(ts->ctx->ps->ordered_pkgs);
-        if (pkgs)
-            pkgs_unordered = n_ref(ts->ctx->ps->pkgs);
+        pkgs = n_ref(ts->ctx->ps->pkgs);
     }
 
     if (pkgs == NULL)
         return 0;
+    */
+
+    tn_array *pkgs = pkgmark_get_packages(ts->pms, PKGMARK_ANY);
+    if (pkgs == NULL)
+        return 0;
 
     if (ts->getop(ts, POLDEK_OP_VRFY_DEPS)) {
-        msgn(0, _("Verifying dependencies..."));
-        if (!packages_verify_dependecies(pkgs, ts->ctx->ps))
+        msgn(3, _("Verifying dependencies..."));
+        if (pkgmark_log_unsatisfied_dependecies(ts->pms) > 0)
             nerr++;
     }
 
+#if 0                           /* removed feature */
     if (ts->getop(ts, POLDEK_OP_DEPGRAPH)) {
         msgn(0, _("Generating dependency graph %s..."), ts->depgraph);
         if (!packages_generate_depgraph(pkgs, ts->ctx->ps, ts->depgraph))
             nerr++;
     }
+#endif
 
     if (ts->getop(ts, POLDEK_OP_VRFY_ORDER)) {
-        tn_array *ordered = NULL;
-        if (!packages_order_and_verify(pkgs_unordered, &ordered, PKGORDER_INSTALL, 1))
+        if (!pkgmark_verify_package_order(ts->pms))
             nerr++;
     }
 
     if (ts->getop(ts, POLDEK_OP_VRFY_CNFLS)) {
-        int i, j;
         msgn(0, _("Verifying conflicts..."));
-
-        for (i=0; i < n_array_size(pkgs); i++) {
-            struct pkg *pkg = n_array_nth(pkgs, i);
-            if (pkg->cnflpkgs == NULL)
-                continue;
-
-            msg(0, "%s -> ", pkg_id(pkg));
-            for (j=0; j < n_array_size(pkg->cnflpkgs); j++) {
-                struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-                msg(0, "_%s%s, ", cpkg->flags & REQPKG_OBSOLETE ? "*":"",
-                    pkg_id(cpkg->pkg));
-            }
-            msg(0, "_\n");
-        }
+        if (!pkgmark_verify_package_conflicts(ts->pms))
+            nerr++;
     }
 
     if (ts->getop(ts, POLDEK_OP_VRFY_FILECNFLS)) {
@@ -984,11 +963,10 @@ static int ts_run_verify(struct poldek_ts *ts)
 
     if (ts->getop(ts, POLDEK_OP_VRFY_FILEMISSDEPS)) {
         msgn(0, _("Verifying file semi-orphans (missing dependencies)..."));
-        file_index_report_semiorphans(ts->ctx->ps->file_idx, pkgs);
+        file_index_report_semiorphans(ts->ctx->ps, pkgs);
     }
 
     n_array_free(pkgs);
-    n_array_free(pkgs_unordered);
     return nerr == 0;
 }
 
@@ -999,7 +977,6 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
 
     poldek_ts_setf(ts, flags);
     n_assert(ts->type);
-
 
     DBGF("%d(%s)\n", ts->type, ts->typenam);
     while (ts_run_tbl[i].type) {
@@ -1014,13 +991,11 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
         return 0;
 
     n_assert(ts_run);
-    if (ts_run->flags & TS_RUN_NEEDAVSET) {
-        do_load_sources(ts->ctx);
-    }
 
-    if ((ts_run->flags & TS_RUN_NOPRERUN) == 0)
+    if ((ts_run->flags & NOPRERUN) == 0) {
         if (!ts_prerun(ts))
             return 0;
+    }
 
     return ts_run->run(ts);
 }

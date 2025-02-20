@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 
 m4_define([poldek_major_version], [0])
-m4_define([poldek_minor_version], [42])
-m4_define([poldek_micro_version], [2])
+m4_define([poldek_minor_version], [44])
+m4_define([poldek_micro_version], [0])
 m4_define([poldek_version],
 	  [poldek_major_version.poldek_minor_version.poldek_micro_version])
 
@@ -133,6 +133,18 @@ else
 	fi
 fi
 
+AC_ARG_ENABLE(threads,
+[  --disable-threads         turn off threading],
+ENABLE_THREADS=$enableval, ENABLE_THREADS=yes)
+
+if test "${ENABLE_THREADS}." != "yes."; then
+	AM_CONDITIONAL(ENABLE_THREADS, false)
+else
+	AC_CHECK_LIB(pthread, pthread_create,,[ AC_MSG_ERROR(["pthread not found"])])
+	AM_CONDITIONAL(ENABLE_THREADS, true)
+	AC_DEFINE([ENABLE_THREADS],1,[defined if threading is on])
+fi
+
 AC_CHECK_LIB(ssl, SSL_CTX_new,,[ AC_MSG_ERROR(["openssl not found"])])
 
 AC_ARG_WITH(sys-trurlib,
@@ -172,8 +184,6 @@ AC_TYPE_MODE_T
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
-AC_HEADER_TIME
-
 
 AC_CHECK_MEMBER(struct tm.tm_gmtoff,
 	[AC_DEFINE([HAVE_TM_GMTOFF],1,[])],
@@ -189,13 +199,12 @@ AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(gettimeofday mkdir strdup uname mkdtemp canonicalize_file_name)
 AC_CHECK_FUNCS(strerror strstr strtol strtoul strsignal)
-AC_CHECK_FUNCS(mallopt)
+AC_CHECK_FUNCS(mallopt mallinfo2)
 AC_CHECK_FUNCS(setenv clearenv)
 AC_CHECK_FUNCS(ngettext setlocale)
 
 dnl Checks for header files.
 AC_HEADER_DIRENT
-AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([fcntl.h limits.h malloc.h locale.h])
 AC_CHECK_HEADERS([sys/file.h sys/time.h syslog.h unistd.h])
@@ -207,7 +216,6 @@ AC_CHECK_FUNCS(argp_usage, ,
         [AC_CHECK_LIB(argp, argp_usage, [LIBS="$LIBS -largp"],
                       [AC_MSG_ERROR(["argp is required"])])
         ])
-
 
 #dnl FreeBSD (bug?) - netinet/in.h depends on in_systm.h
 #AC_CHECK_HEADERS(netinet/in_systm.h)
@@ -287,6 +295,11 @@ if test "${is_rpm5}." = "yes."; then
          [ #include <rpm/rpmtag.h>
 	 ], have_tag_suggests=yes, have_tag_suggests=no)
 
+dnl rpm5 linking w/o
+    AC_CHECK_LIB(bz2, BZ2_bzCompress)
+    AC_CHECK_LIB(z, gzopen)
+    AC_CHECK_FUNCS(gzungetc)
+    AC_CHECK_LIB(popt, poptReadConfigFile)
 else
     AC_MSG_RESULT(no)
 fi
@@ -304,10 +317,9 @@ if test "${have_tag_pubkeys}." = "yes." ; then
 fi
 
 dnl Checks for libraries.
-AC_CHECK_LIB(bz2, BZ2_bzCompress)
-AC_CHECK_LIB(z, gzopen)
-
-AC_CHECK_FUNCS(gzungetc)
+dnl AC_CHECK_LIB(bz2, BZ2_bzCompress)
+dnl AC_CHECK_LIB(z, gzopen)
+dnl AC_CHECK_FUNCS(gzungetc)
 
 DBLIB=""
 if test "${is_rpm4_0_4}." = "no." ; then
@@ -343,9 +355,6 @@ else
     CPPFLAGS="$DBINCLUDE $CPPFLAGS"
 fi
 
-
-AC_CHECK_LIB(popt, poptReadConfigFile)
-
 if test "${is_rpm4_0_4}." = "yes." ; then
 	AC_CHECK_LIB(beecrypt, dhaes_pContextInitEncrypt,
 	have_beecrypt=yes, have_beecrypt=no)
@@ -368,8 +377,7 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $DBLIB $LIBS"],
 AC_CHECK_FUNCS(rpmlog vrpmlog rpmCheckSig rpmVerifySignature)
 
 dnl rpm 4.2?
-AC_CHECK_FUNCS(rpmtsColor, [LIBS="$LIBS -lpthread"
-                            AC_DEFINE([HAVE_RPM_4_2],1,[])])
+AC_CHECK_FUNCS(rpmtsColor, AC_DEFINE([HAVE_RPM_4_2],1,[]))
 AC_CHECK_FUNCS(hGetColor, AC_DEFINE([HAVE_RPM_HGETCOLOR],1,[]))
 
 if test "${is_rpmorg}." != "yes."; then

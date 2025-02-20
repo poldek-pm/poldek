@@ -27,7 +27,6 @@
 #include "pkg.h"
 #include "pkgmisc.h"
 #include "pkgset.h"
-#include "pkgset-req.h"
 #include "arg_packages.h"
 #include "pm/pm.h"
 #include "poldek_term.h"
@@ -187,6 +186,8 @@ int i3_resolve_conflict(int indent, struct i3ctx *ictx,
 int i3_process_pkg_conflicts(int indent, struct i3ctx *ictx,
                              struct i3pkg *i3pkg);
 
+tn_array *i3_get_package_conflicted_pkgs(int indent, struct i3ctx *ictx,
+                                         const struct pkg *pkg);
 
 /* obsoletes.c */
 struct orphan {

@@ -13,9 +13,11 @@
 #ifndef POLDEK_PKGMISC_H
 #define POLDEK_PKGMISC_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <trurl/narray.h>
-#include <stdbool.h>
+#include <trurl/nhash.h>
+
 #ifndef EXPORT
 # define EXPORT extern
 #endif
@@ -69,7 +71,9 @@ struct pkgmark_set;
 #define PKGMARK_SET_IDNEVR (1 << 0) /* id = pkg_id() */
 #define PKGMARK_SET_IDPTR  (1 << 1) /* id = printf("%p", pkg); */
 
-EXPORT struct pkgmark_set *pkgmark_set_new(int size, unsigned flags);
+struct pkgset;
+
+EXPORT struct pkgmark_set *pkgmark_set_new(struct pkgset *ps, int size, unsigned flags);
 EXPORT void pkgmark_set_free(struct pkgmark_set *pms);
 EXPORT int pkgmark_set(struct pkgmark_set *pms, struct pkg *pkg, int set,
                 uint32_t flag);
@@ -86,14 +90,16 @@ EXPORT tn_array *pkgmark_get_packages(struct pkgmark_set *pmark, uint32_t flag);
 
 #define PKGMARK_MARK        (1 << 1)  /* marked directly, i.e. by the user*/
 #define PKGMARK_DEP         (1 << 2)  /* marked by deps */
+#define PKGMARK_ANY         (PKGMARK_MARK | PKGMARK_DEP)
+
 #define pkg_hand_mark(pms, pkg) pkgmark_set(pms, pkg, 1, PKGMARK_MARK)
 #define pkg_dep_mark(pms, pkg) pkgmark_set(pms, pkg, 1, PKGMARK_DEP)
-#define pkg_unmark(pms, pkg) pkgmark_set(pms, pkg, 0, PKGMARK_DEP|PKGMARK_MARK)
+#define pkg_unmark(pms, pkg) pkgmark_set(pms, pkg, 0, PKGMARK_ANY)
 
 #define pkg_is_dep_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_DEP)
 #define pkg_is_hand_marked(pms, pkg)  pkgmark_isset(pms, pkg, PKGMARK_MARK)
-#define pkg_is_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_MARK|PKGMARK_DEP)
-#define pkg_isnot_marked(pms, pkg) (!pkgmark_isset(pms, pkg, PKGMARK_MARK|PKGMARK_DEP))
+#define pkg_is_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_ANY)
+#define pkg_isnot_marked(pms, pkg) (!pkgmark_isset(pms, pkg, PKGMARK_ANY))
 
 
 #define PKGMARK_RM          (1 << 3) /* marked for removal */
@@ -130,14 +136,19 @@ EXPORT tn_array *pkgmark_get_packages(struct pkgmark_set *pmark, uint32_t flag);
 EXPORT void pkgmark_massset(struct pkgmark_set *pmark, int set, uint32_t flag);
 
 /* mark packages (PKGMARK_{MARK,DEP}) to pms */
-EXPORT int packages_mark(struct pkgmark_set *pms, const tn_array *pkgs, int withdeps);
+EXPORT int packages_mark(struct pkgmark_set *pms, const tn_array *pkgs, struct pkgset *ps, int withdeps);
+
+EXPORT int pkgmark_log_unsatisfied_dependecies(struct pkgmark_set *pms);
+
 /* check how many packages are required by pkg */
 EXPORT int pkgmark_pkg_drags(struct pkg *pkg, struct pkgmark_set *pms, int deep);
 /* .. and then verify marked set  */
 EXPORT int pkgmark_verify_package_conflicts(struct pkgmark_set *pms);
+EXPORT int pkgmark_verify_package_order(struct pkgmark_set *pms);
 
 struct pkgset;
-EXPORT int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps);
-EXPORT int packages_generate_depgraph(tn_array *pkgs, struct pkgset *ps,
-                               const char *graphspec);
+//EXPORT int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps);
+//EXPORT int packages_verify_(tn_array *pkgs, struct pkgset *ps);
+//EXPORT int packages_generate_depgraph(tn_array *pkgs, struct pkgset *ps,
+//                               const char *graphspec);
 #endif

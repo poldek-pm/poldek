@@ -156,14 +156,14 @@ EXPORT int capreq_arr_restore_skip_st(tn_stream *st);
 #endif
 
 EXPORT int capreq_snprintf(char *str, size_t size, const struct capreq *cr);
-EXPORT char *capreq_snprintf_s(const struct capreq *cr);
-EXPORT char *capreq_snprintf_s0(const struct capreq *cr);
-
 EXPORT char *capreq_str(char *str, size_t size, const struct capreq *cr);
 
 /* const char *capreq_stra(struct capreq *) */
+#define __CAPREQ_BUF_SIZE 512
 #define capreq_stra(c) \
-    (capreq_versioned((c))? capreq_str(alloca(256), 256, (c)): capreq_name((c)))
+    (capreq_versioned((c)) ? capreq_str(alloca(__CAPREQ_BUF_SIZE), __CAPREQ_BUF_SIZE, (c)) : capreq_name((c)))
 
+#define capreq_snprintf_s(c) capreq_str(alloca(__CAPREQ_BUF_SIZE), __CAPREQ_BUF_SIZE, (c))
+#define capreq_snprintf_s0(c) capreq_str(alloca(__CAPREQ_BUF_SIZE), __CAPREQ_BUF_SIZE, (c))
 
 #endif /* POLDEK_CAPREQ_H */

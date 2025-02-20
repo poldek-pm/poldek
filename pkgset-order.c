@@ -31,12 +31,12 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
-#include "pkgset-req.h"
 
 /*
  * Ordering: sort packages topologically
  */
 struct visit_install_order_s {
+    struct pkgset *ps;
     tn_array *ordered_pkgs;
     tn_array *stack;
     int nerrors;
@@ -54,7 +54,10 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
     deep += 2;
 
     pkg_set_color(pkg, PKG_COLOR_GRAY);
-    if (pkg->reqpkgs == NULL || n_array_size(pkg->reqpkgs) == 0) {
+
+    tn_array *reqpkgs = pkgset_get_required_packages(deep, vs->ps, pkg);
+
+    if (reqpkgs == NULL || n_array_size(reqpkgs) == 0) {
         msg(verb, "_\n");
         msg_i(verb, deep, "_ visit %s  (NO REQS)", pkg->name);
         goto l_end;
@@ -65,10 +68,9 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
 
     msg(verb, "_\n");
     msg_i(verb, deep, "_ visit %s -> (", pkg->name);
-    for (i=0; i < n_array_size(pkg->reqpkgs); i++) {
-        struct reqpkg *rp;
+    for (i=0; i < n_array_size(reqpkgs); i++) {
+        struct reqpkg *rp = n_array_nth(reqpkgs, i);
 
-        rp = n_array_nth(pkg->reqpkgs, i);
         msg(verb, "_%s%s, ", (rp->flags & reqpkg_flag) ? "*" : "",
             rp->pkg->name);
 
@@ -84,14 +86,17 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
     }
     msg(verb, "_) {");
 
-    for (i=0; i < n_array_size(pkg->reqpkgs); i++) {
+    for (i=0; i < n_array_size(reqpkgs); i++) {
         struct reqpkg *rpkg, *rp;
         int np = 0;
 
-        rpkg = rp = n_array_nth(pkg->reqpkgs, i);
+        rpkg = rp = n_array_nth(reqpkgs, i);
 
         while (rp != NULL) {
-            if (pkg_is_color(rp->pkg, PKG_COLOR_WHITE)) {
+            if (pkg_is_color(rp->pkg, PKG_ALL_COLORS) == 0) { // skip, it is not in our pool
+                (void)0;
+
+            } else if (pkg_is_color(rp->pkg, PKG_COLOR_WHITE)) {
                 if (rp->flags & reqpkg_flag)
                     pkg_set_prereqed(rp->pkg);
                 else
@@ -157,8 +162,9 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
                           rp->pkg->name);
                 }
 
-            } else
+            } else {
                 n_assert(0);
+            }
 
             if (rpkg->flags & REQPKG_MULTI)
                 rp = rpkg->adds[np++];
@@ -181,7 +187,10 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
     pkg_set_color(pkg, PKG_COLOR_BLACK);
     pkg_clr_prereqed(pkg);
     msgn(verb, "push %s", pkg_snprintf_s(pkg));
-    n_array_push(vs->ordered_pkgs, pkg);
+    n_array_push(vs->ordered_pkgs, pkg_link(pkg));
+
+    n_array_cfree(&reqpkgs);
+
     if (last_stack_i != -1)
         for (i=last_stack_i; i < n_array_size(vs->stack); i++) {
             pkg = n_array_pop(vs->stack);
@@ -197,15 +206,15 @@ static void mapfn_clean_pkg_color(struct pkg *pkg)
     pkg_clr_prereqed(pkg);
 }
 
-static int do_order(tn_array *pkgs, tn_array **ordered_pkgs,
+static int do_order(struct pkgset *ps, const tn_array *pkgs, tn_array **ordered_pkgs,
                     unsigned reqpkg_flag, int verbose_level)
 {
     struct pkg *pkg;
     struct visit_install_order_s vs;
     int i;
 
-    vs.ordered_pkgs = n_array_new(n_array_size(pkgs), NULL, NULL);
-//                                  (tn_fn_free)pkg_free, NULL);
+    vs.ps = ps;
+    vs.ordered_pkgs = n_array_new(n_array_size(pkgs), (tn_fn_free)pkg_free, NULL);
     vs.nerrors = 0;
     vs.stack = n_array_new(128, NULL, NULL);
     vs.verbose_level = verbose_level;
@@ -230,7 +239,8 @@ static int do_order(tn_array *pkgs, tn_array **ordered_pkgs,
 
 
 /* RET: number of detected loops  */
-static int do_packages_order(tn_array *pkgs, tn_array **ordered_pkgs, int ordertype,
+static int do_packages_order(struct pkgset *ps, const tn_array *pkgs,
+                             tn_array **ordered_pkgs, int ordertype,
                              int verbose_level)
 {
     tn_array *preordered = NULL;
@@ -238,13 +248,16 @@ static int do_packages_order(tn_array *pkgs, tn_array **ordered_pkgs, int ordert
     int nloops;
 
     n_assert(n_array_ctl_get_cmpfn(pkgs) == (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    n_assert(n_array_size(pkgs) > 0);
+
+    tn_array *inpkgs = n_array_dup(pkgs, (tn_fn_dup)pkg_link);
     /* insertion sort - assuming pkgs is already sorted
        by pkg_cmp_pri_name_evr_rev() */
-    n_array_isort_ex(pkgs, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
+    n_array_isort_ex(inpkgs, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
 
     /* Preordering packages using Requires: */
     msgn(verbose_level + 2, "Preordering packages...");
-    do_order(pkgs, &preordered, 0, verbose_level + 2);
+    do_order(ps, inpkgs, &preordered, 0, verbose_level + 2);
 
     switch (ordertype) {
         case PKGORDER_INSTALL:
@@ -260,43 +273,19 @@ static int do_packages_order(tn_array *pkgs, tn_array **ordered_pkgs, int ordert
     }
     msgn(verbose_level + 2, "Ordering packages...");
     *ordered_pkgs = NULL;
-    nloops = do_order(preordered, ordered_pkgs, reqpkg_flag, verbose_level + 1);
+    nloops = do_order(ps, preordered, ordered_pkgs, reqpkg_flag, verbose_level + 1);
 
     n_array_free(preordered);
-    n_array_isort(pkgs);
+    n_array_free(inpkgs);
 
     return nloops;
 }
 
-int packages_order(tn_array *pkgs, tn_array **ordered, int ordertype)
+int pkgset_order_ex(struct pkgset *ps, const tn_array *pkgs, tn_array **ordered, int ordertype, int verbose_level)
 {
-    return do_packages_order(pkgs, ordered, ordertype, 3);
+    return do_packages_order(ps, pkgs, ordered, ordertype, verbose_level);
 }
 
-int packages_order_and_verify(tn_array *pkgs, tn_array **ordered, int ordertype,
-                              int verbose_level)
-{
-    int nloops, i;
-
-    msgn(verbose_level, _("Verifying packages ordering..."));
-
-    nloops = do_packages_order(pkgs, ordered, ordertype, verbose_level);
-
-    if (nloops) {
-		logn(LOGERR, ngettext("%d prerequirement loop detected",
-                              "%d prerequirement loops detected",
-                              nloops), nloops);
-
-    } else {
-        msgn(verbose_level, _("No loops -- OK"));
-    }
-
-
-    msgn(verbose_level, "Installation order:");
-    for (i=0; i < n_array_size(*ordered); i++) {
-        struct pkg *pkg = n_array_nth(*ordered, i);
-        msgn(verbose_level, "%d. %s", i, pkg_id(pkg));
-    }
-    msg(verbose_level, "\n");
-    return nloops == 0;
+int pkgset_order(struct pkgset *ps, const tn_array *pkgs, tn_array **ordered, int ordertype) {
+    return pkgset_order_ex(ps, pkgs, ordered, ordertype, 3);
 }

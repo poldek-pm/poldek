@@ -45,8 +45,8 @@ struct tr {
 };
 
 struct pkgroup {
-    int      id;
-    int      ntrs;
+    uint16_t  id;
+    uint16_t  ntrs;
     tn_hash  *trs;                /* translations */
     char     name[0];
 };
@@ -147,6 +147,8 @@ struct pkgroup *pkgroup_new(int id, const char *name)
 {
     struct pkgroup *gr;
     int len;
+
+    n_assert(id < UINT16_MAX);
 
     len = strlen(name) + 1;
 

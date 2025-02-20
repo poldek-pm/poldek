@@ -29,9 +29,9 @@
 
 static void capreq_ent_free(struct capreq_idx_ent *ent)
 {
-    DBGF("ent %p, %p %d, %d\n", ent, ent->crent_pkgs, ent->_size, ent->items);
+    DBGF("ent %p, %p %d, %d\n", ent, ent->pkgs, ent->_size, ent->items);
     if (ent->_size > 1)
-        free(ent->crent_pkgs);
+        free(ent->pkgs);
 }
 
 int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)
@@ -57,11 +57,10 @@ void capreq_idx_destroy(struct capreq_idx *idx)
 static int ent_transform_to_array(struct capreq_idx_ent *ent)
 {
     struct pkg *tmp;
-
-    n_assert(ent->_size == 1);   /* crent_pkgs is NOT allocated */
-    tmp = ent->crent_pkg;
-    ent->crent_pkgs = n_malloc(2 * sizeof(*ent->crent_pkgs));
-    ent->crent_pkgs[0] = tmp;
+    n_assert(ent->_size == 1);   /* pkgs is NOT allocated */
+    tmp = ent->pkg;
+    ent->pkgs = n_malloc(2 * sizeof(*ent->pkgs));
+    ent->pkgs[0] = tmp;
     ent->_size = 2;
     return 1;
 }
@@ -71,14 +70,14 @@ static inline void idx_ent_sort(struct capreq_idx_ent *ent)
     register size_t i, j;
 
     for (i = 1; i < ent->items; i++) {
-        register struct pkg *tmp = ent->crent_pkgs[i];
+        register struct pkg *tmp = ent->pkgs[i];
 
         j = i;
-        while (j > 0 && tmp - ent->crent_pkgs[j - 1] < 0) {
-            ent->crent_pkgs[j] = ent->crent_pkgs[j - 1];
+        while (j > 0 && tmp - ent->pkgs[j - 1] < 0) {
+            ent->pkgs[j] = ent->pkgs[j - 1];
             j--;
         }
-        ent->crent_pkgs[j] = tmp;
+        ent->pkgs[j] = tmp;
     }
 }
 
@@ -93,7 +92,7 @@ static inline int idx_ent_contains(struct capreq_idx_ent *ent, const struct pkg 
     while (l < r) {
 	i = (l + r) / 2;
 
-	if ((cmp_re = ent->crent_pkgs[i] - pkg) == 0) {
+	if ((cmp_re = ent->pkgs[i] - pkg) == 0) {
 	    return 1;
 
 	} else if (cmp_re > 0) {
@@ -184,7 +183,7 @@ inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
 
 int capreq_idx_add(struct capreq_idx *idx,
                    const char *capname, int capname_len,
-                   struct pkg *pkg)
+                   const struct pkg *pkg)
 {
     struct capreq_idx_ent *ent;
     uint32_t raw_khash = n_hash_compute_raw_hash(capname, capname_len);
@@ -195,16 +194,18 @@ int capreq_idx_add(struct capreq_idx *idx,
             DBGF("skip %s\n", capname);
             return 1;
         }
+    } else if ((idx->flags & CAPREQ_IDX_CAP)) {
+        if (strcmp(capname, "elf(buildid)") == 0)
+            return 1;
     }
 
     uint32_t khash = n_hash_compute_index_hash(idx->ht, raw_khash);
     if ((ent = n_hash_hget(idx->ht, capname, capname_len, khash)) == NULL) {
         const tn_lstr16 *cent = capreq__alloc_name(capname, capname_len);
-
         ent = idx->na->na_malloc(idx->na, sizeof(*ent));
         ent->_size = 1;
         ent->items = 1;
-        ent->crent_pkg = pkg;
+        ent->pkg = (struct pkg*)pkg; /* XXX const */
 
         n_hash_hinsert(idx->ht, cent->str, cent->len, khash, ent);
 
@@ -222,11 +223,10 @@ int capreq_idx_add(struct capreq_idx *idx,
                                     strncmp(capname, "libm", 4) == 0 ||
                                     strncmp(capname, "libpthread", 4) == 0)) {
                 ent->_size = 4096;
-                ent->crent_pkgs = n_realloc(ent->crent_pkgs,
-                                            ent->_size * sizeof(*ent->crent_pkgs));
+                ent->pkgs = n_realloc(ent->pkgs,
+                                      ent->_size * sizeof(*ent->pkgs));
             }
         }
-
         /*
          * Sometimes, there are duplicates, especially in dotnet-* packages
          * which provides multiple versions of one cap. For example dotnet-mono-zeroconf
@@ -239,11 +239,11 @@ int capreq_idx_add(struct capreq_idx *idx,
 
         if (ent->items == ent->_size) {
             ent->_size *= 2;
-            ent->crent_pkgs = n_realloc(ent->crent_pkgs,
-                                        ent->_size * sizeof(*ent->crent_pkgs));
+            ent->pkgs = n_realloc(ent->pkgs,
+                                  ent->_size * sizeof(*ent->pkgs));
         }
 
-        ent->crent_pkgs[ent->items++] = pkg;
+        ent->pkgs[ent->items++] = (struct pkg*)pkg; /* XXX const */
 
         if (idx->flags & CAPREQ_IDX_CAP) { /* sort to prevent duplicates */
             idx_ent_sort(ent);
@@ -255,7 +255,7 @@ int capreq_idx_add(struct capreq_idx *idx,
 
 
 void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
-                       struct pkg *pkg)
+                       const struct pkg *pkg)
 {
     struct capreq_idx_ent *ent;
 
@@ -263,26 +263,25 @@ void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
         return;
 
     if (ent->_size == 1) {      /* no crent_pkgs */
-        if (pkg_cmp_name_evr(pkg, ent->crent_pkg) == 0) {
+        if (pkg_cmp_name_evr(pkg, ent->pkg) == 0) {
             ent->items = 0;
-            ent->crent_pkg = NULL;
+            ent->pkg = NULL;
         }
         return;
     }
 
     for (unsigned i=0; i < ent->items; i++) {
-        if (pkg_cmp_name_evr(pkg, ent->crent_pkgs[i]) == 0) {
+        if (pkg_cmp_name_evr(pkg, ent->pkgs[i]) == 0) {
             if (i == ent->items - 1)
-                ent->crent_pkgs[i] = NULL;
+                ent->pkgs[i] = NULL;
             else
-                memmove(&ent->crent_pkgs[i], &ent->crent_pkgs[i + 1],
-                        (ent->_size - 1 - i) * sizeof(*ent->crent_pkgs));
-            ent->crent_pkgs[ent->_size - 1] = NULL;
+                memmove(&ent->pkgs[i], &ent->pkgs[i + 1],
+                        (ent->_size - 1 - i) * sizeof(*ent->pkgs));
+            ent->pkgs[ent->_size - 1] = NULL;
             ent->items--;
         }
     }
 }
-
 
 void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
 {

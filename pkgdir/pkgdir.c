@@ -646,7 +646,7 @@ static void do_open_dirindex(struct pkgdir *pkgdir, unsigned ldflags)
     pkgdir->dirindex = pkgdir__dirindex_open(pkgdir, flags);
 }
 
-int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
+int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags)
 {
     tn_array *foreign_depdirs = NULL;
     int rc;
@@ -678,12 +678,12 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 
     } else {
         if (poldek_VERBOSE < 2)
+            //printf("loading %s\n", pkgdir->type);
             msgn(1, _("Loading [%s]%s..."), pkgdir->type, pkgdir_idstr(pkgdir));
         else
             msgn(2, _("Loading [%s]%s..."), pkgdir->type,
                  vf_url_slim_s(pkgdir->idxpath, 0));
     }
-
 
     rc = 0;
     uint32_t nth = 1;

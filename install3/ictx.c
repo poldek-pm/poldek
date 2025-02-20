@@ -28,7 +28,6 @@
 #include "pkgset.h"
 #include "pkgmisc.h"
 #include "misc.h"
-#include "pkgset-req.h"
 #include "poldek.h"
 #include "poldek_intern.h"
 #include "pm/pm.h"
@@ -202,7 +201,7 @@ void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
     ictx->ts = ts;
     ictx->ps = ts->ctx->ps;
 
-    ictx->processed = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
+    ictx->processed = pkgmark_set_new(NULL, 0, PKGMARK_SET_IDPTR);
 
     ictx->multi_obsoleted = n_hash_new(8, (tn_fn_free)n_array_free);
     ictx->errors = n_hash_new(8, (tn_fn_free)n_array_free);
@@ -235,7 +234,7 @@ void i3ctx_reset(struct i3ctx *ictx)
     ictx->unset = iset_new();
 
     pkgmark_set_free(ictx->processed);
-    ictx->processed = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
+    ictx->processed = pkgmark_set_new(NULL, 0, PKGMARK_SET_IDPTR);
 
     n_hash_clean(ictx->multi_obsoleted);
     n_hash_clean(ictx->errors);

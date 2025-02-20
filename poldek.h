@@ -60,7 +60,6 @@ EXPORT struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 #define POLDEK_CONF_CHOOSEEQUIV_CB     25
 #define POLDEK_CONF_CHOOSESUGGESTS_CB  26
 #define POLDEK_CONF_VFILEPROGRESS      27
-#define POLDEK_CONF_LAZY_DEPPROCESS    28
 
 EXPORT int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 

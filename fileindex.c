@@ -31,7 +31,7 @@
 #include "pkg.h"
 #include "capreq.h"
 #include "fileindex.h"
-#include "pkgset-req.h"
+#include "pkgset.h"
 
 extern int poldek_conf_MULTILIB;
 
@@ -137,7 +137,6 @@ struct file_index *file_index_new(int nelem)
     fi->dirs = n_hash_new_na(na, nelem, (tn_fn_free)n_array_free);
     n_hash_ctl(fi->dirs, TN_HASH_NOCPKEY);
 
-    fi->cnflh = NULL;
     fi->na = na;
     return fi;
 }
@@ -146,8 +145,6 @@ void file_index_free(struct file_index *fi)
 {
     n_hash_free(fi->dirs);
     fi->dirs = NULL;
-    if (fi->cnflh)
-        n_hash_free(fi->cnflh);
     n_alloc_free(fi->na);
 }
 
@@ -161,6 +158,7 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
 
     if ((files = n_hash_get_ex(fi->dirs, dirname, &klen, &khash)) == NULL) {
         files = n_array_new(4, NULL, fent_cmp);
+        n_array_ctl(files, TN_ARRAY_AUTOSORTED);
         n_hash_insert_ex(fi->dirs, dirname, klen, khash, files);
     }
 #if ENABLE_TRACE
@@ -212,8 +210,13 @@ int findfile(const struct file_index *fi,
         return 0;
     }
 
+    if (!n_array_is_sorted(files)) { /* lazy sort */
+        n_array_sort(files);
+    }
 
-    if ((n = n_array_bsearch_idx_ex(files, basename, fent_cmp2str)) == -1) {
+    n = n_array_bsearch_idx_ex(files, basename, fent_cmp2str);
+    if (n == -1) {
+        n_assert(n_array_is_sorted(files));
         DBGF("%s/%s: file not found\n", dirname, basename);
         return 0;
     }
@@ -451,7 +454,8 @@ void find_dups(const char *dirname, void *data, void *ms_)
     }
 }
 
-int file_index_find_conflicts(const struct file_index *fi, int strict)
+static
+tn_hash *file_index_find_conflicts(const struct file_index *fi, int strict)
 {
     struct map_struct ms;
     ms.strict = strict;
@@ -460,9 +464,8 @@ int file_index_find_conflicts(const struct file_index *fi, int strict)
     n_hash_ctl(ms.cnflh, TN_HASH_NOCPKEY);
     n_hash_map_arg(fi->dirs, find_dups, &ms);
 
-    ((struct file_index*)fi)->cnflh = ms.cnflh;
     DBGF("%d dirnames, %d files\n", n_hash_size(fi->dirs), ms.nfiles);
-    return 1;
+    return ms.cnflh;
 }
 
 static
@@ -509,10 +512,12 @@ void file_conflict_print(struct file_conflict *cnfl)
 
 int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
 {
+    tn_hash *cnflh;
     tn_array *paths;
     int i, j, nconflicts = 0;
 
-    paths = n_hash_keys(fi->cnflh);
+    cnflh = file_index_find_conflicts(fi, 1);
+    paths = n_hash_keys(cnflh);
     n_array_sort(paths);
 
     for (i=0; i < n_array_size(paths); i++) {
@@ -521,7 +526,7 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
         char *path;
 
         path = n_array_nth(paths, i);
-        conflicts = n_hash_get(fi->cnflh, path);
+        conflicts = n_hash_get(cnflh, path);
         for (j = 0; j < n_array_size(conflicts); j++) {
             struct file_conflict *cnfl = n_array_nth(conflicts, j);
             if (pkgs) {
@@ -539,7 +544,9 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
             nconflicts++;
         }
     }
+
     n_array_free(paths);
+    n_hash_free(cnflh);
     msgn(0, _("%d file conflicts found"), nconflicts);
     return nconflicts;
 }
@@ -661,6 +668,7 @@ static
 int is_path_to(tn_hash *is_path_to_cache,
                struct pkgmark_set *pms,
                struct pkg *dest, struct pkg *pkg,
+               tn_array *reqpkgs, struct pkgset *ps,
                int deep)
 {
     int i;
@@ -672,19 +680,17 @@ int is_path_to(tn_hash *is_path_to_cache,
     deep += 2;
 
     pkg_set_mf(pms, pkg, PKGMARK_BLACK); /* was there */
-    if (pkg->reqpkgs == NULL)
+
+    if (reqpkgs == NULL)
         return 0;
 
-    for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
-        struct reqpkg *rpkg = n_array_nth(pkg->reqpkgs, i);
+    for (i=0; i<n_array_size(reqpkgs); i++) {
+        struct reqpkg *rpkg = n_array_nth(reqpkgs, i);
         char key[PATH_MAX];
         int yes;
 
         if (rpkg->pkg == dest)
             return 1;
-
-        if (rpkg->pkg->reqpkgs == NULL)
-            continue;
 
         n_snprintf(key, sizeof(key), "%s -> %s", pkg_id(rpkg->pkg), pkg_id(dest));
         if (n_hash_get(is_path_to_cache, key)) {
@@ -692,7 +698,14 @@ int is_path_to(tn_hash *is_path_to_cache,
             return 1;
         }
 
-        yes = is_path_to(is_path_to_cache, pms, dest, rpkg->pkg, deep);
+        tn_array *r_reqpkgs = pkgset_get_required_packages(0, ps, rpkg->pkg);
+        if (r_reqpkgs == NULL)
+            continue;
+
+        yes = is_path_to(is_path_to_cache, pms, dest, rpkg->pkg, r_reqpkgs, ps, deep);
+
+        n_array_free(r_reqpkgs);
+
 #if 0       /* faster, but needs a lot of memory */
         n_hash_replace(is_path_to_cache, key, yes ? pkg : NULL);
 #endif
@@ -705,6 +718,7 @@ int is_path_to(tn_hash *is_path_to_cache,
 
 /* is any from ptab[] is required by pkg? */
 static int is_required(tn_hash *is_path_to_cache,
+                       struct pkgset *ps,
                        struct pkg *pkg, const char *path,
                        struct pkg *ptab[], int size)
 {
@@ -716,10 +730,11 @@ static int is_required(tn_hash *is_path_to_cache,
             return 1;
     }
 
-    if (pkg->reqpkgs == NULL)
+    tn_array *reqpkgs = pkgset_get_required_packages(0, ps, pkg);
+    if (reqpkgs == NULL)
         return 0;
 
-    pms = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
+    pms = pkgmark_set_new(NULL, 0, PKGMARK_SET_IDPTR);
     for (i=0; i < size; i++) {
         char key[PATH_MAX];
 
@@ -734,13 +749,14 @@ static int is_required(tn_hash *is_path_to_cache,
         }
 
         pkgmark_massset(pms, 0, PKGMARK_BLACK);
-        yes = is_path_to(is_path_to_cache, pms, ptab[i], pkg, 0);
+        yes = is_path_to(is_path_to_cache, pms, ptab[i], pkg, reqpkgs, ps, 0);
         n_hash_replace(is_path_to_cache, key, yes ? pkg : NULL);
 
         if (yes)
             break;
     }
 
+    n_array_free(reqpkgs);
     pkgmark_set_free(pms);
     return yes;
 }
@@ -764,12 +780,14 @@ struct missing_req *missing_req_new(const char *path,
     return mreq;
 }
 
-int file_index_report_semiorphans(const struct file_index *fi, tn_array *pkgs)
+int file_index_report_semiorphans(struct pkgset *ps, tn_array *pkgs)
 {
     struct pkg *result[2048];
     tn_array   *pkgids;
     tn_hash    *missreqh, *is_path_to_cache;
     int        i, j, norphans = 0, modv = 0;
+
+    const struct file_index *fi = ps->file_idx;
 
     missreqh = n_hash_new(n_array_size(pkgs), (tn_fn_free)n_array_free);
     is_path_to_cache = n_hash_new(n_array_size(pkgs)/100, NULL);
@@ -807,7 +825,7 @@ int file_index_report_semiorphans(const struct file_index *fi, tn_array *pkgs)
             if (nfound == 0)    /* orphaned */
                 continue;
 
-            if (!is_required(is_path_to_cache, pkg, dir, result, nfound)) {
+            if (!is_required(is_path_to_cache, ps, pkg, dir, result, nfound)) {
                 tn_array *mreqarr;
                 if ((mreqarr = n_hash_get(missreqh, pkg_id(pkg))) == NULL) {
                     mreqarr = n_array_new(128, free, NULL);

@@ -35,7 +35,6 @@
 #include "poldek_term.h"
 #include "pkgset.h"
 #include "pkgmisc.h"
-#include "pkgset-req.h"
 #include "misc.h"
 #include "log.h"
 #include "i18n.h"
@@ -51,6 +50,30 @@ struct inf {
     struct pkgmark_set *pms;
 };
 
+static void sanity_check(const struct poldek_ts *ts, const tn_array *pkgs) {
+    int n = 0;
+    for (int i=0; i < n_array_size(ts->ctx->ps->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ts->ctx->ps->pkgs, i);
+        if (pkg_is_marked(ts->pms, pkg)) {
+            n++;
+            n_assert(n_array_bsearch(pkgs, pkg));
+        }
+    }
+    n_assert(n == n_array_size(pkgs));
+}
+
+static tn_array *ordered_packages(const struct poldek_ts *ts) {
+    tn_array *pkgs = pkgmark_get_packages(ts->pms, PKGMARK_ANY);
+
+    if (poldek__is_in_testing_mode())
+        sanity_check(ts, pkgs);
+
+    tn_array *ordered = NULL;
+    pkgset_order(ts->ctx->ps, pkgs, &ordered, PKGORDER_INSTALL);
+    n_array_free(pkgs);
+
+    return ordered;
+}
 
 /* --fetch, --dump, packages in install order */
 static int ts_fetch_or_dump_packages(struct poldek_ts *ts)
@@ -58,7 +81,7 @@ static int ts_fetch_or_dump_packages(struct poldek_ts *ts)
     tn_array *pkgs;
     int rc = 0;
 
-    pkgs = poldek__ts_install_ordered_packages(ts);
+    pkgs = ordered_packages(ts);
 
     if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {
         rc = packages_dump(pkgs, ts->dumpfile,
@@ -149,7 +172,7 @@ static int do_install_dist(struct poldek_ts *ts)
     n_array_map_arg(ts->ctx->ps->pkgs, (tn_fn_map2)is_marked_mapfn, &inf);
 
     display_iinf_start(&inf);
-    pkgs = poldek__ts_install_ordered_packages(ts);
+    pkgs = ordered_packages(ts);
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
@@ -230,9 +253,10 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
 
     pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
 
-    ignorer = ts->getop(ts, POLDEK_OP_NODEPS);
-    if (!packages_verify_dependecies(pkgs, ts->ctx->ps) && !ignorer)
-        nerr++;
+    // handled earlier by ts_mark_arg_packages()
+    //ignorer = ts->getop(ts, POLDEK_OP_NODEPS);
+    //if (!packages_verify_dependecies(pkgs, ts->ctx->ps) && !ignorer)
+    //    nerr++;
 
     n_array_free(pkgs);
     pkgs = NULL;

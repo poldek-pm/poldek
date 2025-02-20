@@ -277,12 +277,16 @@ static void score_candidate(int indent, struct i3ctx *ictx,
 
     trace(indent, "- %s (upgrade=%d)", pkg_id(pkg), sc->upgrade);
 
-    if (pkg->cnflpkgs != NULL) {
-        for (int j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
-            struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-            if (i3_is_marked(ictx, cpkg->pkg)) {
-                sc->conflicts++;
+    if (pkg->cnfls != NULL) {
+        tn_array *cnflpkgs = i3_get_package_conflicted_pkgs(indent, ictx, pkg);
+        if (cnflpkgs) {
+            for (int j = 0; j < n_array_size(cnflpkgs); j++) {
+                struct reqpkg *cpkg = n_array_nth(cnflpkgs, j);
+                if (i3_is_marked(ictx, cpkg->pkg)) {
+                    sc->conflicts++;
+                }
             }
+            n_array_cfree(&cnflpkgs);
         }
 
         if (sc->conflicts > 0)
@@ -487,7 +491,7 @@ int i3_find_req(int indent, struct i3ctx *ictx,
 
     //trace(indent, "PROMOTE pkg test satisfied %d", pkg_satisfies_req(pkg,req,1));
 
-    msgn_i(3, indent, "found %s: %d %x", capreq_stra(req), found,  suspkgs);
+    msgn_i(3, indent, "found %s: %d %p", capreq_stra(req), found,  suspkgs);
 
     if (!found)
         return 0;
@@ -740,12 +744,12 @@ tn_array *eval_boolreq(const struct capreq *req,
     } else if (n_array_size(reqs) == 0) {
         to = "None";
     } else {
-        char buf[4096];
-        int n = 0;
+        int n = 0, bufsize = 1024;
+        char *buf = alloca(bufsize);
 
         for (int i=0; i < n_array_size(reqs); i++) {
             struct capreq *r = n_array_nth(reqs, i);
-            n += n_snprintf(&buf[n], sizeof(buf) - n, "%s,", capreq_stra(r));
+            n += n_snprintf(&buf[n], bufsize - n, "%s,", capreq_stra(r));
         }
         buf[n-1] = '\0';
         to = buf;

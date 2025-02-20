@@ -130,7 +130,7 @@ EXPORT struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 				                  (see PKGDIR_OPEN_ALLDESC)
 				               */
 
-EXPORT int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
+EXPORT int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags);
 
 #define PKGDIR_CREAT_NODESC   (1 << 0) /* don't save pkg's user level info */
 #define PKGDIR_CREAT_NOFL     (1 << 1) /* don't save pkg's file list       */

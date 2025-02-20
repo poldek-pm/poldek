@@ -50,11 +50,9 @@ EXPORT int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
                                                    to resolved packages */
 #define ARG_PACKAGES_RESOLV_WARN_ONLY   (1 << 5)/* warn only*/
 
-                                                   
-EXPORT int arg_packages_resolve(struct arg_packages *aps,
-                         tn_array *avpkgs,
-                         struct pkgset *ps,/* =NULL, needed by RESOLV_CAPS only */
-                         unsigned flags);
+
+EXPORT int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
+                                struct pkgset *ps, unsigned flags);
 
 EXPORT tn_hash *arg_packages_get_resolved_caps(struct arg_packages *aps);
 EXPORT tn_array *arg_packages_get_resolved(struct arg_packages *aps);

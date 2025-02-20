@@ -36,7 +36,6 @@
 #include "pkgset.h"
 #include "pkgmisc.h"
 #include "misc.h"
-#include "pkgset-req.h"
 #include "poldek.h"
 #include "poldek_intern.h"
 #include "pm/pm.h"

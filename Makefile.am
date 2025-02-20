@@ -37,13 +37,14 @@ libpoldek_la_SOURCES = \
 	  capreq.c capreq.h 		\
 	  pkgset-load.c    	        \
 	  pkgset.c pkgset.h 		\
-	  pkgset-req.c pkgset-req.h	\
+	  pkgset-req.c			\
+	  pkgset-dep.c			\
 	  pkgset-order.c    		\
+	  pkgset-graph.c    		\
 	  pkguniq.c			\
 	  arg_packages.c arg_packages.h	\
 	  conf.c conf.h			\
 	  conf_intern.h conf_sections.c \
-	  split.c split.h	\
 	  pkgroup.c pkgroup.h	\
 	  pkgscore.c		\
 	  pkgfetch.c            \
@@ -59,6 +60,7 @@ libpoldek_la_SOURCES = \
 	  ts_summary.c          \
 	  poldek_intern.h \
 	  pkg_ver_cmp.h \
+	  thread.c thread.h \
 	  booldep_parse.c booldep_eval.c booldep.h
 
 pkgincludedir = $(includedir)/poldek
@@ -135,7 +137,7 @@ install-exec-hook:
 	$(LN_S) $(PACKAGE) $(DESTDIR)$(bindir)/i$(PACKAGE)
 
 clean-local:
-	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
+	-rm -f core core.[0-9]* callgrind.out.* tests/core.[0-9]* *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
 
 poldek.pc:
 	@ ( echo 'prefix=$(prefix)'; \

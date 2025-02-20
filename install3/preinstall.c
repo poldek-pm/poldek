@@ -196,8 +196,8 @@ int i3_pre_ts_install(struct poldek_ts *ts, tn_array **pkgs)
 
     /* mark_i every marked and installable package */
     *pkgs = pkgs_array_new(256);
-    for (i = 0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
-        struct pkg    *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
+    for (i = 0; i < n_array_size(ts->ctx->ps->pkgs); i++) {
+        struct pkg    *pkg = n_array_nth(ts->ctx->ps->pkgs, i);
         int           installable;
 
         if (!pkg_is_marked(ts->pms, pkg))

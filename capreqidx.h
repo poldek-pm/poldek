@@ -28,27 +28,22 @@ struct capreq_idx {
 
 struct pkg;
 struct capreq_idx_ent {
-
-    unsigned int items;		/* number of elements stored in this entry */
-    unsigned int _size;		/* number of elements for which memory is already allocated */
-
+    uint32_t items;		/* number of elements stored in this entry */
+    uint32_t _size;		/* number of elements for which memory is already allocated */
     union {
         struct pkg *pkg;
         struct pkg **pkgs;       /* pkgs list */
-    } capreq_idx_ent_pkg;
+    };
 };
-
-#define	crent_pkg    capreq_idx_ent_pkg.pkg
-#define	crent_pkgs   capreq_idx_ent_pkg.pkgs
 
 int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem);
 void capreq_idx_destroy(struct capreq_idx *idx);
 
 int capreq_idx_add(struct capreq_idx *idx, const char *capname, int capname_len,
-                   struct pkg *pkg);
+                   const struct pkg *pkg);
 
 void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
-                       struct pkg *pkg);
+                       const struct pkg *pkg);
 
 const struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
                                                const char *capname, int capname_len);

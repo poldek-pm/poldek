@@ -13,6 +13,7 @@
 #ifndef  POLDEK_PKGSET_H
 #define  POLDEK_PKGSET_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <trurl/narray.h>
 
@@ -22,20 +23,13 @@ struct file_index;
 struct pkgdir;
 
 struct pkgset {
-    uint32_t           flags;
-
     tn_array           *pkgs;           /*  pkg* []    */
-    tn_array           *ordered_pkgs;   /* in install order pkg* []    */
-
     tn_array           *pkgdirs;        /*  pkgdir* [] */
-
     tn_array           *depdirs;        /*  char* []   */
-    int                nerrors;
 
     struct pm_ctx      *pmctx;
 
-    tn_hash            *_vrfy_unreqs;
-    tn_array           *_vrfy_file_conflicts;
+    tn_hash            *_depinfocache;
 
     struct capreq_idx  cap_idx;    /* 'name'  => *pkg[]  */
     struct capreq_idx  req_idx;    /*  -"-               */
@@ -44,16 +38,6 @@ struct pkgset {
     struct file_index  *file_idx;   /* 'file'  => *pkg[]  */
 };
 
-#define PKGORDER_INSTALL     1
-#define PKGORDER_UNINSTALL   2
-int packages_order(tn_array *pkgs, tn_array **ordered_pkgs, int ordertype);
-
-int packages_order_and_verify(tn_array *pkgs, tn_array **ordered_pkgs,
-                              int ordertype, int verbose_level);
-
-int pkgset_order(struct pkgset *ps, int verbose);
-
-
 struct pm_ctx;
 struct pkgset *pkgset_new(struct pm_ctx *ctx);
 void pkgset_free(struct pkgset *ps);
@@ -61,27 +45,46 @@ void pkgset_free(struct pkgset *ps);
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
 
+int pkgset__index_caps(struct pkgset *ps);
+//int pkgset__index_reqs(struct pkgset *ps);
 
-/* VRFY_MERCY - if set then:
- * - requirements matched even if requirement has version
- *   while capability hasn't (RPM style)
- * - files with different modes only are not assumed as conflicts
+
+// pkgset-req.c
+#define REQPKG_PREREQ     (1 << 0)
+#define REQPKG_PREREQ_UN  (1 << 1)
+#define REQPKG_CONFLICT   (1 << 2)
+#define REQPKG_OBSOLETE   (1 << 3)
+#define REQPKG_MULTI      (1 << 7) /* with alternatives */
+
+struct reqpkg {
+    struct pkg    *pkg;
+    struct capreq *req;
+    uint8_t       flags;
+    struct reqpkg *adds[0];     /* NULL terminated  */
+};
+
+/*
+  Find requirement looking into capabilities and file list.
+  RET: bool && matched packages in *packages
  */
-#define PSET_VRFY_MERCY          (1 << 0)
-#define PSET_VRFY_PROMOTEPOCH    (1 << 1)
+int pkgset_find_match_packages(struct pkgset *ps,
+                               const struct pkg *pkg, const struct capreq *req,
+                               tn_array **packages, bool strict);
 
-#define PSET_NODEPS              (1 << 5) /* skip deps processing (lazy), implies PSET_NOORDER */
-#define PSET_NOORDER             (1 << 6)
-#define PSET_VERIFY_ORDER        (1 << 7)
-#define PSET_UNIQ_PKGNAME        (1 << 10)
+struct pkg_unreq {
+    bool          mismatch;
+    char          req[0];
+};
 
-#define PSET_RT_DBDIRS_LOADED    (1 << 11)
-#define PSET_RT_INDEXED          (1 << 12)
-#define PSET_RT_DEPS_PROCESSED   (1 << 13)
-#define PSET_RT_ORDERED          (1 << 14)
+tn_array *pkgset_get_conflicted_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
+tn_array *pkgset_get_required_packages_x(int indent, struct pkgset *ps, const struct pkg *pkg, tn_hash **unreqh);
+tn_array *pkgset_get_required_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
 
-int pkgset_setup(struct pkgset *ps, unsigned flags); /* uniqness, indexing */
-int pkgset_setup_deps(struct pkgset *ps, unsigned flags); /* deps processing */
+/* pkgset-order.c */
+#define PKGORDER_INSTALL     1
+#define PKGORDER_UNINSTALL   2
+int pkgset_order_ex(struct pkgset *ps, const tn_array *pkgs, tn_array **ordered_pkgs, int ordertype, int verbose_level);
+int pkgset_order(struct pkgset *ps, const tn_array *pkgs, tn_array **ordered_pkgs, int ordertype);
 
 #include "poldek.h"
 enum pkgset_search_tag {
@@ -98,13 +101,8 @@ enum pkgset_search_tag {
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         const char *value);
 
-tn_array *pkgset_get_unsatisfied_reqs(struct pkgset *ps, struct pkg *pkg);
-
-tn_array *pkgset_get_packages_bynvr(const struct pkgset *ps);
-
 int pkgset_pm_satisfies(const struct pkgset *ps, const struct capreq *req);
 
-void pkgset_report_fileconflicts(struct pkgset *ps, tn_array *pkgs);
 
 int pkgset_add_package(struct pkgset *ps, struct pkg *pkg);
 int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg);

@@ -368,7 +368,7 @@ struct uninstall_ctx *uninstall_ctx_new(struct poldek_ts *ts)
     uctx->db = ts->db;
     uctx->ts = ts;
     uctx->unpkgs = pkgs_array_new_ex(128, pkg_cmp_recno);
-    uctx->pms = pkgmark_set_new(0, 0);
+    uctx->pms = pkgmark_set_new(NULL, 0, 0);
     uctx->strict = 1;
     /* how deeply cause removes too much packages */
     uctx->rev_orphans_deep = ts->uninstall_greedy_deep;
@@ -614,8 +614,7 @@ static tn_array *reorder_packages(tn_array *pkgs)
         pkgset_add_package(ps, pkg);
     }
 
-    pkgset_setup(ps, PSET_NOORDER);
-    packages_order(ps->pkgs, &ordered_pkgs, PKGORDER_UNINSTALL);
+    pkgset_order(ps, ps->pkgs, &ordered_pkgs, PKGORDER_UNINSTALL);
 
     ordered_pkgs = n_array_reverse(ordered_pkgs);
 #if ENABLE_TRACE
@@ -698,10 +697,9 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts)
     }
 
  l_end:
-    if (ordered_pkgs)
-        n_array_free(ordered_pkgs);
-
+    n_array_cfree(&ordered_pkgs);
     uninstall_ctx_free(uctx);
+
     return nerr == 0;
 }
 

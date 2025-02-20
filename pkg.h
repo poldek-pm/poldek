@@ -14,6 +14,7 @@
 #define  POLDEK_PKG_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <trurl/narray.h>
 #include <trurl/nmalloc.h>
@@ -45,11 +46,11 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 #define PKG_INCLUDED_DIRREQS (1 << 17) /* auto-dir-reqs added directly to reqs */
 
 #ifdef POLDEK_PKG_DAG_COLOURS
-/* DAG node colours (pkgset-order.c, split.c) */
+/* DAG node colours (pkgset-order.c) */
 # define PKG_COLOR_WHITE    (1 << 20)
 # define PKG_COLOR_GRAY     (1 << 21)
 # define PKG_COLOR_BLACK    (1 << 22)
-# define PKG_ALL_COLORS     PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK
+# define PKG_ALL_COLORS     (PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK)
 
 /* colours */
 # define pkg_set_color(pkg, color) \
@@ -106,10 +107,6 @@ struct pkg {
 
     tn_tuple     *fl;         /* file list, see pkgfl.h  */
 
-    tn_array     *reqpkgs;    /* required packages  */
-    tn_array     *revreqpkgs; /* packages which requires me */
-    tn_array     *cnflpkgs;   /* conflicted packages */
-
     struct pkgdir    *pkgdir;    /* reference to its own pkgdir */
     void             *pkgdir_data;
     void             (*pkgdir_data_free)(tn_alloc *na, void*);
@@ -121,8 +118,8 @@ struct pkg {
 
     struct pkguinf *pkg_pkguinf;
 
-    int pri;                  /* used for split */
-    int groupid;              /* package group id (see pkgroups.c) */
+    int16_t      pri;                  /* used for split */
+    uint16_t     groupid;              /* package group id (see pkgroups.c) */
 
     /* for installed packages */
     uint32_t     recno;        /* db's ID of the header */
@@ -198,7 +195,7 @@ EXPORT int cap_xmatch_req(const struct capreq *cap, const struct capreq *req,
 
 /* obsoleted */
 EXPORT int cap_match_req(const struct capreq *cap, const struct capreq *req,
-                  int strict);
+                         bool strict);
 
 
 /* CAUTION: looks into NEVR and caps only */
@@ -206,14 +203,14 @@ EXPORT int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req,
                    unsigned flags);
 
 /* obsoleted */
-EXPORT int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict);
+EXPORT int pkg_match_req(const struct pkg *pkg, const struct capreq *req, bool strict);
 
 EXPORT int pkg_has_path(const struct pkg *pkg,
-                 const char *dirname, const char *basename);
+                        const char *dirname, const char *basename);
 
 /* match with caps && files */
 EXPORT int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
-                       int strict);
+                             bool strict);
 
 EXPORT int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
 EXPORT int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg);
@@ -226,14 +223,14 @@ EXPORT int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
 
 /* src.rpm */
 EXPORT char *pkg_srcfilename(const struct pkg *pkg, char *buf, size_t size);
-EXPORT char *pkg_srcfilename_s(const struct pkg *pkg);
+#define pkg_srcfilename_s(pkg) pkg_srcfilename(pkg, alloca(512), 512)
 
 /* RET %path/%name-%version-%release.%arch.rpm  */
 EXPORT char *pkg_filename(const struct pkg *pkg, char *buf, size_t size);
-EXPORT char *pkg_filename_s(const struct pkg *pkg);
+#define pkg_filename_s(pkg) pkg_filename(pkg, alloca(512), 512)
 
 EXPORT char *pkg_path(const struct pkg *pkg, char *buf, size_t size);
-EXPORT char *pkg_path_s(const struct pkg *pkg);
+#define pkg_path_s(pkg) pkg_path(pkg, alloca(512), 512)
 
 EXPORT char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir);
@@ -252,12 +249,15 @@ EXPORT int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg);
 
 EXPORT int pkg_printf(const struct pkg *pkg, const char *str);
 EXPORT int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
-EXPORT char *pkg_snprintf_s(const struct pkg *pkg);
-EXPORT char *pkg_snprintf_s0(const struct pkg *pkg);
-EXPORT char *pkg_snprintf_s1(const struct pkg *pkg);
-EXPORT int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg);
-EXPORT char *pkg_evr_snprintf_s(const struct pkg *pkg);
+EXPORT char *pkg_str(char *str, size_t size, const struct pkg *pkg);
 
+#define pkg_snprintf_s(pkg) pkg_str(alloca(512), 512, pkg)
+#define pkg_snprintf_s0(pkg) pkg_str(alloca(512), 512, pkg)
+#define pkg_snprintf_s1(pkg) pkg_str(alloca(512), 512, pkg)
+
+EXPORT int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg);
+EXPORT char *pkg_evr_str(char *str, size_t size, const struct pkg *pkg);
+#define pkg_evr_snprintf_s(pkg) pkg_evr_str(alloca(512), 512, pkg)
 
 /* must be free()d by pkguinf_free(); see pkgu.h */
 EXPORT struct pkguinf *pkg_uinf(const struct pkg *pkg);

@@ -31,6 +31,11 @@
 #include "poldek_term.h"
 #define POLDEK_LOG_H_INTERNAL
 #include "log.h"
+#include "thread.h"
+
+#ifdef WITH_THREADS
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 int poldek_VERBOSE = 0;
 int poldek_TRACE = -1;
@@ -135,11 +140,13 @@ int poldek_set_verbose(int v)
 
 void poldek_log(int pri, const char *fmt, ...)
 {
+    mutex_lock(&mutex);
     va_list args;
 
     va_start(args, fmt);
     poldek_vlog(pri, 0, fmt, args);
     va_end(args);
+    mutex_unlock(&mutex);
 }
 
 void poldek_log_i(int pri, int indent, const char *fmt, ...)

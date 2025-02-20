@@ -230,6 +230,19 @@ static int do_install(struct i3ctx *ictx, tn_array *pkgs)
     return rc;
 }
 
+static tn_array *iset_packages_in_install_order(struct i3ctx *ictx)
+{
+    const tn_array *inpkgs = iset_packages(ictx->inset);
+    tn_array *pkgs = NULL;
+
+    pkgset_order(ictx->ps, inpkgs, &pkgs, PKGORDER_INSTALL);
+    n_assert(pkgs);
+    n_assert(n_array_size(pkgs) == n_array_size(inpkgs));
+
+    return pkgs;
+}
+
+
 static int install_packages(struct i3ctx *ictx)
 {
     tn_array *toinstall;
@@ -278,7 +291,7 @@ static int install_packages(struct i3ctx *ictx)
         }
     }
 
-    pkgs = iset_packages_in_install_order(ictx->inset);
+    pkgs = iset_packages_in_install_order(ictx);
     //pkgs_array_dump(pkgs, "inset.ordered");
 
     if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {

@@ -39,6 +39,7 @@
 #include "pkgroup.h"
 #include "pkgcmp.h"
 #include "pkg_ver_cmp.h"
+#include "thread.h"
 
 int poldek_conf_PROMOTE_EPOCH = 0;
 int poldek_conf_MULTILIB = 0;
@@ -55,10 +56,17 @@ struct an_arch {
     char arch[0];
 };
 
+#ifdef WITH_THREADS
+static pthread_mutex_t arch_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t os_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 static
 int pkgmod_register_arch(const char *arch)
 {
     struct an_arch *an_arch;
+
+    mutex_lock(&arch_mutex);
 
     if (architecture_h == NULL) {
         architecture_h = n_hash_new(21, free);
@@ -88,6 +96,8 @@ int pkgmod_register_arch(const char *arch)
         n_assert(an_arch->index < UINT16_MAX);
         n_hash_insert(architecture_h, an_arch->arch, an_arch);
     }
+
+    mutex_unlock(&arch_mutex);
 
     return an_arch->index;
 }
@@ -119,7 +129,6 @@ int pkg_set_arch(struct pkg *pkg, const char *arch)
     return 1;
 }
 
-
 struct an_os {
     //int score;
     int index;
@@ -130,6 +139,8 @@ static
 int pkgmod_register_os(const char *os)
 {
     struct an_os *an_os;
+
+    mutex_lock(&os_mutex);
 
     if (operatingsystem_h == NULL) {
         operatingsystem_h = n_hash_new(21, free);
@@ -152,6 +163,8 @@ int pkgmod_register_os(const char *os)
         an_os->index = n_array_size(operatingsystem_a);
         n_hash_insert(operatingsystem_h, an_os->os, an_os);
     }
+
+    mutex_unlock(&os_mutex);
 
     return an_os->index;
 }
@@ -328,9 +341,6 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     pkg->sugs = NULL;
     pkg->revreqs = NULL;
     pkg->fl = NULL;
-    pkg->reqpkgs = NULL;
-    pkg->revreqpkgs = NULL;
-    pkg->cnflpkgs = NULL;
 
     pkg->pkgdir = NULL;
     pkg->pkgdir_data = NULL;
@@ -411,9 +421,6 @@ void pkg_free(struct pkg *pkg)
     n_array_cfree(&pkg->cnfls);
     n_array_cfree(&pkg->sugs);
     n_array_cfree(&pkg->revreqs);
-    n_array_cfree(&pkg->reqpkgs);
-    n_array_cfree(&pkg->revreqpkgs);
-    n_array_cfree(&pkg->cnflpkgs);
 
     if (pkg->fl) {
         n_tuple_free(pkg->na, pkg->fl);
@@ -602,7 +609,7 @@ int cap_xmatch_req(const struct capreq *cap, const struct capreq *req,
 }
 
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
-                  int strict)
+                  bool strict)
 {
     return cap_xmatch_req(cap, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION);
 }
@@ -753,7 +760,7 @@ int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req, unsigned fla
 }
 
 
-int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
+int pkg_match_req(const struct pkg *pkg, const struct capreq *req, bool strict)
 {
     if (strcmp(pkg->name, capreq_name(req)) == 0 &&
         pkg_evr_match_req(pkg, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION))
@@ -764,7 +771,7 @@ int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 
 
 int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
-                      int strict)
+                      bool strict)
 {
     if (!capreq_is_file(req))
         return pkg_match_req(pkg, req, strict);
@@ -1241,12 +1248,6 @@ char *pkg_srcfilename(const struct pkg *pkg, char *buf, size_t size)
     return buf;
 }
 
-char *pkg_srcfilename_s(const struct pkg *pkg)
-{
-    static char buf[256];
-    return pkg_srcfilename(pkg, buf, sizeof(buf));
-}
-
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
 {
     int n_len, v_len, r_len, a_len = 0;
@@ -1302,15 +1303,6 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     return buf;
 }
 
-char *pkg_filename_s(const struct pkg *pkg)
-{
-    static char buf[256];
-    if (pkg->fn)
-        return pkg->fn;
-
-    return pkg_filename(pkg, buf, sizeof(buf));
-}
-
 char *pkg_path(const struct pkg *pkg, char *buf, size_t size)
 {
     int n = 0;
@@ -1327,12 +1319,6 @@ char *pkg_path(const struct pkg *pkg, char *buf, size_t size)
         buf = NULL;
 
     return buf;
-}
-
-char *pkg_path_s(const struct pkg *pkg)
-{
-    static char buf[PATH_MAX];
-    return pkg_path(pkg, buf, sizeof(buf));
 }
 
 const char *pkg_pkgdirpath(const struct pkg *pkg)
@@ -1389,20 +1375,12 @@ int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg)
     return n_snprintf(str, size, "%s-%s%s-%s", pkg->name, e, pkg->ver, pkg->rel);
 }
 
-char *pkg_evr_snprintf_s(const struct pkg *pkg)
+char *pkg_evr_str(char *str, size_t size, const struct pkg *pkg)
 {
-    static char str[256];
-    pkg_evr_snprintf(str, sizeof(str), pkg);
-    return str;
+    if (pkg_evr_snprintf(str, size, pkg) > 0)
+        return str;
+    return NULL;
 }
-
-char *pkg_evr_snprintf_s0(const struct pkg *pkg)
-{
-    static char str[256];
-    pkg_evr_snprintf(str, sizeof(str), pkg);
-    return str;
-}
-
 
 int pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
@@ -1412,25 +1390,11 @@ int pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
     return n;
 }
 
-char *pkg_snprintf_s(const struct pkg *pkg)
+char *pkg_str(char *str, size_t size, const struct pkg *pkg)
 {
-    static char str[256];
-    snprintf(str, sizeof(str), "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
-    return str;
-}
-
-char *pkg_snprintf_s0(const struct pkg *pkg)
-{
-    static char str[256];
-    snprintf(str, sizeof(str), "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
-    return str;
-}
-
-char *pkg_snprintf_s1(const struct pkg *pkg)
-{
-    static char str[256];
-    snprintf(str, sizeof(str), "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
-    return str;
+    if (pkg_snprintf(str, size, pkg) > 0)
+        return str;
+    return NULL;
 }
 
 tn_array *pkgs_array_new_ex(int size,

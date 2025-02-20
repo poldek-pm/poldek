@@ -29,11 +29,128 @@
 #include "misc.h"
 #include "i18n.h"
 #include "depdirs.h"
+#include "thread.h"
+
+#ifdef WITH_THREADS
+struct thread_info {
+    pthread_t tid;
+    struct pkgdir *pkgdir;
+    const tn_array *depdirs;
+    int ldflags;
+};
+
+static void *thread_load(void *thread_info) {
+    struct thread_info *a = thread_info;
+
+    if (!pkgdir_load(a->pkgdir, a->depdirs, a->ldflags)) {
+        logn(LOGERR, _("%s: load failed"), a->pkgdir->idxpath);
+    }
+
+    return NULL;
+}
+
+static struct thread_info *load_pkgdir(struct thread_info *ti) {
+    pthread_t tid;
+
+    msgn(3, "running load thread for %s", vf_url_slim_s(ti->pkgdir->idxpath, 50));
+    pthread_create(&tid, NULL, &thread_load, ti);
+    //pthread_setname_np(tid, pkgdir->name);
+    ti->tid = tid;
+
+    return ti;
+}
+
+static int threadable_loads(const tn_array *pkgdirs) {
+    tn_array *threadable = n_array_new(n_array_size(pkgdirs), NULL, NULL);
+
+    for (int i=0; i < n_array_size(pkgdirs); i++) {
+        struct pkgdir *pkgdir = n_array_nth(pkgdirs, i);
+
+        if ((pkgdir->flags & PKGDIR_LOADED) != 0)
+            continue;
+
+        if (n_str_ne(pkgdir->type, "pndir"))
+            continue;
+
+        n_array_push(threadable, pkgdir);
+    }
+
+    int re = n_array_size(threadable);
+    n_array_free(threadable);
+
+    return re;
+}
+
+static int load_pkgdirs(const tn_array *pkgdirs, const tn_array *depdirs, int ldflags)
+{
+    struct thread_info *ti = NULL;
+    int nti = 0;
+
+    int nt = threadable_loads(pkgdirs);
+
+    msgn(3, "%d threadable loads", nt);
+
+    if (nt > 1) {
+        ti = malloc(n_array_size(pkgdirs) * sizeof(*ti));
+        poldek_threads_toggle(true);
+    }
+
+    for (int i=0; i < n_array_size(pkgdirs); i++) {
+        struct pkgdir *pkgdir = n_array_nth(pkgdirs, i);
+
+        if ((pkgdir->flags & PKGDIR_LOADED) != 0)
+            continue;
+
+        bool th_load = nt > 1 && n_str_eq(pkgdir->type, "pndir");
+
+        if (!th_load) {
+            if (!pkgdir_load(pkgdir, depdirs, ldflags)) {
+                logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
+            }
+        } else {
+            n_assert(ti);
+            struct thread_info *a = &ti[nti++];
+            a->pkgdir = pkgdir;
+            a->depdirs = depdirs;
+            a->ldflags = ldflags;
+            load_pkgdir(a);
+        }
+        //MEMINF("after load %s", pkgdir_idstr(pkgdir));
+    }
+
+    for (int i = 0; i < nti; i++) {
+        pthread_join(ti[i].tid, NULL);
+    }
+    free(ti);
+    poldek_threads_toggle(false);
+
+    return 1;
+}
+#else  /* WITH_THREADS */
+static int load_pkgdirs(const tn_array *pkgdirs, const tn_array *depdirs, int ldflags)
+{
+    int re = 1;
+    for (int i=0; i < n_array_size(pkgdirs); i++) {
+        struct pkgdir *pkgdir = n_array_nth(pkgdirs, i);
+
+        if ((pkgdir->flags & PKGDIR_LOADED) != 0)
+            continue;
+
+        if (!pkgdir_load(pkgdir, depdirs, ldflags)) {
+            logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
+            re = 0;
+        }
+    }
+
+    return re;
+}
+#endif
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
     int i, j;
     unsigned openflags = 0;
+    void *t = timethis_begin();
 
     n_array_isort_ex(sources, (tn_fn_cmp)source_cmp_pri);
 
@@ -51,13 +168,10 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         if (src->type == NULL)
             source_set_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE);
 
-
         pkgdir = pkgdir_srcopen(src, openflags);
 
         /* trying dir */
-        if (pkgdir == NULL && !source_is_type(src, "dir") &&
-            util__isdir(src->path)) {
-
+        if (pkgdir == NULL && !source_is_type(src, "dir") && util__isdir(src->path)) {
             logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
 
             source_set_type(src, "dir");
@@ -71,7 +185,6 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             continue;
         }
 
-
         n_array_push(ps->pkgdirs, pkgdir);
         MEMINF("after open %s", pkgdir_idstr(pkgdir));
     }
@@ -79,26 +192,15 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     /* merge pkgdis depdirs into ps->depdirs */
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
-
-        if (pkgdir->depdirs) {
-            for (j=0; j < n_array_size(pkgdir->depdirs); j++)
-                n_array_push(ps->depdirs, n_strdup(n_array_nth(pkgdir->depdirs, j)));
-        }
+        if (pkgdir->depdirs)
+            n_array_concat_ex(ps->depdirs, pkgdir->depdirs, (tn_fn_dup)strdup);
     }
 
     n_array_sort(ps->depdirs);
     n_array_uniq(ps->depdirs);
+    n_array_freeze(ps->depdirs);
 
-    for (i=0; i < n_array_size(ps->pkgdirs); i++) {
-        struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
-
-        if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
-            if (!pkgdir_load(pkgdir, ps->depdirs, ldflags)) {
-                logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
-            }
-        }
-        MEMINF("after load %s", pkgdir_idstr(pkgdir));
-    }
+    load_pkgdirs(ps->pkgdirs, ps->depdirs, ldflags);
 
     /* merge pkgdirs packages into ps->pkgs */
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
@@ -122,6 +224,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                          "%d packages read", n), n);
     }
 
+    timethis_end(1, t, "ps.load");
+
     return n_array_size(ps->pkgs);
 }
 
@@ -137,11 +241,15 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir)
     n_array_sort(ps->depdirs);
     n_array_uniq(ps->depdirs);
 
+    n_array_concat_ex(ps->pkgs, pkgdir->pkgs, (tn_fn_dup)pkg_link);
+    /*
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
+        n_array_concat_ex(ps->pkgs, pkgdir->pkgs, (tn_fn_dup)pkg_link);
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         //pkg->recno = ps->_recno++; TOFIX see comment in pkgset_load()
         n_array_push(ps->pkgs, pkg_link(pkg));
     }
+    */
     n_array_push(ps->pkgdirs, pkgdir);
 
     return 1;

@@ -36,8 +36,6 @@ const tn_array *iset_packages(struct iset *iset);
 
 /* return array sorted by package recno */
 const tn_array *iset_packages_by_recno(struct iset *iset);
-tn_array *iset_packages_in_install_order(struct iset *iset);
-
 
 void iset_add(struct iset *iset, struct pkg *pkg, unsigned mflag);
 int  iset_remove(struct iset *iset, struct pkg *pkg);

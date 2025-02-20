@@ -62,16 +62,6 @@ const tn_array *iset_packages_by_recno(struct iset *iset)
     return iset->pkgs_by_recno;
 }
 
-tn_array *iset_packages_in_install_order(struct iset *iset)
-{
-    tn_array *pkgs = NULL;
-
-    packages_order(iset->pkgs, &pkgs, PKGORDER_INSTALL);
-    n_assert(pkgs);
-    n_assert(n_array_size(pkgs) == n_array_size(iset->pkgs));
-    return pkgs;
-}
-
 const struct pkgmark_set *iset_pms(struct iset *iset)
 {
     return iset->pms;
@@ -85,7 +75,7 @@ struct iset *iset_new(void)
     iset->pkgs = pkgs_array_new(128);
     iset->pkgs_by_recno = pkgs_array_new_ex(128, pkg_cmp_recno);
     iset->capcache = n_hash_new(128, NULL);
-    iset->pms = pkgmark_set_new(0, 0);
+    iset->pms = pkgmark_set_new(NULL, 0, 0);
     return iset;
 }
 
