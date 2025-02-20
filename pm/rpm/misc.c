@@ -127,7 +127,7 @@ static int get_rpm_internal_caps(tn_array *caps)
     };
 
     i = 0;
-    msgn(3, _("Loading internal capabilities"));
+    msgn(4, _("Loading internal capabilities"));
     while (functions[i]) {
         functions[i++](&ds, NULL);
     }

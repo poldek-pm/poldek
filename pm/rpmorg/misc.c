@@ -60,7 +60,7 @@ static int extract_rpmds(tn_array *caps, rpmds ds)
 
         cr = capreq_new_evr(NULL, name, tmpptr, crflags, 0);
         if (cr) {
-            msgn(3, "  - %s", capreq_snprintf_s(cr));
+            msgn(4, "  - %s", capreq_snprintf_s(cr));
             n_array_push(caps, cr);
         }
     }
@@ -97,7 +97,7 @@ static int get_rpm_internal_caps(tn_array *caps)
     };
 
     i = 0;
-    msgn(3, _("Loading internal capabilities"));
+    msgn(4, _("Loading internal capabilities"));
     while (functions[i]) {
         functions[i++](&ds, NULL);
     }
