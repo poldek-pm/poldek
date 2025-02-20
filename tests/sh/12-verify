@@ -1,0 +1,98 @@
+#!/bin/sh
+# $Id$
+
+# --verify tests
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+ORIGREPO=
+setUp() {
+    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
+    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
+    rm -rf $ORIGREPO/*
+
+    REPO="$ORIGREPO/src"
+    REPO2="$ORIGREPO/src2"
+    rm -rf $REPO $REPO2
+
+    mkdir -p $REPO || fail "mkdir $REPO failed"
+    mkdir -p $REPO2 || fail "mkdir $REPO2 failed"
+
+    RAW_POLDEK="$POLDEK_NOCONF"
+    POLDEK2="$RAW_POLDEK --st dir -s $REPO --st dir -s $REPO2"
+    POLDEK1="$RAW_POLDEK --st dir -s $REPO"
+}
+
+build() {
+   build_package $REPO $@
+}
+
+build2() {
+   build_package $REPO2 $@
+}
+
+testVerifySuccess()
+{
+    build a -r "foo" -r "bar" -f /etc/foo.conf
+    build b -p "foo" -p "bar" -r "baz" -f /etc/bar.conf
+    build c -p "baz"
+    build sh -p /bin/sh
+
+    msgn "deps"
+    $POLDEK1 --verify a
+    assertEquals "verify  failed" "$?" "0"
+
+    msgn "order"
+    $POLDEK1 --verify=order a
+    assertEquals "verify=order failed" "$?" "0"
+
+    msgn "conflicts"
+    $POLDEK1 --verify=conflicts a
+    assertEquals "verify=conflicts failed" "$?" "0"
+
+    msgn "file conflicts"
+    $POLDEK1 --verify=file-conflicts a
+    assertEquals "verify=file-conflicts failed" "$?" "0"
+
+    msgn "file orphans"
+    $POLDEK1 --verify=file-orphans a
+    assertEquals "verify=file-orphans failed" "$?" "0"
+
+    msgn "file missing deps"
+    $POLDEK1 --verify=file-missing-deps a
+    assertEquals "verify=missing-deps failed" "$?" "0"
+}
+
+testVerifyDepsError()
+{
+    build a -r "foo" -r "bar.so"
+    build b -p "foo" -p "bar" -r "baz"
+    build c -p "baz" -r "foo.so"
+    build sh -p /bin/sh
+
+    msg "# $POLDEK1 --verify a"
+    $POLDEK1 --verify a >$TMP/verify-log.log
+    assertEquals "poldek succeed, but should fail", "$?" "1"
+
+    n=$(grep "error:" $TMP/verify-log.log | grep -P 'req.+not found' | wc -l)
+    assertEquals "should report 2 dependency errors" "$n" "2"
+}
+
+testVerifyConflictsError()
+{
+    build a -r "foo" -r "bar" -p "foo.so"
+    build b -p "foo" -p "bar" -r "baz"
+    build c -p "baz" -c "foo.so"
+    build sh -p /bin/sh
+
+    msg "# $POLDEK1 --verify=conflicts a"
+    $POLDEK1 --verify=conflicts a >$TMP/verify-log.log
+    assertEquals "poldek succeed, but should fail", "$?" "1"
+
+    n=$(grep "error:" $TMP/verify-log.log | grep -P 'c-.+conflicts.+foo.so' | wc -l)
+    assertEquals "should report 1 conflict" "$n" "1"
+}
+
+
+. ./sh/lib/shunit2

@@ -1,0 +1,182 @@
+#!/bin/sh
+# $Id$
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/solver-setup
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+
+#tearDown() {
+#    [ -n "$REPO" ] && rm -f $REPO/*.*
+#}
+
+setUp() {
+    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
+    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
+    rm -rf $ORIGREPO/*
+
+    REPO="$ORIGREPO/src"
+    REPO2="$ORIGREPO/src2"
+    DESTINATION_REPO="$ORIGREPO/dest";
+
+    rm -rf $REPO $REPO2 $DESTINATION_REPO
+
+    mkdir -p $REPO || fail "mkdir $REPO failed"
+    mkdir -p $REPO2 || fail "mkdir $REPO2 failed"
+    mkdir -p $DESTINATION_REPO || fail "mkdir $DESTINATION_REPO failed"
+
+    RAW_POLDEK="$POLDEK_NOCONF"
+    POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --st dir -s $REPO2 --install-dist=$DESTINATION_REPO"
+}
+
+build() {
+   build_package $REPO $@
+}
+
+build2() {
+   build_package $REPO2 $@
+}
+
+# try to install package and check result
+# usage: try_install <mode> <poldek switches> <package> <expected installed> [<extra_poldek_switches>]
+try_install_dist() {
+    typeset eec="$1"; shift;
+    typeset mode="$1"; shift
+    typeset poldek_opts="$1"; shift
+    typeset package="$1"; shift
+    typeset expected="$1"; shift
+
+    [ "$expected" == "none" ] && expected=""
+    typeset regexp=$(echo $expected | sed 's/,/|/g')
+    typeset n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
+
+    typeset cmd="$poldek_opts $package"
+    if [ $# -gt 0 ]; then
+        cmd="$1 $cmd"
+        shift
+    fi
+
+    if is_verbose_mode; then
+        GDB=${GDB:-""}
+        if [ -n "$GDB" ]; then
+            gdb --ex run --args $POLDEK_INSTALL $cmd --test
+        else
+            $POLDEK_INSTALL $cmd --test
+        fi
+    fi
+
+    if [ "$mode" != "rpm" ]; then
+        do_runpoldek $eec $cmd --test
+    fi
+
+    if [ -n "$expected" ]; then
+    # run again to check installation results
+        typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | grep -E "^%[IDR]")
+        typeset n_all=$(echo $out | sed 's|%|\n%|g' | grep -E '^%[ID]' | wc -l)
+        typeset n=$(echo $out | sed 's|%|\n%|g' | grep -E "^%[ID] ($regexp)" | wc -l)
+        assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
+        assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
+    fi
+}
+
+
+# try to install package and check result
+# usage: try_install <package> <expected installed> [<expected removed>] [<extra poldek switches>]
+try_install() {
+    local pkg=$1
+    local eec="success"
+    if [ "$pkg" = "--failok" ]; then
+        eec="fail"
+        shift;
+        pkg=$1
+    fi
+
+
+    try_install_dist $eec "dir" "-v" "$@"
+}
+
+testInstallDist() {
+    build a -r "foo" -r "bar"
+    build b -p "foo" -p "bar" -r "baz"
+    build c -p "baz"
+    build sh -p /bin/sh -f /bin/sh
+
+    msgn "Install"
+    try_install a "a,b,c,sh"
+}
+
+# install-dist cannot resolve this (by picking c) as regular install do
+# and it simply report unmet dep here
+testInstallDistMissingDepAlt() {
+    build a -r "foo" -r "bar"
+    build b -p "foo" -p "bar" -r "baz"
+    build c -p "foo" -p "bar"
+    build sh -p /bin/sh
+
+    try_install --failok a ""
+    if is_verbose_mode; then
+        msg "THE ERROR ABOVE (1 unresolved dependency) is EXPECTED"
+    fi
+    $POLDEK_INSTALL a | grep -q "error: b-1-1.noarch: req baz not found"
+    assertEquals "poldek should report 1 dependency error" "$?" "0"
+    # TODO try_install a "a,c,sh"
+}
+
+testInstallDistDepError() {
+    build a -r "b"
+    build b -r "c"
+    build c -r "unmetreq" -r "d"
+    build d
+    build sh -p /bin/sh
+
+    try_install --failok a ""
+    if is_verbose_mode; then
+        msg "THE ERROR ABOVE (1 unresolved dependency) is EXPECTED"
+    fi
+    $POLDEK_INSTALL a | grep -q "error: c-1-1.noarch: req unmetreq not found"
+    assertEquals "poldek should report 1 dependency error" "$?" "0"
+}
+
+testInstallDistDepErrorNoDeps() {
+    build a -r "b"
+    build b -r "c"
+    build c -r "unmetreq" -r "d"
+    build d
+    build sh -p /bin/sh
+
+    msgn "Install"
+    try_install a "a,b,c,d,sh" --nodeps
+    #try_install_dist "success" "dir" "-vt --nodeps" a "a,b,c,d,sh"
+}
+
+# install-dist cannot resolve this conflict (by picking c) as regular install do
+# and it simply report conflict here
+testInstallDistConflictError() {
+    build a -r "foo" -r "bar"
+    build b -p "foo" -p "bar" -c "a"
+    build c -p "foo" -p "bar"
+    build sh -p /bin/sh
+
+    try_install --failok a ""
+    if is_verbose_mode; then
+        msg "THE ERROR ABOVE (1 unresolved dependency) is EXPECTED"
+    fi
+    $POLDEK_INSTALL a | grep -qP "error: b-1-1.*conflicts with a-1-1"
+    assertEquals "poldek should report 1 conflict" "$?" "0"
+}
+
+testInstallDistConflictErrorForce() {
+    build a -r "foo" -r "bar"
+    build b -p "foo" -p "bar" -c "a"
+    build c -p "foo" -p "bar"
+    build sh -p /bin/sh
+
+    msgn "Install"
+    try_install a "a,b,sh" --force
+}
+
+
+. ./sh/lib/shunit2

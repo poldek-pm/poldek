@@ -12,6 +12,9 @@ EXTRA_DIST = test.h poldek_test_conf.conf sh run-sh-tests.sh
 check-sh:
 	@./run-sh-tests.sh
 
+check-sh-no-loop:
+	@MAX_LOOP=3 ./run-sh-tests.sh
+
 # called by test_config
 poldek_test_conf.conf: $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml
 	xsltproc $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml > poldek_test_conf.conf

@@ -37,42 +37,46 @@ setUp() {
 }
 
 build() {
-   build_package $REPO $@
+   build_package $REPO "$@"
 }
 
 build2() {
-   build_package $REPO2 $@
+   build_package $REPO2 "$@"
 }
 
 build_installed() {
-   build_package $DESTINATION_REPO $@
+   build_package $DESTINATION_REPO "$@"
 }
 
 # try to install package and check result
 # usage: try_install <package> <expected installed> [<expected removed>] [<extra poldek switches>]
 try_install() {
-  local pkg=$1
+    local pkg=$1
 
-  try_install_package "dir" -uvt $@
+    local nchoices=$($POLDEK_INSTALL -uv --test $pkg | grep -P '^%choose ' | wc -l)
+    assertEquals "user should not be asked to choose equivalents ($nchoices)" "$nchoices" "0"
 
-  local n=$($POLDEK_INSTALL -uvt $pkg | grep -P '^%choose ' | wc -l)
-  assertEquals "user should not be asked to choose equivalents ($n)" "$n" "0"
+    try_install_package "dir" "-uv --test" "$@"
 }
 
 try_install_with_ask_allowed() {
-    try_install_package "dir" -uvt $@
+    try_install_package "dir" "-uv --test" "$@"
 }
 
 try_install_a() {
     try_install "a" $@
 }
 
+try_install_a_should_fail() {
+    try_install_package_should_fail "dir" "-uv --test" "a" $@
+}
+
 try_uninstall() {
-  try_uninstall_package "dir" -evt $@
+    try_uninstall_package "dir" "-ev --test" "$@"
 }
 
 # 'c' has unmet requirement
-testChooseTheRightAlternative_1() {
+testChooseTheRightAlternative1() {
   build a -r "CAP"
   build c -p "CAP" -r "unmetreq"
   build d -p "CAP"
@@ -80,7 +84,7 @@ testChooseTheRightAlternative_1() {
 }
 
 # 'd' should be choosen instead of non-resolvable 'c'
-testChooseTheRightAlternative_2() {
+testChooseTheRightAlternative2() {
   build a -r "b"
   build b -r "CAP"
   build c -p "CAP" -r "unmetreq"
@@ -89,7 +93,7 @@ testChooseTheRightAlternative_2() {
 }
 
 # as above, but 'c' has more (solvable) requirements
-testChooseTheRightAlternative_3() {
+testChooseTheRightAlternative3() {
   build a -r "b"
   build b -r "CAP"
   build c -p "CAP" -r "foo" -r "bar" -r "unmetreq" -r "zfoo"
@@ -101,7 +105,7 @@ testChooseTheRightAlternative_3() {
 }
 
 # first, but wrong resolved set is: a,b,c,e,g
-testChooseTheRightAlternative_4() {
+testChooseTheRightAlternative4() {
   build a  -r "b"
   build b  -r "CAP"
 
@@ -118,11 +122,10 @@ testChooseTheRightAlternative_4() {
   try_install_with_ask_allowed a "a,b,d,f,h"
 }
 
-
 # package 'x' provides all 'a' requirements
 testChooseMoreAccuratePackage() {
   build a -r "b" -r "c" -r "d" -r "x"
-  build b -p "AA" -p "BB"
+  build b -p "foo" -p "bar"
   build c
   build d
   build x -p "b" -p "c" -p "d"
@@ -130,15 +133,79 @@ testChooseMoreAccuratePackage() {
   try_install_with_ask_allowed a "a,x"
 }
 
+testMissingDep() {
+    build a -r "b"
+    build b -r "unmetreq"
+
+    try_install_a_should_fail "a,b" ""
+    if is_verbose_mode; then
+        msg "THE ERROR ABOVE (1 unresolved dependency) is EXPECTED"
+    fi
+    $POLDEK_INSTALL -uv --test a | grep -q "error: b-1-1: req unmetreq not found"
+    assertEquals "poldek should report 1 dependency error" "$?" "0"
+}
+
+testMissingDepIndirect()
+{
+    build a -r "foo"
+    build b -p "foo" -p "bar" -r "baz"
+    build c -p "baz" -r "foo.so"
+    build sh -p /bin/sh
+
+    try_install_a_should_fail "a,b,c" ""
+    if is_verbose_mode; then
+       msg "THE ERROR ABOVE (1 unresolved dependency) is EXPECTED"
+    fi
+    $POLDEK_INSTALL -uv --test a | grep -q "error: c-1-1: req foo.so not found"
+    assertEquals "poldek should report 1 dependency error" "$?" "0"
+}
+
+testConflict() {
+    build a -r "foo" -r "bar"
+    build b -p "foo" -p "bar" -c "a"
+    build c -p "foo" -p "bar"
+
+    try_install a "a,c" ""
+}
 
 # package 'b' conflicts with 'a'
-testSkipConflictedAlternative() {
-  build a -r "BB" -r "CC"
-  build b -p "BB" -p "CC" -c "a"
-  build c -p "BB" -p "CC"
+testConflictUseAlternative() {
+  build a -r "foo" -r "bar"
+  build b -p "foo" -p "bar" -c "a"
+  build c -p "foo" -p "bar"
 
   try_install_a "a,c"
 }
+
+# b conflicts with installed c
+testConflictUpgrade() {
+    build_installed a -r "foo" -r "bar"
+    build_installed c -p "foo" -p "bar"
+
+    build a 2-2 -r "b"
+    build b 2-2 -r "'a > 1'" -c "'c < 2'"
+    build c 2-2
+
+    try_install_a "a,b,c"
+}
+
+# ...
+testConflictSth() {
+    build a -r "foo" -r "bar"
+    build b -p "foo" -p "bar" -c "a"
+    build c -p "foo" -p "bar"
+
+    msgn "Preparing repositories..."
+    build_installed a 2-1
+    build_installed b 2-1  -r "'a = 2-1'" -r "'a >= 1-1'" -r "a" -r "'a > 1'"
+
+    build a 2-2
+    build b 2-2 -r "'a >= 1-1'" -r "'a = 2-2'"
+
+    msgn "Upgrade"
+    try_install a "a-2-2,b-2-2" "a-2-1,b-2-1"
+}
+
 
 # b-1-1 meets all 'a' requirements
 testRedundantRequirement() {
@@ -729,11 +796,22 @@ testRedundantSuccessorReqs() {
     try_install a "a-2-2,b-2-2" "a-2-1,b-2-1"
 }
 
+testCaplookup() {
+    msgn "Preparing repositories..."
+    build a -p "foo"
+    build b -p "foo"
+
+    msgn "install foo"
+    try_install_package "dir" "-uv --caplookup" "foo" "a"
+}
+
+
 testUninstall() {
     msgn "Preparing repositories..."
     build_installed a 1-1
     build_installed a-devel 1-1 -r "'a = 1'"
 
+    msgn "Uninstall a"
     try_uninstall a "a-1-1,a-devel-1-1"
 }
 
@@ -756,6 +834,16 @@ testUninstallGreedy() {
 
     msgn "-gg"
     try_uninstall_package "dir" "-evtgg" a "a-1-1,a-devel-1-1,b-1-1,c-1-1"
+}
+
+# TODO
+xtestUninstallHold() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1
+    build_installed a-devel 1-1 -r "'a = 1'"
+
+    msgn "Uninstall a"
+    try_uninstall a "a-1-1,a-devel-1-1"
 }
 
 

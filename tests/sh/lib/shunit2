@@ -36,7 +36,7 @@ __SHUNIT_VERSION='2.1.1pre'
 SHUNIT_TRUE=0
 SHUNIT_FALSE=1
 
-__SHUNIT_ASSERT_MSG_PREFIX='ASSERT:'
+__SHUNIT_ASSERT_MSG_PREFIX='\033[35mASSERT\033[0m:'
 
 for _su_const in `set |grep "^__SHUNIT_" |cut -d= -f1`; do
   readonly ${_su_const}
@@ -704,20 +704,20 @@ _shunit_execSuite()
     endSkipping
     if [ -n "$RUNTEST_ONLY" ]; then
        [ "$RUNTEST_ONLY" != "${_su_func}" ] && continue;
-    fi    
+    fi
     # execute the per-test setup function
-    SU_FUNC="${_su_func}"    
-    export SU_FUNC    
+    SU_FUNC="${_su_func}"
+    export SU_FUNC
     setUp
 
     # execute the test
     echo "# ${_su_func}"
     eval ${_su_func}
-    if [ $? -eq 0 ]; then 
+    if [ $? -eq 0 ]; then
         _shunit_testPassed
     else
         _shunit_testFailed
-    fi     
+    fi
 
     # execute the per-test tear-down function
     tearDown

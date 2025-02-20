@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # XXX for some reason rpm5 does not create its database correctly if running as ordinary user:
 #  $ rpm --root /tmp/root --initdb
 #  $ rpm --root /tmp/root -ivh --justdb foo-1-1.noarch.rpm
@@ -45,7 +47,7 @@ rpm_up() {
     RPM="$SUDO rpm --root $DESTINATION_REPO"
     $RPM --initdb
 
-    RAW_POLDEK="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER -Oupgrade_multiple_instances=y --noask"
+    RAW_POLDEK="$POLDEK_NOCONF -Ouse_sudo=n -Odependency_solver=$DEPENDENCY_SOLVER -Oupgrade_multiple_instances=y --noask"
     POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --root $DESTINATION_REPO --justdb"
 }
 

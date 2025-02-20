@@ -1,6 +1,6 @@
 #!/bin/sh
 
-build_package() {
+xxx_build_package() {
     destdir=$1; shift
     name=$1; shift
     version=""
@@ -32,32 +32,74 @@ build_package() {
     BUILT_PACKAGE_NVR="$name-$version"
 }
 
-runpoldek() {
+do_runpoldek() {
+    typeset eec=$1; shift
+
     [ -z "$POLDEK_INSTALL" ] && fail 'empty $POLDEK_INSTALL'
+
     typeset cmd="$POLDEK_INSTALL $@"
+
     if is_verbose_mode; then
         msg "# executing $cmd"
-        $cmd || fail "'poldek $@' failed"
+        $cmd
     else
-        $cmd >/dev/null 2>&1 || fail "'poldek $@' failed"
+        $cmd >/dev/null 2>&1
     fi
+
+    local ec=$?
+    if [ "$eec" = "fail" ]; then
+       [ $ec -eq 0 ] && fail "poldek succeed, but should fail"
+    elif [ $ec -ne 0 ]; then
+        fail "poldek failed with exit code $ec"
+    fi
+
+    return $?
+}
+
+runpoldek() {
+    do_runpoldek "success" "$@"
+}
+
+runpoldek_failok() {
+    do_runpoldek "fail" "$@"
 }
 
 # try to install package and check result
 # usage: try_install <mode> <poldek switches> <package> <expected installed> [<expected removed>] [<extra_poldek_switches>]
-try_install_package() {
+do_try_install_package() {
+    msg "do_try_install_package $# [$@]"
+    typeset eec="$1"; shift
     typeset mode="$1"; shift
-    typeset poldek_opts="$1"; shift
-    typeset package="$1"; shift
-    typeset expected="$1"; shift
-    [ $expected == "none" ] && expected=""
 
+    typeset package=""
+    typeset expected=""
     typeset rm_expected=""
-    if [ $# -gt 0 ]; then
-        rm_expected="$1"
-        shift
-    fi
+    typeset poldek_opts=""
+    while [ $# -gt 0 ]; do
+        case "${1}" in
+            -*)
+                poldek_opts="$poldek_opts $1"
+                shift
+                ;;
+            *)
+                if [ -z "$package" ]; then
+                    package="$1"
+                elif [ -z "$expected" ]; then
+                    expected="$1"
+                elif [ -z "$rm_expected" ]; then
+                    rm_expected="$1"
+                else
+                    echo "too much args?"
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
 
+    msg "do_try_install_package (eec=$eec, mode=$mode, opts=$poldek_opts): $package => [$expected] [$rm_expected]"
+
+    [ "$expected" = "none" ] && expected=""
     typeset regexp=$(echo $expected | sed 's/,/|/g')
     typeset n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
     if [ -n "$rm_expected" ]; then
@@ -71,28 +113,38 @@ try_install_package() {
         shift
     fi
 
+    echo "$cmd" | grep -q -- '--test'
+    local is_test=$?
+
     if is_verbose_mode; then
         GDB=${GDB:-""}
         if [ -n "$GDB" ]; then
             gdb --ex run --args $POLDEK_INSTALL $cmd --test
-        else
-            $POLDEK_INSTALL $cmd --test
         fi
     fi
 
-    # run to check exit code
-    if [ "$mode" != "rpm" ]; then
-      runpoldek $cmd
-      [ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
+    if [ "$mode" = "rpm" ]; then
+        do_runpoldek $eec $cmd
+        return $?
     fi
 
-    # run again to check installation results
-    typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | grep -E "^%[IDR]")
+    # dry run to check installation results
+    typeset testop="--test"
+    echo "$cmd" | grep -Pq '\-\-test'
+    [ $? -eq 0 ] && testop=""
+
+    typeset out=""
+    if [ -n "$expected" -o -n "$rm_expected" ]; then
+        out=$($POLDEK_INSTALL $cmd $testop --parsable-tr-summary | grep -E "^%[IDR]")
+    fi
+
+    do_runpoldek $eec $cmd
+
     if [ -n "$expected" ]; then
         typeset n_all=$(echo $out | sed 's|%|\n%|g' | grep -E '^%[ID]' | wc -l)
         typeset n=$(echo $out | sed 's|%|\n%|g' | grep -E "^%[ID] ($regexp)" | wc -l)
         assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
-        assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
+        assertEquals "not all or non expected packages installed (expected $expected [$n_expected != $n])" "$n" "$n_expected"
     fi
 
     if [ -n "$rm_expected" ]; then
@@ -103,12 +155,20 @@ try_install_package() {
     fi
 }
 
+try_install_package_should_fail() {
+    do_try_install_package "fail" "$@"
+}
+
+try_install_package() {
+    do_try_install_package "success" "$@"
+}
+
 try_uninstall_package() {
     typeset mode="$1"; shift
     typeset poldek_opts="$1"; shift
     typeset package="$1"; shift
     typeset expected="$1"; shift
-    [ $expected == "none" ] && expected=""
+    [ $expected = "none" ] && expected=""
 
     typeset regexp=$(echo $expected | sed 's/,/|/g')
     typeset n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)

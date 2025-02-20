@@ -57,9 +57,9 @@ try_install() {
         rpm_install $@
     elif [ "$INSTALL_MODE" = "dir" ]; then
         local pkg=$1
-        try_install_package "dir" -uvt $@
+        try_install_package "dir" "-uv --test" $@
 
-        local n=$($POLDEK_INSTALL -uvt $pkg | grep -P '^%choose ' | wc -l)
+        local n=$($POLDEK_INSTALL -uv --test $pkg | grep -P '^%choose ' | wc -l)
         assertEquals "user should not be asked to choose equivalents ($n)" "$n" "0"
     fi
 }

@@ -1,5 +1,5 @@
 #!/bin/sh
-# test with rpm installations (--justdb is used)
+# tests with rpm installations (--justdb is used)
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
@@ -32,10 +32,14 @@ try_install() {
   rpm_install "$@"
 }
 
-testRPMdbcache() {
+function testRPMdbcache() {
     build foo
 
-    $RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO --cmd reload >/dev/null
+    local op=""
+    is_verbose_mode && op="-v"
+
+    msgn "create rpmdb cache with dirindex"
+    $RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO $op --cmd reload >/dev/null
     local rpmdb_cachedirname="$(echo $DESTINATION_REPO | sed -e 's|^/||' -e 's|/|.|g').var.lib.rpm"
     local suffix="rpmdbcache$(echo $DESTINATION_REPO | sed 's|/|.|g').var.lib.rpm"
 
@@ -54,19 +58,22 @@ testRPMdbcache() {
     local dirindex_path="$CACHEDIR/$rpmdb_cachedirname/dirindex.rpmdb.tndb"
     local md5=$(md5sum $dirindex_path | cut -f1 -d' ')
 
-    # will die (we're in test mode) if dirindex is missing
-    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO --root $DESTINATION_REPO --cmd ls -u
-    assertEquals "died" "$?" "0"
 
+    # will die (we're in test mode) if dirindex is missing
+    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO --root $DESTINATION_REPO $op --cmd ls -u
+    assertEquals "died" "$?" "0"
+    msgn "install a"
     local md=$(md5sum $dirindex_path | cut -f1 -d' ')
     assertEquals "dirindex changed" "$md5" "$md"
 
     build a "1-1"
     sleep 0.8 # mtime based cache
+
     try_install a "a-1-1" ""
 
+    msgn "update dirindex"
     # should load rpmdb and update dirindex
-    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO --root $DESTINATION_REPO --cmd ls -u
+    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO --root $DESTINATION_REPO $op --cmd ls -u
 
     local md=$(md5sum $dirindex_path | cut -f1 -d' ')
     if [ "$md5" = "$md" ]; then

@@ -74,7 +74,6 @@ XXXtestSelectType() # disabled as pdir indexes are gone since 0.4
 }
 
 poldek_n() {
-    #-Osource2="repo-pdir,type=pndir $REPO"
     $POLDEK_NOCONF -Osource1="repo-pndir,type=pndir $REPO"  $@
 }
 
@@ -84,17 +83,6 @@ testCreateByName()
     msgn "$Case_f"
     poldek_n -n repo-pndir --mkidx || fail "mkidx failed"
     die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
-
-    # disabled as pdir indexes are gone since 0.4
-
-    #poldek_n -n repo-pdir --mkidx || fail "mkidx failed"
-    #die_if_empty_index "$REPO/packages.dir$COMPR_EXT"
-
-    #setUp
-
-    #poldek_n -n repo-pndir -n repo-pdir --mkidx || fail "-n 1 -n 2 --mkidx failed"
-    #die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
-    #die_if_empty_index "$REPO/packages.dir$COMPR_EXT"
 }
 
 #  g) -s /foo --mkidx=/tmp/bar$COMPR_EXT

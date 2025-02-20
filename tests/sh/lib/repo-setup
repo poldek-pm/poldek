@@ -28,6 +28,37 @@ build_repo_packages() {
     fi
 }
 
+build_package() {
+    destdir=$1; shift
+    name=$1; shift
+    version=""
+
+    [ $# -gt 0 ] && version="$1";
+    #echo "v $version"
+    if [ -n "$version" ]; then
+        if echo "$version" | grep -E -qv -- '^-'; then
+            shift
+        else
+            version="1-1"
+        fi
+    fi
+    [ -n "$version" ] || version="1-1"
+
+    params=""
+    [ $# -gt 0 ] && params="$@";
+
+    local log=$TMPDIR/$name.build.log
+
+    eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >$log 2>&1
+    [ $? -eq 0 ] || fail "build package '$name' failed with $(grep error $log | tr -d '\n')"
+
+    if [ "$VERBOSE" = "vv" ]; then
+        echo "./build-test-rpm.sh -d $destdir -n $name -v $version $params"
+        cat $log
+    fi
+
+    BUILT_PACKAGE_NVR="$name-$version"
+}
 
 oneTimeSetUp() {
     [ ! -d "$PWD/sh/lib" ] && abort "$PWD is not a tests directory (missing sh/lib)"

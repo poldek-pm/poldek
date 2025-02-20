@@ -78,6 +78,9 @@ while test $# -gt 0 ; do
             echo '    -c COMPR       - set compression method in repo tests'
             echo '    -t NAME        - run NAME test only'
             exit 0; shift ;;
+
+        test[A-Za-z]*)
+            RUNTEST_ONLY="${1}"; shift;;
         *)
             echo "unknown option ${1}; try -h"; exit 1;
     esac

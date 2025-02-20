@@ -119,7 +119,7 @@ testUpdate()
     rm -f "$lastdiff"
     $POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up
     if [ $? -eq 0 ]; then
-        force_msg "THE ERROR ABOVE is EXPECTED"
+        force_msg "THE ERROR ABOVE (about missig packages.i/ file) is EXPECTED"
     else
         fail "up"
     fi
