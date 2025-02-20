@@ -169,18 +169,18 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     v++;
                 ts->setop(ts, POLDEK_OP_GREEDY, v);
             } else {
-                int v, bool;
+                int v, val;
 
                 if (sscanf(arg, "%u", &v) == 1) {
-                    bool = v;
+                    val = v;
 
-                } else if ((bool = poldek_util_parse_bool(arg)) == -1) {
+                } else if ((val = poldek_util_parse_bool(arg)) == -1) {
                     logn(LOGERR, _("invalid value ('%s') of option 'greedy'"),
                          arg);
                     return EINVAL;
                 }
 
-                ts->setop(ts, POLDEK_OP_GREEDY, bool);
+                ts->setop(ts, POLDEK_OP_GREEDY, val);
             }
             break;
 
