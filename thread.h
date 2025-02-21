@@ -6,6 +6,7 @@
 #endif
 
 #ifdef WITH_THREADS
+# include <stdbool.h>
 # include <pthread.h>
 
 void poldek_threads_toggle(bool value);
