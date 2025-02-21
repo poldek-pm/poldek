@@ -216,6 +216,14 @@ testWithFail() {
     echo $out | grep 'error' | grep -q 'not found' || fail "unexpected success (missing 'not found')"
 }
 
+testWithVersioned() {
+    build a 1-1 -r "'(foo >= 1 with bar >= 2)'"
+    build b 1-1 -p "'foo = 1'" -p "'bar = 1'"
+    build c 1-2 -p "'foo = 1'" -p "'bar = 2'"
+    try_install "a" "a,c"
+}
+
+
 testWithout() {
     build a 1-1 -r "'(foo without bar)'"
     build b 1-1 -p "foo"
