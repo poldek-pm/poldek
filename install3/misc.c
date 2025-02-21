@@ -491,8 +491,6 @@ int i3_find_req(int indent, struct i3ctx *ictx,
 
     //trace(indent, "PROMOTE pkg test satisfied %d", pkg_satisfies_req(pkg,req,1));
 
-    msgn_i(3, indent, "found %s: %d %p", capreq_stra(req), found,  suspkgs);
-
     if (!found)
         return 0;
 
