@@ -34,8 +34,8 @@
 #include "pkgfl.h"
 #include "pkgu.h"
 #include "capreq.h"
-#include "pkgset.h"             /* for pkgset_get_required_packages, TOFIX */
 #include "sigint/sigint.h"
+#include "pkgset.h"             /* struct reqpkg, TOFIX */
 #include "poldek_intern.h"      /* for ctx->ts->cachedir, etc, TOFIX */
 #include "pm/pm.h"
 
@@ -520,7 +520,7 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
     char *colon = ", ";
     int i, ncol = IDENT;
 
-    tn_array *reqpkgs = pkgset_get_required_packages(0, cmdctx->ts->ctx->ps, pkg);
+    tn_array *reqpkgs = poldek_ts_get_required_packages(cmdctx->ts, pkg);
     if (reqpkgs == NULL)
         return;
 
