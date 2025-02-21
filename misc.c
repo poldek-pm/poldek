@@ -808,9 +808,14 @@ char *strtime_(time_t t)
     return n_strdup(buf);
 }
 
+static int poldek_TESTING_MODE = -1;
 int poldek__is_in_testing_mode(void)
 {
-    return getenv("POLDEK_TESTING") != NULL;
+    if (poldek_TESTING_MODE == -1) {
+        poldek_TESTING_MODE = getenv("POLDEK_TESTING") == NULL ? 0 : 1;
+    }
+
+    return poldek_TESTING_MODE == 1;
 }
 
 static void process_output(struct p_open_st *st, int verbose_level)
