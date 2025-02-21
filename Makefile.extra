@@ -20,7 +20,6 @@ mclean:
 
 rsync-backup: clean
 	rsync -atvx . lione:rsync/poldek/
-	rsync -atvx . builder64:poldek/
 
 # symlink ../trurlib repo
 symlink-mod-%:

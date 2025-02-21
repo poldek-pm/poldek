@@ -57,3 +57,8 @@ vfile/vfget
 vfile/test_vopen3
 *.patch
 *.diff
+*.orig
+*.rej
+TAGS
+core.[0-9]*
+tests/core.[0-9]*
