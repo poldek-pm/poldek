@@ -1495,7 +1495,8 @@ int do_poldek_setup_cachedir(struct poldek_ctx *ctx)
         if (ctx->ts->cachedir && path && n_str_eq(ctx->ts->cachedir, path))
             msgn(1, "cachedir: %s", path);
         else
-            msgn(1, "cachedir: %s -> %s", ctx->ts->cachedir, path);
+            msgn(1, "cachedir: %s -> %s", ctx->ts->cachedir ? ctx->ts->cachedir : "null",
+                 path ? path : "null");
     }
 
     if (path == NULL) {
