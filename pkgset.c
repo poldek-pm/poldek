@@ -198,10 +198,7 @@ int pkgset__index_caps(struct pkgset *ps)
         index_package_caps(ps, pkg);
     }
 
-    // moved to file_index as lazy sort
-    //file_index_setup(ps->file_idx);
-
-    timethis_end(1, t, "ps.index");
+    timethis_end(4, t, "ps.index");
 
 #if ENABLE_TRACE
     extern void capreq_idx_stats(const char *prefix, struct capreq_idx *idx);

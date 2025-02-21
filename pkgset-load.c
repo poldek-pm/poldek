@@ -224,7 +224,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                          "%d packages read", n), n);
     }
 
-    timethis_end(1, t, "ps.load");
+    timethis_end(4, t, "ps.load");
 
     return n_array_size(ps->pkgs);
 }
