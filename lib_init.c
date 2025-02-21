@@ -1233,6 +1233,11 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
             poldek_log_set_default_appender("_TTY", NULL, NULL);
             break;
 
+        case POLDEK_CONF_FORCECOLOR:
+            n_hash_replace(ctx->_cnf, "ttycolor", n_strdup("t"));
+            poldek_term_init(1);
+            break;
+
         case POLDEK_CONF_PROGRESS:
             ctx->ts->setop(ctx->ts, POLDEK_OP_PROGRESS_NONE, 1);
             vfile_configure(VFILE_CONF_PROGRESS_NONE, 1);
@@ -1345,7 +1350,7 @@ int poldeklib_init(void)
     bindtextdomain(PACKAGE, NULL);
     textdomain(PACKAGE);
 
-    poldek_term_init();
+    poldek_term_init(0);
     init_internal();
     pkgdirmodule_init();
 

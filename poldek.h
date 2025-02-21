@@ -51,6 +51,7 @@ EXPORT struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 #define POLDEK_CONF_DESTINATION     14
 #define POLDEK_CONF_DEPGRAPH        15
 #define POLDEK_CONF_PROGRESS        16
+#define POLDEK_CONF_FORCECOLOR      19
 #define POLDEK_CONF_LOGFILE         20
 #define POLDEK_CONF_LOGTTY          21
 

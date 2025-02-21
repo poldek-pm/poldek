@@ -513,7 +513,7 @@ static void shell_end(int sig)
 
 static int init_shell(struct poclidek_ctx *cctx)
 {
-    poldek_term_init();
+    poldek_term_init(0); /* FIXME why here? It is called by poldeklib_init()  */
     sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     sh_ctx.cctx = cctx;
     cctx->_flags |= POLDEKCLI_UNDERIMODE;
