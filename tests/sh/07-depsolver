@@ -741,6 +741,29 @@ testUpgradeMultipleInstalled() {
     try_install a "a-1.1.1k-1" "a-1.1.1j-1"
 }
 
+# https://github.com/poldek-pm/poldek/issues/15
+# https://github.com/poldek-pm/poldek/issues/24
+testMultilibCrash() {
+    msgn "Preparing repositories..."
+    build_installed a 1
+    build_installed b 1 -r "'a = 1'"
+    build_installed c 1 -r "'a = 1'"
+
+    build b 2 -r "'a > 2'"
+    build c 2 -r "'a > 2'" -r "aa"
+
+    build a 4 -c "'c >= 2'"
+    build a 3 -p "aa"
+
+    # a) simulate score a-3-1 down
+    # b) a-4 winning, but is's conflicted, and
+    # c) removing winning a-4 from pool causes crash
+    export POLDEK_TESTING_SIMULATE_MULTILIB_CRASH="a-3-1"
+    try_install c "a-3,b,c"
+    unset POLDEK_TESTING_SIMULATE_MULTILIB_CRASH
+}
+
+
 testChooseRightVersion() {
     msgn "Preparing repositories..."
     build a 1-1

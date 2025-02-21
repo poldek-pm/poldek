@@ -296,10 +296,20 @@ static void score_candidate(int indent, struct i3ctx *ictx,
     if (i3_is_other_version_marked(ictx, pkg, NULL)) {
         trace(indent + 4, "%s: other version is already marked, skipped", pkg_id(pkg));
         sc->oth = true;
+    } else if (poldek__is_in_testing_mode()) {
+        const char *id = getenv("POLDEK_TESTING_SIMULATE_MULTILIB_CRASH");
+        if (id && strcmp(pkg_id(pkg), id) == 0) {
+            msgn(0, "Testing: simulate 'other_version_marked' for %s\n", id);
+            sc->oth = true;
+        }
     }
 
-    sc->score = sc->satscore - (5 * sc->conflicts) + sc->prefix_evr + sc->color +
-               (sc->upgrade ? 5 : 0) + (sc->oth ? -10 : 0);
+    sc->score = sc->satscore
+        - (5 * sc->conflicts)
+        + sc->prefix_evr
+        + sc->color
+        + (sc->upgrade ? 5 : 0)
+        + (sc->oth ? -10 : 0);
 
     trace(indent, "=> %s's score=%d", pkg_id(pkg), sc->score);
 }
@@ -373,12 +383,16 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
 
         if (sc->conflicts > worst_conflicts)
             worst_conflicts = sc->conflicts;
+
+        trace(indent, "%d. %s overall=%d sat=%d conflicts=%d\n", i,
+              pkg_id(n_array_nth(candidates, i)), sc->score, sc->satscore, sc->conflicts);
+
     }
 
     trace(indent, "satscore: best=%d, worst=%d", best_satscore, worst_satscore);
     trace(indent, "conflicts: best=%d, worst=%d", best_conflicts, worst_conflicts);
     trace(indent, "best: i=%d, score=%d, sat=%d", i_best, best_score, scores[i_best].satscore);
-    trace(indent+1, "bestsat: i=%d, sat=%d",i_best_sat, best_satscore);
+    trace(indent+1, "bestsat: i=%d, sat=%d", i_best_sat, best_satscore);
 
     struct pkg *best = n_array_nth(candidates, i_best);
 
@@ -402,26 +416,36 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
 
         if (trim_satscore || trim_conflicts) {
             tn_array *copy = n_array_clone(candidates);
-            i_best = -1;
+            int ii_best = -1;
             for (int i = 0; i < npkgs; i++) {
                 struct candidate_score *sc = &scores[i];
                 if (trim_satscore && sc->satscore < 0) {
-                    trace(indent, "removed %s with negative satscore",
+                    trace(indent, "removed %d. %s with negative satscore", i,
                           pkg_id(n_array_nth(candidates, i)));
+
                 } else if (trim_conflicts && sc->conflicts > 0) {
-                    trace(indent, "removed %s with conflicts",
+                    trace(indent, "removed %d. %s with conflicts", i,
                           pkg_id(n_array_nth(candidates, i)));
                 } else {
                     struct pkg *pkg = n_array_nth(candidates, i);
                     if (pkg == best)
-                        i_best = n_array_size(copy);
+                        ii_best = n_array_size(copy);
                     n_array_push(copy, pkg_link(pkg));
                 }
             }
-            n_assert(i_best >= 0);
-            n_array_clean(candidates);
-            n_array_concat_ex(candidates, copy, (tn_fn_dup)pkg_link);
-            n_array_free(copy);
+
+            /* best has been removed */
+            if (ii_best == -1 && n_array_size(copy) > 0) {
+                ii_best = 0;
+            }
+
+            if (ii_best >= 0) {
+                n_array_clean(candidates);
+                n_array_concat_ex(candidates, copy, (tn_fn_dup)pkg_link);
+                n_array_free(copy);
+                i_best = ii_best;
+                best = n_array_nth(candidates, ii_best);
+            }
         }
     }
 
