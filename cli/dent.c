@@ -545,11 +545,22 @@ struct pkg_dent *poclidek_dent_ldfind(struct poclidek_ctx *cctx, const char *pat
 
         n_assert(pkg_dent_isdir(dent));
 
+        if (flags & PKG_DENT_LDFIND_STUBSONLY) {
+            if (pkg_dent_isstub(dent) && n_array_size(dent->pkg_dent_ents) > 0)
+                return dent;
+
+            return NULL;
+        }
+
         if (!pkg_dent_isstub(dent))
             return dent;
 
         if ((flags & PKG_DENT_LDFIND_STUBSOK) && n_array_size(dent->pkg_dent_ents) > 0) /* have package stubs */
             return dent;
+    }
+
+    if (flags & PKG_DENT_LDFIND_STUBSONLY) {
+        return NULL;
     }
 
     if (dent) {

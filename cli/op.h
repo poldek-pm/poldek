@@ -26,6 +26,7 @@ struct poclidek_op_ctx;
 
 EXPORT struct poclidek_op_ctx *poclidek_op_ctx_new(void);
 EXPORT void poclidek_op_ctx_free(struct poclidek_op_ctx *);
+EXPORT int poclidek_op_ctx_has_major_mode(struct poclidek_op_ctx *opctx);
 EXPORT int poclidek_op_ctx_verify_major_mode(struct poclidek_op_ctx *opctx);
 
 struct poclidek_opgroup_rt {
@@ -35,7 +36,7 @@ struct poclidek_opgroup_rt {
     struct poclidek_op_ctx *opctx;
     int (*set_major_mode)(struct poclidek_opgroup_rt *, const char *mode,
                           const char *cmd);
-    
+
     void                   *_opdata;
     void                   (*_opdata_free)(void*);
     int                    (*run)(struct poclidek_opgroup_rt *);

@@ -58,11 +58,11 @@ extern struct poclidek_cmd command_reload;
 
 static struct poclidek_cmd *commands_tab[] = {
     &command_ls,
-    &command_search,
-    &command_get,
-    &command_desc,
     &command_install,
     &command_uninstall,
+    &command_search,
+    &command_desc,
+    &command_get,
     &command_cd,
     &command_pwd,
     &command_external,
@@ -118,8 +118,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'h':
-            argp_state_help(state, stdout, ARGP_HELP_LONG | ARGP_HELP_DOC |
-                            ARGP_HELP_USAGE);
+            argp_state_help(state, stdout, ARGP_HELP_LONG | ARGP_HELP_USAGE);
             return EINVAL;
             break;
 
@@ -193,8 +192,41 @@ static char *help_filter(int key, const char *text, void *input)
     tn_array *aliases;
     int n = 0;
 
-    if (key != ARGP_KEY_HELP_EXTRA)
+#if 0
+    printf("HELP_FILTER %d [%s]\n", key, text);
+
+    if (key == ARGP_KEY_HELP_POST_DOC) {
+        return strdup("POST DOC");
+    }
+
+    if (key == ARGP_KEY_HELP_PRE_DOC) {
+        return strdup("PRE DOC");
+    }
+
+    if (key == ARGP_KEY_HELP_ARGS_DOC) {
+        return strdup("ARGP_KEY_HELP_ARGS_DOC");
+    }
+#endif
+
+    if (key == ARGP_KEY_HELP_PRE_DOC && cmdctx->cmd->_sys_alias) {
+        const char *a = cmdctx->cmd->arg ? cmdctx->cmd->arg : "";
+        char op[128];
+
+        if (cmdctx->cmd->argp_opts) {
+            snprintf(op, sizeof(op), _("[OPTION...] %s"), a);
+            a = op;
+        }
+
+        n += n_snprintf(&buf[n], sizeof(buf) - n, "       %s %s\n",
+                        cmdctx->cmd->_sys_alias, op);
+        p = n_malloc(n + 1);
+        return memcpy(p, buf, n + 1);
+
+    }
+
+    if (key != ARGP_KEY_HELP_EXTRA) {
         return (char*)text;
+    }
 
     if (cmdctx->cmd->extra_help)
         n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
@@ -417,16 +449,24 @@ int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
     cmd->arg = _(cmd->arg);
     cmd->doc = _(cmd->doc);
 
-
     if (n_array_bsearch(cctx->commands, cmd)) {
         logn(LOGERR, _("ambiguous command %s"), cmd->name);
         return 0;
     }
+
+    if (cmd->_sys_alias) {
+        struct poclidek_cmd *a = n_malloc(sizeof(*a));
+        memcpy(a, cmd, sizeof(*a));
+        a->flags |= COMMAND_SYSALIAS | COMMAND__MALLOCED;
+        a->name = cmd->_sys_alias;
+        a->_sys_alias = NULL;
+        n_array_push(cctx->commands, a);
+    }
+
     n_array_push(cctx->commands, cmd);
     n_array_sort(cctx->commands);
     return 1;
 }
-
 
 static void init_commands(struct poclidek_ctx *cctx, tn_hash *global_aliases,
                           tn_hash *local_aliases)
@@ -435,6 +475,7 @@ static void init_commands(struct poclidek_ctx *cctx, tn_hash *global_aliases,
 
     cctx->commands = n_array_new(16, (tn_fn_free)command_free,
                                  (tn_fn_cmp)command_cmp);
+
     n_array_ctl(cctx->commands, TN_ARRAY_AUTOSORTED);
     while (commands_tab[n] != NULL) {
         struct poclidek_cmd *cmd = commands_tab[n++];
@@ -659,10 +700,12 @@ static int load_installed(struct poclidek_ctx *cctx, int flags)
         cctx->_flags &= ~POLDEKCLI_LOADED_INSTALLED;
 
     if ((cctx->_flags & POLDEKCLI_LOADED_INSTALLED) == 0) {
-        cctx->_flags |= POLDEKCLI_LOADED_INSTALLED;
+        //cctx->_flags |= POLDEKCLI_LOADED_INSTALLED;
+
         if (!poclidek__load_installed(cctx, reload))
             return 0;
 
+        cctx->_flags |= POLDEKCLI_LOADED_INSTALLED;
         if (cctx->currdir == cctx->rootdir)
             poclidek_chdir(cctx, POCLIDEK_INSTALLEDDIR);
     }
@@ -704,6 +747,7 @@ int poclidek_setup(struct poclidek_ctx *cctx)
     tn_array *sources = poldek_get_sources(cctx->ctx);
     if (sources && n_array_size(sources) > 0) {
         tn_array *pkgs = poldek_load_stubs(cctx->ctx);
+
         if (pkgs == NULL) {
             dir = load_available(cctx); /* just load repos if no stubs */
 
@@ -814,8 +858,6 @@ int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     tn_array              *cmd_chain;
     int                   rc = 0, i, verbose;
 
-    DBGF("%s\n", cmdline);
-
     /* keep verbose setting as it changes when '-q' option is used */
     verbose = poldek_verbose();
 
@@ -871,8 +913,8 @@ int do_poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, int argc,
     return do_poclidek_execline(cctx, ts, cmdline, pipe);
 }
 
-int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, int argc,
-                  const char **argv)
+int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts,
+                  int argc, const char **argv)
 {
     return do_poclidek_exec(cctx, ts, argc, argv, NULL);
 }

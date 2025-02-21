@@ -173,13 +173,14 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
 }
 
 static
-struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name)
+struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name, int quiet)
 {
     struct poclidek_cmd *cmd, tmpcmd;
     int  i, j, n;
 
     n_array_sort(cctx->commands);
-	tmpcmd.name = (char*)name;
+    tmpcmd.name = (char*)name;
+
     if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)))
         return cmd;
 
@@ -202,8 +203,7 @@ struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name)
 
     if (n == 1)
         cmd = n_array_nth(cctx->commands, i);
-
-    else
+    else if (!quiet)
         logn(LOGERR, _("%s: ambiguous command"), name);
 
     return cmd;
@@ -280,7 +280,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         acmd = n_array_nth(a_argv, 0);
     }
 
-    if ((cmd = find_command(cctx, acmd)) == NULL)
+    if ((cmd = find_command(cctx, acmd, 0)) == NULL)
         return NULL;
 
     if ((cmd->flags & COMMAND_IS_ALIAS) == 0) {
@@ -502,4 +502,13 @@ tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
     }
 
     return cmd_chain;
+}
+
+int poclidek_has_batch_command(struct poclidek_ctx *cctx, const char *name) {
+    struct poclidek_cmd *cmd = find_command(cctx, name, 1);
+
+    if (cmd && (cmd->flags & COMMAND_INTERACTIVE) == 0)
+        return 1;
+
+    return 0;
 }

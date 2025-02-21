@@ -65,6 +65,8 @@ EXPORT int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ..
 #define COMMAND_MODIFIESDB    (1 << 8)
 #define COMMAND_IS_ALIAS      (1 << 9)
 #define COMMAND_PARAMETERIZED (1 << 10)
+#define COMMAND_INTERACTIVE   (1 << 11) /* interactive mode only */
+#define COMMAND_SYSALIAS      (1 << 12)
 
 #define COMMAND_PIPEABLE_LEFT  (1 << 13)
 #define COMMAND_PIPEABLE_RIGTH (1 << 14)
@@ -99,6 +101,7 @@ struct poclidek_cmd {
     char                 *aliasto;   /* if alias, a cmd name is aliased to */
     int                  _seqno;
     void                 (*_free)(struct poclidek_cmd *);
+    char                 *_sys_alias;
 };
 
 EXPORT int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd);
@@ -122,6 +125,7 @@ EXPORT int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
                                             */
 
 struct pkg_dent;                /* package dirent struct */
+
 struct poclidek_ctx {
     unsigned            flags;
     struct poldek_ctx   *ctx;
@@ -141,7 +145,6 @@ struct poclidek_ctx {
     struct pkg_dent     *rootdir;
     struct pkg_dent     *homedir;
     struct pkg_dent     *currdir;
-
 };
 
 #endif

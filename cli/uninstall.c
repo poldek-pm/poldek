@@ -71,7 +71,8 @@ struct poclidek_cmd command_uninstall = {
     COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
     "uninstall", N_("PACKAGE..."), N_("Uninstall packages"),
     options, parse_opt,
-    NULL, uninstall, NULL, NULL, NULL, NULL, NULL, 0, 0
+    NULL, uninstall, NULL, NULL, NULL, NULL, NULL, 0, 0,
+    "remove"
 };
 
 static struct argp cmd_argp = {

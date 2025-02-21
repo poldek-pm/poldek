@@ -81,7 +81,9 @@ EXPORT struct pkg_dent *poclidek_dent_root(struct poclidek_ctx *cctx);
 EXPORT struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char *path);
 
 
-#define PKG_DENT_LDFIND_STUBSOK (1 << 0)
+#define PKG_DENT_LDFIND_STUBSOK   (1 << 0) /* ret stubs if available */
+#define PKG_DENT_LDFIND_STUBSONLY (1 << 1) /* ret stubs or null */
+
 EXPORT tn_array *poclidek_get_dent_ents(struct poclidek_ctx *cctx, const char *dir, unsigned flags);
 EXPORT tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir, unsigned flags);
 EXPORT struct pkg_dent *poclidek_dent_ldfind(struct poclidek_ctx *cctx, const char *path, unsigned flags);

@@ -33,6 +33,7 @@
 #include "pkgset.h"
 #include "pkgmisc.h"
 #include "arg_packages.h"
+#include "install3/ictx.h"
 #include "misc.h"
 #include "log.h"
 #include "i18n.h"
@@ -601,7 +602,7 @@ void poldek_ts_clean_args(struct poldek_ts *ts)
     arg_packages_clean(ts->aps);
 }
 
-tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed)
+tn_array *poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed)
 {
     return arg_packages_get_masks(ts->aps, hashed);
 }
@@ -610,6 +611,65 @@ int poldek_ts_get_arg_count(struct poldek_ts *ts)
 {
     return arg_packages_size(ts->aps);
 }
+
+/*
+   -1: cannot be validated with stubs
+   0: invalid
+   1: valid
+*/
+int poldek_ts_validate_args_with_stubs(struct poldek_ts *ts, tn_array *stubpkgs)
+{
+    int quiet = ts->getop(ts, POLDEK_OP_CAPLOOKUP);
+    tn_array *resolved = NULL;
+
+    int rc = arg_packages__validate_with_stubs(ts->aps, stubpkgs, &resolved, quiet);
+    if (rc != 1) {
+        n_array_cfree(&resolved);
+        return rc;
+    }
+
+    if (resolved == NULL || n_array_size(resolved) == 0)
+        goto l_end;
+
+    if (ts->pmctx == NULL && ts->ctx && ts->ctx->pmctx)
+        ts->pmctx = ts->ctx->pmctx;
+
+    if (ts->pmctx == NULL)
+        goto l_end;
+
+    void *db = NULL;
+    if (ts->db == NULL) {
+        ts->db = db = poldek_ts_dbopen(ts, O_RDONLY);
+    }
+
+    if (ts->db) {
+#if 0  // too noisy in upgrade mode, TODO
+        int freshen = ts->getop(ts, POLDEK_OP_FRESHEN);
+
+        /* disable as it silence installable check */
+        if (freshen)
+            ts->setop(ts, POLDEK_OP_FRESHEN, 0);
+#endif
+        for (int i = 0; i < n_array_size(resolved); i++) {
+            if (i3_is_pkg_installable(ts, n_array_nth(resolved, i), 1) != 1) {
+                rc = 0;
+            }
+        }
+#if 0
+        if (freshen)
+            ts->setop(ts, POLDEK_OP_FRESHEN, freshen);
+#endif
+        if (db) {
+            pkgdb_free(ts->db);
+            ts->db = NULL;
+        }
+    }
+
+ l_end:
+    n_array_cfree(&resolved);
+    return rc;
+}
+
 
 #define TS_MARK_DEPS        (1 << 0)
 #define TS_MARK_VERBOSE     (1 << 1)

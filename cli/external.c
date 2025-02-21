@@ -31,10 +31,11 @@ static int external(struct cmdctx *cmdctx);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 struct poclidek_cmd command_external = {
-    COMMAND_SELFARGS | COMMAND_PIPEABLE | COMMAND_HIDDEN, 
-    "!", N_("COMMAND"), N_("Execute external command"), 
+    COMMAND_SELFARGS | COMMAND_PIPEABLE | COMMAND_HIDDEN | COMMAND_INTERACTIVE,
+    "!", N_("COMMAND"), N_("Execute external command"),
     NULL, parse_opt, NULL, external,
-    NULL, NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0,
+    NULL
 };
 
 
@@ -62,20 +63,20 @@ static int grabfunc(const char *buf, void *cmdctx)
 static int feed_process(void *cmdctx_)
 {
     struct cmdctx *cmdctx = cmdctx_;
-    
+
     n_assert(cmdctx->pipe_left);
     cmd_pipe_writeout_fd(cmdctx->pipe_left, STDOUT_FILENO);
     return 0;
 }
-    
 
-static int external(struct cmdctx *cmdctx) 
+
+static int external(struct cmdctx *cmdctx)
 {
     struct vopen3_st st_process, st_feed, *st;
     int stflags = 0;
     char cmd[PATH_MAX], **argv;
     int i, rc;
-    
+
     n_assert(cmdctx->_data);
 
     argv = alloca((n_array_size(cmdctx->_data) + 1) * sizeof(*argv));
@@ -89,8 +90,8 @@ static int external(struct cmdctx *cmdctx)
         logn(LOGERR, _("%s: external command not found"), argv[0]);
         return 0;
     }
-    
-    
+
+
     vopen3_init(&st_process, cmd, argv);
     if (cmdctx->pipe_right) {
         stflags = VOPEN3_PIPESTDOUT;
@@ -103,7 +104,7 @@ static int external(struct cmdctx *cmdctx)
         vopen3_chain(&st_feed, &st_process);
         st = &st_feed;
     }
-                     
+
     vopen3_exec(st, stflags);
     DBGF("process..\n");
     vopen3_process(st, 0);
@@ -112,4 +113,3 @@ static int external(struct cmdctx *cmdctx)
     DBGF("END\n");
     return rc;
 }
-

@@ -23,7 +23,6 @@ libpoclidek_la_SOURCES  =  \
 			op_source.c     \
 			op_packages.c   \
 			op_makeidx.c    \
-			op_split.c      \
 			op_verify.c     \
 		        ls.c            \
 		        ls_queryfmt.c ls_queryfmt.h \

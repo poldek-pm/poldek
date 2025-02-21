@@ -34,7 +34,7 @@
 #include "pkgfl.h"
 #include "pkgu.h"
 #include "capreq.h"
-#include "pkgset-req.h"         /* for struct reqpkg, TOFIX */
+#include "pkgset.h"             /* for pkgset_get_required_packages, TOFIX */
 #include "sigint/sigint.h"
 #include "poldek_intern.h"      /* for ctx->ts->cachedir, etc, TOFIX */
 #include "pm/pm.h"
@@ -67,8 +67,6 @@ static int desc(struct cmdctx *cmdctx);
                                OPT_DESC_CNFLS |                         \
                                OPT_DESC_DESCR |                         \
                                OPT_DESC_FL)
-
-#define OPT__NEED_DEPS  (1 << 20)
 
 static struct argp_option options[] = {
     { "all",  'a', 0, 0,
@@ -108,7 +106,8 @@ struct poclidek_cmd command_desc = {
     "desc", N_("PACKAGE..."), N_("Display packages info"),
     options, parse_opt,
     NULL, desc,
-    NULL, NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0,
+    "info"
 };
 
 static
@@ -141,11 +140,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'R':
-            cmdctx->_flags |= OPT_DESC_REQPKGS | OPT__NEED_DEPS;
+            cmdctx->_flags |= OPT_DESC_REQPKGS;
             break;
 
         case 'B':
-            cmdctx->_flags |= OPT_DESC_REVREQPKGS | OPT__NEED_DEPS;
+            cmdctx->_flags |= OPT_DESC_REVREQPKGS;
             break;
 
         case 'f':
@@ -521,14 +520,14 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
     char *colon = ", ";
     int i, ncol = IDENT;
 
-
-    if (pkg->reqpkgs == NULL || n_array_size(pkg->reqpkgs) == 0)
+    tn_array *reqpkgs = pkgset_get_required_packages(0, cmdctx->ts->ctx->ps, pkg);
+    if (reqpkgs == NULL)
         return;
 
     cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Required(pkgs):");
 
-    for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
-        struct reqpkg *rp = n_array_nth(pkg->reqpkgs, i);
+    for (i=0; i<n_array_size(reqpkgs); i++) {
+        struct reqpkg *rp = n_array_nth(reqpkgs, i);
         char *pname;
 
         pname = rp->pkg->name;
@@ -557,41 +556,49 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
             }
         }
 
-        if (i + 1 < n_array_size(pkg->reqpkgs))
+        if (i + 1 < n_array_size(reqpkgs))
             ncol += cmdctx_printf(cmdctx, colon);
     }
+
     cmdctx_printf(cmdctx, "\n");
+    n_array_cfree(&reqpkgs);
 }
 
 static
 void show_revreqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
     int i;
+    tn_array *revreqpkgs = NULL;
 
-    if (pkg->revreqpkgs && n_array_size(pkg->revreqpkgs)) {
+    // TODO
+    cmdctx_printf(cmdctx, "To be implemented.\n");
+
+    if (revreqpkgs && n_array_size(revreqpkgs)) {
         int ncol = IDENT;
 
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Required(by):");
 
-        for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
+        for (i=0; i<n_array_size(revreqpkgs); i++) {
             struct pkg *tmpkg;
             char *p, *colon = ", ";
 
 
-            tmpkg = n_array_nth(pkg->revreqpkgs, i);
+            tmpkg = n_array_nth(revreqpkgs, i);
 
             p = tmpkg->name;
             if (ncol + (int)strlen(p) + 2 >= term_width) {
                 ncol = SUBIDENT;
                 nlident(cmdctx, ncol);
             }
-            if (i + 1 == n_array_size(pkg->revreqpkgs))
+            if (i + 1 == n_array_size(revreqpkgs))
                 colon = "";
 
             ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
         }
         cmdctx_printf(cmdctx, "\n");
     }
+
+    n_array_cfree(&revreqpkgs);
 }
 
 
@@ -861,6 +868,7 @@ static void show_changelog(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguin
 
 static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int term_width)
 {
+
     if (flags & OPT_DESC_CAPS)
         show_caps(cmdctx, pkg, term_width);
 
@@ -1034,10 +1042,6 @@ static int desc(struct cmdctx *cmdctx)
         err++;
         goto l_end;
     }
-
-    /* resolved dependencies (e.g. required packages) are needed by desc command only */
-    if (cmdctx->_flags & OPT__NEED_DEPS)
-        poldek_setup_pkgset_deps(cmdctx->cctx->ctx);
 
     if (cmdctx->_flags == 0)
         cmdctx->_flags = OPT_DESC_DESCR;

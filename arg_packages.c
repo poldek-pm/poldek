@@ -438,10 +438,10 @@ tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
 }
 
 static
-int resolve_masks(tn_array *pkgs,
+int resolve_masks(tn_array *re,
                   struct arg_packages *aps, tn_array *avpkgs,
                   struct pkgset *ps,
-                  unsigned flags)
+                  unsigned flags, int quiet)
 {
     int i, j, nmasks, rc = 1;
     int *matches, *matches_bycmp;
@@ -474,14 +474,17 @@ int resolve_masks(tn_array *pkgs,
 
             DBGF("%s cmp %s or %s\n", mask, pkg->name, pkg_id(pkg));
             if (strcmp(mask, pkg->name) == 0) {
-                n_array_push(pkgs, pkg_link(pkg));
+                if (re)
+                    n_array_push(re, pkg_link(pkg));
+
                 matches_bycmp[j]++;
                 matches[j]++;
 
             } else if (fnmatch(mask, pkg_id(pkg), 0) == 0) {
-                n_array_push(pkgs, pkg_link(pkg));
-                matches[j]++;
+                if (re)
+                    n_array_push(re, pkg_link(pkg));
 
+                matches[j]++;
             }
         }
     }
@@ -489,22 +492,26 @@ int resolve_masks(tn_array *pkgs,
 
     for (j=0; j < n_array_size(aps->package_masks); j++) {
         const char *mask = n_array_nth(aps->package_masks, j);
+        int unmatched = matches[j] == 0;
 
-        if (matches[j] == 0 && ps && (flags & ARG_PACKAGES_RESOLV_CAPS)) {
+        if (unmatched && ps && (flags & ARG_PACKAGES_RESOLV_CAPS)) {
             if (resolve_bycap(aps, ps, mask)) {
                 matches[j]++;
                 continue;
             }
         }
 
-        if (matches[j] == 0 && (flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
-            logn(LOGERR, _("%s: no such package"), mask);
+        if (unmatched && (flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
+            if (!quiet)
+                logn(LOGERR, _("%s: no such package"), mask);
             rc = 0;
         }
 
         if ((flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS) == 0 && matches_bycmp[j] > 1) {
             int pri = (flags & ARG_PACKAGES_RESOLV_EXACT) ? LOGERR : LOGWARN;
-            logn(pri, _("%s: ambiguous name"), mask);
+            if (!quiet)
+                logn(pri, _("%s: ambiguous name"), mask);
+
             if (flags & ARG_PACKAGES_RESOLV_EXACT)
                 rc = 0;
         }
@@ -639,6 +646,47 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
     return topkgs;
 }
 
+static inline char *prepare_mask(char *mask) {
+    int len = strlen(mask);
+
+    if (len > 1 && mask[len - 1] == '-')
+        mask[len - 1] = '\0';
+
+    return mask;
+}
+
+/*
+   -1: cannot be validated with stubs
+   0: invalid
+   1: valid
+*/
+int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpkgs, tn_array **resolved, int quiet)
+{
+    if (n_array_size(aps->packages) > 0)
+        return -1;              /* cannot be validated with stubs */
+
+    if (n_array_size(aps->package_lists) > 0)
+        return -1;
+
+    if (n_array_size(aps->package_files) > 0)
+        return -1;
+
+    if (aps->pset_virtuals && n_hash_size(aps->pset_virtuals) > 0)
+        return -1;
+
+    tn_array *re = NULL;
+    if (resolved) {
+        n_assert(*resolved == NULL);
+        *resolved = pkgs_array_new_ex(128, pkg_cmp_name_evr_rev);
+        re = *resolved;
+    }
+
+    if (!resolve_masks(re, aps, stubpkgs, NULL, 0, quiet))
+        return 0;
+
+    return 1;
+}
+
 
 int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
                          struct pkgset *ps, unsigned flags)
@@ -651,12 +699,9 @@ int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
     nmasks = n_array_size(aps->package_masks);
     for (i=0; i < nmasks; i++) {
         char *mask = n_array_nth(aps->package_masks, i);
-        int len = strlen(mask);
-
-        if (len > 1 && mask[len - 1] == '-')
-            mask[len - 1] = '\0';
-
+        mask = prepare_mask(mask);
         DBGF("mask %s\n", mask);
+
         if (*mask == '*' && *(mask + 1) == '\0') {
             for (j=0; j < n_array_size(avpkgs); j++)
                 n_array_push(aps->resolved_pkgs,
@@ -668,7 +713,7 @@ int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
     if (!resolve_pkgs(aps->resolved_pkgs, aps, avpkgs, flags))
         rc = 0;
 
-    if (!resolve_masks(aps->resolved_pkgs, aps, avpkgs, ps, flags))
+    if (!resolve_masks(aps->resolved_pkgs, aps, avpkgs, ps, flags, 0))
         rc = 0;
 
     if (ps && aps->pset_virtuals) {

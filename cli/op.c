@@ -49,6 +49,11 @@ int poclidek_op_ctx_set_major_mode(struct poclidek_op_ctx *opctx,
     return 1;
 }
 
+int poclidek_op_ctx_has_major_mode(struct poclidek_op_ctx *opctx)
+{
+    return n_hash_size(opctx->modeh);
+}
+
 int poclidek_op_ctx_verify_major_mode(struct poclidek_op_ctx *opctx)
 {
     tn_array *majormodes;
@@ -57,12 +62,10 @@ int poclidek_op_ctx_verify_major_mode(struct poclidek_op_ctx *opctx)
 
     majormodes = n_hash_keys(opctx->modeh);
     n_array_sort(majormodes);
-
     if (n_array_size(majormodes) < 2) {
         n_array_free(majormodes);
         return 1;
     }
-
 
     n = 0;
     sp = ", ";

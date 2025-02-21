@@ -50,6 +50,8 @@ EXPORT int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
                                                    to resolved packages */
 #define ARG_PACKAGES_RESOLV_WARN_ONLY   (1 << 5)/* warn only*/
 
+int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpkgs,
+                                      tn_array **resolved, int quiet);
 
 EXPORT int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
                                 struct pkgset *ps, unsigned flags);

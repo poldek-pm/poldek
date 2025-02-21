@@ -196,6 +196,7 @@ EXPORT int poldek_ts_add_pkglist(struct poldek_ts *ts, const char *path);
 EXPORT void poldek_ts_clean_args(struct poldek_ts *ts);
 EXPORT tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed);
 EXPORT int poldek_ts_get_arg_count(struct poldek_ts *ts);
+EXPORT int poldek_ts_validate_args_with_stubs(struct poldek_ts *ts, tn_array *stubpkgs);
 
 EXPORT int poldek_ts_run(struct poldek_ts *ts, unsigned flags);
 

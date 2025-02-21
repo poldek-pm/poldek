@@ -36,7 +36,8 @@ struct poclidek_cmd command_alias = {
     COMMAND_NOARGS | COMMAND_NOOPTS,
     "alias", NULL, N_("Print defined command aliases"),
     NULL, NULL, NULL, alias,
-    NULL, NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0,
+    NULL
 };
 
 static int alias(struct cmdctx *cmdctx)
@@ -45,8 +46,17 @@ static int alias(struct cmdctx *cmdctx)
 
     for (i=0; i < n_array_size(cmdctx->cctx->commands); i++) {
         struct poclidek_cmd *cmd = n_array_nth(cmdctx->cctx->commands, i);
-        if (cmd->flags & COMMAND_IS_ALIAS)
-            cmdctx_printf(cmdctx, "%-18s = %s\n", cmd->name, cmd->cmdline);
+
+        if ((cmd->flags & COMMAND_IS_ALIAS) == 0)
+            continue;
+
+        /* skip external commands aliases in non-interactive mode */
+        if ((cmdctx->cctx->_flags & POLDEKCLI_UNDERIMODE) == 0) {
+            if ((cmd->flags & COMMAND_INTERACTIVE))
+                continue;
+        }
+
+        cmdctx_printf(cmdctx, "%-18s = %s\n", cmd->name, cmd->cmdline);
     }
     return 1;
 }
@@ -62,8 +72,7 @@ static void free_alias(struct poclidek_cmd *cmd)
     }
 }
 
-static
-struct poclidek_cmd *command_new_alias(const char *name, const char *cmdline)
+static struct poclidek_cmd *new_command_alias(const char *name, const char *cmdline)
 {
     struct poclidek_cmd *alias;
 
@@ -77,40 +86,6 @@ struct poclidek_cmd *command_new_alias(const char *name, const char *cmdline)
     if (strchr(alias->cmdline, '%'))
         alias->flags |= COMMAND_PARAMETERIZED;
     return alias;
-}
-
-
-static
-int add_alias(struct poclidek_ctx *cctx,
-              const char *aliasname, const char *cmdline)
-{
-    struct poclidek_cmd *cmd, tmpcmd;
-    int rc = 1;
-
-    tmpcmd.name = (char*)aliasname;
-    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)) == NULL) {
-        cmd = command_new_alias(aliasname, cmdline);
-        n_array_push(cctx->commands, cmd);
-
-    } else {
-        if ((cmd->flags & COMMAND_IS_ALIAS) == 0) {
-            logn(LOGWARN, _("%s: alias could not shadow a command"), aliasname);
-            rc = 0;
-
-        } else {
-            if (poldek_verbose() > 1)
-                logn(LOGWARN, _("%s (%s) overwrites %s"), aliasname, cmdline,
-                     cmd->cmdline);
-            free(cmd->name);
-            cmd->name = n_strdup(aliasname);
-
-            free(cmd->cmdline);
-            cmd->cmdline = n_strdup(cmdline);
-        }
-	}
-
-	n_array_sort(cctx->commands);
-	return rc;
 }
 
 /* determine to what command alias is aliased */
@@ -140,24 +115,73 @@ static char *alias_to(struct poclidek_ctx *cctx, const char *cmdline)
     return cmd;
 }
 
-static void find_aliased_commands(struct poclidek_ctx *cctx)
+static
+int add_alias(struct poclidek_ctx *cctx,
+              const char *aliasname, const char *cmdline)
 {
-    struct poclidek_cmd *cmd;
-    int i;
+    struct poclidek_cmd *cmd, tmpcmd;
+    unsigned flags = 0;
+    int ok = 1, seqno = 0;
+    char *to;
 
-    for (i=0; i < n_array_size(cctx->commands); i++) {
-        cmd = n_array_nth(cctx->commands, i);
+    /* find aliased command and if interactive mark alias respectively  */
+    to = alias_to(cctx, cmdline);
+    if (to == NULL) {
+        logn(LOGWARN, _("%s: could not determine aliased command"),
+             aliasname);
+    } else {
+        msgn(3, _("%s => aliased %s"), aliasname, to);
+        /* external or quit is dynamically added */
+        if (*to == '!' || strcmp(to, "quit") == 0) {
+            flags |= COMMAND_INTERACTIVE;
+        } else {
+            tmpcmd.name = to;
+            cmd = n_array_bsearch(cctx->commands, &tmpcmd);
+            if (cmd == NULL) {
+                logn(LOGWARN, _("%s: could not determine aliased command"), to);
 
-        if ((cmd->flags & COMMAND_IS_ALIAS) == 0)
-            continue;
+            } else {
+                if (cmd->flags & COMMAND_INTERACTIVE)
+                    flags |= COMMAND_INTERACTIVE;
 
-        cmd->aliasto = alias_to(cctx, cmd->cmdline);
-        if (cmd->aliasto == NULL)
-            logn(LOGWARN, _("%s: could not determine aliased command"),
-                 cmd->name);
-        else
-            msgn(3, _("%s => aliased %s"), cmd->name, cmd->aliasto);
+                seqno = cmd->_seqno;
+            }
+        }
     }
+
+    tmpcmd.name = (char*)aliasname;
+    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)) == NULL) {
+        cmd = new_command_alias(aliasname, cmdline);
+        cmd->flags |= flags;
+        cmd->_seqno = seqno;
+        cmd->aliasto = to;
+        n_array_push(cctx->commands, cmd);
+
+    } else {
+        if ((cmd->flags & COMMAND_IS_ALIAS) == 0) {
+            logn(LOGWARN, _("%s: alias could not shadow a command"), aliasname);
+            ok = 0;
+
+        } else {
+            if (poldek_verbose() > 1)
+                logn(LOGWARN, _("%s (%s) overwrites %s"), aliasname, cmdline,
+                     cmd->cmdline);
+
+            cmd->flags |= flags;
+
+            free(cmd->name);
+            cmd->name = n_strdup(aliasname);
+
+            free(cmd->cmdline);
+            cmd->cmdline = n_strdup(cmdline);
+
+            n_cfree(&cmd->aliasto);
+            cmd->aliasto = to;
+        }
+    }
+
+    n_array_sort(cctx->commands);
+    return ok;
 }
 
 int poclidek__load_aliases(struct poclidek_ctx *cctx)
@@ -183,7 +207,7 @@ int poclidek__load_aliases(struct poclidek_ctx *cctx)
         tn_hash *htcnf;
         int load = 1;
 
-		snprintf(path, sizeof(path), "%s/.poldek-aliases.conf", homedir);
+        snprintf(path, sizeof(path), "%s/.poldek-aliases.conf", homedir);
 
         if (access(path, R_OK) != 0) {
             snprintf(path, sizeof(path), "%s/.poldek.alias", homedir);
@@ -220,9 +244,6 @@ int poclidek__add_aliases(struct poclidek_ctx *cctx, tn_hash *htcnf)
     }
 
     n_array_free(keys);
-
-    if (n)
-        find_aliased_commands(cctx);
 
     return n;
 }

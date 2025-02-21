@@ -30,19 +30,19 @@
 static int reload(struct cmdctx *cmdctx);
 
 struct poclidek_cmd command_reload = {
-    COMMAND_NOARGS | COMMAND_NOOPTS, 
-    "reload", NULL, N_("Reload installed packages"), 
+    COMMAND_NOARGS | COMMAND_NOOPTS | COMMAND_INTERACTIVE,
+    "reload", NULL, N_("Reload installed packages"),
     NULL, NULL, NULL, reload,
-    NULL, NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0,
+    NULL
 };
 
-static int reload(struct cmdctx *cmdctx) 
+static int reload(struct cmdctx *cmdctx)
 {
     unsigned ldflags = POCLIDEK_LOAD_INSTALLED|POCLIDEK_LOAD_RELOAD;
     int rc;
-    
+
     rc = poclidek_load_packages(cmdctx->cctx, ldflags);
     cmdctx->cctx->ts_dbpkgdir = time(0); /* touch */
     return rc;
 }
-

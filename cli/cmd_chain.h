@@ -30,6 +30,9 @@ struct cmd_chain_ent {
     struct cmd_pipe      *pipe_right;
 };
 
+struct poclidek_ctx;
+
 tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line);
+int poclidek_has_batch_command(struct poclidek_ctx *cctx, const char *name);
 
 #endif

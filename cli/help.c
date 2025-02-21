@@ -25,10 +25,11 @@
 static int cmd_help(struct cmdctx *cmdctx);
 
 struct poclidek_cmd command_help = {
-    COMMAND_NOOPTS | COMMAND_NOHELP | COMMAND_NOARGS, 
-    "help", NULL, N_("Display this help"), 
+    COMMAND_NOOPTS | COMMAND_NOHELP | COMMAND_NOARGS,
+    "help", NULL, N_("Display this help"),
     NULL, NULL, NULL, cmd_help,
-    NULL, NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0,
+    NULL
 };
 
 static
@@ -42,16 +43,23 @@ static
 int cmd_help(struct cmdctx *cmdctx)
 {
     int i;
-    
-    printf("%s\n", poldek_BANNER);
-    n_array_sort_ex(cmdctx->cctx->commands, (tn_fn_cmp)cmd_cmp_seqno);
-    for (i=0; i < n_array_size(cmdctx->cctx->commands); i++) {
-        struct poclidek_cmd *cmd = n_array_nth(cmdctx->cctx->commands, i);
-        char buf[256], *p;
+    tn_array *commands = cmdctx->cctx->commands;
 
-        if (cmd->flags & (COMMAND_IS_ALIAS | COMMAND_HIDDEN))
+
+    //printf("%s\n", poldek_BANNER);
+
+    n_array_sort_ex(commands, (tn_fn_cmp)cmd_cmp_seqno);
+    for (i=0; i < n_array_size(commands); i++) {
+        struct poclidek_cmd *cmd = n_array_nth(commands, i);
+        char buf[256], *p;
+        if (cmd->flags & (COMMAND_IS_ALIAS | COMMAND_HIDDEN | COMMAND_SYSALIAS))
             continue;
-        
+
+        if ((cmdctx->cctx->_flags & POLDEKCLI_UNDERIMODE) == 0 &&
+            (cmd->flags & COMMAND_INTERACTIVE)) {
+            continue;
+        }
+
         p = cmd->arg ? cmd->arg : "";
         if (cmd->argp_opts) {
             snprintf(buf, sizeof(buf), _("[OPTION...] %s"), cmd->arg);

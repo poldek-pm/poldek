@@ -205,7 +205,8 @@ struct poclidek_cmd command_install = {
     COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
     "install", N_("PACKAGE..."), N_("Install packages"),
     options, parse_opt,
-    NULL, install, NULL, NULL, NULL, NULL, NULL, 0, 0
+    NULL, install, NULL, NULL, NULL, NULL, NULL, 0, 0,
+    "add"
 };
 
 static struct argp cmd_argp = {
@@ -547,6 +548,23 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
+/* validate args with stubs */
+static int args_are_invalid(struct poclidek_ctx  *cctx, struct poldek_ts *ts)
+{
+    tn_array *stubpkgs = poclidek_get_dent_packages(cctx, POCLIDEK_AVAILDIR,
+                                                    PKG_DENT_LDFIND_STUBSONLY);
+    if (stubpkgs == NULL)
+        return 0;
+
+    int rc = poldek_ts_validate_args_with_stubs(ts, stubpkgs);
+
+    /* package not found, but caps lookup is enabled so we need load full pkg info */
+    if (rc == 0 && ts->getop(ts, POLDEK_OP_CAPLOOKUP)) {
+        rc = 1;
+    }
+
+    return rc == 0;
+}
 
 static int install(struct cmdctx *cmdctx)
 {
@@ -556,6 +574,11 @@ static int install(struct cmdctx *cmdctx)
 
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
+
+    if (args_are_invalid(cctx, ts)) {
+        msgn(4, "pre: install args are invalid");
+        return 0;
+    }
 
     poldek_ts_set_type(ts, POLDEK_TS_TYPE_INSTALL, "install-cmd");
     if (!poldek_ts_issetf(ts, POLDEK_TS_INSTALL))

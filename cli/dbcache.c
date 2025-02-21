@@ -195,7 +195,7 @@ static void timethis_end(int verbose_level, void *tvp, const char *prefix)
         tv.tv_usec = 1000000 + tv.tv_usec;
     }
 
-    msgn(verbose_level, "time [%s] %ld.%ld\n", prefix,
+    msgn(verbose_level, "time [%s] %ld.%06ld\n", prefix,
          (unsigned long)tv.tv_sec, (unsigned long) tv.tv_usec);
     free(tvp);
 }
