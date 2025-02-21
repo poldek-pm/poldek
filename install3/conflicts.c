@@ -289,6 +289,11 @@ int i3_process_pkg_conflicts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
         n_array_cfree(&cnflpkgs);
     }
 
+    /*
+       XXX selfcaps are added on index, but here they may be not indexed at all here.
+    */
+    pkg_add_selfcap(pkg);
+
     /* conflicts with db packages */
     for (i = 0; i < n_array_size(pkg->caps); i++) {
         struct capreq *cap = n_array_nth(pkg->caps, i);

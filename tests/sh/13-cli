@@ -1,0 +1,42 @@
+#!/bin/sh
+# $Id$
+
+# cli
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+ORIGREPO=
+setUp() {
+    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
+    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
+    rm -rf $ORIGREPO/*
+
+    REPO="$ORIGREPO/src"
+    rm -rf $REPO
+
+    mkdir -p $REPO || fail "mkdir $REPO failed"
+
+    RAW_POLDEK="$POLDEK_NOCONF"
+    POLDEK="$RAW_POLDEK --st pndir -s $REPO"
+}
+
+build() {
+    build_package $REPO $@
+}
+
+index() {
+    $RAW_POLDEK --st dir -s $REPO --index
+}
+
+testInstall()
+{
+    build a
+    build sh -p /bin/sh
+    index
+
+    $POLDEK install -t a
+    assertEquals "install failed" "$?" "0"
+}
+
+. ./sh/lib/shunit2
