@@ -55,6 +55,7 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_FOLLOW           (OPT_GID + 22) /* bool opt */
 #define OPT_INST_FRESHEN          'F'
 #define OPT_INST_HOLD             (OPT_GID + 24)
+#define OPT_INST_NOASK            'y'
 #define OPT_INST_NOHOLD           (OPT_GID + 25)
 #define OPT_INST_IGNORE           (OPT_GID + 26)
 #define OPT_INST_NOIGNORE         (OPT_GID + 27)
@@ -95,6 +96,8 @@ N_("Install packages ignoring broken dependencies, conflicts, etc"), OPT_GID },
 {"fetch", OPT_INST_FETCH, "DIR", OPTION_ARG_OPTIONAL,
      N_("Download packages to DIR (poldek's cache directory by default)"
         "instead of install them"), OPT_GID },
+
+{"noask", OPT_INST_NOASK, 0, 0, N_("Don't ask about anything"), OPT_GID },
 
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), OPT_GID },
@@ -374,10 +377,7 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdctx         *cmdctx = state->input;
-    struct poldek_ts      *ts;
-
-
-    ts = cmdctx->ts;
+    struct poldek_ts      *ts = cmdctx->ts;
 
     switch (key) {
         case ARGP_KEY_INIT:
@@ -393,6 +393,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_NODEPS:
             ts->setop(ts, POLDEK_OP_NODEPS, 1);
+            break;
+
+        case OPT_INST_NOASK:
+            ts->setop(ts, POLDEK_OP_CONFIRM_INST, 0);
+            ts->setop(ts, POLDEK_OP_EQPKG_ASKUSER, 0);
             break;
 
         case OPT_INST_FORCE:

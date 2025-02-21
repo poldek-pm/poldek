@@ -56,7 +56,7 @@ static void argp_as_docbook(struct argp *argp);
 
 #define OPT_CACHEDIR          (OPT_GID + 1)
 #define OPT_ASK               (OPT_GID + 2)
-#define OPT_NOASK             (OPT_GID + 3)
+#define OPT_NOASK             'y'
 #define OPT_CONF              (OPT_GID + 4)
 #define OPT_UPCONF            (OPT_GID + 5)
 #define OPT_NOCONF            (OPT_GID + 6)
@@ -252,7 +252,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_NOASK:
-            argsp->cnflags |= OPT_AS_FLAG(OPT_NOASK);
+            // OPT_NOASK is not used as flag (probably...)
+            //argsp->cnflags |= OPT_AS_FLAG(OPT_NOASK);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 0);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 0);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_EQPKG_ASKUSER, 0);

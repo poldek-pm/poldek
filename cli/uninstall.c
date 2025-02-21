@@ -34,6 +34,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int uninstall(struct cmdctx *cmdctx);
 
 #define OPT_GID             OPT_GID_OP_UNINSTALL
+#define OPT_INST_NOASK      'y'
 #define OPT_UNINSTALL       'e'
 #define OPT_INST_NODEPS     (OPT_GID + 2)
 #define OPT_INST_GREEDY     'g'
@@ -42,6 +43,8 @@ static int uninstall(struct cmdctx *cmdctx);
 static struct argp_option options[] = {
 {"test", 't', 0, 0,
  N_("Do not remove, but tell if it would work or not"), OPT_GID },
+
+{"noask", OPT_INST_NOASK, 0, 0, N_("Don't ask about anything"), OPT_GID },
 
 {"nofollow", 'N', 0, 0, N_("Remove only selected packages"), OPT_GID },
 
@@ -156,6 +159,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         //case 'm':
         //ts->setop(ts, POLDEK_OP_VRFYMERCY, 1);
         //    break;
+
+        case OPT_INST_NOASK:
+            ts->setop(ts, POLDEK_OP_CONFIRM_UNINST, 0);
+            break;
 
         case OPT_INST_NODEPS:
             ts->setop(ts, POLDEK_OP_NODEPS, 1);
