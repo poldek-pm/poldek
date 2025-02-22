@@ -143,8 +143,16 @@ do_try_install_package() {
     if [ -n "$expected" ]; then
         typeset n_all=$(echo $out | sed 's|%|\n%|g' | grep -E '^%[ID]' | wc -l)
         typeset n=$(echo $out | sed 's|%|\n%|g' | grep -E "^%[ID] ($regexp)" | wc -l)
-        assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
+        assertEquals "unexpected ($n_all) number of packages (found $n)" "$n_all" "$n"
         assertEquals "not all or non expected packages installed (expected $n_expected: $expected, got $n)" "$n" "$n_expected"
+
+        if [ "$n" != "$n_expected" -a is_verbose_mode ]; then
+           msg "Installed:"
+           echo $out | sed 's|%|\n%|g' | grep -E '^%[ID]' | nl
+
+           msg "Installed requested ($regexp):"
+           echo $out | sed 's|%|\n%|g' | grep -E "^%[ID] ($regexp)" | nl
+        fi
     fi
 
     if [ -n "$rm_expected" ]; then

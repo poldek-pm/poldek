@@ -787,6 +787,41 @@ testUpgradeMultiset() {
     try_install "coreutils dirmngr" "setup-2,coreutils-2,dirmngr-2,gnupg2-common-2,gnupg-agent-2,gnupg-smime-2,gnupg2-2"
 }
 
+testUpgradeMultisetMultiVersions() {
+    build_installed coreutils 1 -r "'setup >= 1'"
+    build_installed setup 1
+
+    build_installed dirmngr 1 -r "'gnupg2-common = 1'"
+    build_installed gnupg2-common 1
+    build_installed gnupg-agent 1 -r "'gnupg2-common = 1'"
+    build_installed gnupg-smime 1 -r "'gnupg2-common = 1'"
+    build_installed gnupg2 1 -r "'gnupg2-common = 1'"
+
+    build coreutils 2 -r "'setup >= 2'"
+    build setup 2
+
+    build dirmngr 2 -r "'gnupg2-common = 2'"
+    build gnupg2-common 2
+    build gnupg-agent 2 -r "'gnupg2-common = 2'"
+    build gnupg-smime 2 -r "'gnupg2-common = 2'"
+    build gnupg2 2 -r "'gnupg2-common = 2'"
+
+    build dirmngr 3 -r "'gnupg2-common = 3'"
+    build gnupg2-common 3
+    build gnupg-agent 3 -r "'gnupg2-common = 3'"
+    build gnupg-smime 3 -r "'gnupg2-common = 3'"
+    build gnupg2 3 -r "'gnupg2-common = 3'"
+
+    build dirmngr 4 -r "'gnupg2-common = 4'"
+    build gnupg2-common 4
+    build gnupg-agent 4 -r "'gnupg2-common = 4'"
+    build gnupg-smime 4 -r "'gnupg2-common = 4'"
+    build gnupg2 4 -r "'gnupg2-common = 4'"
+
+    try_install "coreutils dirmngr" "setup-2,coreutils-2,dirmngr-4,gnupg2-common-4,gnupg-agent-4,gnupg-smime-4,gnupg2-4"
+}
+
+
 testChooseRightVersion() {
     msgn "Preparing repositories..."
     build a 1-1
