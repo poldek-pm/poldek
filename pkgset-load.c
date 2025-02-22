@@ -31,7 +31,7 @@
 #include "depdirs.h"
 #include "thread.h"
 
-#ifdef WITH_THREADS
+#ifdef ENABLE_THREADS
 struct thread_info {
     pthread_t tid;
     struct pkgdir *pkgdir;
@@ -126,7 +126,7 @@ static int load_pkgdirs(const tn_array *pkgdirs, const tn_array *depdirs, int ld
 
     return 1;
 }
-#else  /* WITH_THREADS */
+#else  /* ENABLE_THREADS */
 static int load_pkgdirs(const tn_array *pkgdirs, const tn_array *depdirs, int ldflags)
 {
     int re = 1;

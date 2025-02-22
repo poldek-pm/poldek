@@ -56,7 +56,7 @@ struct an_arch {
     char arch[0];
 };
 
-#ifdef WITH_THREADS
+#ifdef ENABLE_THREADS
 static pthread_mutex_t arch_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t os_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif

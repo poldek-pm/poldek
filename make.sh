@@ -14,4 +14,4 @@ fi
 
 CFLAGS="-fno-builtin-log $OPT -g -Wall -W -Wextra -Wformat-security -Wshadow -pipe -std=gnu99 -D_GNU_SOURCE=1 -fbounds-check -Wformat -Werror=format-security"
 
-make CFLAGS="$CFLAGS -DWITH_TIMETHIS=1 -DWITH_THREADS=1" $@
+make CFLAGS="$CFLAGS -DWITH_TIMETHIS=1" $@

@@ -31,7 +31,7 @@
 #include "pkg_ver_cmp.h"
 #include "thread.h"
 
-#ifdef WITH_THREADS
+#ifdef ENABLE_THREADS
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 

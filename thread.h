@@ -5,7 +5,7 @@
 # include "config.h"
 #endif
 
-#ifdef WITH_THREADS
+#ifdef ENABLE_THREADS
 # include <stdbool.h>
 # include <pthread.h>
 
