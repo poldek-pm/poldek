@@ -49,8 +49,11 @@ build_package() {
 
     local log=$TMPDIR/$name.build.log
 
-    eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >$log 2>&1
-    [ $? -eq 0 ] || fail "build package '$name' failed with $(grep error $log | tr -d '\n')"
+    eval ./build-test-rpm.sh -d $destdir -n $name -v $version "$params" >$log 2>&1
+    if [ $? -ne 0 ]; then
+        fail "build package '$name' failed"
+        exit
+    fi
 
     if [ "$VERBOSE" = "vv" ]; then
         echo "./build-test-rpm.sh -d $destdir -n $name -v $version $params"

@@ -764,6 +764,29 @@ testMultilibCrash() {
 }
 
 
+# https://github.com/poldek-pm/poldek/issues/13
+# trying to reproduce this bug (muti set upgrade), unfortunately it "works for me"
+testUpgradeMultiset() {
+    build_installed coreutils 1 -r "'setup >= 1'"
+    build_installed setup 1
+
+    build_installed dirmngr 1 -r "'gnupg2-common = 1'"
+    build_installed gnupg2-common 1
+    build_installed gnupg-agent 1 -r "'gnupg2-common = 1'"
+    build_installed gnupg-smime 1 -r "'gnupg2-common = 1'"
+    build_installed gnupg2 1 -r "'gnupg2-common = 1'"
+
+    build coreutils 2 -r "'setup >= 2'"
+    build setup 2
+    build dirmngr 2 -r "'gnupg2-common = 2'"
+    build gnupg2-common 2
+    build gnupg-agent 2 -r "'gnupg2-common = 2'"
+    build gnupg-smime 2 -r "'gnupg2-common = 2'"
+    build gnupg2 2 -r "'gnupg2-common = 2'"
+
+    try_install "coreutils dirmngr" "setup-2,coreutils-2,dirmngr-2,gnupg2-common-2,gnupg-agent-2,gnupg-smime-2,gnupg2-2"
+}
+
 testChooseRightVersion() {
     msgn "Preparing repositories..."
     build a 1-1
