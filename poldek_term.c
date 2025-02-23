@@ -254,7 +254,8 @@ static void update_term_width(void)
             term_height = TERM_DEFAULT_HEIGHT;
         }
 
-        snprintf(tmp, sizeof(tmp), "rmargin=%d", term_width - 1);
+        //https://www.gnu.org/software/libc/manual/html_node/Argp-User-Customization.html
+        snprintf(tmp, sizeof(tmp), "no-dup-args-note,rmargin=%d", term_width - 1);
         setenv("ARGP_HELP_FMT", tmp, 1);
         winch_reached = 0;
     }
