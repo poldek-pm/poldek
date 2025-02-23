@@ -181,7 +181,7 @@ EXPORT const char *vf_url_hidepasswd(char *buf, int size, const char *url);
 
 /* applies vf_url_hidepasswd() + slim down url string to maxl */
 EXPORT const char *vf_url_slim(char *buf, int size, const char *url, int maxl);
-#define vf_url_slim_s(url, maxl) vf_url_slim(alloca(PATH_MAX), PATH_MAX, url, (maxl) > 50 ? (maxl) : 60)
+#define vf_url_slim_s(url, maxl) vf_url_slim(alloca(PATH_MAX), PATH_MAX, url, (maxl) > 40 ? (maxl) : 40)
 
 EXPORT char *vf_url_unescape(const char *url);
 
