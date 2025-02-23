@@ -84,7 +84,7 @@ static struct argp_option options[] = {
 };
 
 struct poclidek_cmd command_ls = {
-    COMMAND_EMPTYARGS | COMMAND_PIPEABLE |
+    COMMAND_NEEDAVAIL | COMMAND_EMPTYARGS | COMMAND_PIPEABLE |
     COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
     "ls", N_("[PACKAGE...]"), N_("List packages"),
     options, parse_opt, NULL, ls,

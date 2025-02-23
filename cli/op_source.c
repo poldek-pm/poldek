@@ -323,9 +323,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-static
-void print_source_list(struct poldek_ctx *ctx, tn_array *sources,
-                       int print_groups)
+void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
+                                 int print_groups)
 {
     int i;
     tn_hash *htcnf;
@@ -473,9 +472,10 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCLS) {
         rc = OPGROUP_RC_OK;
-        print_source_list(rt->ctx, sources,
-                          (arg_s->cnflags & POLDEKCLI_SRC_SPECIFIED) == 0);
-                          /* print source groups if no -n or -s */
+
+        /* print source groups if no -n or -s */
+        int with_groups = (arg_s->cnflags & POLDEKCLI_SRC_SPECIFIED) == 0;
+        poclidek__print_source_list(rt->ctx, sources, with_groups);
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {

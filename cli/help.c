@@ -55,9 +55,12 @@ int cmd_help(struct cmdctx *cmdctx)
         if (cmd->flags & (COMMAND_IS_ALIAS | COMMAND_HIDDEN | COMMAND_SYSALIAS))
             continue;
 
-        if ((cmdctx->cctx->_flags & POLDEKCLI_UNDERIMODE) == 0 &&
-            (cmd->flags & COMMAND_INTERACTIVE)) {
-            continue;
+        if ((cmdctx->cctx->_flags & POLDEKCLI_UNDERIMODE)) {
+            if (cmd->flags & COMMAND_BATCH)
+                continue;
+        } else {
+            if (cmd->flags & COMMAND_INTERACTIVE)
+                continue;
         }
 
         p = cmd->arg ? cmd->arg : "";

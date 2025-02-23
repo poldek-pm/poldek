@@ -62,23 +62,26 @@ EXPORT int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ..
 #define COMMAND_HIDDEN       (1 << 5) /* help doesn't displays it */
 #define COMMAND_SELFARGS     (1 << 7) /* cmd parses its args itself */
 
-#define COMMAND_MODIFIESDB    (1 << 8)
-#define COMMAND_IS_ALIAS      (1 << 9)
-#define COMMAND_PARAMETERIZED (1 << 10)
-#define COMMAND_INTERACTIVE   (1 << 11) /* interactive mode only */
-#define COMMAND_SYSALIAS      (1 << 12)
+#define COMMAND_NEEDAVAIL     (1 << 8)
+#define COMMAND_MODIFIESDB    (1 << 9)
+#define COMMAND_IS_ALIAS      (1 << 10)
+#define COMMAND_PARAMETERIZED (1 << 11)
 
-#define COMMAND_PIPEABLE_LEFT  (1 << 13)
-#define COMMAND_PIPEABLE_RIGTH (1 << 14)
+#define COMMAND_INTERACTIVE   (1 << 15) /* interactive mode only */
+#define COMMAND_BATCH         (1 << 16) /* batch mode only */
+#define COMMAND_SYSALIAS      (1 << 17) /* is sys alias */
+
+#define COMMAND_PIPEABLE_LEFT  (1 << 20)
+#define COMMAND_PIPEABLE_RIGTH (1 << 21)
 #define COMMAND_PIPEABLE COMMAND_PIPEABLE_LEFT | COMMAND_PIPEABLE_RIGTH/* both */
 
-#define COMMAND_PIPE_XARGS     (1 << 15) /* cmd treats pipe content as arguments */
-#define COMMAND_PIPE_PACKAGES  (1 << 16) /* cmd treats pipe content as packages */
+#define COMMAND_PIPE_XARGS     (1 << 22) /* cmd treats pipe content as arguments */
+#define COMMAND_PIPE_PACKAGES  (1 << 23) /* cmd treats pipe content as packages */
 
 #define COMMAND_PIPE_DEFAULTS  COMMAND_PIPEABLE | COMMAND_PIPE_XARGS | \
                                COMMAND_PIPE_PACKAGES
 
-#define COMMAND__MALLOCED      (1 << 17) /* internal */
+#define COMMAND__MALLOCED      (1 << 30) /* internal */
 
 struct poclidek_cmd {
     unsigned            flags;

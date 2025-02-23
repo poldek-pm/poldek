@@ -44,7 +44,7 @@ static struct argp_option options[] = {
 };
 
 struct poclidek_cmd command_get = {
-    0,
+    COMMAND_NEEDAVAIL,
     "get", N_("PACKAGE..."), N_("Download packages"),
     options, parse_opt,
     NULL, get, NULL, NULL, NULL, NULL, 0, 5, 0,

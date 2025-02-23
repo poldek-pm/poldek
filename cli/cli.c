@@ -55,6 +55,8 @@ extern struct poclidek_cmd command_external;
 extern struct poclidek_cmd command_help;
 extern struct poclidek_cmd command_alias;
 extern struct poclidek_cmd command_reload;
+extern struct poclidek_cmd command_clean;
+extern struct poclidek_cmd command_pull;
 
 static struct poclidek_cmd *commands_tab[] = {
     &command_ls,
@@ -63,6 +65,8 @@ static struct poclidek_cmd *commands_tab[] = {
     &command_search,
     &command_desc,
     &command_get,
+    &command_pull,
+    &command_clean,
     &command_cd,
     &command_pwd,
     &command_external,
@@ -738,11 +742,18 @@ int poclidek_setup(struct poclidek_ctx *cctx)
         return 0;
     }
 
+    /* already called */
+    if (poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR)) {
+        return 1;
+    }
+
     /*
        add /avail and /install stubs to allow command completion
        even if packages are not yet loaded
     */
     idir = add_stub_dir(cctx, POCLIDEK_INSTALLEDDIR, NULL);
+
+    n_assert(poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR));
 
     tn_array *sources = poldek_get_sources(cctx->ctx);
     if (sources && n_array_size(sources) > 0) {
@@ -790,6 +801,11 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
+
+    /* lazy load packages */
+    if (ent->cmd->flags & COMMAND_NEEDAVAIL) {
+        poclidek_setup(cctx);
+    }
 
     memset(&cmdctx, 0, sizeof(cmdctx));
     cmdctx.cmd = ent->cmd;

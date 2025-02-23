@@ -204,7 +204,7 @@ N_("Remove package duplicates from available package list"), OPT_GID },
 
 
 struct poclidek_cmd command_install = {
-    COMMAND_HASVERBOSE | COMMAND_MODIFIESDB |
+    COMMAND_NEEDAVAIL | COMMAND_HASVERBOSE | COMMAND_MODIFIESDB |
     COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
     "install", N_("PACKAGE..."), N_("Install packages"),
     options, parse_opt,
@@ -563,7 +563,7 @@ static int args_are_invalid(struct poclidek_ctx  *cctx, struct poldek_ts *ts)
 
     int rc = poldek_ts_validate_args_with_stubs(ts, stubpkgs);
 
-    /* package not found, but caps lookup is enabled so we need load full pkg info */
+    /* package not found, but caps lookup is enabled so we need to load full pkg info */
     if (rc == 0 && ts->getop(ts, POLDEK_OP_CAPLOOKUP)) {
         rc = 1;
     }

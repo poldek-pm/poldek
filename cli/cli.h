@@ -35,7 +35,7 @@
 #define OPT_GID_OP_INSTALL    (800  + OPT_GID_BASE)
 #define OPT_GID_OP_UNINSTALL  (1000 + OPT_GID_BASE)
 #define OPT_GID_OP_VERIFY     (1200 + OPT_GID_BASE)
-#define OPT_GID_OP_SPLIT      (1400 + OPT_GID_BASE)
+#define OPT_GID_OP_UP         (1400 + OPT_GID_BASE)
 #define OPT_GID_OP_OTHER      (1600 + OPT_GID_BASE)
 
 EXPORT int poclidek__load_aliases(struct poclidek_ctx *cctx);

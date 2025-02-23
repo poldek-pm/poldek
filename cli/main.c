@@ -48,6 +48,13 @@ const char *argp_program_version = poldek_VERSION_BANNER;
 const char *argp_program_bug_address = poldek_BUG_MAILADDR;
 static char args_doc[] = N_("[PACKAGE...]");
 
+/* FIXME: only way to disable --version opt in argp
+   is set global argp_program_version to null  */
+static void disable_version_opt_and_bug_address() {
+    argp_program_version = NULL;
+    argp_program_bug_address = NULL;
+}
+
 #if GENDOCBOOK
 static void argp_as_docbook(struct argp *argp);
 #endif
@@ -337,8 +344,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             }
 
             if (argsp->mode == RUNMODE_APT) { /* eat all args and keep it for shell */
-                argsp->argv[argsp->argc++] = arg;
+                disable_version_opt_and_bug_address();
 
+                argsp->argv[argsp->argc++] = arg;
                 while (state->next < state->argc) {
                     char *a = state->argv[state->next++];
                     argsp->argv[argsp->argc++] = a;
@@ -448,8 +456,7 @@ static
 void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                    int argc, char **argv, int mode)
 {
-    struct argp argp = { common_options, parse_opt,
-                         args_doc, poldek_BANNER, 0, 0, 0};
+    struct argp argp = { common_options, parse_opt, args_doc, 0, 0, 0, 0 };
     int n, i, index, hide_child_opts = 0;
     struct argp_child *child;
 
@@ -630,10 +637,14 @@ static int run_poldek(struct poclidek_ctx *cctx)
 {
     int rc;
 
-    if (g_args.shcmd)
+    if (g_args.shcmd) {
+        // batch mode
         rc = poclidek_execline(cctx, g_args.ts, g_args.shcmd);
-    else
+    } else {
+        // shell
+        poclidek_setup(cctx);
         rc = poclidek_shell(cctx);
+    }
 
     return rc;
 }
@@ -649,11 +660,12 @@ static int run_ipoldek(struct poclidek_ctx *cctx)
     printf("\n");
 #endif
 
-    if (g_args.argc > 0)
+    if (g_args.argc > 0) { // batch mode
         rc = poclidek_exec(cctx, g_args.ts, g_args.argc,
                            (const char **)g_args.argv);
-    else /* lonely ipoldek -> run shell as poldek does */
+    } else { /* lonely ipoldek -> run shell as poldek does */
         rc = run_poldek(cctx);
+    }
 
     return rc;
 }
@@ -720,7 +732,12 @@ int main(int argc, char **argv)
             goto out;
     }
 
-    poclidek_setup(cctx);
+    //call moved down for lazy load
+    //poclidek_setup(cctx);
+
+    /* global --version is already parsed and handled here,
+       disabling it here prevents argp from adding it to all commands */
+    disable_version_opt_and_bug_address();
 
     if (g_args.mode == RUNMODE_POLDEK)
         rc = run_poldek(cctx);

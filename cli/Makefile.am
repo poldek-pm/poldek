@@ -31,6 +31,8 @@ libpoclidek_la_SOURCES  =  \
 	        	desc.c          \
 		    	search.c        \
 			reload.c	\
+			pull.c		\
+			clean.c		\
 			cd.c            \
 			help.c		\
 			external.c      \

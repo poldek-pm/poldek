@@ -102,7 +102,7 @@ static struct argp_option options[] = {
 
 
 struct poclidek_cmd command_desc = {
-    COMMAND_PIPE_DEFAULTS,
+    COMMAND_NEEDAVAIL | COMMAND_PIPE_DEFAULTS,
     "desc", N_("PACKAGE..."), N_("Display packages info"),
     options, parse_opt,
     NULL, desc,
