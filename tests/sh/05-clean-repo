@@ -12,11 +12,11 @@ up() {
 fetch_package_to_cachedir()
 {
     msgn "download package to cachedir"
-    package=$(poldek_quiet_up --skip-installed -q --cmd 'ls -q | !head -1')
+    package=$(poldek_quiet_up -q --cmd 'ls -q' | head -1)
     [ -n "$package" ] || fail "no available packages??"
 
     msg "  - $package"
-    poldek_up --skip-installed --cmd "get -d $CACHEDIR $package"
+    poldek_up --cmd "get -d $CACHEDIR $package"
     downloaded=$(find $CACHEDIR -name $package\*.rpm | wc -l)
     assertEquals "$package not downloaded?" "1" $downloaded
 

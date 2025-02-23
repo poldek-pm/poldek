@@ -185,7 +185,7 @@ path = ${REPOURL}x2
 
     #$POLDEK --conf $TMPDIR/poldek.conf  -l --cachedir $CACHEDIR
 
-    n=$($poldek_l_cdir | grep 'type=' | wc -l)
+    n=$($poldek_l_cdir | grep 'test://' | wc -l)
     assertEquals "6 sources expected, got $n" "$n" "6"
 
     is_verbose_mode && $poldek_l_cdir
@@ -212,11 +212,10 @@ path = ${REPOURL}x4
 
     POLDEK_TESTING_DENIED_FILES="remote.conf"
     #cat $TMPDIR/poldek.conf
-    is_verbose_mode && $poldek_l_cdir
+    is_verbose_mode && echo $poldek_l_cdir && $poldek_l_cdir
 
     n=$($poldek_l_cdir | grep 'test://' | wc -l)
     assertEquals "6 sources expected" "$n" "6"
-
     #$POLDEK --conf $TMPDIR/poldek.conf -q  -l | grep -E '^test[12] '
     n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
     [ "$n" == "4" ] && assertEquals "4 sources expected, but not those" "$n" "4"
@@ -225,7 +224,7 @@ path = ${REPOURL}x4
     $POLDEK --conf $TMPDIR/poldek.conf --upconf --cachedir $CACHEDIR
 
     POLDEK_TESTING_DENIED_FILES="remote.conf"
-    n=$($poldek_l_cdir | grep '(type=' | wc -l)
+    n=$($poldek_l_cdir | grep 'test://' | wc -l)
     assertEquals "8 sources exepected, got $n" "$n" "8"
 
     n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
@@ -244,7 +243,7 @@ path = ${REPOURL}x4
     $POLDEK --conf test://$TMPDIR/poldek.conf --cachedir $CACHEDIR -q -l >/dev/null
     is_verbose_mode && $poldek_l_cdir
 
-    n=$($poldek_l_cdir | grep '(type=' | wc -l)
+    n=$($poldek_l_cdir | grep 'test://' | wc -l)
     assertEquals "8 sources exepected, got $n" "$n" "8"
 
     n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
