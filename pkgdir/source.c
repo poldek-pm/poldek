@@ -783,10 +783,30 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
     n_assert(size > 0);
 
     *str = '\0';
-
     i = n = 0;
+
+    if (!src->type || n_str_ne(src->type, source_TYPE_GROUP)) {
+        if ((src->flags & PKGSOURCE_GROUP) == 0) {
+            if ((src->flags & PKGSOURCE_NOAUTO) == 0) {
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", "auto");
+                n += n_snprintf(&str[n], size - n, ",");
+            }
+
+            if ((src->flags & PKGSOURCE_NOAUTOUP) == 0) {
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", "autoup");
+                n += n_snprintf(&str[n], size - n, ",");
+            }
+        }
+    }
+
     while (source_options[i].name != NULL) {
         struct src_option *opt = &source_options[i++];
+
+        /* skip noauto* - reversed above */
+        if (opt->flag & (PKGSOURCE_NOAUTO | PKGSOURCE_NOAUTOUP))
+            continue;
 
         if (opt->len == 0)
             opt->len = strlen(opt->name);
@@ -798,7 +818,6 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
                                         "%s", opt->name);
             n += n_snprintf(&str[n], size - n, ",");
-            // n += n_snprintf(&str[n], size - n, "%s,", opt->name);
 
         } else if ((opt->flag & PKGSOURCE_PRI)) {
             if (src->pri) {
@@ -808,11 +827,19 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             }
 
         } else if ((opt->flag & PKGSOURCE_TYPE)) {
-            if (src->type) {
-                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
-                                            "%s", opt->name);
-                n += n_snprintf(&str[n], size - n, "=%s,", src->type);
+            if (!src->type || n_str_eq(src->type, poldek_conf_PKGDIR_DEFAULT_TYPE))
+                continue;
+
+
+            if (n_str_eq(src->type, source_TYPE_GROUP)) {
+                n += poldek_term_snprintf_c(PRCOLOR_CYAN, &str[n], size - n,
+                                            "%s", src->type);
+            } else {
+                n += n_snprintf(&str[n], size - n, "%s=", opt->name);
+                n += poldek_term_snprintf_c(PRCOLOR_CYAN, &str[n], size - n,
+                                            "%s", src->type);
             }
+            n += n_snprintf(&str[n], size - n, ",");
 
         } else if ((opt->flag & PKGSOURCE_GROUP)) {
             if (src->type) {
@@ -858,6 +885,9 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
     return n;
 }
 
+
+int poldek_term_get_width(void);
+
 void source_printf_w(const struct source *src, int name_width)
 {
     char optstr[256], fmt[32];
@@ -872,12 +902,17 @@ void source_printf_w(const struct source *src, int name_width)
     *optstr = '\0';
     source_snprintf_flags(optstr, sizeof(optstr), src);
 
-    printf(fmt, src->name ? src->name : "-", vf_url_slim_s(src->path, 0),
+    int width = name_width + 1 + strlen(src->path) + 21/* for flags */;
+    int term_width = poldek_term_get_width();
+
+    const char *url = src->path;
+    if (width > term_width)
+        url = vf_url_slim_s(src->path, term_width - name_width - 21);
+
+    printf(fmt, src->name ? src->name : "-", url,
            *optstr ? "  (" : "", optstr, *optstr ? ")" : "");
 
     if (src->pkg_prefix) {
-        //printf_c(PRCOLOR_GREEN, "%-14s prefix: ", "");
-        //printf("%s\n", src->pkg_prefix);
         printf("%-14s prefix => %s\n", "", vf_url_slim_s(src->pkg_prefix, 0));
     }
 }
