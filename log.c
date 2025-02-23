@@ -158,12 +158,24 @@ void poldek_log_i(int pri, int indent, const char *fmt, ...)
     va_end(args);
 }
 
+/* used to reprint dep errors by install3 */
+static int last_err_distance = -1;
+int poldek_log__get_last_error_distance() {
+    return last_err_distance;
+}
 
 void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
 {
     static int last_endlined = 1;
+
     char buf[1024], tmp_fmt[1024];
     int  buf_len = 0, fmt_len = 0, flags, is_continuation = 0, is_endlined = 0;
+
+    if (pri & LOGERR) {
+        last_err_distance = 0;
+    } else if (last_err_distance >= 0) {
+        last_err_distance++;
+    }
 
     if (*fmt == '_') {
         fmt++;

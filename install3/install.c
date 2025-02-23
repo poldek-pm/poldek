@@ -242,6 +242,8 @@ static tn_array *iset_packages_in_install_order(struct i3ctx *ictx)
     return pkgs;
 }
 
+int poldek_log__get_last_error_distance();
+int poldek_term_get_height(void);
 
 static int install_packages(struct i3ctx *ictx)
 {
@@ -276,7 +278,14 @@ static int install_packages(struct i3ctx *ictx)
         int nconflicts = i3_get_nerrors(ictx, I3ERR_CLASS_CNFL);
 
         if (nunmet_deps || nconflicts) {
+            int term_height = poldek_term_get_height() - nconflicts - nunmet_deps;
+            int log_errors = poldek_log__get_last_error_distance() > term_height;
+
             print_dependency_errors(nunmet_deps, nconflicts);
+
+            if (log_errors)  /* log errors again as they are scrolled out */
+                i3_log_errors(ictx);
+
             rc = 0;
         }
 

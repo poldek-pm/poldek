@@ -50,6 +50,7 @@ void i3_error(struct i3ctx *ictx, struct pkg *pkg,
               unsigned errcode, const char *fmt, ...);
 void i3_forget_error(struct i3ctx *ictx, const struct pkg *pkg);
 int i3_get_nerrors(struct i3ctx *ictx, unsigned errcodeclass);
+int i3_log_errors(struct i3ctx *ictx);
 
 
 /* i3pkg wraps package itself and dependency resolving related data */

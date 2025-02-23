@@ -116,6 +116,20 @@ int i3_get_nerrors(struct i3ctx *ictx, unsigned errcodeclass)
     return n;
 }
 
+int i3_log_errors(struct i3ctx *ictx)
+{
+    tn_hash_it it;
+    tn_array *errors;
+
+    n_hash_it_init(&it, ictx->errors);
+    while ((errors = n_hash_it_get(&it, NULL))) {
+        for (int i=0; i < n_array_size(errors); i++) {
+            struct i3err *e = n_array_nth(errors, i);
+            msgn_i(0, 2, "%s", e->message);
+        }
+    }
+}
+
 #if 0                           /* unused */
 static int i3pkg_cmp(struct i3pkg *n1, struct i3pkg *n2)
 {
