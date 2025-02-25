@@ -270,11 +270,17 @@ int arg_packages_add_pkglist(struct arg_packages *aps, const char *path)
 
 int arg_packages_add_pkgmask(struct arg_packages *aps, const char *mask)
 {
+    char *m = n_strdup(mask);
+    int i = strlen(m) - 1;
 
-    n_array_push(aps->package_masks, n_strdup(mask));
+    /* last '~' works like '*' */
+    if (i > 0 && m[i] == '~') {
+        m[i] = '*';
+    }
+
+    n_array_push(aps->package_masks, m);
     return 1;
 }
-
 
 int arg_packages_add_pkgmasks(struct arg_packages *aps, const tn_array *masks)
 {
