@@ -59,21 +59,22 @@ static int shQuit = 0;          /* cmd_quit */
 static char *histfile;
 
 
-#define COMPLETITION_CTX_NONE            0 /* current directory */
-#define COMPLETITION_CTX_AVAILABLE       1 /* /all-avail */
-#define COMPLETITION_CTX_UPGRADEABLE     2
-#define COMPLETITION_CTX_INSTALLED       3
-#define COMPLETITION_CTX_WHAT_PROVIDES   4
-#define COMPLETITION_CTX_WHAT_REQUIRES   5
-#define COMPLETITION_CTX_WHAT_SUGGESTS   6
-#define COMPLETITION_CTX_DIRNAME         7
+#define COMPLETION_CTX_NONE            0 /* current directory */
+#define COMPLETION_CTX_AVAILABLE       1 /* /all-avail */
+#define COMPLETION_CTX_UPGRADEABLE     2
+#define COMPLETION_CTX_INSTALLED       3
+#define COMPLETION_CTX_WHAT_PROVIDES   4
+#define COMPLETION_CTX_WHAT_REQUIRES   5
+#define COMPLETION_CTX_WHAT_SUGGESTS   6
+#define COMPLETION_CTX_DIRNAME         7
 
 struct sh_ctx {
     int completion_ctx;
     struct poclidek_ctx  *cctx;
+    tn_array *commands;
 };
 
-static struct sh_ctx sh_ctx = { COMPLETITION_CTX_NONE, NULL };
+static struct sh_ctx sh_ctx = { COMPLETION_CTX_NONE, NULL, NULL };
 
 inline static int option_is_end (const struct argp_option *__opt)
 {
@@ -164,18 +165,19 @@ static char *command_generator(const char *text, int state)
     char *name = NULL;
     struct poclidek_cmd tmpcmd;
 
-	tmpcmd.name = (char*)text;
+    tmpcmd.name = (char*)text;
+
     if (state == 0) {
         len = strlen(text);
         if (len == 0)
             i = 0;
         else
-            i = n_array_bsearch_idx_ex(sh_ctx.cctx->commands, &tmpcmd,
+            i = n_array_bsearch_idx_ex(sh_ctx.commands, &tmpcmd,
                                        (tn_fn_cmp)poclidek_cmd_ncmp);
     }
 
-    if (i > -1 && i < n_array_size(sh_ctx.cctx->commands)) {
-        struct poclidek_cmd *cmd = n_array_nth(sh_ctx.cctx->commands, i++);
+    if (i > -1 && i < n_array_size(sh_ctx.commands)) {
+        struct poclidek_cmd *cmd = n_array_nth(sh_ctx.commands, i++);
         if (len == 0 || strncmp(cmd->name, text, len) == 0)
             name = n_strdup(cmd->name);
     }
@@ -201,15 +203,18 @@ static char *command_options_generator(const char *text, int state)
 
         n_strncpy(line, p, e - p + 1);
 
-        for (i = 0; i < n_array_size(sh_ctx.cctx->commands); i++) {
-            struct poclidek_cmd *cmd = n_array_nth(sh_ctx.cctx->commands, i);
+        for (i = 0; i < n_array_size(sh_ctx.commands); i++) {
+            struct poclidek_cmd *cmd = n_array_nth(sh_ctx.commands, i);
+
+            if (cmd->flags & COMMAND_BATCH)
+                continue;
 
             if (n_str_eq(cmd->name, line)) {
                 if (cmd->aliasto) {
                     struct poclidek_cmd tmpcmd;
 
                     tmpcmd.name = cmd->aliasto;
-                    command = n_array_bsearch(sh_ctx.cctx->commands, &tmpcmd);
+                    command = n_array_bsearch(sh_ctx.commands, &tmpcmd);
 
                 } else {
                     command = cmd;
@@ -258,14 +263,14 @@ static char *arg_generator(const char *text, int state, int genpackages)
     int                  completion_ctx = sh_ctx.completion_ctx;
 
     //DBGF("run %s\n", text);
-    if (completion_ctx == COMPLETITION_CTX_UPGRADEABLE) {
+    if (completion_ctx == COMPLETION_CTX_UPGRADEABLE) {
         upgradeable_mode = 1;
     }
 
     if (genpackages) {
         const char *pwd = poclidek_pwd(sh_ctx.cctx);
 
-        if (completion_ctx == COMPLETITION_CTX_INSTALLED)
+        if (completion_ctx == COMPLETION_CTX_INSTALLED)
             pwd = POCLIDEK_INSTALLEDDIR;
 
         ents = silent_get_dents(sh_ctx.cctx, pwd, 1);
@@ -358,15 +363,15 @@ static char *deps_generator(const char *text, int state)
                 continue;
 
             switch (sh_ctx.completion_ctx) {
-                case COMPLETITION_CTX_WHAT_PROVIDES:
+                case COMPLETION_CTX_WHAT_PROVIDES:
                     caps = pkg->caps;
                     break;
 
-                case COMPLETITION_CTX_WHAT_REQUIRES:
+                case COMPLETION_CTX_WHAT_REQUIRES:
                     caps = pkg->reqs;
                     break;
 
-		case COMPLETITION_CTX_WHAT_SUGGESTS:
+		case COMPLETION_CTX_WHAT_SUGGESTS:
 		    caps = pkg->sugs;
 		    break;
             }
@@ -379,7 +384,7 @@ static char *deps_generator(const char *text, int state)
                 const char *name = capreq_name(cr);
 
                 /* skip self-caps */
-                if (sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_PROVIDES) {
+                if (sh_ctx.completion_ctx == COMPLETION_CTX_WHAT_PROVIDES) {
                     if (strcmp(pkg->name, name) == 0 && pkg_evr_match_req(pkg, cr, 1))
                         continue;
                 }
@@ -428,28 +433,28 @@ static char **poldek_completion(const char *text, int start, int end)
 
     if (*p) {  /* XXX: alias context should be configurable, TODO */
         if (strncmp(p, "un", 2) == 0) /* uninstall cmd */
-            sh_ctx.completion_ctx = COMPLETITION_CTX_INSTALLED;
+            sh_ctx.completion_ctx = COMPLETION_CTX_INSTALLED;
 
         else if (strncmp(p, "upgr", 4) == 0) /* upgrade cmd */
-            sh_ctx.completion_ctx = COMPLETITION_CTX_UPGRADEABLE;
+            sh_ctx.completion_ctx = COMPLETION_CTX_UPGRADEABLE;
 
         else if (strncmp(p, "gree", 4) == 0) /* greedy-upgrade cmd */
-            sh_ctx.completion_ctx = COMPLETITION_CTX_UPGRADEABLE;
+            sh_ctx.completion_ctx = COMPLETION_CTX_UPGRADEABLE;
 
         else if (strncmp(p, "what-prov", 9) == 0) /* what-provides cmd */
-            sh_ctx.completion_ctx = COMPLETITION_CTX_WHAT_PROVIDES;
+            sh_ctx.completion_ctx = COMPLETION_CTX_WHAT_PROVIDES;
 
         else if (strncmp(p, "what-req", 8) == 0) /* what-requires cmd */
-            sh_ctx.completion_ctx = COMPLETITION_CTX_WHAT_REQUIRES;
+            sh_ctx.completion_ctx = COMPLETION_CTX_WHAT_REQUIRES;
 
 	else if (strncmp(p, "what-sug", 8) == 0) /* what-suggests cmd */
-	    sh_ctx.completion_ctx = COMPLETITION_CTX_WHAT_SUGGESTS;
+	    sh_ctx.completion_ctx = COMPLETION_CTX_WHAT_SUGGESTS;
 
         else if (strncmp(p, "cd ", 3) == 0)
-            sh_ctx.completion_ctx = COMPLETITION_CTX_DIRNAME;
+            sh_ctx.completion_ctx = COMPLETION_CTX_DIRNAME;
 
         else
-            sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
+            sh_ctx.completion_ctx = COMPLETION_CTX_NONE;
     }
 
     if (start == 0 || strchr(p, ' ') == NULL) {
@@ -462,13 +467,13 @@ static char **poldek_completion(const char *text, int start, int end)
         rl_completer_word_break_characters = " \t\n\"\\'`$><=;|&{(";
 
         switch (sh_ctx.completion_ctx) {
-            case COMPLETITION_CTX_DIRNAME:
+            case COMPLETION_CTX_DIRNAME:
                 matches = rl_completion_matches(text, dirname_generator);
                 break;
 
-            case COMPLETITION_CTX_WHAT_PROVIDES:
-            case COMPLETITION_CTX_WHAT_REQUIRES:
-            case COMPLETITION_CTX_WHAT_SUGGESTS:
+            case COMPLETION_CTX_WHAT_PROVIDES:
+            case COMPLETION_CTX_WHAT_REQUIRES:
+            case COMPLETION_CTX_WHAT_SUGGESTS:
                 rl_completer_word_break_characters = " \t\n\"\\'`$><=;|&{";
                 matches = rl_completion_matches(text, deps_generator);
                 break;
@@ -511,15 +516,32 @@ static void shell_end(int sig)
     }
 }
 
+static int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2)
+{
+    return strcmp(c1->name, c2->name);
+}
+
 static int init_shell(struct poclidek_ctx *cctx)
 {
     poldek_term_init(0); /* FIXME why here? It is called by poldeklib_init()  */
-    sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
+    sh_ctx.completion_ctx = COMPLETION_CTX_NONE;
     sh_ctx.cctx = cctx;
     cctx->_flags |= POLDEKCLI_UNDERIMODE;
-    return poclidek_add_command(cctx, &command_quit);
-}
 
+    poclidek_add_command(cctx, &command_quit);
+
+    tn_array *commands = n_array_new(n_array_size(cctx->commands),
+                                     NULL, (tn_fn_cmp)command_cmp);
+
+    for (int i = 0; i < n_array_size(cctx->commands); i++) {
+        struct poclidek_cmd *cmd = n_array_nth(cctx->commands, i);
+        if ((cmd->flags & COMMAND_BATCH) == 0)
+            n_array_push(commands, cmd);
+    }
+    sh_ctx.commands = commands;
+
+    return 1;
+}
 
 int poclidek_shell(struct poclidek_ctx *cctx)
 {
