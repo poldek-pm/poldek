@@ -642,23 +642,14 @@ int poldek_ts_validate_args_with_stubs(struct poldek_ts *ts, tn_array *stubpkgs)
         ts->db = db = poldek_ts_dbopen(ts, O_RDONLY);
     }
 
-    if (ts->db) {
-#if 0  // too noisy in upgrade mode, TODO
-        int freshen = ts->getop(ts, POLDEK_OP_FRESHEN);
-
-        /* disable as it silence installable check */
-        if (freshen)
-            ts->setop(ts, POLDEK_OP_FRESHEN, 0);
-#endif
+    int freshen = ts->getop(ts, POLDEK_OP_FRESHEN);
+    if (ts->db && !freshen) { /* check against db breaks upgrade foo-* */
         for (int i = 0; i < n_array_size(resolved); i++) {
             if (i3_is_pkg_installable(ts, n_array_nth(resolved, i), 1) != 1) {
                 rc = 0;
             }
         }
-#if 0
-        if (freshen)
-            ts->setop(ts, POLDEK_OP_FRESHEN, freshen);
-#endif
+
         if (db) {
             pkgdb_free(ts->db);
             ts->db = NULL;
