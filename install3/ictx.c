@@ -116,7 +116,7 @@ int i3_get_nerrors(struct i3ctx *ictx, unsigned errcodeclass)
     return n;
 }
 
-int i3_log_errors(struct i3ctx *ictx)
+void i3_log_errors(struct i3ctx *ictx)
 {
     tn_hash_it it;
     tn_array *errors;

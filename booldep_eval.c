@@ -218,13 +218,14 @@ static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *c
 
 static struct dvalue *eval_with(struct node *node, const struct booldep_eval_ctx *ctx)
 {
+    struct dvalue *left = NULL, *right = NULL;
     tn_array *re = NULL;
 
-    struct dvalue *left = eval(node->args[0], ctx);
+    left = eval(node->args[0], ctx);
     if (left == NULL || left->providers == NULL || n_array_size(left->providers) == 0)
         goto l_none;
 
-    struct dvalue *right = eval(node->args[1], ctx);
+    right = eval(node->args[1], ctx);
     if (right == NULL || right->providers == NULL || n_array_size(right->providers) == 0)
         goto l_none;
 
@@ -270,11 +271,13 @@ static struct dvalue *eval_with(struct node *node, const struct booldep_eval_ctx
 
 static struct dvalue *eval_without(struct node *node, const struct booldep_eval_ctx *ctx)
 {
-    struct dvalue *left = eval(node->args[0], ctx);
+    struct dvalue *left = NULL, *right = NULL;
+
+    left = eval(node->args[0], ctx);
     if (left == NULL || left->providers == NULL || n_array_size(left->providers) == 0)
         goto l_none;
 
-    struct dvalue *right = eval(node->args[1], ctx);
+    right = eval(node->args[1], ctx);
     if (right == NULL || right->providers == NULL || n_array_size(right->providers) == 0)
         goto l_none;
 
