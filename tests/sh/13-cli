@@ -5,24 +5,31 @@
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
+. ./sh/lib/rpm-setup
 
 ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+
 setUp() {
-    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
-    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
-    rm -rf $ORIGREPO/*
+    rpm_up
+    # provide /bin/sh auto requirement
+    rpm_build_installed sh -p /bin/sh
 
-    REPO="$ORIGREPO/src"
-    rm -rf $REPO
+    RAW_POLDEK="$POLDEK_NOCONF -Ouse_sudo=n"
+    POLDEK="$RAW_POLDEK --st pndir -s $REPO --root $DESTINATION_REPO --justdb"
+}
 
-    mkdir -p $REPO || fail "mkdir $REPO failed"
-
-    RAW_POLDEK="$POLDEK_NOCONF"
-    POLDEK="$RAW_POLDEK --st pndir -s $REPO"
+tearDown() {
+    rpm_down
 }
 
 build() {
     build_package $REPO $@
+}
+
+build_installed() {
+    rpm_build_installed $@
 }
 
 index() {
@@ -32,11 +39,35 @@ index() {
 testInstall()
 {
     build a
-    build sh -p /bin/sh
     index
 
-    $POLDEK install -t a
+    msg $POLDEK install -v a
+    $POLDEK install -v a
     assertEquals "install failed" "$?" "0"
+    rpm_state_check "a" ""
 }
+
+testUpgrade()
+{
+    build a -v 2
+    build a-libs -v 2
+    index
+
+    build_installed a
+    build_installed a-libs
+
+    n=$($POLDEK llu | grep -E '^(a|a-libs)' | wc -l)
+    assertEquals "expected 2 packages to be upgradeable, got $n" "$n" "2"
+
+    msg $POLDEK upgrade -v a\*
+    $POLDEK upgrade -v a\*
+
+    #$RPM -ev a --justdb
+    #$RPM -ev a-libs --justdb
+    #$RPM -qa
+
+    rpm_state_check "a-2,a-libs-2" "a-1,a-libs-1"
+}
+
 
 . ./sh/lib/shunit2

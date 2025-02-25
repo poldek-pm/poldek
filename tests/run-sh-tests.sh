@@ -27,20 +27,29 @@ for i in sh/[0-9][0-9]*; do
     compr="gz"
     suffixed_compr=""
     suffixed_imode=""
-    install_modes="dir"
+    install_modes=""
 
     # run with each compression method if test uses indexes
     if grep -q compr-setup $i; then
         compr="gz zst none"
         suffixed_compr="1"
-    elif grep -q INSTALL_MODE $i; then
+    fi
+
+    if grep -q INSTALL_MODE $i; then
         install_modes="dir rpm"
         suffixed_imodel="1"
+    else
+        install_modes="none"
+        suffixed_imodel=""
     fi
 
     for m in $install_modes; do
-        INSTALL_MODE="$m"
-        export INSTALL_MODE
+        if [ "$m" = "none" ]; then
+           unset INSTALL_MODE
+        else
+            INSTALL_MODE="$m"
+            export INSTALL_MODE
+        fi
         isuffix=""
         [ -n "$suffixed_imodel" ] && isuffix=" (mode=$INSTALL_MODE)"
 

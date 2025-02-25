@@ -104,3 +104,24 @@ rpm_install() {
       $RPMQ $i || fail "$i: package expected to be kept"
   done
 }
+
+rpm_state_check() {
+    typeset expected="$1"
+    typeset unexpected=${2:-""}
+
+    [ -n "$expected" ] && expected=$(echo $expected | sed 's/,/ /g')
+    [ -n "$unexpected" ] && unexpected=$(echo $unexpected | sed 's/,/ /g')
+
+    RPMQ="$RPM -qa"
+    for i in $expected; do
+        $RPMQ | grep -q $i
+        [ $? -eq 0 ] || fail "$i: package expected to be installed"
+    done
+
+    for i in $unexpected; do
+        $RPMQ | grep -q $i
+        [ $? -eq 0 ] && fail "package expected to not to be installed"
+    done
+
+    return 0
+}
