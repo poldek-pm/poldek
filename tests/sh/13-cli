@@ -21,6 +21,7 @@ setUp() {
 }
 
 tearDown() {
+    $POLDEK clean
     rpm_down
 }
 
@@ -56,7 +57,7 @@ testUpgrade()
     build_installed a
     build_installed a-libs
 
-    n=$($POLDEK llu | grep -E '^(a|a-libs)' | wc -l)
+    n=$($POLDEK ls -u | grep -E '^(a|a-libs)' | wc -l)
     assertEquals "expected 2 packages to be upgradeable, got $n" "$n" "2"
 
     msg $POLDEK upgrade -v a\*
