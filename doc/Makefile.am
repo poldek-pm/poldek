@@ -18,7 +18,7 @@ man_MANS   = poldek.1 poldek.conf.1
 GEN        = $(man_MANS) manual.html poldek.info
 GEN_NODIST = m_index.xml m_config.xml manual.xml.xhtml.tmp manual.xml.texi.tmp
 
-EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual CREDITS.old NEWS.old NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto mkindex.pl
+EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual CREDITS NEWS.old NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto mkindex.pl
 
 MANUAL_XHTMLDIR = manual-xhtml
 
