@@ -114,13 +114,13 @@ rpm_state_check() {
 
     RPMQ="$RPM -qa"
     for i in $expected; do
-        $RPMQ | grep -q $i
+        $RPMQ | grep -qE "^$i-"
         [ $? -eq 0 ] || fail "$i: package expected to be installed"
     done
 
     for i in $unexpected; do
-        $RPMQ | grep -q $i
-        [ $? -eq 0 ] && fail "package expected to not to be installed"
+        $RPMQ | grep -Eq "^$i-"
+        [ $? -eq 0 ] && fail "$i: package expected to not to be installed"
     done
 
     return 0

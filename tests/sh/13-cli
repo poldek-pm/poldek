@@ -18,10 +18,10 @@ setUp() {
 
     RAW_POLDEK="$POLDEK_NOCONF -Ouse_sudo=n"
     POLDEK="$RAW_POLDEK --st pndir -s $REPO --root $DESTINATION_REPO --justdb"
+    $RAW_POLDEK clean
 }
 
 tearDown() {
-    $POLDEK clean
     rpm_down
 }
 
@@ -60,14 +60,67 @@ testUpgrade()
     n=$($POLDEK ls -u | grep -E '^(a|a-libs)' | wc -l)
     assertEquals "expected 2 packages to be upgradeable, got $n" "$n" "2"
 
-    msg $POLDEK upgrade -v a\*
-    $POLDEK upgrade -v a\*
+    msg $POLDEK upgrade -v a~
+    $POLDEK upgrade -v a~
 
     #$RPM -ev a --justdb
     #$RPM -ev a-libs --justdb
     #$RPM -qa
 
     rpm_state_check "a-2,a-libs-2" "a-1,a-libs-1"
+}
+
+testUninstall()
+{
+    build a
+    index
+
+    build_installed a
+    build_installed b
+    build_installed a-libs
+
+    msg $POLDEK uninstall -y a~
+    $POLDEK uninstall -y a~
+
+    #$RPM -ev a --justdb
+    #$RPM -ev a-libs --justdb
+    #$RPM -qa
+
+    rpm_state_check "b" "a,a-libs"
+}
+
+testClean()
+{
+    typeset n=$(find $CACHEDIR | wc -l)
+    assertEquals "$CACHEDIR should be empty" "$n" "1"
+
+    rm -rf $CACHEDIR/*
+    mkdir -p $CACHEDIR/foo/bar/baz
+    touch $CACHEDIR/foo/foo.txt
+    touch $CACHEDIR/foo/bar/bar.txt
+    touch $CACHEDIR/foo/bar/baz/bar.txt
+    mkfifo $CACHEDIR/fifo
+
+    typeset OUTSIDEDIR="$CACHEDIR/../"
+    touch $CACHEDIR/../existing-file
+
+    ln -s ../existing-file $CACHEDIR/symlink
+    ln -s ../non-existing $CACHEDIR/broken-symlink
+    #ls -l $CACHEDIR/
+    n=$(find $CACHEDIR | wc -l)
+    #find $CACHEDIR | nl
+    if [ "$n" -lt 8 ]; then
+        find $CACHEDIR | nl
+        fail "$CACHEDIR should contain at least 8 items"
+    fi
+
+    $RAW_POLDEK clean
+    n=$(find $CACHEDIR | wc -l)
+    [ "$n" != "1" ] && find $CACHEDIR
+    assertEquals "$CACHEDIR should be empty after clean" "$n" "1"
+
+    test -f $CACHEDIR/../existing-file || fail "$CACHEDIR/../existing-file should still be there"
+
 }
 
 
