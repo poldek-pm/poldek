@@ -77,7 +77,7 @@ static int do_cachedir_clean(const char *dirpath)
     char *sepchar = "/";
     int nerr = 0;
 
-    if (stat(dirpath, &st) != 0)
+    if (lstat(dirpath, &st) != 0)
 	return 0;
 
     if (!S_ISDIR(st.st_mode))
@@ -111,12 +111,11 @@ static int do_cachedir_clean(const char *dirpath)
 
 	snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchar, ent->d_name);
 
-	if (stat(path, &st) == 0) {
-	    if (S_ISREG(st.st_mode)) {
-		nerr += unlink(path);
-	    }
-	    else if (S_ISDIR(st.st_mode)) {
+	if (lstat(path, &st) == 0) {
+            if (S_ISDIR(st.st_mode)) {
 		do_cachedir_clean(path);
+	    } else {
+		nerr += unlink(path);
 	    }
 	}
     }
