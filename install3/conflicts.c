@@ -17,8 +17,8 @@
 #include "ictx.h"
 
 static
-int find_replacement(struct i3ctx *ictx, struct pkg *pkg,
-                     const struct capreq *cnfl, struct pkg **rpkg)
+int find_direct_replacement(struct i3ctx *ictx, struct pkg *pkg,
+                            const struct capreq *cnfl, struct pkg **rpkg)
 {
     tn_array *pkgs;
     struct pkgset *ps;
@@ -45,7 +45,26 @@ int find_replacement(struct i3ctx *ictx, struct pkg *pkg,
         }
     }
 
-    if (*rpkg == NULL && (pkgs = pkgset_search(ps, PS_SEARCH_OBSL, pkg->name))) {
+    if (*rpkg && i3_is_marked(ictx, *rpkg)) {
+        *rpkg = NULL;
+        return 1;
+    }
+
+    return (*rpkg != NULL);
+}
+
+static
+int find_indirect_replacement(struct i3ctx *ictx, struct pkg *pkg,
+                              const struct capreq *cnfl, struct pkg **rpkg)
+{
+    tn_array *pkgs;
+    struct pkgset *ps;
+    int i;
+
+    ps = ictx->ts->ctx->ps;
+    *rpkg = NULL;
+
+    if ((pkgs = pkgset_search(ps, PS_SEARCH_OBSL, pkg->name))) {
         for (i=0; i < n_array_size(pkgs); i++) {
             struct pkg *p = n_array_nth(pkgs, i);
 
@@ -99,18 +118,27 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
     printf("%s\n", capreq_stra(req));
 #endif
 
-    DBGF("find_req %s %s\n", pkg_id(pkg), capreq_stra(req));
     capreq_revrel(req);
-    DBGF("find_req %s %s\n", pkg_id(pkg), capreq_stra(req));
+    tracef(indent, "%s&%s cnfl %s\n", pkg_id(pkg), pkg_id(dbpkg), capreq_stra(cnfl));
+    indent++;
 
-    if (i3_is_user_choosable_equiv(ictx->ts))
-        candidates = pkgs_array_new(8);
+    /* if newer version exists then just upgrade (UpgradeMultipleByConflict case) */
+    found = find_direct_replacement(ictx, dbpkg, cnfl, &tomark);
+    if (found) {
+        by_replacement = 1;
 
-    found = i3_find_req(indent, ictx, pkg, req, &tomark, candidates);
-    capreq_revrel(req);
+    } else {
+        if (i3_is_user_choosable_equiv(ictx->ts))
+            candidates = pkgs_array_new(8);
+
+        found = i3_find_req(indent, ictx, pkg, req, &tomark, candidates);
+        tracef(indent, "%s&%s cnfl %s => req lookup %s\n", pkg_id(pkg), pkg_id(dbpkg),
+               capreq_stra(cnfl), tomark ? pkg_id(tomark) : "null");
+        capreq_revrel(req);
+    }
 
     if (!found) {
-        found = find_replacement(ictx, dbpkg, cnfl, &tomark);
+        found = find_indirect_replacement(ictx, dbpkg, cnfl, &tomark);
         by_replacement = 1;
 
     } else {
@@ -138,10 +166,16 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
     if (by_replacement || pkg_obsoletes_pkg(tomark, dbpkg)) {
         struct i3pkg *i3tomark;
 
+        tracef(indent, "%s&%s cnfl %s => install %s\n", pkg_id(pkg), pkg_id(dbpkg),
+               capreq_stra(cnfl), pkg_id(tomark));
         found = 1;
         i3tomark = i3pkg_new(tomark, 0, pkg, req, I3PKGBY_REQ);
         i3_process_package(indent, ictx, i3tomark);
+    } else {
+        tracef(indent, "%s&%s cnfl %s => not found\n", pkg_id(pkg), pkg_id(dbpkg),
+               capreq_stra(cnfl));
     }
+
 
 l_end:
     n_array_cfree(&candidates);
@@ -272,6 +306,8 @@ int i3_process_pkg_conflicts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
 
     if (!ictx->ts->getop(ictx->ts, POLDEK_OP_CONFLICTS))
         return 1;
+
+    tracef(indent, "%s", pkg_id(pkg));
 
     tn_array *cnflpkgs = i3_get_package_conflicted_pkgs(indent, ictx, pkg);
     /* conflicts in install set */

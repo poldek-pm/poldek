@@ -53,6 +53,8 @@ build_installed() {
 try_install() {
     local pkg=$1
 
+    msg "try_install $pkg"
+    $POLDEK_INSTALL -uv --test $pkg | grep -P '^%choose '
     local nchoices=$($POLDEK_INSTALL -uv --test $pkg | grep -P '^%choose ' | wc -l)
     assertEquals "user should not be asked to choose equivalents ($nchoices)" "$nchoices" "0"
 
@@ -61,6 +63,10 @@ try_install() {
 
 try_install_with_ask_allowed() {
     try_install_package "dir" "-uv --test" "$@"
+}
+
+try_install_noask() {
+    try_install_package "dir" "-uv --test -y" "$@"
 }
 
 try_install_a() {
@@ -204,6 +210,24 @@ testConflictSth() {
 
     msgn "Upgrade"
     try_install a "a-2-2,b-2-2" "a-2-1,b-2-1"
+}
+
+# thunderbird and it's lang packages
+testUpgradeMultipleByConflict() {
+    build foo 2-2 -r "'libfoo >= 2'"
+    build libfoo 2-2
+
+    build a 2-2 -c "'a-lang-resources < 2'" -r "'libfoo = 2'"
+    build a-lang-en 2-2 -p "'a-lang-resources = 2'"
+    build a-lang-pl 2-2 -p "'a-lang-resources = 2'"
+
+    build_installed libfoo 1-1
+    build_installed a 1-1 -c "'a-lang-resources < 1'" -r "'libfoo = 1'"
+    build_installed a-lang-en 1-1 -p "'a-lang-resources = 1'" -r "'a >= 1'"
+    build_installed a-lang-pl 1-1 -p "'a-lang-resources = 1'" -r "'a >= 1'"
+
+    msgn "Upgrade"
+    try_install_noask foo "foo-2-2,libfoo-2-2,a-2-2,a-lang-en-2-2,a-lang-pl-2-2" "libfoo-1-1,a-1-1,a-lang-en-1-1,a-lang-pl-1-1"
 }
 
 
