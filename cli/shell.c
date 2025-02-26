@@ -432,10 +432,10 @@ static char **poldek_completion(const char *text, int start, int end)
         p++;
 
     if (*p) {  /* XXX: alias context should be configurable, TODO */
-        if (strncmp(p, "un", 2) == 0) /* uninstall cmd */
+        if (strncmp(p, "un", 2) == 0 || strncmp(p, "rem", 3) == 0) /* uninstall|remove cmd */
             sh_ctx.completion_ctx = COMPLETION_CTX_INSTALLED;
 
-        else if (strncmp(p, "upgr", 4) == 0) /* upgrade cmd */
+        else if (strncmp(p, "upg", 3) == 0) /* upgrade cmd */
             sh_ctx.completion_ctx = COMPLETION_CTX_UPGRADEABLE;
 
         else if (strncmp(p, "gree", 4) == 0) /* greedy-upgrade cmd */
