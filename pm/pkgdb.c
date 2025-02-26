@@ -457,7 +457,9 @@ int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, unsigned ma_flag
     int is_file;
 
     is_file = (*capreq_name(req) == '/' ? 1 : 0);
-    tracef(0, "%s %d", capreq_snprintf_s(req), n_array_size(exclude));
+
+    // too noisy
+    //tracef(0, "%s %d", capreq_snprintf_s(req), n_array_size(exclude));
 
     if (!is_file && db_match(db, PMTAG_NAME, req, exclude, ma_flags))
         return 1;

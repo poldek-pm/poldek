@@ -568,10 +568,11 @@ static int process_req(int indent, struct i3ctx *ictx,
     pkg = i3pkg->pkg;
     strreq = capreq_stra(req);
 
-    tracef(indent, "%s, req: %s", pkg_id(pkg), strreq);
+    if (!capreq_is_rpmlib(req)) {
+        tracef(indent, "%s, req: %s", pkg_id(pkg), strreq);
+    }
 
     if (capreq_is_rpmlib(req) && pkgset_pm_satisfies(ictx->ps, req)) {
-        trace(indentt, "- satisfied by pm");
         msgn_i(4, indent, "%s: satisfied by pm", strreq);
         goto l_end;
     }
