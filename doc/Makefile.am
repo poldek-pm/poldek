@@ -16,9 +16,9 @@ MANUALS   = manual.xml manual.css manual.xsl
 # generated files
 man_MANS   = poldek.1 poldek.conf.1
 GEN        = $(man_MANS) manual.html poldek.info
-GEN_NODIST = m_index.xml m_config.xml manual.xml.xhtml.tmp manual.xml.texi.tmp CREDITS.docb.tmp NEWS.docb.tmp
+GEN_NODIST = m_index.xml m_config.xml manual.xml.xhtml.tmp manual.xml.texi.tmp
 
-EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual CREDITS NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto mkindex.pl
+EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual CREDITS.old NEWS.old NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto mkindex.pl
 
 MANUAL_XHTMLDIR = manual-xhtml
 
@@ -89,23 +89,24 @@ manual.html: manual.xml.xhtml.tmp
 # remove empty indexterm's (I'm docbook novice)
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $@
 
-CREDITS.docb.tmp: NEWS.xml NEWSto
-	cd $(srcdir) && $(PERL) ./NEWSto CREDITS.docb > $(abs_builddir)/$@ && cd $(abs_builddir)
+## NEWS and CREDITS archived with .old 'extension'
+#CREDITS.docb.tmp: NEWS.xml NEWSto
+#	cd $(srcdir) && $(PERL) ./NEWSto CREDITS.docb > $(abs_builddir)/$@ && cd $(abs_builddir)
 
-CREDITS: NEWS.xml NEWS.xsl NEWSto CREDITS.docb.tmp
-	xmlto --skip-validation -m $(srcdir)/NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
+#CREDITS: NEWS.xml NEWS.xsl NEWSto CREDITS.docb.tmp
+#	xmlto --skip-validation -m $(srcdir)/NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
 
-CREDITS-body.html: NEWS.xml NEWSto
-	cd $(srcdir) && $(PERL) ./NEWSto CREDITS.html_body > $(abs_builddir)/$@ && cd $(abs_builddir)
+#CREDITS-body.html: NEWS.xml NEWSto
+#	cd $(srcdir) && $(PERL) ./NEWSto CREDITS.html_body > $(abs_builddir)/$@ && cd $(abs_builddir)
 
-NEWS.docb.tmp: NEWS.xml NEWSdocb.xsl NEWSto
-	cd $(srcdir) && $(PERL) ./NEWSto NEWS.docb > $(abs_builddir)/$@ && cd $(abs_builddir)
+#NEWS.docb.tmp: NEWS.xml NEWSdocb.xsl NEWSto
+#	cd $(srcdir) && $(PERL) ./NEWSto NEWS.docb > $(abs_builddir)/$@ && cd $(abs_builddir)
 
-NEWS: NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto NEWS.docb.tmp
-	xmlto --skip-validation -m $(srcdir)/NEWS.xsl txt NEWS.docb.tmp && mv NEWS.docb.txt $@
+#NEWS: NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto NEWS.docb.tmp
+#	xmlto --skip-validation -m $(srcdir)/NEWS.xsl txt NEWS.docb.tmp && mv NEWS.docb.txt $@
 
-NEWS.html: NEWS.docb.tmp NEWS.xsl
-	xmlto --skip-validation -m $(srcdir)/NEWS.xsl -m $(srcdir)/manual-web.xsl xhtml-nochunks NEWS.docb.tmp && mv NEWS.docb.html $@
+#NEWS.html: NEWS.docb.tmp NEWS.xsl
+#	xmlto --skip-validation -m $(srcdir)/NEWS.xsl -m $(srcdir)/manual-web.xsl xhtml-nochunks NEWS.docb.tmp && mv NEWS.docb.html $@
 
 $(MANUAL_XHTMLDIR): manual.xml.xhtml.tmp
 	$(MKDIR_P) $(MANUAL_XHTMLDIR)
@@ -148,7 +149,7 @@ poldek.1: poldek.1.xml manual-datafiles.stamp
 
 clean-local:
 	-rm -r manual-web
-	
+
 	if test $(abs_srcdir) != $(abs_builddir); then \
 	    for file in $(MANUAL_DATAFILES); do \
 		rm -f $(abs_builddir)/$$file; \

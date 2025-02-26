@@ -99,10 +99,10 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.sub config.guess config.status config.log aclocal.m4 \
 			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.html \
 			ABOUT-NLS po/*~ po/*.pot conf/*~ m4/*~
-
-NEWS:
-	$(MAKE) -C doc NEWS
-	cp doc/NEWS .
+# NEWS archived as doc/NEWS.old
+#NEWS:
+#	$(MAKE) -C doc NEWS
+#	cp doc/NEWS .
 
 conf_sections.c: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl
 	         	 doc/conf-xml2.sh c doc/poldek.conf.xml > $@

@@ -1,0 +1,1064 @@
+poldek NEWS (archive, see NEWS.md for current)
+
+   ══════════════════════════════════════════════════════════════════════════
+
+0.42.2 (bugfix release; 2020/04/09)
+
+     • cli: avoid loading installed packages with desc --log/-L
+
+     • solver: proper handling of redundant requirements
+
+     • solver: improved package scoring (fixes
+       https://bugs.launchpad.net/poldek/+bug/1722104)
+
+     • cli: optimized rpmdb cache loading (avoid double creation of directory
+       index)
+
+0.42.1 (bugfix release; 2020/03/16)
+
+     • unified '--clean' and '-n repo --clean' behavior. All --clean
+       subvariants: --clean-pkg, --clean-whole/--cleana are obsoleted now.
+
+     • Fixed package deduplication with "unique package names = y" (#4)
+
+     • Fixed download progress bar on non-tty outputs (#2)
+
+     • multilib: back to comparing package architecture scores provided by
+       rpmPlatformScore()
+
+     • Fixed config macros expanding (#3)
+
+     • multilib: fixed architecture flip-flop in transaction summary (#1)
+
+0.42.0 (performance; 2020/03/02)
+
+     • cli: faster shell boot time due to lazy load repos; compacted and
+       colored install/ uninstall summary and downloading progress bar
+
+     • feat: use XDG_CACHE_HOME/poldek as default cache directory
+
+     • performance: faster (about 40%) repo loading: optimized capabilities
+       indexes, zero backward fseeks (which is slow with compressed files),
+       mtime based verification cache and lazy deps processing
+
+     • depsolver: with "upgrade multiple instances" config option, poldek
+       handle upgrades of multiple installed packages: most recent version is
+       upgraded while other installed versions are kept untouch
+
+     • ZSTD support: create zst repos with --mo=zst or with "compr = zst"
+       source config option (or with global "default index compr = zst").
+       ZSTD is faster than GZIP, saves about 200ms on PLD TH repo loading
+       (~30K packages).
+
+     • SSL SNI support
+
+     • fix: allow multiple --rpmdef command line options
+
+     • fix: minor memleaks fixed
+
+0.40.0 (rpm.org; 2019/12/31)
+
+     • rpm.org support (except boolean dependencies yet; beta)
+
+     • internal HTTPS support
+
+     • depsolver: score orphan successors to select best fit
+
+     • performance: faster package repo loading (avoiding backward fseeks)
+
+     • cleanup: removed support for obsoleted package repo formats: pdir
+       (poldek <= 0.18), hdrl (old apt) and old yum
+
+     • openssl >= 1.1.1 support (openssl.patch) Arkadiusz Miskiewicz
+
+     • fix: allow to transfer file via FTP even if server does not report
+       file mtime (poldek-notzdata.patch) Arkadiusz Miskiewicz
+
+     • fixed incorrect WTERMSIG usage (WTERMSIG.patch) Jan Rękorajski
+
+     • fixed python bindings build (python-fix.patch) Jan Rękorajski
+
+0.32.2 (; 2016/07/18)
+
+  Bug fixes:
+
+     • map characters only when they are available in validchars (lp#1599021)
+       (Marcin Banasiak)
+
+     • ignore elf(buildid) while verifying uninstalled caps (Marcin Banasiak)
+
+     • fix crash when loading more than 64k packages (lp#1571324) (Marcin
+       Banasiak)
+
+     • in comparison EVR should be preferred over arch (Marcin Banasiak)
+
+0.32.1 (; 2016/02/04)
+
+  New features:
+
+     • autocompletion support for what-suggests (lp#1539745) (Marcin
+       Banasiak)
+
+  Bug fixes:
+
+     • ignore 'q' when asking about suggested package (lp#1532694) (Marcin
+       Banasiak)
+
+     • allow '=' in pathname (lp#1321916) (Marcin Banasiak)
+
+0.32.0 (; 2016/01/04)
+
+  New features:
+
+     • search by suggests support (lp#1332039) (Marcin Banasiak)
+
+     • add --noprogress option that lets you hide progress bar (Marcin
+       Banasiak)
+
+     • enable largefile for 64bit inodes (Arkadiusz Miskiewicz)
+
+  Bugfixes:
+
+     • fix: always try to update orphaned package if successor is available
+       (Marcin Banasiak)
+
+     • fix: assertion failed due to lack of free() (Adam Osuchowski <adwol
+       att pld-linux org>)
+
+     • fix segfault in glibc >= 2.22 (Arkadiusz Miskiewicz)
+
+0.30.1 (; 2014/03/26)
+
+  Bugfixes:
+
+     • fix building without optimization (Kacper Kornet)
+
+     • fix order of packages during removal (Kacper Kornet)
+
+     • fix crash on invalid capreqs (Marcin Banasiak)
+
+     • fix sysinfo data usage (lp#1216250) (Marcin Banasiak)
+
+     • fix tab completion for kernel modules (Witold Filipczyk)
+
+     • support packages with path length over 255 bytes (lp#1288989) (Marcin
+       Banasiak)
+
+0.30.0 (walking on; 2013/07/07)
+
+  New features:
+
+     • adding repo to group from repo config (lp#966972) (Bartlomiej Zimon)
+
+     • change behaviour of --cleana to clean the whole cache dir (Marcin
+       Banasiak)
+
+     • support RPM 5.4 (lp#1042200) (Marcin Banasiak)
+
+     • drop support for ancient RPM versions (Marcin Banasiak)
+
+     • conf: only warn if path included twice (Bartlomiej Zimon)
+
+     • if --up needs to download more data than --upa, switch to --upa
+       (lp#705452) (Bartlomiej Zimon)
+
+     • add aria2 to fetch.conf, it is configured as multifile downloader for
+       speedup (Bartlomiej Zimon)
+
+     • support more than 24 packages in choose equiv (Bartlomiej Zimon)
+
+     • rpmvercmp: rewritten to use rpmEVRcompare() (Marcin Banasiak)
+
+     • add counter of packages to download (Bartlomiej Zimon)
+
+     • add autocompletion of command options in interactive mode (Marcin
+       Banasiak)
+
+     • add --caplookup to install command in interactive mode (Bartlomiej
+       Zimon)
+
+     • do not show information about amount of transaction space required but
+       relative to already installed (Bartlomiej Zimon)
+
+     • support for query format in ls command (Marcin Banasiak)
+
+     • add --source-rpm (-s) option to ls command (lp#392984) (Bartlomiej
+       Zimon)
+
+     • allow to search changelogs (Marcin Banasiak)
+
+     • package changelogs are stored in repo index
+
+     • add what-{provides,requires} autocompletion (Marcin Banasiak <megabajt
+       att pld-linux org>)
+
+     • add source rpm filename to pndir index (with help of Marcin Banasiak
+       <megabajt att pld-linux org>)
+
+     • support for conf.d style %include
+       (https://bugs.pld-linux.org/show_bug.cgi?id=79)
+
+     • dependency solver big cleanup: faster, simplified, improved a lot
+       multilib, backtracking, fixes.
+
+     • supported RPM up to 5.0.2 (with help of Arkadiusz Miskiewicz <arekm
+       att pld-linux org>)
+
+     • support fo UTF-8 encoded package summaries and descriptions (Witold
+       Filipczyk <witekfl att pld-linux org>)
+
+     • package Suggests supported (with help of Marcin Banasiak <megabajt att
+       pld-linux org>)
+
+     • cli.conf with interactive shell configuration, aliases.conf has been
+       removed
+
+     • improved package repositories management mode: instalation to multiple
+       repos, working --destination and --jutstdb
+
+     • pythonized Python module, new pyldek.py as general example of module
+       usage.
+
+     • support for RPM 4.4.6's new internal sysinfo(),getconf(),uname() and
+       cpuinfo() capabilities and auto-dependecies based on package
+       directories
+
+     • let a user to choose equivalents selected by --caplookup option
+
+     • choosing equivalents prompt are interrupt-able now.
+
+     • new --mo=OPTION[,OPTION...] replaces --no{compress,desc,diff} index
+       creation options,
+
+     • with --mo=v018x created 'pdir' index is compatibile with versions
+       prior 0.18.9 (without package files mtime included)
+
+     • vfcompr: temporary *vfcompr.md5 files moved from source to destination
+       (cache) directory
+
+     • "use sudo" default value is explicit set to "auto" (new 3var
+       boolean-like type is added).
+
+     • configuration for CentOS has been added. (Arkadiusz Patyk <areq att
+       areq eu org>)
+
+  Bugfixes:
+
+     • fix for crashes on subpackages with inherited group (Kacper Kornet
+       <draenog att pld-linux org>)
+
+     • fix leaking fds (lp#307183) (Marcin Banasiak)
+
+     • fix insecure format string usage (Jan Rękorajski)
+
+     • don't get number of elements in database iterator in rpmdb_it_init()
+       (lp#1042200) (Marcin Banasiak)
+
+     • don't clean list if not found one or more entries, warn instread
+       (lp#1024970) (Bartlomiej Zimon)
+
+     • show pkg arch in verify deps mode (lp#1031762) (Bartlomiej Zimon)
+
+     • don't lose directories during dirindex update (Marcin Banasiak)
+
+     • improve matching security updates from changelogs (Elan Ruusamäe)
+
+     • fix repo loading, broken repo is non fatal now (lp#813213) (Bartlomiej
+       Zimon)
+
+     • kill (null) when using source url (lp#699907) (Marcin Banasiak)
+
+     • don't process suggests when --follow is set to no. (lp#689237) (Marcin
+       Banasiak)
+
+     • enforce dirindex update when package was rebuilt without release
+       change (Marcin Banasiak)
+
+     • break endless loop when poldek loses connected terminal (lp#499504)
+       (Bartlomiej Zimon)
+
+     • fix url prepare (lp#506568) (Bartlomiej Zimon)
+
+     • add multiarch upgrade(-dist) support and pkgs migration from/to noarch
+       (lp#408034) (Bartlomiej Zimon)
+
+     • add arch match to hold/ignore (lp#408036) (Bartlomiej Zimon)
+
+     • don't ask for Suggests if the transaction is already broken (Patryk
+       Zawadzki <patrys att pld-linux org>)
+
+     • color bugfix for not picking pkg updates for c=2 pkg if new is c=0
+       (lp#299685) (Elan Ruusamäe <glen att pld-linux.org>)
+
+     • abort if db version changed between installs (Elan Ruusamäe <glen att
+       pld-linux.org>)
+
+     • decode strings that may be urlencoded before displaying (lp#381548)
+       (Marcin Banasiak)
+
+     • on upgrade don't suggest packages skipped during installation (Marcin
+       Banasiak)
+
+     • don't suggest required packages (lp#305588) (Marcin Banasiak)
+
+     • multilib: fixed choose equiv
+
+     • never rollback directly marked packages (#158)
+
+     • check ability to install before hold (#153)
+
+     • copy packages from local repos too if --fetch to custom dir requested
+       (#101)
+
+     • cli: --nohold command line option not longer ignored (#68) (Marcin
+       Banasiak <megabajt att pld-linux org>)
+
+     • fixed path validation ("/foo../" is not a relative path)
+
+     • orphaned package are upgraded if its successor drags more new packages
+       than orphaned one
+
+0.20 (major enhancements release; 2005/10/28)
+
+   This release introduces new series of poldek. Significant changes and
+   differences from 0.18.x series
+
+  Package repositories
+
+     • repositories code has been redesigned and totally rewritten in the
+       modular, plugin-like way, so is is quite easy to add support for new
+       formats.
+
+     • new 'pndir' is the default format now. It is based on tndb (cdb like)
+       DBM library. To save bandwidth package descriptions (Description,
+       Summary, etc) are stored in 2 separate files: first named
+       packages.ndir.dscr with common (BuildHost, Distribution, etc) and "C"
+       descriptions and second with all non-C descriptions).
+
+     • 'hdrl' aka 'apt' format are update-able
+
+     • support for Yum and Metadata XML repositories
+
+     • repository indexes could be created in many formats at once using --mt
+       switch, ex:
+
+     $ poldek -s /foo/bar --mkdix --mt=pdir,pndir
+
+
+     • indexes may be created from any index format, i.e conversion to to
+       another format is supported, ex:
+
+     $ poldek --st apt -s /foo/bar --mkidx=/ala/ma --mt=pdir
+
+
+     • (re)creation of native poldek's indexes (pdir, pndir) is much faster
+       now package headers are not loaded at all if package's file
+       modification time is the same as saved one in existing index.
+
+  Installation related
+
+     • uninstallation code has been rewritten and improved. Packages are
+       removed with its reverse dependencies and in the right order,
+       according to {pre,post}un requirements
+
+     • poldek can perform 'to repository' installation, i.e packages are
+       copied from source to destination repository with full dependency
+       checking, ex:
+
+     $ poldek -n ...  --dt pdir --destination /foo/bar/RPMS --upgrade-dist -v
+     $ poldek -n ...  --dn name --upgrade-dist -v
+
+
+  Interactive mode
+
+     • interactive mode commands are available directly from command line
+
+    $ poldek --cmd ls foo
+    $ ipoldek ls foo
+
+
+     • command aliases are defined in external configuration file (Mariusz
+       Mazur <mmazur a kernel pl>)
+
+     • commands may be piped, ex:
+
+      poldek> rsearch /poldek/ | ls -l
+
+
+     • external commands are supported:
+
+      poldek> rsearch /pol/ | !grep ^pol
+
+
+  Configuration
+
+     • multi word option names may be written with spaces or underscore
+       separator, i.e: both forms "this is = foo" and "this_is = foo" are
+       valid.
+
+     • default location of configuration file has been changed to
+       "${_sysconfdir}/poldek/poldek.conf", old /etc location is still
+       supported.
+
+     • configuration file format has been changed to ini-like one. Sources
+       and external file getters should be configured in its own sections
+       "source" and "fetcher", see sample configs. Old configuration format
+       is still supported.
+
+     • environment variables in config files are expanded, for example:
+
+    cachedir = $HOME/.cache
+
+
+     • support for simple macros has been added to make configuration easier
+       to write and read, for example:
+
+    _arch   = i686
+    _prefix = ftp://ftp.pld.org.pl/dists
+
+    [source]
+    type  = pdir
+    name  = pld-ra
+    path  = %{_prefix}/ra/PLD/%{_arch}/PLD/RPMS/
+
+    [source]
+    type  = pdir
+    name  = pld-ra-updates
+    path  = %{_prefix}/ra/updates/general/%{_arch}/
+
+
+     • %include directive has been added, it can include both local and
+       remote files:
+
+    %include source.conf
+    %include ftp://ftp.pld.org.pl/dists/ra/source.conf
+
+
+       Remote files once downloaded are stored in cache directory. To
+       resynchronize them with it's remote copy use --upconf option.
+
+     • support for APT sources configuration has been added - new "load apt
+       sources list" configuration option.
+
+  General
+
+     • some command line switches has been changed, but all obsoleted
+       switches are still supported *except* "-f" (not important IMO).
+       Changes:
+
+       0.18.x                     0.20
+     ------------------------------------
+    -f, --fast               => --skip-installed
+    --mkidxz                 => --mkidx           (compression is on by default)
+    --sidx, --sdir, --shdrl  =>                   (use --st=TYPE -s instead)
+    --unique-pkg-names       => --uniq
+    --shcmd                  =>                   (use --cmd or run ipoldek)
+
+
+     • configuration options may be set from command line by -O switch, for
+       example:
+
+     $ poldek -Ovfile_external_compress=yes
+
+
+     • PLD-FreeBSD port
+       (ftp://beliar.pld-freebsd.org/dists/1.0/ready/i386/RPMS/) (Tomasz
+       Trojanowski <tomek att uninet com pl>)
+
+     • manual have been rewritten and enhanced
+
+0.18.9.1 (bugfix release; 2005/10/17)
+
+     • fixed writing diff list file (packages.diff.toc)
+
+     • update to rpm 4.4 (dropped legacy PreReq support) (Jakub Bogusz
+       <qboosh att pld-linux org>)
+
+     • renamed trurlib's nstream members to avoid conflicts with stdio macros
+       (Olivier Thauvin <olivier.thauvin att aerov jussieu fr>)
+
+     • fixed package version selection on greedy upgrade
+
+0.18.9 (bugfix release; 2005/07/03)
+
+     • handle package file 'mtime' tag ('t' tag) to be compatible with devel
+       branch.
+
+     • fixes related to glibc 2.3.5 (Jakub Bogusz <qboosh att pld-linux org>,
+       Arkadiusz Miskiewicz <arekm att pld-linux org>)
+
+     • fixed compilation with gcc 4.x (PLD's poldek-gcc4.patch)
+
+     • dependency resolving issues (Mariusz Krynski <mrk att sed pl>)
+
+     • new --pmcmd to set rpm binary in place of default /bin/rpm (Jan
+       Rekorajski <baggins att sith mimuw edu pl>)
+
+0.18.8 (bugfix release; 2004/12/30)
+
+     • fixed checking file-based dependencies of packages being removed
+
+     • fixed another dependency processing bug (hard to explain)
+
+     • 'ls' output fixes to be parsable by external scripts (Patryk Zawadzki
+       <patrys att pld-linux org>)
+
+     • removed usage of superfluous n_free() (Tomasz Wittner <twittner att o2
+       pl>)
+
+     • vfile's progress bar: fixed displaying total transfer and rate (Lukasz
+       Masko <lukasz.masko att ipipan waw pl>)
+
+     • support for RPM 4.4
+
+     • fixed build under Owl (rpm 4.0.2 without libelf)
+
+     • workaround for "group not found" bug
+
+     • pl and de translation fixes (PLD Team)
+
+0.18.7 (major bugfix release; 2004/09/24)
+
+     • another stupid SIGSEGV killed (happened occasionally while dependency
+       processing)
+
+     • vfile's progress bar improvements (Patryk Zawadzki <patrys att
+       pld-linux org>)
+
+     • fix: disabled package Epoch's autopromotion while checking if it
+       matches requirement
+
+     • with rpm >= 4.1 packages with same provide are obsoleted, not just
+       name
+
+     • fixed processing dependencies of orphaned packages
+
+     • SIGSEGV killed while reading packages with dir/file names longer than
+       127 bytes
+
+     • fixed package ordering bug
+
+     • with --caplookup packages may be installed by specifying its
+       capabilities, i.e: "poldek --caplookup -uv foo" will install package
+       provides "foo" (if any).
+
+0.18.6 (major bugfix release; 2004/06/28)
+
+     • fixed broken dist installation
+
+     • fixed serious bug with dependency processing of obsoleted packages
+
+     • fixed --rpmdef '_dbpath DIR' (do not read rpm's configs many times)
+
+     • fix: --nofollow with --install-dist works as expected (#920)
+
+     • vfile: fixed progress bar displaying on std sized terminal (79 cols)
+
+0.18.5 (bugfix release; 2004/05/23)
+
+     • fixed dowloading packages from apt-like sources
+
+0.18.4 (bugfix and minor improvements release; 2004/05/10)
+
+     • package filenames in "non-standard" form (N-V.R.ARCH.rpm) are
+       supported
+
+     • killed SIGSEGVs on 64bit architecture (Jakub Bogusz <qboosh att
+       pld-linux org>)
+
+     • fixed Epoch comparison bug while checking uninstalled capabilities
+
+     • vfile: progress bar shows remaining time and transfer rate (Patryk
+       Zawadzki <patrys att pld-linux org>)
+
+     • fixed setting cache directory bug (Andreas Piesk <a.piesk att gmx
+       net>)
+
+     • fixed serious bug of checking unversioned dependencies
+
+     • --ignore{arch,os} rpm options are honored
+
+     • rpm options could be passed as --rpm=OPTION too, i.e. --rpm=ignorearch
+       is equivalent of -- --rpm-ignorearch
+
+     • new cmdline options --rpm-{force,nodeps} which are passed as --force
+       and --nodeps to /bin/rpm only.
+
+     • more aggressive package upgrades - orphaned packages are upgraded
+       instead of processing its dependencies. This behavior is enabled by
+       "greedy" option. To disable put "aggressive_greedy = no" to config.
+
+     • "greedy" upgrade mode is enabled by default
+
+     • conflicts with already installed packages are treated as resolved if
+       at least one of multiple-installed package satisfies conflict. Of
+       course RPM doesn't support such cases, so additionally --rpm-nodepsis
+       needed (use with care). This behavior is enabled by default, put
+       "allow_duplicates=no" to config to disable it.
+
+     • displaying package size summary of installed package set
+
+     • --unique-pkg-names (-Q) behavior is more intuitive now - highest
+       version of package are taken instead of one from highest
+       prioritizedsource
+
+0.18.3 (bugfix and improvements release; 2004/01/10)
+
+     • internal HTTP client does not prevent proxy caching (Arkadiusz
+       Miskiewicz <arekm att pld-linux org>)
+
+     • fixed bug on getting package capabilities having EVR with empty Epoch
+       like "foo = :1.0-1"
+
+     • do not die if rpmdb iterator returns NULL (possibly broken rpm
+       database) (Arkadiusz Miskiewicz <arekm att pld-linux org>)
+
+     • vfile_external_compress=yes in config allows gzipped indexes to be
+       used on systems with broken zlib linked in rpmio library(rpm 4.2 from
+       RedHat 9, Fedora)
+
+     • kill unaligned traps on Alpha, time_t is not 32bit long (Jakub Bogusz
+       <qboosh att pld-linux org>) (Jakub Bogusz <qboosh att pld-linux org>)
+
+     • new "promoteepoch" config and cmdline option switches Epoch to
+       comparision compatible with rpm prior to 4.2.1 (with help of Jakub
+       Bogusz <qboosh att pld-linux org>)
+
+     • support for RPM 4.2/4.3
+
+     • dependency processing fixes
+
+     • RPM 4.1 related fixes
+
+0.18.1 (major bugfix release; 2002/11/27)
+
+     • ability of creation empty indexes
+
+     • killed SIGSEV on '$ poldek -s /' (#443)
+
+     • fixed presentation of dependency tree during unistallations;
+       information about what package marks an others was completely broken
+
+     • killed SIGSEV during dependencies processing
+
+     • fixed vfile's progress bar
+
+     • fixed 'hold' and 'ignore' package patterns matching
+
+     • fixed bug of interactive mode; after interrupted installation selected
+       packages are properly unmarked now.
+
+0.18 (bugfix/minor enhancements release; 2002/11/07)
+
+     • support for RPM 4.1 (with help of Artur Frysiak <wiget att pld-linux
+       org>)
+
+     • few dependency processing improvements
+
+     • 'hold' and 'ignore' package masks are matched with source name,
+       package epoch, version and release, i.e. masks apache-1.3.2* or
+       ra:apache-1* are valid ones now.
+
+     • new: with --unique-pkg-names (-Q) packages with the same name are
+       removed from available package set
+
+     • sources are prioritized in order they are passed in cmdline, i.e. with
+       $ poldek -s /foo/bar -n pld, source 'foo/bar' obtains highest priority
+       than 'pld', no matter what priority 'pld' has in config file.
+
+     • fixed available package list management in interactive mode
+
+     • AM/AC stuff cleanup and adaptation to their new versions (automake 1.7
+       and autoconf 2.54) (Artur Frysiak <wiget att pld-linux org>)
+
+     • Polish translation of manual page (Tomasz Pala <gotar att pld-linux
+       org>)
+
+     • fix: progress bar isn't refreshed so frequently (#367)
+
+0.17.9 (bugfix/minor enhancements release; 2002/09/20)
+
+     • Obsoletes tag is used during upgrades (if --greedy is set)
+
+     • fixed dependency EVR matching
+
+     • source priorities (new 'pri' source option) -- if the same package is
+       availablein more than one source than program takes package from
+       source with highest priority.If priorities aren't set sources are
+       prioritized in order they are appear in config file.
+
+     • bugfix: -s URL works fine
+
+     • added poldek's logo (Karol Krenski <mimooh att sgsp edu pl>)
+
+0.17.8 (major bugfix release; 2002/08/18)
+
+     • package installation is verified with rpm database if rpm reports
+       failure
+
+     • fixed obsoletes matching (Jakub Bogusz <qboosh att pld-linux org>)
+
+     • improved and fixed file based conflicts detection
+
+     • fixed size units display (Tomasz Pala <gotar att poczta.onet.pl>)
+
+0.17.7 (bugfix release; 2002/06/14)
+
+     • improved package conflicts resolving
+
+     • split: SIGSEV killed
+
+     • fixed package removal
+
+     • shell: search: fixed default options processing
+
+     • another "desynchronized index" bug is fixed
+
+     • fixed Epoch matching
+
+     • vhttp: program doesn't die on doubled HTTP headers
+
+0.17.6 (minor bugfix release; 2002/06/03)
+
+     • new "--ignore" option makes packages invisible to the poldek
+
+     • "hdrl" sources can be refreshed with --upa
+
+     • fixed package removal: don't follow dependencies if only one of
+       multiple-installed packages is intended to uninstall
+
+     • shell: search: pattern is treated as shell wildcard (matched by
+       fnmatch(3)) by default; previous behavior (Perl regular expression
+       matching) is available with --perlre or "rsearch" alias.
+
+     • fixed package auto-selection among equivalents: dependencies aren't
+       verified strictly during package scoring.
+
+     • fixed bug of equivalent package selection (<Enter> was select first,
+       notdefault package).
+
+     • shell: with 'upgrade' and 'greedy-upgrade' commands only upgradeable
+       packages are auto-completed.
+
+0.17.5 (minor bugfix release; 2002/05/15)
+
+     • about 75% less memory is used by incremental update of packages.dir
+
+     • improved package auto-selection among equivalents: package which marks
+       less packages to install is preferred
+
+     • vftp: fixed logging in when server doesn't ask for password
+       (Przemyslaw Frasunek <venglin att freebsd.lublin.pl>)
+
+     • bugfix: root directory (--rootdir) is always passed to rpm as absolute
+       path
+
+     • shell: desc: file mode is displayed in human readable form
+
+     • fixed vfjuggle: packages.dir.md* are copied to hdd too
+
+     • few SIGSEVs killed on "search" command when APT's pkglist file is used
+       as package index (with help of Gustavo Niemeyer <niemeyer att
+       conectiva com>)
+
+0.17.4 (bugfix/minor enhancements release; 2002/05/06)
+
+     • new (major) modes: --downgrade downgrade given packages; --reinstall
+       major mode reinstalls given packages; --erase removes packages with
+       its reverse dependent ones
+
+     • shell: fixed C-c handling (connecting phase can be interrupted)
+
+     • improved splitting
+
+     • killed SIGSEV on long URL's basenames
+
+     • source prefix is handled properly with --mkidx*
+
+0.17.3 (major enhancements release; 2002/04/23)
+
+     • supported "hdlist" files (simple raw RPM package headers list) as
+       sources. These files are used by APT-RPM as they are widely supported
+       by RPM based distributions. However this format isn't optimal, now
+       poldek is useable with almost every RPM based distro without poldek's
+       native indexes support. See poldekrc.sample-{rh,mdk} for examples of
+       RedHat and Mandrake configuration.
+
+     • new "type=[pidx|dir|hdrl]" source option lets define source type
+       inconfiguration file. Needed to distinguish "hdlist" ('hdrl' type)
+       from"native" index format. Cmdline options: --source for 'pidx',
+       --sdir for'dir' and --shdrl for 'hdrl'.
+
+     • support for GPG/PGP signatures verification (new "gpg" and "pgp"
+       source options). Verification works well with rpm >= 4.0.4 or patched
+       PLD's rpm 4.0.2 package (release 62).
+
+     • simple HTTP client (with partly HTTP/1.1 support), it is used for HTTP
+       downloads; cURL backend is not compiled by default.
+
+     • added IPv6 support to internal FTP client
+
+     • new "--clean" and "--clean-whole" options for cache directorycleanup
+
+     • URLs with user and password (ftp://user:passwd at host:port/path/
+       syntax) are supported (Andreas Piesk <a.piesk att gmx net>)
+
+     • new "ftp_sysuser_as_anon_passwd" option causes sending login at
+       hostname as anonymous FTP password
+
+     • new "noautoup" source option tells poldek to do not update source by
+       default.
+
+     • shell: added long listig format of file list (poldek> desc -ll)
+
+     • misc fixes to compile on SuSE
+
+     • fixed rpm 3.x support (with help of Roger Luethi <rl att hellgate ch>)
+
+     • fixed and improved handling of bool configuration options, added
+       on/off and enable/disable to the list of valid choices (Andreas Piesk
+       <a.piesk att gmx net>)
+
+     • fixed detection of file based conflicts between available packages.
+
+     • packages with capabilities with the same name and different versions
+       are handled properly
+
+     • misc fixes to compile and work with glibc2.1 (with help of Andreas
+       Piesk <a.piesk att gmx net>)
+
+     • installation of multiple instances of package is allowed (by poldek
+       -i)
+
+     • fixes and improvements of dependency resolution
+
+     • German translation (Andreas Piesk <a.piesk att gmx net>)
+
+     • various bugs are fixed
+
+0.17.2 (bugfix release; 2002/03/26)
+
+     • "ported" to RedHat 7.2 (with rpm 4.0.4)
+
+     • install-dist: --force forces installation of broken package sets
+
+     • corrected package installation progress bar (Michal Moskal <malekith
+       att pld-linux org>)
+
+     • install-dist: log INST-{OK,ERR} for PLD Installer (Michal Moskal
+       <malekith att pld-linux org>)
+
+     • --dump* works properly
+
+     • vftp: fixed error handling
+
+0.17.1 (bugfix release; 2002/03/26)
+
+     • ftp: fixed multiline responses handling
+
+0.17 (major enhancements release; 2002/02/21)
+
+     • added support for package.dir's "patches" (new option --update-whole
+       updates whole index; --update looking for patches first)
+
+     • packages are divided into groups before install and each group is
+       installed separately; this ensures that broken dependencies in one of
+       group doesn't affect the rest.
+
+     • improved dependency processing
+
+     • added simple ftp client; it is used for FTP downloads by default
+
+     • shell
+
+     • added log file support (--log option)
+
+     • sources may be configured as name and URL pair and later selected by
+       that name (new --sn|-n option); with --sl|-l program lists all
+       configured sources.
+
+     • packages.dir's integrity is verified before each loadingwhat prevents
+       program SIGSEVs on load broken indexes
+
+     • changed default cache directory to $HOME/.poldek-cache
+
+     • package MD5 sums are verified before install
+
+     • with --ask program confirms each installation (confirm_install config
+       option) and allows the user to choose among equivalent packages
+       (choose_equivalents_manually config option)
+
+     • few (nice) improvements and (not so nice ;-) bugs fixed
+
+0.16 (bugfix release; 2002/01/29)
+
+     • fixed removable media support in non-install-dist modes
+
+     • shell: uninstall: fix: don't remove pkg from install list if removal
+       fails
+
+0.15.9 (major enhancements release; 2002/01/11)
+
+     • shell
+
+     • removed GCC's nested functions usage -- seems that it causes SIGSEVs
+       on some machines (Arkadiusz Patyk <areq att pld-linux org>)
+
+     • fix: don't include trailing whitespaces in config values
+
+0.15.8 (bugfix release; 2001/10/29)
+
+     • curl: disabled timeouts, cURL's timeout it's a time to transfer file
+
+     • curl: amount and total sizes are displayed in progress bar
+
+     • fix: enabled --hold
+
+     • fix: SIGSEV killed when pkg description requested while pkg index
+       doesn't contain package descriptions at all
+
+     • shell: fixed installed package list management
+
+     • curl: fixed progress bar if total file size is unknown (Michal Moskal
+       <malekith att pld-linux org>)
+
+     • "mercy" mode bugfix
+
+0.15.7 (major enhancements release; 2001/10/10)
+
+     • downloaded packages are removed after successful installation by
+       default (keep_downloads=yes in config can change to previous behavior)
+
+     • changed semantics of --test: -t causes poldek's checks only, -tt turns
+       on tests performed by rpm too.
+
+     • "mercy" dependency checking mode may be enabled in config
+
+     • added workarounds and traps for (probably) curl's bugs
+
+     • "update" option can be used with other commands simultaneously
+
+     • shell mode is now the default
+
+     • shell: added greedy option to install cmd
+
+0.15.6 (bugfix/major enhancements release; 2001/08/12)
+
+     • package priorities could be used during installation too
+       (/etc/poldek-pkgsplit.conf or /etc/poldek-pri.conf is used by default)
+
+     • added global config /etc/poldek.conf usage
+
+     • fixed prereq loop detection
+
+     • added '@' to list of valid characters in package filename (Rafal
+       Kleger-Rudomin <klakier att pld-linux org>)
+
+     • vfjuggle: sed is used instead of awk (Rafal Kleger-Rudomin <klakier
+       att pld-linux org>)
+
+     • shell: ls: fixed packages sorting
+
+     • minor bugfixes
+
+0.15.5 (bugfix release; 2001/07/20)
+
+     • another bugfix of dependency processing
+
+     • shell: new ls options: -t, -T, -r
+
+     • added --shcmd option which allows to execute poldek's shell command
+       without entering shell mode
+
+     • detect if stdout is connected to a terminal and display progress bars
+       accordingly.
+
+     • install-dist: retry to fetch packages if connection is down
+
+0.15.4 (bugfix release; 2001/07/17)
+
+     • conflicts detection bugfix
+
+0.15.3 (bugfix release; 2001/07/16)
+
+     • another bugfix of dependency processing
+
+     • splitted verify option to verify, verify-conflicts and
+       verify-fileconflicts
+
+     • more user friendly output on package set verification
+
+0.15.2 (bugfix/major enhancements release; 2001/07/13)
+
+     • added "hold" and "greedy" commands
+
+     • added FIRST_FREE_SPACE param to split option
+
+     • fixed bug of dependency processing
+
+     • minor bugfixes
+
+0.15.1 (major bugfix release; 2001/06/28)
+
+     • spliting: changed packages.chunk* format: full package filenames are
+       printed and removed comments.
+
+     • bugfixes
+
+0.15 (bugfix/major enhancements release; 2001/06/26)
+
+     • updated vfcurl progress bar handling (according to curl 7.8)
+
+     • better index format version handling (minor.major ver schema), current
+       version is 1.0, older versions not supported...
+
+     • package's integer fields are stored in binary form, groups are stored
+       as separate, global tag
+
+     • remote indexes are verified after download
+
+     • added checking of package architecture and OS
+
+     • added support for removable media (vfjuggle script is added)
+
+     • added package file size to index (for spliting)
+
+     • added "nofollow" option to cmdline and "follow" one to config
+
+     • renamed "freshen" to "fresh" and changed its semantics, now rpm's
+       "--freshen" <=> "--nofollow --fresh"
+
+     • changed default index name to "packages.dir"
+
+     • added mkpackagedir script
+
+     • added spliting (--split* options)
+
+     • package-set file syntax: changed "maybe" mark to '~' ('!' still work,
+       but obsoleted)
+
+     • shell
+
+     • many bugfixes (Rafal Kleger-Rudomin <klakier att pld-linux org>,
+       Michal Moskal <malekith att pld-linux org>)
+
+0.14 (bugfix/major enhancements release; 2001/06/12)
+
+     • support for multiple sources
+
+     • Packages SHA1 digest is computed and checked (Packages.md is created)
+
+     • capabilities/requirement are stored in binary form (v0.4 of Packages
+       format)
+
+     • default name (Packages[.gz]) is used if only dir is given as source
+       (i.e. it's last character is '/')
+
+     • shell: both installed and available packages list is maintained
+       properly during installs/unistalls without reloading rpm database
+
+     • shell: added "search" command
+
+     • removed unused support for rpmidx (aka tocfile)
+
+     • cleanup and bugfixes

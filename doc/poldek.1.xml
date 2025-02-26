@@ -11,7 +11,7 @@
 <!ENTITY ref-package_deinstallation SYSTEM "manual/ref1490-package_deinstallation.xml.tmpman">
 <!ENTITY ref-verification_options-switches SYSTEM "manual/ref1700-verification_options-switches.xml.tmpman">
 <!ENTITY ref-splitting_options SYSTEM "manual/ref1900-splitting_options.xml.tmpman">
-<!ENTITY ref-miscellaneous_options SYSTEM "manual/ref2100-miscellaneous_options.xml.tmpman"> 
+<!ENTITY ref-miscellaneous_options SYSTEM "manual/ref2100-miscellaneous_options.xml.tmpman">
 ]>
 
 <refentry id="poldek">
@@ -27,7 +27,7 @@
 <para>
 <programlisting>
 <command>poldek </command> [OPTION...] [PACKAGE...]
-<command>ipoldek </command> [OPTION...] [COMMAND...] [COMMAND_OPTION...] [PACKAGE...]
+<command>poldek </command> [OPTION...] [COMMAND...] [COMMAND_OPTION...] [PACKAGE...]
 </programlisting>
 </para>
   </refsect1>
@@ -35,14 +35,14 @@
   <refsect1><title>Description</title>
 <para>
 <application>poldek</application> is a full-featured packages management utility,
-basically designed to work with rpm packages. Basic features are similar to every 
-modern package updater like apt-get. Program takes information about packages 
-from package repositories (aka <emphasis>sources</emphasis>) and do package management 
+basically designed to work with rpm packages. Basic features are similar to every
+modern package updater like apt-get. Program takes information about packages
+from package repositories (aka <emphasis>sources</emphasis>) and do package management
 tasks like installation, upgrading or removal.
 </para>
 
 <para>
-This manual page covers command line option reference, the full documentation 
+This manual page covers command line option reference, the full documentation
 for poldek is available as a Texinfo manual. Do <command>info poldek</command> to get it.
 </para>
   </refsect1>
@@ -66,7 +66,7 @@ for poldek is available as a Texinfo manual. Do <command>info poldek</command> t
 Pawel A. Gajda &lt;mis at pld-linux.org&gt;
 </para>
 <para>
-See CREDITS file for a list of contributors.
+See CREDITS.old file for a list of contributors + contributors from GitHub repository (https://github.com/poldek-pm/poldek)
 </para>
 </refsect1>
 
