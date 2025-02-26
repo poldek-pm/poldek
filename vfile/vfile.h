@@ -60,7 +60,6 @@ EXPORT void vfile_destroy(void);
 /* vf_type */
 #define VFT_IO       1             /* open(2)                   */
 #define VFT_STDIO    2             /* fopen(3)                  */
-#define VFT_GZIO     3             /* zlib: gzopen()            */
 #define VFT_TRURLIO  5             /* trurlib's tn_stream       */
 
 /* vf_mode */

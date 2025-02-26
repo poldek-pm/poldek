@@ -355,31 +355,6 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         }
         break;
 
-        case VFT_GZIO: {
-            char *mode = NULL;
-
-            if ((vfmode & VFM_APPEND) == VFM_APPEND)
-				mode = "a";
-            else if (vfmode & VFM_RW)
-                mode = "w";
-			else
-                mode = "r";
-
-            if ((vf->vf_gzstream = gzopen(path, mode)) != NULL) {
-                rc = 1;
-
-            } else {
-                if (errno)
-                    vf_logerr("%s: %m\n", CL_URL(path));
-                else if (Z_MEM_ERROR)
-                    vf_logerr("gzopen %s: insufficient memory\n",
-                               CL_URL(path));
-                else
-                    vf_logerr("gzopen %s: unknown error\n", CL_URL(path));
-            }
-        }
-        break;
-
 #ifdef ENABLE_VFILE_TRURLIO
         case VFT_TRURLIO: {
             char *mode = NULL;
@@ -633,11 +608,6 @@ void vfile_close(struct vfile *vf)
         case VFT_STDIO:
             fclose(vf->vf_stream);
             vf->vf_stream = NULL;
-            break;
-
-        case VFT_GZIO:
-            gzclose(vf->vf_gzstream);
-            vf->vf_gzstream = NULL;
             break;
 
 #ifdef ENABLE_VFILE_TRURLIO
