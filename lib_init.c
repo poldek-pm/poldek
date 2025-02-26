@@ -50,11 +50,18 @@ static int poldeklib_init_called = 0;
 #define SOURCES_LOADED      (1 << 3)
 #define SETUP_DONE          (1 << 4)
 
+
+#ifdef VERSION_STATUS
+# define VSTATUS " (" VERSION_STATUS ")"
+#else
+# define VSTATUS ""
+#endif
+
 const char poldek_BUG_MAILADDR[] = PACKAGE_BUGREPORT;
-const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
-const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-" VERSION_YEAR " Pawel A. Gajda <mis@pld-linux.org>\n"
-"This program may be freely redistributed under the terms of the GNU GPL v2";
+const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION VSTATUS;
+//const char poldek_BANNER[] = PACKAGE " " VERSION VSTATUS "\n"
+//"Copyright (C) 2000-" VERSION_YEAR " Pawel A. Gajda <mis@pld-linux.org>\n"
+//"This program may be freely redistributed under the terms of the GNU GPL v2";
 
 static int say_goodbye(const char *msg);
 int (*poldek_say_goodbye)(const char *msg) = say_goodbye;
@@ -1063,8 +1070,10 @@ static void n_assert_hook(const char *expr, const char *file, int line)
     n_snprintf(msg, sizeof(msg), "Something wrong, something not quite right"
                " with %s\n"
                "Assertion '%s' failed, %s:%d\n"
-               "Please report this bug to: %s\n\n",
-               VERSION " (" VERSION_STATUS ")",
+               "Please report this bug to: %s\n"
+               "If this bug is related to dependency solving, please attach trace log from:\n"
+               "$ POLDEK_TRACE=1 poldek -uv PACKAGE...\n",
+               poldek_VERSION_BANNER,
                expr, file, line,  poldek_BUG_MAILADDR);
     if (poldek_say_goodbye(msg))
         abort();

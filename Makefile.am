@@ -16,7 +16,7 @@ AM_CFLAGS = @AM_CFLAGS@
 
 POD2MAN   = @POD2MAN@
 
-libVERINFO         = 3:0:0
+libVERINFO         = 4:0:0
 lib_LTLIBRARIES    = libpoldek.la
 
 libpoldek_la_LDFLAGS = -version-info $(libVERINFO)

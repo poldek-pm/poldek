@@ -11,7 +11,7 @@ AC_INIT([poldek], [poldek_version], [https://github.com/poldek-pm/poldek/issues/
 AC_CONFIG_SRCDIR([capreq.c])
 AC_CONFIG_HEADERS([config.h])
 
-VERSION_STATUS="stable"
+#VERSION_STATUS="beta"
 VERSION_YEAR=$(date +%Y)
 
 AH_TEMPLATE([ENABLE_TRACE],[])
@@ -28,7 +28,10 @@ AH_TEMPLATE([HAVE_RPM_5],[])
 AH_TEMPLATE([HAVE_RPMORG],[])
 
 AM_INIT_AUTOMAKE([1.11 foreign no-dist-gzip dist-xz])
-AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [version status])
+
+if test -n "${VERSION_STATUS}"; then
+   AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [version status])
+fi
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_FUNCNAME],
                    ${PACKAGE}_version_${VERSION_TAG},  [ version function name ])
 
