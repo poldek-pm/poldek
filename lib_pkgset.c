@@ -35,6 +35,7 @@
 #include "poldek.h"
 #include "poldek_intern.h"
 #include "pm/pm.h"
+#include "thread.h"
 
 extern const char *poldek_conf_PKGDIR_DEFAULT_TYPE;
 
@@ -75,6 +76,10 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx)
 
     /* create/update stubindex by default */
     ldflags |= PKGDIR_LD_UPDATE_STUBINDEX;
+
+    if (!ctx->ts->getop(ctx->ts, POLDEK_OP_USETHREADS)) {
+        poldek_disable_threads();
+    }
 
     if (!pkgset_load(ps, ldflags, ctx->sources)) {
         if (poldek_verbose() > 0)

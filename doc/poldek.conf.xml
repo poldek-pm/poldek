@@ -191,7 +191,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
     </description>
   </option>
 
-  <option name="cachedir" type="string" default="$HOME/.poldek-cache" env="yes">
+  <option name="cachedir" type="string" default="XDG_CACHE_HOME/poldek" env="yes">
     <description>
      Cache directory for downloaded files. NOTE that parent directory of cachedir
      must exist.
@@ -262,8 +262,10 @@ and [filename]*-source.conf[/filename], file getters are declared in
     Transaction summary style, can be 'old' (pre 0.4.0 version) or 'color' - coloured and compact.
     </description>
   </option>
-</optiongroup>
 
+  <option name="use threads" type="boolean" default="yes" hidden="yes" op="USETHREADS">
+  </option>
+</optiongroup>
 
 <optiongroup id="ogroup.fetcher"><title>File downloaders configuration</title>
   <option name="vfile ftp sysuser as anon passwd" type="boolean" default="no">

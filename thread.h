@@ -5,16 +5,22 @@
 # include "config.h"
 #endif
 
+#include <stdbool.h>
+
+bool poldek_enabled_threads();
+void poldek_disable_threads();
+
 #ifdef ENABLE_THREADS
-# include <stdbool.h>
 # include <pthread.h>
 
-void poldek_threads_toggle(bool value);
-bool poldek_threads_enabled();
+void poldek_threading_toggle(bool value);
+bool poldek_threading_is_on();
 
-# define mutex_lock(m) (poldek_threads_enabled() ? pthread_mutex_lock(m) : ((void) 0))
-# define mutex_unlock(m) (poldek_threads_enabled() ? pthread_mutex_unlock(m) : ((void) 0))
-#else
+# define mutex_lock(m) (poldek_threading_is_on() ? pthread_mutex_lock(m) : ((void) 0))
+# define mutex_unlock(m) (poldek_threading_is_on() ? pthread_mutex_unlock(m) : ((void) 0))
+
+#else  /* ENABLE_THREADS */
+
 # define mutex_lock(m) ((void) 0)
 # define mutex_unlock(m) ((void) 0)
 #endif

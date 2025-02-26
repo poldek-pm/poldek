@@ -31,7 +31,33 @@
 #include "depdirs.h"
 #include "thread.h"
 
-#ifdef ENABLE_THREADS
+static int load_pkgdirs_seq(const tn_array *pkgdirs, const tn_array *depdirs, int ldflags)
+{
+    int re = 1;
+
+    printf("seqload\n");
+
+    for (int i=0; i < n_array_size(pkgdirs); i++) {
+        struct pkgdir *pkgdir = n_array_nth(pkgdirs, i);
+
+        if ((pkgdir->flags & PKGDIR_LOADED) != 0)
+            continue;
+
+        if (!pkgdir_load(pkgdir, depdirs, ldflags)) {
+            logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
+            re = 0;
+        }
+    }
+
+    return re;
+}
+
+#ifndef ENABLE_THREADS /* not available */
+static int load_pkgdirs(const tn_array *pkgdirs, const tn_array *depdirs, int ldflags)
+{
+    return load_pkgdirs_seq(pkgdirs, depdirs, ldflags);
+}
+#else  /* ENABLE_THREADS */
 struct thread_info {
     pthread_t tid;
     struct pkgdir *pkgdir;
@@ -86,13 +112,17 @@ static int load_pkgdirs(const tn_array *pkgdirs, const tn_array *depdirs, int ld
     struct thread_info *ti = NULL;
     int nti = 0;
 
+    if (!poldek_enabled_threads()) {
+        return load_pkgdirs_seq(pkgdirs, depdirs, ldflags);
+    }
+
     int nt = threadable_loads(pkgdirs);
 
     msgn(3, "%d threadable loads", nt);
 
     if (nt > 1) {
         ti = malloc(n_array_size(pkgdirs) * sizeof(*ti));
-        poldek_threads_toggle(true);
+        poldek_threading_toggle(true);
     }
 
     for (int i=0; i < n_array_size(pkgdirs); i++) {
@@ -122,27 +152,9 @@ static int load_pkgdirs(const tn_array *pkgdirs, const tn_array *depdirs, int ld
         pthread_join(ti[i].tid, NULL);
     }
     free(ti);
-    poldek_threads_toggle(false);
+    poldek_threading_toggle(false);
 
     return 1;
-}
-#else  /* ENABLE_THREADS */
-static int load_pkgdirs(const tn_array *pkgdirs, const tn_array *depdirs, int ldflags)
-{
-    int re = 1;
-    for (int i=0; i < n_array_size(pkgdirs); i++) {
-        struct pkgdir *pkgdir = n_array_nth(pkgdirs, i);
-
-        if ((pkgdir->flags & PKGDIR_LOADED) != 0)
-            continue;
-
-        if (!pkgdir_load(pkgdir, depdirs, ldflags)) {
-            logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
-            re = 0;
-        }
-    }
-
-    return re;
 }
 #endif
 

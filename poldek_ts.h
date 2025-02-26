@@ -88,6 +88,7 @@ enum poldek_ts_opt {
     POLDEK_OP_JUSTPRINT_N,  /* names, not filenames */
     POLDEK_OP_MKDBDIR,      /* --mkdir */
     POLDEK_OP_USESUDO,      /* use_sudo = yes  */
+    POLDEK_OP_USETHREADS,   /* use_threads = yes  */
     POLDEK_OP_HOLD,         /* --nohold  */
     POLDEK_OP_IGNORE,       /* --noignore  */
     POLDEK_OP_PARTICLE,     /* particle_install = yes */
