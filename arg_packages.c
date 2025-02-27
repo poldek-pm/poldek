@@ -273,9 +273,12 @@ int arg_packages_add_pkgmask(struct arg_packages *aps, const char *mask)
     char *m = n_strdup(mask);
     int i = strlen(m) - 1;
 
-    /* last '~' works like '*' */
-    if (i > 0 && m[i] == '~') {
-        m[i] = '*';
+    if (i > 0) {
+        if (m[i] == '~') { /* last tilde '~' works like '*' */
+            m[i] = '*';
+        } else if (m[i] == '-') { /* foo- from completion */
+            m[i] = '\0';
+        }
     }
 
     n_array_push(aps->package_masks, m);

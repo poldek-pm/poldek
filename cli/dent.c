@@ -682,13 +682,10 @@ tn_array *do_resolve(struct arg_packages *aps,
 
     for (i=0; i < nmasks; i++) {
         char *mask = n_array_nth(masks, i);
-        int len = strlen(mask);
-
-        if (len > 1 && mask[len - 1] == '-')
-            mask[len - 1] = '\0';
-
-        if (*mask == '*' && *(mask + 1) == '\0')
+        if (*mask == '*' && *(mask + 1) == '\0') {
+            n_array_free(masks);
             return n_ref(ents);
+        }
     }
 
     matches = alloca(nmasks * sizeof(*matches));
