@@ -1,35 +1,35 @@
-## 0.44.0 (2025/02/26)
+## 0.44.0 (2025/02/27)
 * Interactive mode (*shell*) commands can be invoked directly from command line, like:
-  ```shell      
-      $ poldek llu   
+  ```shell
+      $ poldek llu
       $ poldek install foo
-      # etc      
+      # etc
   ```
   Some commands get aliased with to mimic apt/dnf/etc:
   - `install` => `add`
   - `uninstall` => `remove`
   - `desc`      => `info`
-    
-  Means `$ poldek install` and `$ poldek add` do the same.    
+
+  Means `$ poldek install` and `$ poldek add` do the same.
   Two new commands has been added `up` (wortks like `--up` switch) and `clean` (`--clean`).
- 
+
   See `poldek help` and `poldek <command> --help` for details.
-* Tilde (`~`) at the end of package name is treated as a asterisk wildcard (`*`), e.g: 
+* Simplified available *repo* list display
+* Tilde (`~`) at the end of package name is treated as a asterisk wildcard (`*`), e.g:
+  ```shell
+   $ poldek install foo-~
   ```
-  poldek install foo-~
-  ```  
 * Boolean dependency support (at least tested cases - see tests/sh/10-booldeps)
 * New option --color forces coloured output (#21)
 * Coloured and compact output of `llu` (`ls -lu`); old 4-column view is available with `ls -llu`
 * Fixed depsolver crash (issues #15, #24)
+* Fixed depsolver conflict resolution (tests/sh/07-depsolver:testUpgradeMultipleByConflict)
 * Reduced startup time:
     - lazy dep indexing
-    - repos loading in threads
+    - repos loading in threads (can be switched off by `-Ouse_threads=n`)
     - zlib-ng is used by default for (de)compressing
     - `install` arguments validation before repo load
-* Removed features:
-    - package set splitting (`--split`)
-    - package set graphing (nobody using it probably)
+
 * Merged most PLD patches: ‎
   - poldek-info.patch (https://github.com/pld-linux/poldek/commit/5e4ef52a61a7ebbf59a4f8c2d8254376514f1f49)
   - poldek-pc.patch (https://github.com/pld-linux/poldek/commit/b99b1fbaafcd141db7744fc9f85bbfdce0a7137c)
@@ -49,6 +49,9 @@
   - db-index-format.patch (https://github.com/pld-linux/poldek/commit/c670d25c1a1541aad4f848759358ed0d11ddacaf)
   - rpm-4.15.patch (https://github.com/pld-linux/poldek/commit/b47be59439fe1031a342efc93d30171acac79fa3)
 
+* rpmvercmp for rpm.org by @jpalus in https://github.com/poldek-pm/poldek/pull/16
+* fix: cli/ls: sort entries just before listing (after filtering) by @jpalus in https://github.com/poldek-pm/poldek/pull/22
+
 ## previous versions
 
-See NEWS.old
+See [NEWS.old](doc/NEWS.old)
