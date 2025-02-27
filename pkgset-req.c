@@ -97,6 +97,7 @@ static int psreq_lookup(struct pkgset *ps, const struct capreq *req,
     *npkgs = 0;
     matched = 0;
 
+    pkgset__index_caps(ps);
     if ((ent = capreq_idx_lookup(&ps->cap_idx, reqname, capreq_name_len(req)))) {
         *suspkgs = (struct pkg **)ent->pkgs;
         *npkgs = ent->items;
@@ -221,8 +222,6 @@ int pkgset_find_match_packages(struct pkgset *ps,
 {
     struct pkg **suspkgs, pkgsbuf[1024], **matches;
     int nsuspkgs = 0, nmatches = 0, found = 0;
-
-    pkgset__index_caps(ps);
 
     nsuspkgs = 1024;            /* size of pkgsbuf */
     found = psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf, &nsuspkgs);
