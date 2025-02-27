@@ -21,6 +21,7 @@
 #include <signal.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 
 #include <trurl/nassert.h>
@@ -75,11 +76,14 @@ void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
         bytesused += pkg->size;
         if (pkg->pkgdir && (vf_url_type(pkg->pkgdir->path) & VFURL_REMOTE)) {
             if (pkg_localpath(pkg, path, sizeof(path), destdir)) {
+                struct stat st;
+
                 if (access(path, R_OK) != 0) {
                     bytesdownload += pkg->fsize;
 
-                } else {
-                    if (!pm_verify_signature(pmctx, path, PKGVERIFY_MD)) {
+                } else if (lstat(path, &st) == 0) {
+                    (void)pmctx;
+                    if (st.st_size != pkg->fsize) {
                         vf_unlink(path);
                         bytesdownload += pkg->fsize;
                     }
