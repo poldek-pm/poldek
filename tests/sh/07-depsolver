@@ -230,6 +230,14 @@ testUpgradeMultipleByConflict() {
     try_install_noask foo "foo-2-2,libfoo-2-2,a-2-2,a-lang-en-2-2,a-lang-pl-2-2" "libfoo-1-1,a-1-1,a-lang-en-1-1,a-lang-pl-1-1"
 }
 
+#  --reinstall xorg-lib-libXfont-devel case on carme
+testReinstallNoMissingReqs() {
+    build a 1-1 -c "foo"
+    build_installed a 1-1
+
+    msgn "Reinstall"
+    try_install_noask a "a" "" "--reinstall"
+}
 
 # b-1-1 meets all 'a' requirements
 testRedundantRequirement() {

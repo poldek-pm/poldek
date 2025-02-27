@@ -293,6 +293,8 @@ tn_array *get_conflicted(int indent, struct pkgset *ps,
     const struct capreq_idx_ent *ent;
     const char *cnflname = capreq_name(cnfl);
 
+    pkgset__index_caps(ps);
+
     if ((ent = capreq_idx_lookup(&ps->cap_idx, cnflname, capreq_name_len(cnfl)))) {
         struct pkg **suspkgs = (struct pkg **)ent->pkgs;
         int nmatch = 0;
