@@ -69,14 +69,23 @@ testVerifyDepsError()
     build a -r "foo" -r "bar.so"
     build b -p "foo" -p "bar" -r "baz"
     build c -p "baz" -r "foo.so"
+    build d -r "baz.so"
     build sh -p /bin/sh
 
-    msg "# $POLDEK1 --verify a"
+    msg "# selected: $POLDEK1 --verify a"
     $POLDEK1 --verify a >$TMP/verify-log.log
     assertEquals "poldek succeed, but should fail", "$?" "1"
 
     n=$(grep "error:" $TMP/verify-log.log | grep -P 'req.+not found' | wc -l)
     assertEquals "should report 2 dependency errors" "$n" "2"
+
+
+    msg "# all: $POLDEK1 --verify"
+    $POLDEK1 --verify >$TMP/verify-log.log
+    assertEquals "poldek succeed, but should fail", "$?" "1"
+
+    n=$(grep "error:" $TMP/verify-log.log | grep -P 'req.+not found' | wc -l)
+    assertEquals "should report 3 dependency errors" "$n" "3"
 }
 
 testVerifyConflictsError()

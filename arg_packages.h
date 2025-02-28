@@ -38,7 +38,7 @@ EXPORT int arg_packages_add_pkgmaska(struct arg_packages *aps, tn_array *masks);
 EXPORT int arg_packages_add_pkgfile(struct arg_packages *aps, const char *pathname);
 EXPORT int arg_packages_add_pkglist(struct arg_packages *aps, const char *path);
 EXPORT int arg_packages_add_pkg(struct arg_packages *aps, struct pkg *pkg);
-EXPORT int arg_packages_add_pkga(struct arg_packages *aps, tn_array *pkgs);
+EXPORT int arg_packages_add_pkgs(struct arg_packages *aps, const tn_array *pkgs);
 
 EXPORT int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
 

@@ -350,6 +350,11 @@ int arg_packages_add_pkg(struct arg_packages *aps, struct pkg *pkg)
     return 1;
 }
 
+int arg_packages_add_pkgs(struct arg_packages *aps, const tn_array *pkgs)
+{
+    n_array_concat_ex(aps->packages, pkgs, (tn_fn_dup)pkg_link);
+    return 1;
+}
 
 static
 int arg_packages_load_list(struct arg_packages *aps, const char *fpath)

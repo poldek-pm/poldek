@@ -943,44 +943,31 @@ static int ts_run_uninstall(struct poldek_ts *ts)
 /* just verify deps, conflicts, ordering, etc */
 static int ts_run_verify(struct poldek_ts *ts)
 {
-    int nerr = 0, rc = 1;
+    int nerr = 0;
 
     //n_assert(poldek_ts_issetf(ts, POLDEK_TS_VERIFY));
 
-    if (poldek_ts_get_arg_count(ts) == 0) {
-        logn(LOGERR, _("Nothing to do"));
+    if (!ts_prerun(ts))
         return 0;
-        // XXX disabled feature of whole set verification, does anybody needs that?
-        //load_sources(ts->ctx);
 
+    if (!load_sources(ts->ctx))
+        return 0;
+
+    unsigned flags = TS_MARK_DEPS | TS_MARK_CAPSINLINE;
+
+    if (poldek_ts_get_arg_count(ts) == 0) { /* no args */
+        arg_packages_add_pkgs(ts->aps, ts->ctx->ps->pkgs);
     } else {
-        if (!ts_prerun(ts))
-            return 0;
-
-        if (!load_sources(ts->ctx))
-            return 0;
-
-        unsigned flags = TS_MARK_DEPS | TS_MARK_VERBOSE | TS_MARK_CAPSINLINE;
-        rc = ts_mark_arg_packages(ts, flags);
-        (void)rc;               /* XXX unused for now */
+        flags |= TS_MARK_VERBOSE;
     }
 
-    /* XXX disabled feature of whole set verification
-    if (poldek_ts_get_arg_count(ts) > 0) {
-        pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
-
-    } else {
-        pkgs = n_ref(ts->ctx->ps->pkgs);
-    }
-
-    if (pkgs == NULL)
-        return 0;
-    */
+    ts_mark_arg_packages(ts, flags);
 
     tn_array *pkgs = pkgmark_get_packages(ts->pms, PKGMARK_ANY);
     if (pkgs == NULL)
         return 0;
 
+    /* just print errors here, deps are already verified by ts_mark_arg_packages */
     if (ts->getop(ts, POLDEK_OP_VRFY_DEPS)) {
         msgn(3, _("Verifying dependencies..."));
         if (pkgmark_log_unsatisfied_dependecies(ts->pms) > 0)
