@@ -715,6 +715,10 @@ tn_array *poldek_ts_get_required_packages(struct poldek_ts *ts, const struct pkg
     return pkgset_get_required_packages(0, ts->ctx->ps, pkg);
 }
 
+tn_array *poldek_ts_get_requiredby_packages(struct poldek_ts *ts, const struct pkg *pkg) {
+    return pkgset_get_requiredby_packages(0, ts->ctx->ps, pkg);
+}
+
 static void cp_str_ifnull(char **dst, const char *src)
 {
     if (*dst == NULL && src)

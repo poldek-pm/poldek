@@ -372,3 +372,75 @@ tn_array *pkgset_get_conflicted_packages(int indent, struct pkgset *ps, const st
 
     return re;
 }
+
+
+static
+tn_array *get_reqby(int indent, struct pkgset *ps,
+                    const struct pkg *pkg, struct capreq *cap, tn_array *re)
+{
+    const struct capreq_idx_ent *ent;
+    const char *capname = capreq_name(cap);
+
+    pkgset__index_reqs(ps);
+
+    if ((ent = capreq_idx_lookup(&ps->req_idx, capname, capreq_name_len(cap)))) {
+        struct pkg **suspkgs = (struct pkg **)ent->pkgs;
+        int nmatch = 0;
+        msg_i(4, indent, "cap %-35s --> ",  capreq_snprintf_s(cap));
+
+        for (unsigned i = 0; i < ent->items; i++) {
+            struct pkg *spkg = suspkgs[i];
+            msg_i(4, indent, "sus %s->%s", pkg_id(pkg), pkg_id(spkg));
+
+            if (capreq_has_ver(cap))  /* check version */
+                if (!pkg_match_req(pkg, cap, 1 /* strict */))
+                    continue;
+
+            /* do not require myself */
+            if (spkg == pkg)
+                continue;
+
+            /* multilib */
+            if (pkg_cmp_name_evr(spkg, pkg) == 0 && pkg_cmp_arch(spkg, pkg) != 0)
+                continue;
+
+            msg_i(4, indent, "_%s, ", pkg_id(spkg));
+
+            struct pkg *rrpkg = NULL;
+            if (re) {
+                rrpkg = n_array_bsearch(re, spkg);
+            } else {
+                re = pkgs_array_new(4);
+            }
+
+            if (rrpkg == NULL) {
+                n_array_push(re, pkg_link(spkg));
+            }
+            nmatch++;
+        }
+
+        if (nmatch == 0)
+            msg_i(4, indent, "_UNMATCHED\n");
+        else
+            msg_i(4, indent, "\n");
+    }
+
+    return re;
+}
+
+tn_array *pkgset_get_requiredby_packages(int indent, struct pkgset *ps,
+                                         const struct pkg *pkg)
+{
+    tn_array *re = NULL;
+
+    pkg_add_selfcap((struct pkg*)pkg); /* XXX */
+    for (int i=0; i < n_array_size(pkg->caps); i++) {
+        struct capreq *cap = n_array_nth(pkg->caps, i);
+        re = get_reqby(indent, ps, pkg, cap, re);
+    }
+
+    if (re && n_array_size(re) == 0)
+        n_array_cfree(&re);
+
+    return re;
+}

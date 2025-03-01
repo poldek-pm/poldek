@@ -224,36 +224,6 @@ int pkgset__index_reqs(struct pkgset *ps)
     return 1;
 }
 
-/*
-int OLD_pkgset_verify(struct pkgset *ps)
-{
-    //int strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
-    int v = poldek_VERBOSE;
-    void *t = timethis_begin();
-
-    return 1;
-    msgn(2, "Preparing package set dependencies...");
-
-    //if ((ps->flags & PSET_RT_DEPS_PROCESSED) == 0) {
-    //    ps->flags |= PSET_RT_DEPS_PROCESSED;
-
-        msgn(3, " a). detecting file conflicts...");
-        v = poldek_set_verbose(-1);
-        //file_index_find_conflicts(ps->file_idx, strict);
-        poldek_set_verbose(v);
-
-        msgn(3, " b). dependencies...");
-        //pkgset_verify_deps(ps, strict);
-        MEMINF("after verify deps");
-        //pkgset_verify_conflicts(ps, strict);
-        //}
-
-    timethis_end(1, t, "ps.deps");
-
-    return 1;
-}
-*/
-
 int pkgset_add_package(struct pkgset *ps, struct pkg *pkg)
 {
     if (n_array_bsearch(ps->pkgs, pkg))

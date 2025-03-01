@@ -198,6 +198,7 @@ EXPORT void poldek_ts_clean_args(struct poldek_ts *ts);
 EXPORT tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed);
 EXPORT int poldek_ts_get_arg_count(struct poldek_ts *ts);
 EXPORT tn_array *poldek_ts_get_required_packages(struct poldek_ts *ts, const struct pkg *pkg);
+EXPORT tn_array *poldek_ts_get_requiredby_packages(struct poldek_ts *ts, const struct pkg *pkg);
 EXPORT int poldek_ts_validate_args_with_stubs(struct poldek_ts *ts, tn_array *stubpkgs);
 
 EXPORT int poldek_ts_run(struct poldek_ts *ts, unsigned flags);

@@ -567,18 +567,17 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 static
 void show_revreqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
-    int i;
-    tn_array *revreqpkgs = NULL;
+    tn_array *revreqpkgs = poldek_ts_get_requiredby_packages(cmdctx->ts, pkg);
 
-    // TODO
-    cmdctx_printf(cmdctx, "To be implemented.\n");
+    if (revreqpkgs == NULL)
+        return;
 
-    if (revreqpkgs && n_array_size(revreqpkgs)) {
+    if (n_array_size(revreqpkgs)) {
         int ncol = IDENT;
 
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Required(by):");
 
-        for (i=0; i<n_array_size(revreqpkgs); i++) {
+        for (int i=0; i<n_array_size(revreqpkgs); i++) {
             struct pkg *tmpkg;
             char *p, *colon = ", ";
 

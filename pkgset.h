@@ -46,7 +46,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
 
 int pkgset__index_caps(struct pkgset *ps);
-//int pkgset__index_reqs(struct pkgset *ps);
+int pkgset__index_reqs(struct pkgset *ps);
 
 
 // pkgset-req.c
@@ -79,6 +79,7 @@ struct pkg_unreq {
 tn_array *pkgset_get_conflicted_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
 tn_array *pkgset_get_required_packages_x(int indent, struct pkgset *ps, const struct pkg *pkg, tn_hash **unreqh);
 tn_array *pkgset_get_required_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
+tn_array *pkgset_get_requiredby_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
 
 /* pkgset-order.c */
 #define PKGORDER_INSTALL     1
