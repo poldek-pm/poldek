@@ -1,15 +1,13 @@
+CPPFLAGS = @CPPFLAGS@ @CHECK_CFLAGS@
+LDADD = @CHECK_LIBS@ $(top_builddir)/vfile/libvfile.la
 
+check_PROGRAMS = test_vfile test_vopen3
 
-TESTS = test_vfile
-noinst_PROGRAMS = test_vfile
-test_vfile_SOURCES = test_vfile.c test_misc.c test_file.c
-
-test_vfile_INCLUDES= @CHECK_CFLAGS@
-test_vfile_LDADD = @CHECK_LIBS@ ../libvfile.la  
+TESTS = $(check_PROGRAMS)
+EXTRA_DIST = test.h
 
 clean-local:
-	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* 
-
+	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
 
 runtests: poldek_test_conf.conf
 	$(MAKE) check
@@ -30,4 +28,3 @@ runtests: poldek_test_conf.conf
    echo "====================================="; \
    echo "$$n tests passed / $$nfails failed";    \
    echo "====================================="
-

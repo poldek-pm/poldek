@@ -1,90 +1,68 @@
-/*
-  $Id$
-*/
-#include <check.h>
 #include "test.h"
 
-//extern struct test_suite test_suite_match;
-
-extern struct test_case test_case_misc;
-
-
-struct test_suite test_suite_vfile;
-struct test_suite *suites[] = {
-    &test_suite_vfile,
-    NULL,
-};
-
-extern struct test_case test_case_misc_env;
-struct test_case *misc_cases[] = {
-    &test_case_misc,
-    NULL,
-};
-
-Suite *make_suite(struct test_suite *tsuite)
+void append(const char *path, int vft_io)
 {
-    Suite *s = suite_create(tsuite->name);
-    int i = 0;
+    struct vfile *vf;
 
-    while (tsuite->cases[i].name) {
-        TCase *tc = tcase_create(tsuite->cases[i].name);
-        tcase_add_test(tc, tsuite->cases[i].test_fn);
-        suite_add_tcase(s, tc);
+    vf = vfile_open(path, vft_io, VFM_APPEND);
+    fail_if(vf == NULL);
+    fail_if(n_stream_write(vf->vf_tnstream, "foo\n", 4) != 4);
+    vfile_close(vf);
+}
+
+START_TEST (test_vfile_append) {
+    int ec;
+
+    char *gzpath = strdup(NTEST_TMPPATH("tmp.txt.gz"));
+    append(gzpath, VFT_TRURLIO);
+    append(gzpath, VFT_TRURLIO);
+    append(gzpath, VFT_TRURLIO);
+
+    char *path = strdup(NTEST_TMPPATH("tmp.txt"));
+    append(path, VFT_TRURLIO);
+    append(path, VFT_TRURLIO);
+    append(path, VFT_TRURLIO);
+
+
+    char cmd[1024];
+    n_snprintf(cmd, sizeof(cmd), "zdiff %s %s\n", gzpath, path);
+    ec = system(cmd);
+    fail_if(ec != 0);
+}
+END_TEST
+
+START_TEST (test_valid_path) {
+    char *inv_paths[] = {
+        "../ala/ma/kota",
+        "foo/bar",
+        "/ala/../foo",
+        NULL
+    };
+    char *valid_paths[] = {
+        "/",
+        "/ala/ma/kota",
+        "/foo/..bar",
+        "/ala../foo",
+	"/home/foo/.poldek-cache/_www.rpm.xx.redhat-7.3../.vflock__home.foo..poldek-cache..www.rpm.xx.redhat-7.3..",
+        NULL
+    };
+    int i;
+
+    i = 0;
+    while (inv_paths[i] != NULL) {
+        fail_if(vf_valid_path(inv_paths[i]),
+                "validated invalid '%s'", inv_paths[i]);
         i++;
-    }
-    return s;
-}
-
-Suite *make_themisc_suite(void)
-{
-    Suite *s = suite_create("misc");
-    int i = 0;
-
-    while (misc_cases[i]) {
-        TCase *tc = tcase_create(misc_cases[i]->name);
-        tcase_add_test(tc, misc_cases[i]->test_fn);
-        suite_add_tcase(s, tc);
-        i++;
-    }
-    return s;
-}
-
-/*
-  tc = tcase_create("op_ts_postconf");
-  tcase_add_test(tc, test_op_ts_postconf);
-  suite_add_tcase (s, tc);
-  
-  return s;
-}
-*/
-
-int main(int argc, char *argv[])
-{
-    int i = 0, nerr = 0;
-    
-    //if (argc > 1 && n_str_eq(argv[1], "-v"))
-        
-    if (misc_cases[0]) {
-        Suite *s = make_themisc_suite();
-        SRunner *sr = srunner_create(s);
-        srunner_run_all(sr, CK_NORMAL);
-        nerr += srunner_ntests_failed(sr);
-        srunner_free(sr);
     }
 
     i = 0;
-    while (suites[i]) {
-        Suite *s = make_suite(suites[i]);
-        SRunner *sr = srunner_create(s);
-        printf("\n");
-        srunner_run_all(sr, CK_NORMAL);
-        nerr += srunner_ntests_failed(sr);
-        srunner_free(sr);
+    while (valid_paths[i] != NULL) {
+        fail_if(!vf_valid_path(valid_paths[i]),
+                "invalid valid '%s'", valid_paths[i]);
         i++;
     }
-    
-    
-
-    return (nerr == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+END_TEST
 
+
+NTEST_RUNNER("vfile", test_vfile_append, test_valid_path);

@@ -9,9 +9,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <trurl/n_check.h>
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
-#include <check.h>
+#include <trurl/n_snprintf.h>
 
 #include "../vfile.h"
 #define fail_ifnot fail_unless
