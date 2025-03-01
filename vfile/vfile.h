@@ -14,9 +14,9 @@
 #ifndef POLDEK_VFILE_H
 #define POLDEK_VFILE_H
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <zlib.h>
 #include <trurl/narray.h>
 
 #undef ENABLE_VFILE_TRURLIO
@@ -90,7 +90,6 @@ struct vfile {
     union {
         int        vfile_fd;
         FILE       *vfile_stream;
-        gzFile     vfile_gzstream;
 #ifdef ENABLE_VFILE_TRURLIO
         tn_stream  *vfile_tnstream;
 #endif
@@ -102,7 +101,6 @@ struct vfile {
 
 #define	vf_fd        vfile_fdescriptor.vfile_fd
 #define	vf_stream    vfile_fdescriptor.vfile_stream
-#define	vf_gzstream  vfile_fdescriptor.vfile_gzstream
 #ifdef ENABLE_VFILE_TRURLIO
 # define vf_tnstream  vfile_fdescriptor.vfile_tnstream
 #endif

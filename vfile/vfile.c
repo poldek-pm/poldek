@@ -25,7 +25,6 @@
 #include <fcntl.h>
 #include <time.h>
 
-#include <zlib.h>
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nhash.h>
