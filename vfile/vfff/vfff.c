@@ -436,5 +436,10 @@ int vfff_transfer_file(struct vcn *cn, struct vfff_req *vreq, long total_size)
     if (vreq->progress_fn)
         vreq->progress_fn(vreq->progress_fn_data, total_size, -1);
 
-    return is_err == 0;
+    if (is_err == 0 && cn->state == VCN_ALIVE) {
+        cn->ts_is_alive = time(0); /* update alive timestamp on success */
+        return 1;
+    }
+
+    return 0;
 }

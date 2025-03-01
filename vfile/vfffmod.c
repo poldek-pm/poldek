@@ -202,8 +202,12 @@ static struct vcn *vcn_pool_do_connect(struct vf_request *req)
     if (cn == NULL) {
         cn = vcn_new(vcn_proto, host, port, login, passwd,
                      req->proxy_login, req->proxy_passwd);
-        if (cn)
+        if (cn) {
+            if (req->proxy_host)
+                cn->flags |= VCN_PROXIED;
+
             n_list_push(vcn_pool, cn);
+        }
     }
 
     return cn;

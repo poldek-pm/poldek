@@ -60,6 +60,7 @@ struct vfff_req;
 /* flags */
 #define VCN_SUPPORTS_SIZE  (1 << 0)
 #define VCN_SUPPORTS_MDTM  (1 << 1)
+#define VCN_PROXIED        (1 << 9)
 
 struct vcn {
     int       proto;

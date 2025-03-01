@@ -790,27 +790,6 @@ static time_t parse_date(const char *dt)
     return ts;
 }
 
-static
-int vhttp_vcn_is_alive(struct vcn *cn)
-{
-    char req_line[256];
-
-    if (cn->state != VCN_ALIVE)
-        return 0;
-
-    make_req_line(req_line, sizeof(req_line), "HEAD", "/");
-
-    if (!httpcn_req(cn, req_line, NULL))
-        return 0;
-
-    if (!httpcn_get_resp(cn)) {
-        cn->state = VCN_DEAD;
-        return 0;
-    }
-
-    return 1;
-}
-
 static int is_closing_connection_status(struct http_resp *resp)
 {
     int close_cn = 0;
@@ -834,6 +813,34 @@ static int is_closing_connection_status(struct http_resp *resp)
     }
 
     return close_cn;
+}
+
+static int vhttp_vcn_is_alive(struct vcn *cn)
+{
+    char req_line[256];
+
+    if (cn->state != VCN_ALIVE)
+        return 0;
+
+    if (cn->flags & VCN_PROXIED)
+        return 0;
+
+    make_req_line(req_line, sizeof(req_line), "HEAD", "/");
+
+    if (!httpcn_req(cn, req_line, NULL))
+        return 0;
+
+    if (!httpcn_get_resp(cn)) {
+        cn->state = VCN_DEAD;
+        return 0;
+    }
+
+    if (is_closing_connection_status(cn->resp)) {
+        cn->state = VCN_DEAD;
+        return 0;
+    }
+
+    return 1;
 }
 
 static
