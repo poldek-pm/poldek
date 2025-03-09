@@ -41,6 +41,7 @@
 #include "pkgdir.h"
 #include "pkg.h"
 #include "pndir.h"
+#include "tags.h"
 
 static char *eat_zlib_ext(char *path)
 {

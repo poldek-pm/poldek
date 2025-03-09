@@ -469,7 +469,6 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     struct pkgdir               *pkgdir;
     const struct pkgdir_module  *mod;
     unsigned                    saved_flags;
-    tn_array                    *pkgs;
 
     n_assert(type);
     if ((mod = find_module(type)) == NULL)
@@ -503,13 +502,10 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     else
         pkgdir->path = n_strdup(idxpath);
 
-
-
     pkgdir->idxpath = n_strdup(idxpath);
     if (compr == NULL)
         compr = pkgdir_type_default_compr(type);
     pkgdir->compr = compr ? n_strdup(compr) : NULL;
-    pkgdir->pkgs = pkgs = pkgs_array_new_ex(2048, pkg_strcmp_name_evr_rev);
 
     pkgdir->mod = mod;
     pkgdir->type = mod->name;   /* just reference */
@@ -527,8 +523,11 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
             return NULL;
         }
     }
-    n_assert(pkgdir->pkgs == pkgs);
     n_assert((pkgdir->flags & saved_flags) == saved_flags);
+
+    /* pkgdir->size set by mod->open */
+    int size = pkgdir->size > 0 ? pkgdir->size : 512;
+    pkgdir->pkgs = pkgs_array_new_ex(size, pkg_strcmp_name_evr_rev);
 
     if (pkgdir->langs && n_array_size(pkgdir->langs) == 0) {
         n_array_free(pkgdir->langs);

@@ -46,6 +46,7 @@
 #include "pkgfl.h"
 #include "pkgroup.h"
 #include "pkgmisc.h"
+#include "tags.h"
 
 struct pkg_data {
     off_t             off_nodep_files;  /* no dep files offset in index */
@@ -437,7 +438,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     }
 
     vlen = 8192;
-    vlen = 256;
     vlen_max = vlen;
     val = n_malloc(vlen);
     if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
@@ -446,15 +446,14 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         goto l_end;
     }
 
-    if (strcmp(key, pndir_tag_hdr) != 0) {
+    if (!hdr_eq(key, pndir_tag_hdr)) {
         logn(LOGERR, _("%s: not a poldek index file, %s"),
              pkgdir->idxpath, val);
         nerr++;
         goto l_end;
     }
 
-
-    while (strcmp(key, pndir_tag_endhdr) != 0) {
+    while (!hdr_eq(key, pndir_tag_endhdr)) {
         if (vlen < vlen_max)   /* to avoid needless tndb_it_rget()'s reallocs */
             vlen = vlen_max;
         else
@@ -466,7 +465,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             goto l_end;
         }
 
-        if (strcmp(key, pndir_tag_opt) == 0) {
+        if (hdr_eq(key, pndir_tag_opt)) {
             tn_array *opts = parse_depdirs(val);
             int i;
 
@@ -483,28 +482,28 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             }
             n_array_free(opts);
 
-        } else if (strcmp(key, pndir_tag_ts) == 0) {
+        } else if (hdr_eq(key, pndir_tag_ts)) {
             if (sscanf(val, "%lu", &ts) != 1) {
                 logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts);
                 nerr++;
                 goto l_end;
             }
 
-        } else if (strcmp(key, pndir_tag_ts_orig) == 0) {
+        } else if (hdr_eq(key, pndir_tag_ts_orig)) {
             if (sscanf(val, "%lu", &ts_orig) != 1) {
                 logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts_orig);
                 nerr++;
                 goto l_end;
             }
 
-        } else if (strcmp(key, pndir_tag_removed) == 0) {
+        } else if (hdr_eq(key, pndir_tag_removed)) {
             n_assert(pkgdir->removed_pkgs == NULL);
             pkgdir->removed_pkgs = parse_removed(val);
 
-        } else if (strcmp(key, pndir_tag_langs) == 0) {
+        } else if (hdr_eq(key, pndir_tag_langs)) {
             parse_avlangs(val, pkgdir);
 
-        } else if (strcmp(key, pndir_tag_pkgroups) == 0) {
+        } else if (hdr_eq(key, pndir_tag_pkgroups)) {
             tn_buf *nbuf;
             tn_buf_it group_it;
 
@@ -514,7 +513,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             pkgdir->pkgroups = pkgroup_idx_restore(&group_it, 0);
             n_buf_free(nbuf);
 
-        } else if (strcmp(key, pndir_tag_depdirs) == 0) {
+        } else if (hdr_eq(key, pndir_tag_depdirs)) {
             n_assert(pkgdir->depdirs == NULL);
             pkgdir->depdirs = parse_depdirs(val);
         }
@@ -522,6 +521,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 
     pkgdir->flags |= pkgdir_flags;
     pkgdir->ts = ts;
+    pkgdir->size = tndb_size(idx.db);
     pkgdir->orig_ts = ts_orig;
     if (ts_orig)
         pkgdir->flags |= PKGDIR_DIFF;

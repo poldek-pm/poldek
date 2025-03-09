@@ -45,6 +45,7 @@
 #include "pkgmisc.h"
 #include "pkgroup.h"
 #include "pndir.h"
+#include "tags.h"
 
 static const char *pndir_DEFAULT_ARCH = "noarch";
 static const char *pndir_DEFAULT_OS = "linux";

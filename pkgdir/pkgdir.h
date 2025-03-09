@@ -61,6 +61,7 @@ struct pkgdir {
     struct pkgroup_idx  *pkgroups;
     unsigned            flags;            /* PKGDIR_* */
     time_t              ts;               /* timestamp */
+    size_t              size;             /* no. of packages */
 
     tn_array            *removed_pkgs;    /* for diffs, removed packages */
     time_t              orig_ts;          /* for pathes, ts of .orig idx */
@@ -76,6 +77,7 @@ struct pkgdir {
     struct source       *src;            /* reference to its source (if any) */
     unsigned            _ldflags;        /* internal, to remember ldflags    */
     tn_alloc            *na;
+
     const struct pkgdir_module  *mod;
     void                        *mod_data;
 };
