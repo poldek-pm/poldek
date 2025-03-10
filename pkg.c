@@ -61,10 +61,17 @@ static pthread_mutex_t arch_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t os_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
+static struct an_arch *last_arch = NULL;
+
 static
 int pkgmod_register_arch(const char *arch)
 {
     struct an_arch *an_arch;
+
+    an_arch = __atomic_load_n(&last_arch, __ATOMIC_RELAXED);
+    if (an_arch && strcmp(an_arch->arch, arch) == 0) {
+        return an_arch->index;
+    }
 
     mutex_lock(&arch_mutex);
 
@@ -95,6 +102,8 @@ int pkgmod_register_arch(const char *arch)
         an_arch->index = n_array_size(architecture_a);
         n_assert(an_arch->index < UINT16_MAX);
         n_hash_insert(architecture_h, an_arch->arch, an_arch);
+
+        __atomic_store_n(&last_arch, an_arch, __ATOMIC_RELAXED);
     }
 
     mutex_unlock(&arch_mutex);
@@ -109,6 +118,7 @@ const char *pkg_arch(const struct pkg *pkg)
         n_assert(a);
         return a->arch;
     }
+
     return NULL;
 }
 
@@ -135,10 +145,17 @@ struct an_os {
     char os[0];
 };
 
+static struct an_os *last_os = NULL;
+
 static
 int pkgmod_register_os(const char *os)
 {
     struct an_os *an_os;
+
+    an_os = __atomic_load_n(&last_os, __ATOMIC_RELAXED);
+    if (an_os && strcmp(an_os->os, os) == 0) {
+        return an_os->index;
+    }
 
     mutex_lock(&os_mutex);
 
@@ -162,6 +179,8 @@ int pkgmod_register_os(const char *os)
         /* +1 in fact; 0 means no os */
         an_os->index = n_array_size(operatingsystem_a);
         n_hash_insert(operatingsystem_h, an_os->os, an_os);
+
+        __atomic_store_n(&last_os, an_os, __ATOMIC_RELAXED);
     }
 
     mutex_unlock(&os_mutex);
@@ -220,10 +239,10 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 
     if (fn && arch) {           /* compare filename with "standard" name */
         //fn = n_basenam(fn);
-        n_snprintf(pkg_fn, sizeof(pkg_fn), "%s-%s-%s.%s.rpm", name,
-                   version, release, arch);
+        int n = n_snprintf(pkg_fn, sizeof(pkg_fn), "%s-%s-%s.%s.rpm", name,
+                           version, release, arch);
         //printf("cmp %s %s\n", pkg_fn, fn);
-        if (strcmp(pkg_fn, fn) == 0)
+        if (strncmp(pkg_fn, fn, n) == 0)
             fn = NULL;
         else {
             fn_len = strlen(fn);
@@ -237,10 +256,10 @@ struct pkg *pkg_new_ext(tn_alloc *na,
             srcfn = NULL;
 
         else {
-            n_snprintf(pkg_srcfn, sizeof(pkg_srcfn), "%s-%s-%s.src.rpm", name,
-                       version, release);
+            int n = n_snprintf(pkg_srcfn, sizeof(pkg_srcfn), "%s-%s-%s.src.rpm", name,
+                               version, release);
 
-            if (strcmp(pkg_srcfn, srcfn) == 0)
+            if (strncmp(pkg_srcfn, srcfn, n) == 0)
                 srcfn = NULL;
         }
 
