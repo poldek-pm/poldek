@@ -357,9 +357,9 @@ struct pkgroup_idx *pkgroup_idx_new(void)
     struct pkgroup_idx *idx;
 
     idx = n_malloc(sizeof(*idx));
-    idx->ht = n_hash_new(101, NULL);
+    idx->ht = n_hash_new(512, NULL);
     n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
-    idx->arr = n_array_new(128, (tn_fn_free)pkgroup_free,
+    idx->arr = n_array_new(256, (tn_fn_free)pkgroup_free,
                            (tn_fn_cmp)pkgroup_cmp);
     idx->_refcnt = 0;
 
