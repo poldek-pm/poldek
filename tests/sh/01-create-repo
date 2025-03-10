@@ -91,25 +91,30 @@ testNonDefaultName()
     msgn "$Case_g"
     poldek="$POLDEK_NOCONF"
 
+    msgn "1"
     $poldek -s $REPO --mkidx=$TMPDIR || fail "mkidx #1 failed"
     die_if_empty_index "$TMPDIR/packages.ndir$COMPR_EXT"
 
+    msgn "2"
     $poldek -s $REPO --mkidx=$TMPDIR/packages.foo.ndir$COMPR_EXT || fail "mkidx #2 failed"
     die_if_empty_index "$TMPDIR/packages.foo.ndir$COMPR_EXT"
 
+    msgn "3"
     $poldek --st pndir -s $TMP/packages.foo.ndir$COMPR_EXT \
             --mkidx=$TMP/packages.foo2.ndir$COMPR_EXT --mt pndir || fail "mkidx #3 failed"
 
     die_if_empty_index "$TMP/packages.foo2.ndir$COMPR_EXT"
 
     setUp
+    msgn "4"
     $poldek -s $REPO --mkidx --mt pndir || fail "mkidx #4 failed"
 
-
+    msgn "5"
     poldek="$POLDEK_UP -Ovfile_retries=1"
-    $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR fail "mkidx #5 failed"
+    $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR || fail "mkidx #5 failed"
     die_if_empty_index "$TMPDIR/packages.ndir$COMPR_EXT"
 
+    msgn "6"
     $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR/packages.foo.ndir$COMPR_EXT || fail "mkidx #6 failed"
     die_if_empty_index "$TMPDIR/packages.foo.ndir$COMPR_EXT"
 }

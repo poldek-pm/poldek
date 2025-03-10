@@ -100,9 +100,10 @@ oneTimeSetUp() {
 
     PATH="$PATH:$PWD/sh/lib/"
 
-    POLDEK="$PWD/../cli/poldek $QUIET"
+    POLDEK="$PWD/../cli/poldek"
     $POLDEK --version >/dev/null; # produce .libs/lt-poldek
-    POLDEK="$PWD/../cli/.libs/lt-poldek $QUIET"
+
+    POLDEK="$PWD/../cli/.libs/lt-poldek"
     POLDEK_NOCONF="$POLDEK --noconf -Ovfile_retries=1 --cachedir $CACHEDIR"
     POLDEK_UP="$POLDEK --conf ./sh/lib/vftest-fetch.conf --cachedir $CACHEDIR"
 

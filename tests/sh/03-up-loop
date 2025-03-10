@@ -6,11 +6,11 @@
 . ./sh/lib/compr-setup
 
 mkidx() {
-   $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+   $POLDEK_NOCONF $QUIET -s $REPO --mkidx --mt pndir || fail "mkidx failed"
 }
 
 up() {
-   $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up
+   $POLDEK_UP $QUIET -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up
 }
 
 load() {
@@ -32,6 +32,7 @@ load() {
   # check if changelogs are available (related to github#6)
   packages=$($POLDEK_UP -q --skip-installed -Osource="test,type=pndir $REPOURL" -n test \
                             --cmd ls --qf '%{NAME}\n')
+
   $POLDEK_UP -q --skip-installed -Osource="test,type=pndir $REPOURL" -n test --cmd 'desc -L *' > $TMPDIR/changelogs
   for p in $packages; do
       grep -qP "^\- $p package changelog entry" $TMPDIR/changelogs
