@@ -75,4 +75,20 @@ void timethis_end(int verbose_level, void *tvp, const char *prefix);
 
 char *strtime_(time_t t);
 
+
+#ifndef WITH_TIMETHIS
+# define tt_start
+# define tt_stop(name) (void)name
+
+#elif HAVE_GETTIMEOFDAY
+#include <sys/time.h>
+static inline double __tt_get() {
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    return t.tv_sec + t.tv_usec*1e-6;
+}
+# define tt_start double __tt0 = __tt_get()
+# define tt_stop(name) do { if (!poldek__is_in_testing_mode()) printf("[%s] %fs\n", name, __tt_get() - __tt0); } while (0)
+#endif
+
 #endif /* POLDEK_MISC_H */
