@@ -161,8 +161,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
     int i, j;
     unsigned openflags = 0;
-    void *t = timethis_begin();
 
+    tt_start;
     n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_pri);
 
     if (ldflags & PKGDIR_LD_ALLDESC)
@@ -235,7 +235,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                          "%d packages read", n), n);
     }
 
-    timethis_end(4, t, "ps.load");
+    tt_stop("ps.load");
 
     return n_array_size(ps->pkgs);
 }

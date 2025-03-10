@@ -180,11 +180,10 @@ static int index_package_reqs(struct pkgset *ps, const struct pkg *pkg)
 
 int pkgset__index_caps(struct pkgset *ps)
 {
-    void *t = timethis_begin();
-
     if (ps->cap_idx.na != NULL)
         return 1;
 
+    tt_start;
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
 
@@ -197,8 +196,7 @@ int pkgset__index_caps(struct pkgset *ps)
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         index_package_caps(ps, pkg);
     }
-
-    timethis_end(4, t, "ps.index");
+    tt_stop("ps.index.caps");
 
 #if ENABLE_TRACE
     extern void capreq_idx_stats(const char *prefix, struct capreq_idx *idx);
@@ -213,6 +211,7 @@ int pkgset__index_reqs(struct pkgset *ps)
     if (ps->req_idx.na != NULL)
         return 1;
 
+    tt_start;
     capreq_idx_init(&ps->req_idx,  CAPREQ_IDX_REQ, 8 * n_array_size(ps->pkgs));
     capreq_idx_init(&ps->obs_idx,  CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
     capreq_idx_init(&ps->cnfl_idx, CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
@@ -220,7 +219,7 @@ int pkgset__index_reqs(struct pkgset *ps)
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         index_package_reqs(ps, pkg);
     }
-
+    tt_stop("ps.index.reqs");
     return 1;
 }
 
