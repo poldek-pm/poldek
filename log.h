@@ -42,6 +42,7 @@
 
 EXPORT int poldek_verbose(void);
 EXPORT int poldek_set_verbose(int v);
+EXPORT int poldek_up_verbose(void);
 #ifdef POLDEK_LOG_H_INTERNAL
 EXPORT int poldek_VERBOSE;
 EXPORT int poldek_TRACE;

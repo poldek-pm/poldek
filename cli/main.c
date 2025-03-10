@@ -247,7 +247,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'v':
-            poldek_set_verbose(poldek_VERBOSE + 1);
+            poldek_up_verbose();
             break;
 
         case OPT_NOCONF:
@@ -452,6 +452,15 @@ static void args_init(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 }
 
 
+static void preset_quiet(int argc, char **argv)
+{
+    for (int i=0; i < argc; i++) {
+        if (strcmp(argv[i], "--quiet") == 0 || strcmp(argv[i], "-q") == 0) {
+            poldek_set_verbose(-1);
+        }
+    }
+}
+
 static
 void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                    int argc, char **argv, int mode)
@@ -459,6 +468,9 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     struct argp argp = { common_options, parse_opt, args_doc, 0, 0, 0, 0 };
     int n, i, index, hide_child_opts = 0;
     struct argp_child *child;
+
+    poldek_set_verbose(0);
+    preset_quiet(argc, argv); /* be quiet early (w/o for -v ... -q) */
 
     args_init(cctx, ts, argc, argv, mode);
 
@@ -488,8 +500,6 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 #endif
 
     argp_prepare_child_options(&argp, hide_child_opts);
-
-    poldek_set_verbose(0);
 
     index = 0;
     argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &g_args);

@@ -131,12 +131,20 @@ int poldek_set_verbose(int v)
     int vv = poldek_VERBOSE;
     poldek_VERBOSE = v;
 
+
     if ((p = getenv("POLDEK_TRACE")) && *p && *p != '0')
         poldek_TRACE = 1;
 
     return vv;
 }
 
+int poldek_up_verbose(void)
+{
+    if (poldek_VERBOSE >= 0)
+        poldek_set_verbose(poldek_VERBOSE + 1);
+
+    return poldek_verbose();
+}
 
 void poldek_log(int pri, const char *fmt, ...)
 {
