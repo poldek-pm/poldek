@@ -83,25 +83,6 @@ int pndir_digest_calc(struct pndir_digest *pdg, tn_array *keys);
 int pndir_digest_calc_pkgs(struct pndir_digest *pdg, tn_array *pkgs);
 int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
                       const struct pkgdir *pkgdir);
-/*
-extern const char pndir_packages_incdir[];
-extern const char pndir_difftoc_suffix[];
-extern const char pndir_extension[];
-extern const char pndir_desc_suffix[];
-
-extern const char pndir_poldeksindex[];
-extern const char pndir_poldeksindex_toc[];
-
-extern const char pndir_tag_hdr[];
-extern const char pndir_tag_depdirs[];
-extern const char pndir_tag_pkgroups[];
-extern const char pndir_tag_langs[];
-extern const char pndir_tag_ts[];
-extern const char pndir_tag_ts_orig[];
-extern const char pndir_tag_opt[];
-extern const char pndir_tag_removed[];
-extern const char pndir_tag_endhdr[];
-*/
 
 int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg);
 struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg);

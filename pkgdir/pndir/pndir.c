@@ -437,7 +437,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         goto l_end;
     }
 
-    vlen = 8192;
+    vlen = 1024;
     vlen_max = vlen;
     val = n_malloc(vlen);
     if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
@@ -482,16 +482,16 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             }
             n_array_free(opts);
 
-        } else if (hdr_eq(key, pndir_tag_ts)) {
-            if (sscanf(val, "%lu", &ts) != 1) {
-                logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts);
+        } else if (hdr_eq(key, pndir_tag_ts_orig)) {
+            if (sscanf(val, "%lu", &ts_orig) != 1) {
+                logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts_orig);
                 nerr++;
                 goto l_end;
             }
 
-        } else if (hdr_eq(key, pndir_tag_ts_orig)) {
-            if (sscanf(val, "%lu", &ts_orig) != 1) {
-                logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts_orig);
+        } else if (hdr_eq(key, pndir_tag_ts)) {
+            if (sscanf(val, "%lu", &ts) != 1) {
+                logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts);
                 nerr++;
                 goto l_end;
             }
