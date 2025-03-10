@@ -107,24 +107,23 @@ EXPORT extern__inline int32_t capreq_epoch_(const struct capreq *cr);
                           (((uint8_t)~cnfl->cr_relflags) & REL_ALL) : (cr)->cr_relflags)
 
 EXPORT struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
-                              int32_t relflags, int32_t flags);
+                                     int32_t relflags, int32_t flags);
 
 EXPORT struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
-                          const char *version, const char *release,
-                          int32_t relflags, int32_t flags);
+                                 const char *version, const char *release,
+                                 int32_t relflags, int32_t flags);
 #ifndef SWIG
-EXPORT const tn_lstr16 *capreq__alloc_name(const char *name, size_t len);
 #define capreq_new_name_a(nam, crptr)                              \
     {                                                              \
         struct capreq *__cr;                                       \
-        const tn_lstr16 *ent;                                      \
-        ent = capreq__alloc_name(nam, strlen(nam));                \
-        __cr = alloca(sizeof(*__cr) + 2);                          \
+        int __len = strlen(nam);                                   \
+        __cr = alloca(sizeof(*__cr) + __len + 2);                  \
         __cr->cr_flags = __cr->cr_relflags = 0;                    \
         __cr->cr_ep_ofs = __cr->cr_ver_ofs = __cr->cr_rel_ofs = 0; \
         __cr->_buff[0] = '\0';                                     \
-        __cr->name = ent->str;                                     \
-        __cr->namelen = ent->len;                                  \
+        memcpy(&__cr->_buff[1], nam, __len + 1);                   \
+        __cr->name = &__cr->_buff[1];                              \
+        __cr->namelen = __len;                                     \
         crptr = __cr;                                              \
     }
 

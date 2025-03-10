@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <trurl/nhash.h>
+#include <trurl/noash.h>
 #include <trurl/nmalloc.h>
 
 #define CAPREQ_IDX_CAP (1 << 0)
@@ -22,7 +23,7 @@
 
 struct capreq_idx {
     unsigned flags;
-    tn_hash  *ht;       /* name => *pkgs[] */
+    tn_oash  *ht;       /* name => *pkgs[] */
     tn_alloc *na;
 };
 

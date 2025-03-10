@@ -40,8 +40,8 @@ int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)
 
     MEMINF("START");
     idx->na = n_alloc_new(4, TN_ALLOC_OBSTACK);
-    idx->ht = n_hash_new_na(idx->na, nelem, (tn_fn_free)capreq_ent_free);
-    n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
+    idx->ht = n_oash_new_na(idx->na, nelem, (tn_fn_free)capreq_ent_free);
+    n_oash_ctl(idx->ht, TN_HASH_NOCPKEY);
     MEMINF("END");
     return 1;
 }
@@ -49,7 +49,7 @@ int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)
 
 void capreq_idx_destroy(struct capreq_idx *idx)
 {
-    n_hash_free(idx->ht);
+    n_oash_free(idx->ht);
     n_alloc_free(idx->na);
     memset(idx, 0, sizeof(*idx));
 }
@@ -108,31 +108,27 @@ static inline int idx_ent_contains(struct capreq_idx_ent *ent, const struct pkg 
 
 /* avoid to index caps (about 150k index entries for TH) */
 /* a) path-based requirements from docs dirs */
-const char *skip_PREFIXES[] = {
+const char skip_PREFIXES[][20] = {
     "/usr/share/doc",
     "/usr/share/info",
     "/usr/share/man",
     "/usr/share/locale",
-    "/usr/share/icons",
-    NULL
+    "/usr/share/icons"
 };
 
-int skip_LENGTHS[] = {
-    0,
-    0,
-    0,
-    0,
-    0
-};
+int skip_LENGTHS[sizeof(skip_PREFIXES) / sizeof(skip_PREFIXES[0])] = { 0 };
 
 /* b) well-known FHS directories and some generic rpm specific caps */
-const char *skip_CAPS[] = {
-    "/etc", "/bin",
-    "/usr/bin", "/usr/sbin", "/usr/lib",
-    "/usr/share", "/usr/include",
+const char skip_CAPS[][16] = {
+    "/etc",
+    "/bin",
+    "/usr/bin",
+    "/usr/sbin",
+    "/usr/lib",
+    "/usr/share",
+    "/usr/include",
     "elf(buildid)",
-    "rtld(GNU_HASH)",
-    NULL
+    "rtld(GNU_HASH)"
 };
 
 tn_hash *skip_CAPS_H = NULL;
@@ -147,13 +143,16 @@ static void skip_CAPS_free(void) {
 inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
 {
     if (!skip_CAPS_H) {
-        skip_CAPS_H = n_hash_new(128, NULL);
+        skip_CAPS_H = n_hash_new(32, NULL);
         n_hash_ctl(skip_CAPS_H, TN_HASH_NOCPKEY);
 
-        int i = 0;
-        while (skip_CAPS[i] != NULL) {
+        for (size_t i = 0; i < sizeof(skip_CAPS) / sizeof(skip_CAPS[0]); i++) {
             n_hash_insert(skip_CAPS_H, skip_CAPS[i], skip_CAPS[i]);
             i++;
+        }
+
+        for (size_t i = 0; i < sizeof(skip_PREFIXES) / sizeof(skip_PREFIXES[0]); i++) {
+            skip_LENGTHS[i] = strlen(skip_PREFIXES[i]);
         }
 
         atexit(skip_CAPS_free);
@@ -164,16 +163,10 @@ inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
         return 0;
 
     if (*name ==  '/') {
-        int i = 0;
-        const char *prefix;
-
-        while ((prefix = skip_PREFIXES[i]) != NULL) {
-            if (skip_LENGTHS[i] == 0)
-                skip_LENGTHS[i] = strlen(prefix);
-
-            if (strncmp(name, prefix, skip_LENGTHS[i]) == 0)
+        for (size_t i = 0; i < sizeof(skip_PREFIXES) / sizeof(skip_PREFIXES[0]); i++) {
+            if (strncmp(name, skip_PREFIXES[i], skip_LENGTHS[i]) == 0) {
                 return 0;
-
+            }
             i++;
         }
     }
@@ -181,11 +174,24 @@ inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
     return 1;
 }
 
+static int cap_is_owned_by_pkg(const char *capname, const struct pkg *pkg) {
+    int owned = 0;
+
+    if (pkg->caps && capreq_arr_contains(pkg->caps, capname))
+        owned = 1;
+    else if (pkg->reqs && capreq_arr_contains(pkg->reqs, capname))
+        owned = 1;
+    else if (pkg->cnfls && capreq_arr_contains(pkg->cnfls, capname))
+        owned = 1;
+
+    return owned;
+}
+
 int capreq_idx_add(struct capreq_idx *idx,
                    const char *capname, int capname_len,
                    const struct pkg *pkg)
 {
-    struct capreq_idx_ent *ent;
+
     uint32_t raw_khash = n_hash_compute_raw_hash(capname, capname_len);
 
     /* skip redundant/ needless requirements */
@@ -199,22 +205,27 @@ int capreq_idx_add(struct capreq_idx *idx,
             return 1;
     }
 
-    uint32_t khash = n_hash_compute_index_hash(idx->ht, raw_khash);
-    if ((ent = n_hash_hget(idx->ht, capname, capname_len, khash)) == NULL) {
-        const tn_lstr16 *cent = capreq__alloc_name(capname, capname_len);
-        ent = idx->na->na_malloc(idx->na, sizeof(*ent));
+    /* costly check */
+    /* n_assert(cap_is_owned_by_pkg(capname, pkg)); */
+
+    /* do not copy capname, it should be allocated by pkg */
+    void **entptr = n_oash_get_insert(idx->ht, capname, capname_len);
+    n_assert(entptr);
+
+    if (*entptr == NULL) {
+        struct capreq_idx_ent *ent = idx->na->na_malloc(idx->na, sizeof(*ent));
         ent->_size = 1;
         ent->items = 1;
         ent->pkg = (struct pkg*)pkg; /* XXX const */
-
-        n_hash_hinsert(idx->ht, cent->str, cent->len, khash, ent);
+        *entptr = ent;
 
 #if ENABLE_TRACE
-        if ((n_hash_size(idx->ht) % 1000) == 0)
-            n_hash_stats(idx->ht);
+        if ((n_oash_size(idx->ht) % 1000) == 0)
+            n_oash_stats(idx->ht);
 #endif
 
     } else {
+        struct capreq_idx_ent *ent = *entptr;
         if (ent->_size == 1) {    /* crent_pkgs is NOT allocated */
             ent_transform_to_array(ent);
 
@@ -259,7 +270,7 @@ void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
 {
     struct capreq_idx_ent *ent;
 
-    if ((ent = n_hash_get(idx->ht, capname)) == NULL)
+    if ((ent = n_oash_get(idx->ht, capname)) == NULL)
         return;
 
     if (ent->_size == 1) {      /* no crent_pkgs */
@@ -285,18 +296,18 @@ void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
 
 void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
 {
-    tn_array *keys = n_hash_keys(idx->ht);
+    tn_array *keys = n_oash_keys(idx->ht);
     int i, stats[100000];
-    tn_hash_it it;
+    tn_oash_it it;
     struct capreq_idx_ent *ent;
     const char *key;
 
-    n_hash_it_init(&it, idx->ht);
+    n_oash_it_init(&it, idx->ht);
     char path[1024];
     snprintf(path, sizeof(path), "/tmp/poldek_%s_stats.txt", prefix);
 
     FILE *f = fopen(path, "w");
-    while ((ent = n_hash_it_get(&it, &key)) != NULL) {
+    while ((ent = n_oash_it_get(&it, &key)) != NULL) {
         fprintf(f, "%d %s %s\n", ent->items, key, prefix);
     }
     fclose(f);
@@ -304,11 +315,11 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
     memset(stats, 0, sizeof(stats));
 
     for (i=0; i < n_array_size(keys); i++) {
-        ent = n_hash_get(idx->ht, n_array_nth(keys, i));
+        ent = n_oash_get(idx->ht, n_array_nth(keys, i));
         stats[ent->items]++;
     }
     n_array_free(keys);
-    printf("CAPREQ_IDX %s %d\n", prefix, n_hash_size(idx->ht));
+    printf("CAPREQ_IDX %s %d\n", prefix, n_oash_size(idx->ht));
 
     for (i=0; i < 100000; i++) {
         if (stats[i])
@@ -316,15 +327,14 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
     }
 }
 
-
 const
 struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
                                          const char *capname, int capname_len)
 {
     struct capreq_idx_ent *ent;
-    unsigned hash = n_hash_compute_hash(idx->ht, capname, capname_len);
+    unsigned hash = n_oash_compute_hash(idx->ht, capname, capname_len);
 
-    if ((ent = n_hash_hget(idx->ht, capname, capname_len, hash)) == NULL)
+    if ((ent = n_oash_hget(idx->ht, capname, capname_len, hash)) == NULL)
         return NULL;
 
     if (ent->items == 0)

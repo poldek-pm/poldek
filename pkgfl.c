@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include <trurl/trurl.h>
+#include <trurl/noash.h>
 
 #include "compiler.h"
 #include "i18n.h"
@@ -30,41 +31,6 @@
 #include "pkgfl.h"
 #include "depdirs.h"
 #include "misc.h"
-#include "thread.h"
-
-static tn_strdalloc *dirname_allocator = NULL;
-
-#ifdef ENABLE_THREADS
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
-
-static void dirname_allocator_free(void) {
-    if (dirname_allocator != NULL)
-        n_strdalloc_free(dirname_allocator);
-}
-
-static inline const char *register_dn(const char *name, size_t len)
-{
-    mutex_lock(&mutex);
-
-    if (dirname_allocator == NULL) {
-        dirname_allocator = n_strdalloc_new(1024, 0);
-        atexit(dirname_allocator_free);
-    }
-
-    const tn_lstr8 *s8 = n_strdalloc_add8(dirname_allocator, name, len);
-
-    mutex_unlock(&mutex);
-    return s8->str;
-}
-
-#if 0                           /* for testing */
-const char *XXXregister_dn(const char *name, size_t len) {
-    char *s = malloc(len + 1);
-    n_strncpy(s, name, len + 1);
-    return s;
-}
-#endif
 
 struct flfile *flfile_new(tn_alloc *na, uint32_t size, uint16_t mode,
                           const char *basename, int blen,
@@ -270,7 +236,9 @@ struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
     flent = na->na_malloc(na, sizeof(*flent)+(nfiles * sizeof(struct flfile*)));
     dirname = prepare_dirname(dirname, &dirname_len);
 
-    flent->dirname = (char *)register_dn(dirname, dirname_len);
+    n_assert(dirname_len < UINT8_MAX);
+    const tn_str8 *ent = na->na_alloc_str8(na, dirname, dirname_len);
+    flent->dirname = (char *)ent->str;
     flent->items = 0;
     DBGF("flent_new %s %d\n", flent->dirname, nfiles);
     return flent;

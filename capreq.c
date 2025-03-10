@@ -29,11 +29,6 @@
 #include "misc.h"
 #include "pkgmisc.h"
 #include "pkg_ver_cmp.h"
-#include "thread.h"
-
-#ifdef ENABLE_THREADS
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
 
 /* utilize rel_flags as it have 5 bits unused */
 #define __SPLITTED   (1 << 7) /* same as __NAALLOC (runtime only flag) */
@@ -46,40 +41,6 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int capreq_store(struct capreq *cr, tn_buf *nbuf);
 static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitted);
-
-static tn_strdalloc *capname_allocator = NULL;
-
-static void capname_allocator_free(void) {
-    if (capname_allocator != NULL)
-        n_strdalloc_free(capname_allocator);
-}
-
-const tn_lstr16 *capreq__alloc_name(const char *name, size_t len)
-{
-    mutex_lock(&mutex);
-    if (capname_allocator == NULL) {
-        capname_allocator = n_strdalloc_new(1024 * 128, 0);
-        atexit(capname_allocator_free);
-    }
-
-    const tn_lstr16 *s = n_strdalloc_add16(capname_allocator, name, len);
-
-    mutex_unlock(&mutex);
-
-    return s;
-}
-
-#if 0                           /* experiments */
-const tn_lstr16 *XXXcapreq__alloc_name(const char *name, size_t len) {
-    //mutex_lock(&mutex);
-    tn_lstr16 *ent16 = malloc(sizeof(*ent16) + len + 1);
-    ent16->len = len;
-    n_strncpy(ent16->str, name, len + 1);
-    //mutex_unlock(&mutex);
-    return ent16;
-}
-#endif
-
 
 void capreq_free_na(tn_alloc *na, struct capreq *cr)
 {
@@ -340,7 +301,10 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         name_len = strlen(name);
     }
 
-    len = 1; // + name_len + 1;
+    len = 1;
+    if (na == NULL) {           /* then copy name into _buf */
+        len += name_len + 1;
+    }
 
     if (epoch) {
         if (version == NULL)
@@ -371,19 +335,24 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
     else
         cr = n_malloc(sizeof(*cr) + len);
 
-    cr->cr_flags = cr->cr_relflags = 0;
-    cr->cr_ep_ofs = cr->cr_ver_ofs = cr->cr_rel_ofs = 0;
-
-    const tn_lstr16 *ent = capreq__alloc_name(name, name_len);
-    cr->name = ent->str;
-    cr->namelen = ent->len;
-
     buf = cr->_buff;
     *buf++ = '\0';          /* set buf[0] to '\0' */
 
-    //memcpy(buf, name, name_len);
-    //buf += name_len;
-    //*buf++ = '\0';
+    cr->cr_flags = cr->cr_relflags = 0;
+    cr->cr_ep_ofs = cr->cr_ver_ofs = cr->cr_rel_ofs = 0;
+
+    if (na) {
+        /* string dedup alloc */
+        if (name_len > UINT8_MAX) {
+            const tn_str16 *ent = na->na_alloc_str16(na, name, name_len);
+            cr->name = ent->str;
+            cr->namelen = ent->len;
+        } else {
+            const tn_str8 *ent = na->na_alloc_str8(na, name, name_len);
+            cr->name = ent->str;
+            cr->namelen = ent->len;
+        }
+    }
 
     if (epoch) {
         cr->cr_ep_ofs = buf - cr->_buff;
@@ -405,6 +374,14 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         *buf++ = '\0';
     }
 
+    if (na == NULL) {                  /* put name at buffer end */
+        memcpy(buf, name, name_len);
+        cr->name = buf;
+        cr->namelen = name_len;
+        buf += name_len;
+        *buf++ = '\0';
+    }
+
     cr->cr_relflags = relflags;
     cr->cr_flags = flags;
     if (isrpmreq)
@@ -415,7 +392,6 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
 
     return cr;
 }
-
 
 struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
                               int32_t relflags, int32_t flags)
@@ -429,24 +405,25 @@ struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
     return capreq_new(na, name, epoch, version, release, relflags, flags);
 }
 
+#define malloced(cr) (cr->cr_relflags & __NAALLOC) == 0
+
 struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr)
 {
     uint8_t size;
     struct capreq *newcr;
 
-    size = capreq_sizeof(cr);
-    if (na)
-        newcr = na->na_malloc(na, size);
-    else
+    if (malloced(cr) && na == NULL) {
+        size = capreq_sizeof(cr) + cr->namelen + 1;
         newcr = n_malloc(size);
+        memcpy(newcr, cr, size);
+        newcr->name = &newcr->_buff[capreq_bufsize(newcr)];
+        n_assert(*newcr->name == *cr->name);
+        return newcr;
+    }
 
-    memcpy(newcr, cr, size);
-    if (na)
-        newcr->cr_relflags |= __NAALLOC;
-    else
-        newcr->cr_relflags &= ~(__NAALLOC);
-
-    return newcr;
+    return capreq_new(na, capreq_name(cr),
+                      capreq_epoch(cr), capreq_ver(cr), capreq_rel(cr),
+                      cr->cr_relflags, cr->cr_flags & ~(REL_RT_FLAGS));
 }
 
 int32_t capreq_epoch_(const struct capreq *cr)
@@ -519,7 +496,7 @@ static tn_array *split_capreq(struct capreq *cr, int actual_store_size)
     unsigned namelen = cr->namelen;
     char *name;
 
-    n_strdupapl(cr->name, namelen, &name);
+    n_strdupapl(capreq_name(cr), namelen, &name);
     n_assert(strlen(name) == namelen);
 
     tn_array *parts = capreq_arr_new(2);
@@ -595,7 +572,7 @@ static int capreq_store(struct capreq *cr, tn_buf *nbuf)
     bufsize = capreq_bufsize(cr) - 1; /* without last '\0' */
     size = sizeof(cr_buf) + bufsize;
 
-    const char *cr_name = cr->name;
+    const char *cr_name = capreq_name(cr);
     uint16_t cr_namelen = cr->namelen;
 
     if (size + cr_namelen + 1 > UINT8_MAX) { /* over pndir UINT8_MAX limit */
@@ -658,7 +635,7 @@ static int capreq_store(struct capreq *cr, tn_buf *nbuf)
     return 1;
 }
 
-static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitted)
+static struct capreq *capreq_restore_na(tn_alloc *na, tn_buf_it *nbufi, int *splitted)
 {
     struct capreq *cr;
     register int i;
@@ -678,7 +655,6 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitt
 
     buff++;                     /* skip '\0' */
     size--;
-
     if ((p = memchr(buff, '\0', size))) { /* versioned? */
         name = buff;
         name_len = p - buff;
@@ -687,17 +663,14 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitt
 
     } else {
         unsigned char *s = alloca(size + 1);
-        memcpy(s, buff, size);
+        memcpy(s, buff, size);  /* would be nice w/o memcpy */
         s[size] = '\0';
         name = s;
         name_len = size;
         size = 0;
     }
 
-    if (na)
-        cr = na->na_malloc(na, sizeof(*cr) + size + 1);
-    else
-        cr = n_malloc(sizeof(*cr) + size + 1);
+    cr = na->na_malloc(na, sizeof(*cr) + size + 1);
 
     cr->cr_relflags = cr_buf[0];
 
@@ -711,6 +684,7 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitt
         cr->cr_relflags &= ~__SPLITTED;
     }
 
+    cr->cr_relflags |= __NAALLOC;
     cr->cr_flags = cr_buf[1];
 
     for (i=2; i < 5; i++) {
@@ -722,13 +696,17 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitt
     cr->cr_ver_ofs  = cr_buf[3];
     cr->cr_rel_ofs  = cr_buf[4];
 
-    const tn_lstr16 *ent = capreq__alloc_name((const char *)name, name_len);
-    n_assert(name_len == ent->len);
-    cr->name = ent->str;
-    cr->namelen = ent->len;
-
-    if (na)
-        cr->cr_relflags |= __NAALLOC;
+    if (name_len > UINT8_MAX) {
+        const tn_str16 *ent = na->na_alloc_str16(na, (const char *)name, name_len);
+        n_assert(name_len == ent->len);
+        cr->name = ent->str;
+        cr->namelen = ent->len;
+    } else {
+        const tn_str8 *ent = na->na_alloc_str8(na, (const char *)name, name_len);
+        n_assert(name_len == ent->len);
+        cr->name = ent->str;
+        cr->namelen = ent->len;
+    }
 
     cr->_buff[0] = '\0';
     if (size) {
@@ -748,6 +726,98 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitt
     //          strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
 
     return cr;
+}
+
+static struct capreq *capreq_restore_wo_na(tn_buf_it *nbufi, int *splitted)
+{
+    struct capreq *cr;
+    register int i;
+    uint8_t size = 0, *cr_buf, *buff;
+    uint8_t phcr_buf[5];          /* placeholder,  for sizeof */
+    unsigned char *p, *name = NULL;
+    size_t name_len = 0;
+
+    n_buf_it_get_int8(nbufi, &size);
+
+    cr_buf = n_buf_it_get(nbufi, sizeof(phcr_buf));
+    if (cr_buf == NULL)
+        return NULL;
+
+    size -= sizeof(phcr_buf);
+    buff = n_buf_it_get(nbufi, size);
+
+    cr = n_malloc(sizeof(*cr) + size + 1);
+    cr->cr_relflags = cr_buf[0];
+
+    if (splitted)
+        *splitted = 0;
+
+    if (cr->cr_relflags & __SPLITTED) {
+        if (splitted)
+            *splitted = 1;
+
+        cr->cr_relflags &= ~__SPLITTED;
+    }
+
+    cr->_buff[0] = '\0';
+    buff++;                     /* skip leading zero */
+    size--;
+
+    if (!capreq_versioned(cr)) {
+        memcpy(&cr->_buff[1], buff, size);
+        cr->_buff[1 + size] = '\0';
+
+        cr->name = &cr->_buff[1];
+        cr->namelen = size;
+
+    } else {
+        p = memchr(buff, '\0', size); /* end of name */
+        n_assert(p);
+
+        name = buff;
+        name_len = p - buff;
+
+        buff = p + 1;
+        size -= (name_len + 1);
+
+        int n = 1;
+        memcpy(&cr->_buff[n], buff, size);
+        n += size;
+        cr->_buff[n++] = '\0';
+
+        memcpy(&cr->_buff[n], name, name_len); /* put name at buf's end */
+        cr->_buff[n + name_len] = '\0';
+
+        cr->name = &cr->_buff[n];
+        cr->namelen = name_len;
+    }
+
+    for (i=2; i < 5; i++) {
+        if (cr_buf[i])
+            cr_buf[i] -= cr->namelen + 1;
+    }
+
+    cr->cr_flags = cr_buf[1];
+    cr->cr_ep_ofs   = cr_buf[2];
+    cr->cr_ver_ofs  = cr_buf[3];
+    cr->cr_rel_ofs  = cr_buf[4];
+
+
+    if (cr->cr_ep_ofs) {
+        int32_t epoch = n_ntoh32(capreq_epoch(cr));
+        memcpy(&cr->_buff[cr->cr_ep_ofs], &epoch, sizeof(epoch));
+    }
+    DBGF("cr %s\n", capreq_snprintf_s(cr));
+
+    return cr;
+}
+
+static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitted)
+{
+    if (!na)
+        return capreq_restore_wo_na(nbufi, splitted);
+
+    return capreq_restore_na(na, nbufi, splitted);
 }
 
 int capreq_arr_store_n(tn_array *arr)
@@ -835,7 +905,7 @@ int capreq_arr_store(tn_array *arr, tn_buf *nbuf)
     return real_arr_size;
 }
 
-static struct capreq *restore_parts(struct capreq *cr, tn_buf_it *nbufi, int *splitted)
+static struct capreq *restore_parts(tn_alloc *na, struct capreq *cr, tn_buf_it *nbufi, int *splitted)
 {
     struct capreq *part = NULL;
     tn_buf *namebuf = n_buf_new(512);
@@ -844,7 +914,7 @@ static struct capreq *restore_parts(struct capreq *cr, tn_buf_it *nbufi, int *sp
     n_buf_write_z(namebuf, cr->name, cr->namelen);
 
     *splitted = 0;
-    while ((part = capreq_restore(NULL, nbufi, splitted))) {
+    while ((part = capreq_restore(na, nbufi, splitted))) {
         if ((part->cr_relflags & __PART) == 0) { /* regular capreq restored */
             break;
         }
@@ -859,7 +929,7 @@ static struct capreq *restore_parts(struct capreq *cr, tn_buf_it *nbufi, int *sp
     n_assert(nparts > 0);
 
     DBGF("restored from %d parts, size %d\n", nparts + 1, n_buf_size(namebuf));
-    const tn_lstr16 *ent = capreq__alloc_name(n_buf_ptr(namebuf), n_buf_size(namebuf));
+    const tn_str16 *ent = na->na_alloc_str16(na, n_buf_ptr(namebuf), n_buf_size(namebuf));
     cr->name = ent->str;
     cr->namelen = ent->len;
 
@@ -898,7 +968,7 @@ tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf)
         while (splitted) {
             DBGF("SPLITTED[%d of %d] %s\n", i, arr_size, cr->name);
 
-            struct capreq *part = restore_parts(cr, &nbufi, &splitted);
+            struct capreq *part = restore_parts(na, cr, &nbufi, &splitted);
             poldek_die_if(part == NULL && splitted, "%s", "null splitted occured");
 
             if (part) {
@@ -922,7 +992,6 @@ struct restore_struct {
     tn_alloc *na;
     tn_array *arr;
 };
-
 
 static int capreq_arr_restore_fn(tn_buf *nbuf, struct restore_struct *rs)
 {
