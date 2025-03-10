@@ -35,8 +35,6 @@ static int load_pkgdirs_seq(const tn_array *pkgdirs, const tn_array *depdirs, in
 {
     int re = 1;
 
-    printf("seqload\n");
-
     for (int i=0; i < n_array_size(pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(pkgdirs, i);
 
@@ -68,6 +66,7 @@ struct thread_info {
 static void *thread_load(void *thread_info) {
     struct thread_info *a = thread_info;
 
+    DBGF("thread %ld\n", pthread_self());
     if (!pkgdir_load(a->pkgdir, a->depdirs, a->ldflags)) {
         logn(LOGERR, _("%s: load failed"), a->pkgdir->idxpath);
     }
@@ -164,7 +163,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     unsigned openflags = 0;
     void *t = timethis_begin();
 
-    n_array_isort_ex(sources, (tn_fn_cmp)source_cmp_pri);
+    n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_pri);
 
     if (ldflags & PKGDIR_LD_ALLDESC)
 	openflags |= PKGDIR_OPEN_ALLDESC;
