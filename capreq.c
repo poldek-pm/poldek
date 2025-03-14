@@ -423,7 +423,7 @@ struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr)
 
     return capreq_new(na, capreq_name(cr),
                       capreq_epoch(cr), capreq_ver(cr), capreq_rel(cr),
-                      cr->cr_relflags, cr->cr_flags & ~(REL_RT_FLAGS));
+                      cr->cr_relflags & ~(REL_RT_FLAGS), cr->cr_flags);
 }
 
 int32_t capreq_epoch_(const struct capreq *cr)
