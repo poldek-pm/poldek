@@ -89,7 +89,7 @@ struct pkgtags_s {
 extern int pkg_restore_fields(tn_stream *st, struct pkg *pkg);
 
 static
-int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
+int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value, int value_len,
                 const char *pathname, off_t offs);
 
 static
@@ -221,6 +221,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     last_tag = 0;
     while ((nread = n_stream_gets(st, linebuf, sizeof(linebuf))) > 0) {
         char *p, *val, *line;
+        int val_len;
 
         offs = n_stream_tell(st);
         ul_offs = offs;         /* to satisfy printf() */
@@ -270,6 +271,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
         }
 
         val = eatws(val);
+        val_len = nread - (val - line);
 
         switch (tag) {
             case PKG_STORETAG_NAME:
@@ -284,7 +286,10 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                     goto l_end;
                 }
 
-                if (!add2pkgtags(&pkgt, tag, val, fn, offs)) {
+                /* costly check, when testing only */
+                //n_assert(val_len == strlen(val));
+
+                if (!add2pkgtags(&pkgt, tag, val, val_len, fn, offs)) {
                     nerr++;
                     goto l_end;
                 }
@@ -458,8 +463,9 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 
 
 #define sizeof_pkgt(memb) (sizeof((pkgt)->memb) - 1)
+
 static
-int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
+int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value, int value_len,
                 const char *pathname, off_t offs)
 {
     int err = 0;
@@ -472,7 +478,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                memcpy(pkgt->name, value, sizeof(pkgt->name)-1);
+                memcpy(pkgt->name, value, (int)sizeof(pkgt->name)-1);
                 pkgt->flags |= PKGT_HAS_NAME;
             }
             break;
@@ -482,8 +488,9 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                memcpy(pkgt->evr, value, sizeof(pkgt->evr)-1);
-                pkgt->evr[sizeof(pkgt->evr)-1] = '\0';
+                n_assert(value_len < (int)sizeof(pkgt->evr));
+                memcpy(pkgt->evr, value, value_len + 1);
+                pkgt->evr[value_len + 1] = '\0';
                 pkgt->flags |= PKGT_HAS_EVR;
             }
             break;
@@ -493,8 +500,9 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                memcpy(pkgt->arch, value, sizeof(pkgt->arch)-1);
-                pkgt->arch[sizeof(pkgt->arch)-1] = '\0';
+                n_assert(value_len < (int)sizeof(pkgt->arch));
+                memcpy(pkgt->arch, value, value_len + 1);
+                pkgt->arch[value_len + 1] = '\0';
                 pkgt->flags |= PKGT_HAS_ARCH;
             }
             break;
@@ -504,8 +512,9 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                memcpy(pkgt->os, value, sizeof(pkgt->os) - 1);
-                pkgt->os[ sizeof(pkgt->os) - 1 ] = '\0';
+                n_assert(value_len < (int)sizeof(pkgt->os));
+                memcpy(pkgt->os, value, value_len + 1);
+                pkgt->os[value_len + 1] = '\0';
                 pkgt->flags |= PKGT_HAS_OS;
             }
             break;
@@ -515,14 +524,16 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                memcpy(pkgt->fn, value, sizeof(pkgt->fn)-1);
+                n_assert(value_len < (int)sizeof(pkgt->fn));
+                memcpy(pkgt->fn, value, value_len + 1);
                 pkgt->flags |= PKGT_HAS_FN;
             }
             break;
 
         case PKG_STORETAG_SRCFN:
             n_assert((pkgt->flags & PKGT_HAS_SRCFN) == 0);
-            memcpy(pkgt->srcfn, value, sizeof(pkgt->srcfn)-1);
+            n_assert(value_len < (int)sizeof(pkgt->srcfn));
+            memcpy(pkgt->srcfn, value, value_len + 1);
             pkgt->flags |= PKGT_HAS_SRCFN;
             break;
 
