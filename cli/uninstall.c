@@ -120,18 +120,26 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct poclidek_opgroup_rt  *rt;
     struct poldek_ts            *ts;
-    struct cmdctx               cmdctx;
-
+    struct cmdl_arg_s           *arg_s;
 
     rt = state->input;
     ts = rt->ts;
     arg = arg;
 
-    cmdctx.ts = rt->ts;
+    if (rt->_opdata != NULL) {  /* TODO: is it really needed? */
+        arg_s = rt->_opdata;
+
+    } else {
+        arg_s = n_malloc(sizeof(*arg_s));
+        memset(arg_s, 0, sizeof(*arg_s));
+        arg_s->cmdctx.ts = rt->ts;
+        rt->_opdata = arg_s;
+        rt->_opdata_free = free;
+    }
 
     switch (key) {
         case ARGP_KEY_INIT:
-            state->child_inputs[0] = &cmdctx;
+            state->child_inputs[0] = &arg_s->cmdctx;
             state->child_inputs[1] = NULL;
             break;
 
