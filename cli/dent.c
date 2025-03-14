@@ -36,13 +36,14 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
                               struct pkg *pkg, int flags, const char *dirpath)
 {
     struct pkg_dent *ent;
-    int dirpath_at = 0, dirpath_len = 0, len = 0;
+    int name_len = 0, dirpath_at = 0, dirpath_len = 0, len = 0;
 
     if (name) {
         while (*name == '/')
             name++;
 
-        len += strlen(name) + 1;
+        name_len = strlen(name);
+        len += name_len + 1;
         n_assert(flags & PKG_DENT_DIR);
         n_assert(dirpath);
 
@@ -60,7 +61,7 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
     if (name) {
         char *p;
 
-        memcpy(ent->_buf, name, len);
+        memcpy(ent->_buf, name, name_len + 1);
         ent->name = ent->_buf;
 
         if (dirpath) {
