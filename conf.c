@@ -320,9 +320,12 @@ static char *eat_wws(char *s)
 
     p = strrchr(s, '\0'); /* eat trailing ws */
     n_assert(p);
-    p--;
-    while (isspace(*p))
-        *p-- = '\0';
+
+    if (p != s) {
+        p--;
+        while (isspace(*p))
+            *p-- = '\0';
+    }
 
     return s;
 }
