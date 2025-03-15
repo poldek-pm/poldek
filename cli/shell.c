@@ -258,7 +258,6 @@ static char *arg_generator(const char *text, int state, int genpackages)
 {
     int                  uprev = 0, upgradeable_mode = 0;
     static int           i, len;
-    const char           *name = NULL;
     tn_array             *ents;
     int                  completion_ctx = sh_ctx.completion_ctx;
 
@@ -291,9 +290,11 @@ static char *arg_generator(const char *text, int state, int genpackages)
                                        (tn_fn_cmp)pkg_dent_strncmp);
     }
 
+    const char *name = NULL;
+    char ent_path[PATH_MAX];
+
     while (i > -1 && i < n_array_size(ents)) {
         struct pkg_dent *ent = n_array_nth(ents, i++);
-        char ent_path[PATH_MAX];
         const char *path;
 
         if (genpackages) {
@@ -330,6 +331,7 @@ static char *arg_generator(const char *text, int state, int genpackages)
 
     if (name)
         return n_strdup(name);
+
     return NULL;
 }
 
