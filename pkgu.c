@@ -657,9 +657,6 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr, tn_array *loadlangs)
     pkgu->_ht = n_hash_new(3, NULL);
 
     if ((langs = pm_rpmhdr_langs(h))) {
-        tn_array *sl_langs = NULL;
-        char *lc_lang = NULL, *sl_lang = NULL;
-
         pm_rpmhdr_get_raw_entry(h, RPMTAG_SUMMARY, (void*)&summs, &nsumms);
         pm_rpmhdr_get_raw_entry(h, RPMTAG_DESCRIPTION, (void*)&descrs, &ndescrs);
 
@@ -690,6 +687,7 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr, tn_array *loadlangs)
                 langs = n_array_remove_nth(langs, i - 1);
         }
 
+        char *lc_lang = NULL;
         if (loadlangs) {
     	    for (i = 0; i < n_array_size(loadlangs); i++) {
     		const char *loadlang = n_array_nth(loadlangs, i);
@@ -697,14 +695,20 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr, tn_array *loadlangs)
 		if (loadlang == NULL)
 		    continue;
 
-		if (lc_lang == NULL)
-		    lc_lang = n_strdup(loadlang);
-		else {
-		    lc_lang = n_str_concat(lc_lang, ":", loadlang, NULL);
+		if (lc_lang == NULL) {
+                    lc_lang = n_strdup(loadlang);
+                } else {
+		    char *s = n_str_concat(lc_lang, ":", loadlang, NULL);
+                    free(lc_lang);
+                    lc_lang = s;
 		}
     	    }
-        } else
+        } else {
     	    lc_lang = n_strdup(lc_messages_lang());
+        }
+
+        tn_array *sl_langs = NULL;
+        char *sl_lang = NULL;
 
         sl_langs = lc_lang_select(langs, lc_lang);
         if (sl_langs == NULL)

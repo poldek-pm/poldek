@@ -61,7 +61,6 @@ void pm_rpm_destroy(void *pm_rpm)
 void *pm_rpm_init(void)
 {
     struct pm_rpm *pm_rpm;
-    char *p;
 
     if (initialized == 0) {
 	/* lp#1644315: save original umask and restore it after rpmReadConfigFiles() call */
@@ -81,12 +80,16 @@ void *pm_rpm_init(void)
     pm_rpm->rpm = NULL;
     pm_rpm->sudo = NULL;
 
-    p = (char*)rpmGetPath("%{_dbpath}", NULL);
-    if (p == NULL || *p == '%')
-        p = RPM_DEFAULT_DBPATH;
+    char *path = rpmGetPath("%{_dbpath}", NULL);
+    if (path && *path == '%') {
+        free(path);
+        path = NULL;
+    }
 
-    pm_rpm->default_dbpath = n_strdup(p);
+    if (path == NULL)
+        path = n_strdup(RPM_DEFAULT_DBPATH);
 
+    pm_rpm->default_dbpath = path;
     pm_rpm->caps = NULL;
 
     return pm_rpm;

@@ -44,7 +44,7 @@ extern int poldek_conf_MULTILIB;
 
 #define bitvect_slot_itype  uint32_t
 #define bitvect_slot_size   sizeof(bitvect_slot_itype) * CHAR_BIT
-#define bitvect_mask(b)     (1 << ((b) % (bitvect_slot_size)))
+#define bitvect_mask(b)     ((bitvect_slot_itype)1 << ((b) % (bitvect_slot_size)))
 #define bitvect_slot(b)     ((b) / (bitvect_slot_size))
 #define bitvect_set(a, b)   ((a)[bitvect_slot(b)] |= bitvect_mask(b))
 #define bitvect_clr(a, b)   ((a)[bitvect_slot(b)] &= ~(bitvect_mask(b)))
@@ -188,7 +188,7 @@ void poldek_ts_setop(struct poldek_ts *ts, int optv, int on)
 int poldek_ts_getop(const struct poldek_ts *ts, int optv)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
-    return bitvect_isset(ts->_opvect, optv) > 0;
+    return bitvect_isset(ts->_opvect, (uint32_t)optv) > 0;
 }
 
 int poldek_ts_op_touched(const struct poldek_ts *ts, int optv)
@@ -311,6 +311,7 @@ static void poldek_ts_destroy(struct poldek_ts *ts)
     n_cfree(&ts->cachedir);
     n_cfree(&ts->dumpfile);
     n_cfree(&ts->prifile);
+    n_cfree(&ts->typenam);
 
     n_array_cfree(&ts->rpmopts);
     n_array_cfree(&ts->rpmacros);
@@ -649,11 +650,11 @@ int poldek_ts_validate_args_with_stubs(struct poldek_ts *ts, tn_array *stubpkgs)
                 rc = 0;
             }
         }
+    }
 
-        if (db) {
-            pkgdb_free(ts->db);
-            ts->db = NULL;
-        }
+    if (db) {
+        pkgdb_free(ts->db);
+        ts->db = NULL;
     }
 
  l_end:

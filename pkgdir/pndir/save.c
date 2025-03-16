@@ -177,6 +177,7 @@ static tn_hash *put_avlangs(struct tndb *db, struct pkgdir *pkgdir,
         n_hash_insert(langs_h, avl->lang, NULL);
         n_buf_printf(nbuf, "%s|%u:", avl->lang, avl->count);
     }
+    n_array_free(avlangs);
 
     if (n_buf_size(nbuf) > 0) {
         n_assert(n_hash_size(langs_h) > 0);
@@ -759,6 +760,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
             msgn(2, _(" Writing '%s' descriptions %s..."), lang, p);
         }
         n_hash_free(db_dscr_h);
+        n_array_free(langs);
         db_dscr_h = NULL;
     }
 

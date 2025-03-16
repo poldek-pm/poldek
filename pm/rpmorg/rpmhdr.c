@@ -75,9 +75,11 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
     rpmtd td = rpmtdNew();
 
     if (!headerGet(h, tag, td, HEADERGET_MINMEM | HEADERGET_RAW)) {
+        rpmtdFree(td);
         *(char **)buf = NULL;
         if (cnt)
             *cnt = 0;
+
         return 0;
     }
 
@@ -85,6 +87,8 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
     if (cnt)
         *cnt = td->count;
     *(char ***)buf = td->data;
+
+    // XXX memleak
     /* TODO: check td->flags - mem allocation? */
     //rpmtdFree(td);
 
@@ -214,11 +218,13 @@ int pm_rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
 {
     rpmtd td = rpmtdNew();
     if (!headerGet(h, tag, td, HEADERGET_MINMEM)) {
+        rpmtdFree(td);
         memset(ent, 0, sizeof(*ent));
         return 0;
     }
 
     if (rpmtdCount(td) == 0) {
+        rpmtdFree(td);
         memset(ent, 0, sizeof(*ent));
         return 0;
     }
@@ -234,8 +240,10 @@ int pm_rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
 
 void pm_rpmhdr_ent_free(struct rpmhdr_ent *ent)
 {
-    if (ent->td)
+    if (ent->td) {
         rpmtdFree(ent->td);
+        ent->td = NULL;
+    }
 }
 
 int pm_rpmhdr_issource(Header h)

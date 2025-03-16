@@ -420,17 +420,37 @@ struct pkg *pkg_clone(tn_alloc *na, struct pkg *pkg, unsigned flags)
 }
 #endif
 
+#if TRACE_PACKAGE
+#include <execinfo.h>
+void dump_backtrace(void)
+{
+  void *array[10];
+  char **strings;
+  int size, i;
+
+  size = backtrace(array, 10);
+  strings = backtrace_symbols(array, size);
+  if (strings != NULL)  {
+      for (i = 1; i < size; i++)
+          printf("  %s\n", strings[i]);
+  }
+
+  free(strings);
+  fflush(stdout);
+}
+
+static struct pkg *__trace_pkg = NULL;
+#endif  /* TRACE_PACKAGE */
+
 void pkg_free(struct pkg *pkg)
 {
-#if ENABLE_TRACE
-    if (strcmp(pkg->name, "poldek") == 0) {
-        DBGF("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
-               pkg, pkg_snprintf_s(pkg),
-               pkg->pkgdir ? pkgdir_idstr(pkg->pkgdir) : "<none>",
-               pkg->na ? pkg->na->_refcnt : -1,
-               pkg->_refcnt, &pkg->_refcnt);
+#if TRACE_PACKAGE
+    if (pkg == __trace_pkg) {
+        printf("pkg_free %p %s %d\n", pkg, pkg_id(pkg), pkg->_refcnt);
+        dump_backtrace();
     }
 #endif
+
     if (pkg->_refcnt > 0) {
         pkg->_refcnt--;
         return;
@@ -1515,15 +1535,14 @@ void *pkg_na_malloc(struct pkg *pkg, size_t size)
 
 struct pkg *pkg_link(struct pkg *pkg)
 {
-#if ENABLE_TRACE
-    if (strcmp(pkg->name, "XX") == 0) {
-        DBGF("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
-             pkg, pkg_snprintf_s(pkg),
-             pkg->pkgdir ? pkgdir_idstr(pkg->pkgdir) : "<none>",
-             pkg->na ? pkg->na->_refcnt : -1,
-             pkg->_refcnt, &pkg->_refcnt);
+#if TRACE_PACKAGE
+    if (n_str_eq(pkg_id(pkg), "a-3-1.noarch")) {
+        __trace_pkg = pkg;
+        printf("pkg_link %p %s %d\n", pkg, pkg_id(pkg), pkg->_refcnt);
+        dump_backtrace();
     }
 #endif
+
     n_assert(pkg->_refcnt < UINT16_MAX - 1);
     pkg->_refcnt++;
     return pkg;

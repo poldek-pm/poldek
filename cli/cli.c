@@ -450,8 +450,11 @@ int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
     if (cmd->argp_opts)
         translate_argp_options(cmd->argp_opts);
 
-    cmd->arg = _(cmd->arg);
-    cmd->doc = _(cmd->doc);
+    if (cmd->arg)
+        cmd->arg = _(cmd->arg);
+
+    if (cmd->doc)
+        cmd->doc = _(cmd->doc);
 
     if (n_array_bsearch(cctx->commands, cmd)) {
         logn(LOGERR, _("ambiguous command %s"), cmd->name);
@@ -464,6 +467,7 @@ int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
         a->flags |= COMMAND_SYSALIAS | COMMAND__MALLOCED;
         a->name = cmd->_sys_alias;
         a->_sys_alias = NULL;
+        a->_free = (void (*)(struct poclidek_cmd *))n_free;
         n_array_push(cctx->commands, a);
     }
 
@@ -697,7 +701,6 @@ static int load_installed(struct poclidek_ctx *cctx, int flags)
         return 1;
     }
 #endif
-
     int reload = (flags & POCLIDEK_LOAD_RELOAD);
 
     if (reload)
@@ -765,6 +768,7 @@ int poclidek_setup(struct poclidek_ctx *cctx)
         } else {
             n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_nvr_strcmp);
             dir = add_stub_dir(cctx, POCLIDEK_AVAILDIR, pkgs);
+            n_array_free(pkgs);
         }
     }
 
@@ -775,6 +779,8 @@ int poclidek_setup(struct poclidek_ctx *cctx)
         cctx->homedir = dir;
         poclidek_chdir(cctx, dir->name);
     }
+
+    n_array_free(sources);
 
     return 1;
 }

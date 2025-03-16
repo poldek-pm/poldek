@@ -350,6 +350,7 @@ static int make_idx(struct arg_s *arg_s)
 
     sources = poldek_get_sources(arg_s->ctx);
     if (sources == NULL || n_array_size(sources) == 0) {
+        n_array_cfree(&sources);
         logn(LOGERR, _("no sources specified"));
         nerr++;
         goto l_end;

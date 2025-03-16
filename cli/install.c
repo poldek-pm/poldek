@@ -568,6 +568,8 @@ static int args_are_invalid(struct poclidek_ctx  *cctx, struct poldek_ts *ts)
         rc = 1;
     }
 
+    n_array_free(stubpkgs);
+
     return rc == 0;
 }
 

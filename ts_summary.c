@@ -54,6 +54,7 @@ void poldek__ts_update_summary(struct poldek_ts *ts,
     }
 
     if (n_array_size(supkgs) == 0) {
+        n_assert(!n_hash_exists(ts->ts_summary, prefix));
         n_array_free(supkgs);
 
     } else {
@@ -82,7 +83,7 @@ struct color_str {
 
 /* for scripts */
 static
-void do_display_parseable_summary(const char *prefix, tn_array *strpkgs)
+void do_display_parseable_summary(const char *prefix, const tn_array *strpkgs)
 {
     for (int i=0; i < n_array_size(strpkgs); i++) {
         const struct color_str *s = n_array_nth(strpkgs, i);
@@ -92,7 +93,7 @@ void do_display_parseable_summary(const char *prefix, tn_array *strpkgs)
 
 /* pre 0.4.0 summary */
 static
-void do_display_summary(const char *prefix, int prefix_color, tn_array *strpkgs)
+void do_display_summary(const char *prefix, int prefix_color, const tn_array *strpkgs)
 {
     int npkgs = n_array_size(strpkgs);
     int prefix_printed = 0;
@@ -143,7 +144,7 @@ void do_display_summary(const char *prefix, int prefix_color, tn_array *strpkgs)
 
 /* pre 0.4.0 summary */
 static
-void display_summary(const char *prefix, int prefix_color, tn_array *pkgs, int parseable)
+void display_summary(const char *prefix, int prefix_color, const tn_array *pkgs, int parseable)
 {
     n_assert(pkgs);
     n_assert(n_array_size(pkgs) > 0);
@@ -161,6 +162,8 @@ void display_summary(const char *prefix, int prefix_color, tn_array *pkgs, int p
     } else {
         do_display_summary(prefix, prefix_color, strpkgs);
     }
+
+    n_array_free(strpkgs);
 }
 
 static
@@ -227,7 +230,7 @@ static int pkg_cmp_name_arch(const struct pkg *p1, const struct pkg *p2)
 }
 
 static
-void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkgs)
+void colored_install_summary(const tn_array *ipkgs, const tn_array *idepkgs, const tn_array *rmpkgs)
 {
     tn_array *upgs = n_array_new(n_array_size(ipkgs), free, NULL);
     tn_array *news = n_array_clone(ipkgs);
@@ -279,6 +282,7 @@ void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkg
     if (n_array_size(news) > 0) {
         display_summary("A", PRCOLOR_GREEN, news, 0);
     }
+    n_array_free(news);
 
     if (rems && n_array_size(rems) > 0) {
         display_summary("R", PRCOLOR_RED, rems, 0);
@@ -286,10 +290,12 @@ void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkg
 
     if (rems)
         n_array_free(rems);
+
+    n_array_free(pkgs);
 }
 
 static
-void colored_uninstall_summary(tn_array *ipkgs, tn_array *idepkgs)
+void colored_uninstall_summary(const tn_array *ipkgs, const tn_array *idepkgs)
 {
     display_summary("R", PRCOLOR_RED, ipkgs, 0);
 
@@ -299,8 +305,8 @@ void colored_uninstall_summary(tn_array *ipkgs, tn_array *idepkgs)
 }
 
 static
-void colored_summary(struct poldek_ts *ts,
-                     tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkgs)
+void colored_summary(struct poldek_ts *ts, const tn_array *ipkgs,
+                     const tn_array *idepkgs, const tn_array *rmpkgs)
 {
     if (poldek_VERBOSE < summary_VERBOSE_LEVEL)
         return;

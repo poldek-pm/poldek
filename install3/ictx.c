@@ -112,6 +112,7 @@ int i3_get_nerrors(struct i3ctx *ictx, unsigned errcodeclass)
                 n++;
         }
     }
+    n_array_free(keys);
 
     return n;
 }

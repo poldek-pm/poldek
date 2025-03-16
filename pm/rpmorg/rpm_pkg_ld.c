@@ -100,15 +100,10 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
 {
     struct rpm_cap_tagset *tgs = NULL;
     struct capreq *cr;
-    struct rpmhdr_ent e_name, e_version, e_flag;
+    struct rpmhdr_ent e_name = {}, e_version = {}, e_flag = {};
     char **names = NULL, **versions = NULL;
     uint32_t *flags = NULL;
     int  i, rc = 0, ownedarr = 0;
-
-    if (arr == NULL) {
-        arr = capreq_arr_new(0);
-        ownedarr = 1;
-    }
 
     i = 0;
     while (rpm_cap_tags_tab[i].pmtag > 0) {
@@ -125,8 +120,9 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
 
     DBGF("ldcaps %s %d\n", tgs->label, tgs->name_tag);
 
-    if (!pm_rpmhdr_ent_get(&e_name, h, tgs->name_tag))
-        return NULL;
+    if (!pm_rpmhdr_ent_get(&e_name, h, tgs->name_tag)) {
+        goto l_end;
+    }
 
     if (pm_rpmhdr_ent_get(&e_version, h, tgs->version_tag)) {
         //n_assert(t2 == RPM_STRING_ARRAY_TYPE);
@@ -135,7 +131,8 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
 
     } else if (pmcap_tag == PMCAP_REQ) { /* reqs should have version tag */
         pm_rpmhdr_ent_free(&e_name);
-        return 0;
+        rc = 0;
+        goto l_end;
     }
 
     if (pm_rpmhdr_ent_get(&e_flag, h, tgs->flags_tag)) {
@@ -146,7 +143,7 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
     } else if (pmcap_tag == PMCAP_REQ) {  /* reqs should have version too */
         pm_rpmhdr_ent_free(&e_name);
         pm_rpmhdr_ent_free(&e_version);
-        return 0;
+        goto l_end;
     }
 
     if (e_flag.cnt && (e_name.cnt != e_version.cnt)) {
@@ -170,6 +167,11 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
     names = pm_rpmhdr_ent_as_strarr(&e_name);
     versions = pm_rpmhdr_ent_as_strarr(&e_version);
     flags = pm_rpmhdr_ent_as_intarr(&e_flag);
+
+    if (arr == NULL) {
+        arr = capreq_arr_new(0);
+        ownedarr = 1;
+    }
 
     for (i=0; i < e_name.cnt; i++) {
         char *name, *evr = NULL;
@@ -313,6 +315,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     struct rpmtd_s names, dirs, diridxs, modes, sizes, symlinks;
 
     (void)missing_file_hdrs_err; /* disable -Wunused-but-set-variable */
+
     n_assert(na);
 
     if (!hget(&names, h, RPMTAG_BASENAMES))
@@ -546,7 +549,6 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
         pkg->reqs = load_capreqs(na, NULL, h, pkg, PMCAP_REQ);
         pkg->sugs = load_capreqs(na, NULL, h, pkg, PMCAP_RECO);
         pkg->sugs = load_capreqs(na, pkg->sugs, h, pkg, PMCAP_SUG);
-
         pkg->revreqs = load_capreqs(na, NULL, h, pkg, PMCAP_SUPL);
         pkg->revreqs = load_capreqs(na, pkg->revreqs, h, pkg, PMCAP_ENH);
     }

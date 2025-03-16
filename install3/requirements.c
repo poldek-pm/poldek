@@ -404,7 +404,9 @@ l_end:
 
         tracef(indent, "- %s: upgrading orphan%s%s%s", pkg_id(sucpkg),
 	       message ? " (":"", message ? message:"", message ? ")":"");
+
         i3_process_package(indent, ictx, i3tomark);
+        i3pkg_free(i3tomark);
     }
 
     return install;
@@ -485,7 +487,10 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         }
 
         i3tomark = i3pkg_new(real_tomark, 0, pkg, req, I3PKGBY_ORPHAN);
+
         i3_process_package(indent, ictx, i3tomark);
+        i3pkg_free(i3tomark);
+
         goto l_end;
     }
 

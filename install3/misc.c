@@ -20,6 +20,7 @@ int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc)
 {
     tn_array *dbpkgs = NULL;
     int n = 0, freshen = 0;
+
     freshen = ts->getop(ts, POLDEK_OP_FRESHEN)
 	    || poldek_ts_issetf(ts, POLDEK_TS_UPGRADE)
 	    || poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE)
@@ -50,7 +51,7 @@ int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc)
 	    // add package if pkg_is_kind_of (have same name and color)
             if (pkg_is_kind_of(dbpkg, pkg)
 		&& !(freshen && !pkg_is_arch_compat(dbpkg, pkg)))
-			n_array_push(arr, pkg_link(dbpkg));
+                n_array_push(arr, pkg_link(dbpkg));
         }
 
         n_array_cfree(&dbpkgs);
@@ -64,7 +65,7 @@ int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc)
             /*
                order by E-V-R, DESC to compare with newest installed version
             */
-            n_array_isort_ex(dbpkgs, (tn_fn_cmp)pkg_cmp_evr);
+            n_array_sort_ex(dbpkgs, (tn_fn_cmp)pkg_cmp_evr);
             n_array_reverse(dbpkgs);
         }
 
@@ -73,6 +74,7 @@ int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc)
     }
 
     n_array_free(dbpkgs);
+
     return n;
 }
 

@@ -136,7 +136,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     }
 
     if (pkgdir2->depdirs) {
-        depdirs = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
+        depdirs = n_array_new(64, free, (tn_fn_cmp)strcmp);
         for (i=0; i < n_array_size(pkgdir2->depdirs); i++)
             n_array_push(depdirs, n_strdup(n_array_nth(pkgdir2->depdirs, i)));
     }

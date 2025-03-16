@@ -41,7 +41,7 @@ struct pkg_cap_iter {
 };
 
 
-struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg) 
+struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg)
 {
     struct pkg_cap_iter *it = n_calloc(sizeof(*it), 1);
     it->pkg = pkg;
@@ -51,11 +51,12 @@ struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg)
     return it;
 }
 
-void pkg_cap_iter_free(struct pkg_cap_iter *it) 
+void pkg_cap_iter_free(struct pkg_cap_iter *it)
 {
     if (it->cap)
         capreq_free(it->cap);
     memset(it, 0, sizeof(*it));
+    n_free(it);
 }
 
 const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it)
@@ -63,7 +64,7 @@ const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it)
     struct capreq *cap;
     const char *path;
     struct flfile *flfile = NULL;
-    
+
     if (it->pkg->caps && it->ncap < n_array_size(it->pkg->caps)) {
         cap = n_array_nth(it->pkg->caps, it->ncap);
         it->ncap++;
@@ -74,7 +75,7 @@ const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it)
         capreq_free(it->cap);
         it->cap = NULL;
     }
-    
+
     if (it->pkg->fl == NULL)
         return NULL;
 
@@ -82,13 +83,13 @@ const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it)
         pkgfl_it_init(&it->fit, it->pkg->fl);
         it->fit_initialized = 1;
     }
-    
+
     path = pkgfl_it_get(&it->fit, &flfile);
     if (path) {
         unsigned flags = CAPREQ_BASTARD;
         if (S_ISDIR(flfile->mode))
             flags |= CAPREQ_ISDIR;
-        
+
         it->cap = capreq_new(NULL, path, 0, NULL, NULL, 0, flags);
     }
     return it->cap;
@@ -109,7 +110,7 @@ struct pkg_req_iter {
     int              ndir;
 };
 
-struct pkg_req_iter *pkg_req_iter_new(const struct pkg *pkg, unsigned flags) 
+struct pkg_req_iter *pkg_req_iter_new(const struct pkg *pkg, unsigned flags)
 {
     struct pkg_req_iter *it = n_calloc(sizeof(*it), 1);
     it->pkg = pkg;
@@ -124,20 +125,21 @@ struct pkg_req_iter *pkg_req_iter_new(const struct pkg *pkg, unsigned flags)
     return it;
 }
 
-void pkg_req_iter_free(struct pkg_req_iter *it) 
+void pkg_req_iter_free(struct pkg_req_iter *it)
 {
     if (it->req)
         capreq_free(it->req);
     n_array_cfree(&it->requiredirs);
     memset(it, 0, sizeof(*it));
+    n_free(it);
 }
 
 const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
 {
     struct capreq *req;
-    
+
     it->current_req_type = 0;   /* reset type */
-    
+
     if (it->pkg->reqs && it->nreq < n_array_size(it->pkg->reqs)) {
         req = n_array_nth(it->pkg->reqs, it->nreq);
         it->nreq++;
@@ -153,7 +155,7 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
             it->current_req_type = PKG_ITER_REQUN;
         else
             it->current_req_type = PKG_ITER_REQIN;
-        
+
         return req;
     }
 
@@ -173,7 +175,7 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
     /* already got dirs in pkg->reqs */
     if (it->pkg->flags & PKG_INCLUDED_DIRREQS)
         return NULL;
-    
+
     if (it->req) {
         capreq_free(it->req);
         it->req = NULL;
@@ -190,22 +192,22 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
         const char *path = n_array_nth(it->requiredirs, it->ndir);
         char tmp[PATH_MAX];
         const char *rname = tmp;
-        
+
         if (*path == '/')
             rname = path;
         else
             n_snprintf(tmp, sizeof(tmp), "/%s", path);
-        
-        
+
+
         it->ndir++;
         DBGF("%s %s\n", pkg_id(it->pkg), rname);
-        
+
         it->req = capreq_new(NULL, rname, 0, NULL, NULL, 0,
                              CAPREQ_BASTARD | CAPREQ_ISDIR);
         it->current_req_type = PKG_ITER_REQIN;/* autodirdeps are always REQIN */
         return it->req;
     }
-    
+
     return NULL;
 }
 
@@ -214,4 +216,3 @@ unsigned pkg_req_iter_current_req_type(const struct pkg_req_iter *it)
     n_assert(it->current_req_type > 0);
     return it->current_req_type;
 }
-

@@ -592,7 +592,7 @@ static void register_vf_handlers(const tn_array *fetchers)
     if (fetchers == NULL)
         return;
 
-    protocols = n_array_new(2, NULL, (tn_fn_cmp)strcmp);
+    protocols = n_array_new(2, n_free, (tn_fn_cmp)strcmp);
 
     for (i=0; i<n_array_size(fetchers); i++) {
         const char *nam, *cmd;

@@ -69,8 +69,10 @@ int do_init(void)
 static
 void do_destroy(void)
 {
-    n_list_free(vcn_pool);
-    vcn_pool = NULL;
+    if (vcn_pool) {
+        n_list_free(vcn_pool);
+        vcn_pool = NULL;
+    }
 }
 
 

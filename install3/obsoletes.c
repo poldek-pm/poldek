@@ -329,7 +329,7 @@ int handle_multiinsts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg, tn_ar
     n_assert(n_array_size(obsoleted) == 0);
     n_array_push(obsoleted, dbpkg_to_uninstall);
 
-    n_array_unshift(keeps, dbpkg_to_uninstall); /* first will be uninstalled, see install.c */
+    n_array_unshift(keeps, pkg_link(dbpkg_to_uninstall)); /* first will be uninstalled, see install.c */
     n_hash_insert(ictx->multi_obsoleted, pkg_id(i3pkg->pkg), keeps);
 
     return re;
@@ -384,6 +384,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
     obsoleted = get_obsoletedby_pkg(db, iset_packages_by_recno(unset), pkg,
                                     getflags, PKG_LDWHOLE_FLDEPDIRS);
 
+
     n = obsoleted ? n_array_size(obsoleted) : 0;
     if (n > 1) {
         process_multiinsts(indent, ictx, i3pkg, obsoleted);
@@ -392,8 +393,10 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
 
     trace(indent + 1, "%s removes %d package(s)", pkg_id(pkg), n);
 
-    if (n == 0)
+    if (n == 0) {
+        n_array_cfree(&obsoleted);
         return 1;
+    }
 
     DBGF("%s n=%d\n", pkg_id(pkg), n);
     for (i=0; i < n_array_size(obsoleted); i++) {
@@ -444,15 +447,16 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
                 n_array_push(unsatisfied_caps, capreq_clone(NULL, cap));
             }
         }
-
         pkg_cap_iter_free(it);
     }
+    n_array_cfree(&obsoleted);
 
     if (unsatisfied_caps == NULL)
         return 0;
-    n_assert(n_array_size(unsatisfied_caps));
 
+    n_assert(n_array_size(unsatisfied_caps));
     n_array_uniq(unsatisfied_caps);
+
     orphaned = pkgs_array_new_ex(16, pkg_cmp_recno);
 
     /*
@@ -496,7 +500,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
     }
 
     n_array_cfree(&orphans);
-    n_array_free(unsatisfied_caps); /* must be free()d after orphans array,
-                                       caps in array are "weak"-referenced */
+    n_array_free(unsatisfied_caps);
+
     return 1;
 }

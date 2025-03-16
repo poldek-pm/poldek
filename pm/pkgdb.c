@@ -371,7 +371,7 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
 
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
             nfound++;
-            n_array_push(*dbpkgs, pkg);
+            n_array_push(*dbpkgs, pkg_link(pkg));
         }
     }
 

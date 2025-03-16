@@ -153,9 +153,9 @@ tn_array *poldek_load_stubs(struct poldek_ctx *ctx)
             else
                 n_array_push(stubpkgs, pkg);
         }
+        n_array_free(pkgs);
     }
-    n_array_sort(stubpkgs);
-    n_array_isort_ex(stubpkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
+    n_array_sort_ex(stubpkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
 
     struct poldek_ts *ts = ctx->ts;
     packages_uniq(stubpkgs, ts->getop(ts, POLDEK_OP_UNIQN) ? true : false);

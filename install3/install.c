@@ -447,5 +447,7 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
     if (is_particle)
         ts->setop(ts, POLDEK_OP_PARTICLE, 1);
 
+    n_array_cfree(&pkgs);
+
     return nerr == 0;
 }
