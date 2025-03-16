@@ -107,9 +107,8 @@ static void copt_free(struct copt *opt)
         n_array_free(opt->vals);
     } else {
         n_assert(opt->vals == NULL);
-        n_cfree(&opt->val);
     }
-
+    n_cfree(&opt->val);
     free(opt);
 }
 
