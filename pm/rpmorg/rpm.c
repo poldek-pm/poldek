@@ -51,6 +51,9 @@ void pm_rpm_destroy(void *pm_rpm)
 {
     struct pm_rpm *pm = pm_rpm;
 
+    rpmFreeMacros(NULL);
+    rpmFreeRpmrc();
+
     n_cfree(&pm->rpm);
     n_cfree(&pm->sudo);
     n_cfree(&pm->default_dbpath);
@@ -297,6 +300,8 @@ time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
 
     if (stat(path, &st) != 0)
         return 0;
+
+    free(backend);
 
     return st.st_mtime;
 }
