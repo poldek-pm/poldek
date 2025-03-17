@@ -160,8 +160,9 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     }
 
     diff = pkgdir_malloc();
-    diff->type = n_strdup(pkgdir->type);
-	diff->mod = pkgdir->mod;
+    /* type is a reference to mod->type, no need to be malloced */
+    diff->type = pkgdir->type;
+    diff->mod = pkgdir->mod;
     diff->pkgs = plus_pkgs;
     diff->removed_pkgs = minus_pkgs;
     diff->name = n_strdup("DIFF");
@@ -186,8 +187,8 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
         setup_diff_langs(diff, pkgdir2);
     pkgdir__setup_langs(pkgdir);
 
-	if (diff->mod->posthook_diff)
-		diff->mod->posthook_diff(pkgdir, pkgdir2, diff);
+    if (diff->mod->posthook_diff)
+        diff->mod->posthook_diff(pkgdir, pkgdir2, diff);
 
     return diff;
 }

@@ -980,7 +980,7 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
                    const char *path, unsigned flags)
 {
     struct pkgdir               *orig, *diff;
-	const struct pkgdir_module  *mod;
+    const struct pkgdir_module  *mod;
     const char                  *idxpath = NULL;
     tn_hash                     *avlangs_h, *avlangs_h_tmp;
     int                         nerr = 0;
@@ -1075,6 +1075,9 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
             if (!do_create(diff, type, NULL, flags))
                 nerr++;
         }
+
+        if (diff)
+            pkgdir_free(diff);
     }
 
     if (orig && orig != pkgdir->prev_pkgdir) {
