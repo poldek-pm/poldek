@@ -841,7 +841,7 @@ int is_older_installed(struct poldek_ctx *ctx, const struct pkg *pkg, time_t *bu
         *built = max_btime;
     }
 
-    pkgdb_close(db);
+    pkgdb_free(db);
 
     return installed;
 }

@@ -72,10 +72,11 @@ int pm_rpmhdr_get_entry(Header h, int32_t tag, void *buf, int32_t *type,
 int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
 {
     int type;
-    rpmtd td = rpmtdNew();
+    struct rpmtd_s tdd = {};
+    rpmtd td = &tdd; //= rpmtdNew();
 
     if (!headerGet(h, tag, td, HEADERGET_MINMEM | HEADERGET_RAW)) {
-        rpmtdFree(td);
+        //rpmtdFree(td);
         *(char **)buf = NULL;
         if (cnt)
             *cnt = 0;
@@ -88,9 +89,9 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
         *cnt = td->count;
     *(char ***)buf = td->data;
 
-    // XXX memleak
-    /* TODO: check td->flags - mem allocation? */
-    //rpmtdFree(td);
+    /* XXX memleak
+       TODO: check td->flags - mem allocation?
+       rpmtdFreeData(td) should be called  */
 
     if (tag == RPMTAG_GROUP && type == RPM_STRING_TYPE) { // build by old rpm
         char **g;

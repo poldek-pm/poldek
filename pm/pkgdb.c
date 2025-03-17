@@ -701,6 +701,7 @@ static int q_is_required(struct pkgdb *db, int tag, const struct capreq *cap,
                 pkg_free(pkg);
 
             } else {
+                pkg_free(pkg);
                 n++;
                 break;
             }

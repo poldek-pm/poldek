@@ -303,6 +303,7 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
         }
     }
     tracef(indent, "END %s (requirer=%s)", pkg_id(pkg), pkg_id(requirer));
+    pkg_req_iter_free(it);
     MEMINF("END");
     return 1;
 }

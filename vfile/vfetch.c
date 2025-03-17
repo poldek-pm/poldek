@@ -203,7 +203,6 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     }
 
  l_endloop:
-    req->bar = NULL;
     if (!rc && req->destpath)
         vf_unlink(req->destpath);
 

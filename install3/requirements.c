@@ -487,7 +487,6 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         }
 
         i3tomark = i3pkg_new(real_tomark, 0, pkg, req, I3PKGBY_ORPHAN);
-
         i3_process_package(indent, ictx, i3tomark);
         i3pkg_free(i3tomark);
 
@@ -650,6 +649,7 @@ static int process_req(int indent, struct i3ctx *ictx,
 
         i3tomark = i3pkg_new(real_tomark, i3pkg_flag, pkg, req, byflag);
         rc = i3_process_package(indent, ictx, i3tomark);
+        i3pkg_free(i3tomark);
         goto l_end;
     }
 

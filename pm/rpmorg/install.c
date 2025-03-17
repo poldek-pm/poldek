@@ -77,7 +77,7 @@ static void progress(const unsigned long amount, const unsigned long total)
 
 static void *install_cb(const void *h __attribute__((unused)),
                         const enum rpmCallbackType_e op,
-                        const rpm_loff_t amount, 
+                        const rpm_loff_t amount,
                         const rpm_loff_t total,
                         const void *pkgpath,
                         void *data __attribute__((unused)))
@@ -137,11 +137,12 @@ static int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
 {
     rpmts ts = NULL;
     rpmps probs = NULL;
-
     struct vfile *vf = NULL;
-    int rc;
     Header h = NULL;
     FD_t fdt = NULL;
+    int rc = 0;
+
+    (void)db;
 
     if (rootdir == NULL)
         rootdir = "/";
@@ -156,19 +157,23 @@ static int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
             err = Fstrerror(fdt);
 
         logn(LOGERR, "rpmio's fdDup failed: %s", err);
-        goto l_err;
+        rc = -1;
+        goto l_end;
     }
 
     if (!pm_rpmhdr_loadfdt(fdt, &h, path)) {
-        goto l_err;
+        rc = -1;
+        goto l_end;
 
     } else if (pm_rpmhdr_issource(h)) {
         logn(LOGERR, _("%s: source packages are not supported"), path);
-        goto l_err;
+        rc = -1;
+        goto l_end;
     }
 
+    Fclose(fdt);
+    fdt = NULL;
 
-    db = db;   /* avoid gcc's warn */
     ts = rpmtsCreate();
     rpmtsSetRootDir(ts, rootdir);
     rpmtsOpenDB(ts, O_RDWR);
@@ -183,18 +188,18 @@ static int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
 
         case 1:
             logn(LOGERR, _("%s: rpm read error"), path);
-            goto l_err;
+            goto l_end;
             break;
 
 
         case 2:
             logn(LOGERR, _("%s requires a newer version of RPM"), path);
-            goto l_err;
+            goto l_end;
             break;
 
         default:
             logn(LOGERR, "%s: rpmtransAddPackage() failed", path);
-            goto l_err;
+            goto l_end;
             break;
     }
 
@@ -204,7 +209,8 @@ static int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
 
         if (rpmtsCheck(ts) != 0) {
             logn(LOGERR, "%s: rpmtsCheck() failed", path);
-            goto l_err;
+            rc = -1;
+            goto l_end;
         }
         conflicts = rpmtsProblems(ts);
         numConflicts = rpmpsNumProblems(conflicts);
@@ -213,7 +219,8 @@ static int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
             logn(LOGERR, _("%s: failed dependencies:"), n_basenam(path));
             rpmpsPrint(stderr, conflicts);
             conflicts = rpmpsFree(conflicts);
-            goto l_err;
+            rc = -1;
+            goto l_end;
         }
     }
 
@@ -228,24 +235,14 @@ static int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
             probs = rpmtsProblems(ts);
             logn(LOGERR, _("%s: installation failed:"), path);
             rpmpsPrint(stderr, probs); /* XXX: rpm logging API... */
-            goto l_err;
+            goto l_end;
 
         } else {
             logn(LOGERR, _("%s: installation failed (retcode=%d)"), path, rc);
         }
     }
 
-
-    vfile_close(vf);
-    if (probs)
-        probs = rpmpsFree(probs);
-
-    rpmtsCloseDB(ts); /* XXX not sure that it's really necessary */
-    rpmtsFree(ts);
-
-    return 1;
-
- l_err:
+ l_end:
     if (fdt)
         Fclose(fdt);
 
@@ -255,13 +252,15 @@ static int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
     if (probs)
         rpmpsFree(probs);
 
-    if (ts)
+    if (ts) {
+        rpmtsCloseDB(ts); /* XXX not sure that it's really necessary */
         rpmtsFree(ts);
+    }
 
     if (h)
         headerFree(h);
 
-    return 0;
+    return rc == 0;
 }
 
 

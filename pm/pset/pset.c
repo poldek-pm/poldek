@@ -208,7 +208,7 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
     }
 
     /* pkgset_setup(ps, PSET_VRFY_MERCY); */
-    db = n_malloc(sizeof(*db));
+    db = n_calloc(1, sizeof(*db));
     db->ts = NULL;
     db->ps = ps;
     db->pkgs_added = pkgs_array_new(32);
@@ -253,6 +253,7 @@ void pm_pset_freedb(void *dbh)
             unlink(path);
         }
         rmdir(db->tsdir);
+        n_free(db->tsdir);
     }
 
     n_array_free(db->paths_added);

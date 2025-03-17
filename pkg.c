@@ -420,7 +420,10 @@ struct pkg *pkg_clone(tn_alloc *na, struct pkg *pkg, unsigned flags)
 }
 #endif
 
-#if TRACE_PACKAGE
+#define TRACE_PACKAGE "a-devel-1-1"
+#undef TRACE_PACKAGE
+
+#ifdef TRACE_PACKAGE
 #include <execinfo.h>
 void dump_backtrace(void)
 {
@@ -444,7 +447,8 @@ static struct pkg *__trace_pkg = NULL;
 
 void pkg_free(struct pkg *pkg)
 {
-#if TRACE_PACKAGE
+
+#ifdef TRACE_PACKAGE
     if (pkg == __trace_pkg) {
         printf("pkg_free %p %s %d\n", pkg, pkg_id(pkg), pkg->_refcnt);
         dump_backtrace();
@@ -1535,8 +1539,8 @@ void *pkg_na_malloc(struct pkg *pkg, size_t size)
 
 struct pkg *pkg_link(struct pkg *pkg)
 {
-#if TRACE_PACKAGE
-    if (n_str_eq(pkg_id(pkg), "a-3-1.noarch")) {
+#ifdef TRACE_PACKAGE
+    if (n_str_eq(pkg_id(pkg), TRACE_PACKAGE)) {
         __trace_pkg = pkg;
         printf("pkg_link %p %s %d\n", pkg, pkg_id(pkg), pkg->_refcnt);
         dump_backtrace();

@@ -254,6 +254,9 @@ struct pkgdir *pkgdir_malloc(void)
     pkgdir->mod = pkgdir->mod_data = NULL;
     pkgdir->na = n_alloc_new(128, TN_ALLOC_OBSTACK);
     pkgdir->dirindex = NULL;
+
+    DBGF("%p\n", pkgdir);
+
     return pkgdir;
 }
 
@@ -578,8 +581,8 @@ void pkgdir_free(struct pkgdir *pkgdir)
 
         n_array_cfree(&pkgdir->pkgs);
     }
-
     n_array_cfree(&pkgdir->_unsorted_pkgs);
+    n_array_cfree(&pkgdir->removed_pkgs);
 
     if (pkgdir->pkgroups) {
         pkgroup_idx_free(pkgdir->pkgroups);
@@ -649,6 +652,8 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
 {
     tn_array *foreign_depdirs = NULL;
     int rc;
+
+    DBGF("%p %s\n", pkgdir,  pkgdir_idstr(pkgdir));
 
     if ((ldflags & PKGDIR_LD_FULLFLIST) == 0 && depdirs && pkgdir->depdirs) {
         int i;

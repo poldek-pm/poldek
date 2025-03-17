@@ -49,7 +49,6 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     Header          sign = NULL;
     HeaderIterator  it;
     char            *msg = NULL;
-    struct rpmtd_s td;
 
     *signature_flags = 0;
 
@@ -89,15 +88,12 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     }
 
 
+    int tag;
     flags = 0;
     it = headerInitIterator(sign);
 
-    while (headerNext(it, &td)) {
-        if (rpmtdCount(&td) == 0) {
-            continue;
-        }
-
-        switch (td.tag) {
+    while ((tag = headerNextTag(it)) != RPMTAG_NOT_FOUND) {
+        switch (tag) {
             case RPMSIGTAG_RSA:
                 flags |= PKGVERIFY_PGP;
                 flags |= PKGVERIFY_GPG;
@@ -122,7 +118,6 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
                 continue;
                 break;
         }
-        rpmtdFreeData(&td);
     }
 
     headerFreeIterator(it);

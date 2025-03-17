@@ -335,6 +335,7 @@ void vcn_free(struct vcn *cn)
         cn->m_free(cn->resp);
 
     memset(cn, 0, sizeof(*cn));
+    n_free(cn);
 }
 
 int vcn_is_alive(struct vcn *cn)

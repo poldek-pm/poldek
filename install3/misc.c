@@ -715,6 +715,7 @@ void i3_req_iter_init(struct i3_req_iter *it, int indent, struct i3ctx *ictx,
     it->i3req.origin = NULL;
     it->i3req.req = NULL;
     it->breqs = NULL;
+    it->bi = -1;
 
     struct eval_ctx *ectx = n_malloc(sizeof(*ectx));
     ectx->indent = indent;
@@ -728,6 +729,8 @@ void i3_req_iter_init(struct i3_req_iter *it, int indent, struct i3ctx *ictx,
 void i3_req_iter_destroy(struct i3_req_iter *it)
 {
     n_free(it->bctx.ctx);
+    n_array_cfree(&it->breqs);
+    it->bi = -1;
     pkg_req_iter_free(it->it);
 }
 
@@ -802,10 +805,10 @@ const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
 {
     const struct capreq *req;
 
-    if (it->breqs) {
-        req = n_array_shift(it->breqs);
-        if (n_array_size(it->breqs) == 0)
-            n_array_cfree(&it->breqs);
+    if (it->bi >= 0) {
+        req = n_array_nth(it->breqs, it->bi++);
+        if (it->bi == n_array_size(it->breqs))
+            it->bi = -1;        /* stop iterating current breqs */
 
         it->i3req.origin = it->borigin;
         it->i3req.req = req;
@@ -815,12 +818,15 @@ const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
 
     req = pkg_req_iter_get(it->it);
     if (req && req_is_boolean(req)) {
+        n_array_cfree(&it->breqs); /* free if any */
         it->breqs = eval_boolreq(req, &it->bctx);
         if (it->breqs) {
-            if (n_array_size(it->breqs) == 0) /* resolved to none => skip it */
+            if (n_array_size(it->breqs) == 0) { /* resolved to none => skip it */
                 n_array_cfree(&it->breqs);
-            else
+            } else {
                 it->borigin = req;
+                it->bi = 0;     /* enable iterating over breqs */
+            }
 
             return i3_req_iter_get(it);
         }

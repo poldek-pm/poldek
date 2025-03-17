@@ -94,7 +94,9 @@ void i3_error(struct i3ctx *ictx, struct pkg *pkg,
 
 void i3_forget_error(struct i3ctx *ictx, const struct pkg *pkg)
 {
-    n_hash_remove(ictx->errors, pkg_id(pkg));
+    tn_array *errors = n_hash_remove(ictx->errors, pkg_id(pkg));
+    if (errors)
+        n_array_free(errors);
 }
 
 int i3_get_nerrors(struct i3ctx *ictx, unsigned errcodeclass)

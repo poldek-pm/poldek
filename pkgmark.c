@@ -460,6 +460,7 @@ int pkgmark_verify_package_order(struct pkgmark_set *pms)
         msgn(1, "%d. %s", i+1, pkg_id(pkg));
     }
     n_array_free(ordered);
+    n_array_free(pkgs);
 
     return nloops == 0;
 }

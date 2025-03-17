@@ -722,8 +722,10 @@ int main(int argc, char **argv)
         poldek_set_verbose(1);
 
     rrc = do_run();
-    if (rrc & OPGROUP_RC_ERROR)
-        exit(EXIT_FAILURE);
+    if (rrc & OPGROUP_RC_ERROR) {
+        rc = 0;
+        goto out;
+    }
 
 #define ENABLE_TRACE 0
 #if ENABLE_TRACE
@@ -760,7 +762,7 @@ out:
     poldek_free(ctx);
     poldeklib_destroy();
 
-    return rc ? 0 : -1;
+    return rc ? 0 : EXIT_FAILURE;
 }
 
 

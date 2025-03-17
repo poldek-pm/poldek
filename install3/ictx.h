@@ -167,6 +167,7 @@ struct i3_req_iter {
     /* booldep */
     const struct capreq     *borigin;
     tn_array                *breqs;
+    int                     bi;
     struct booldep_eval_ctx bctx;
 };
 

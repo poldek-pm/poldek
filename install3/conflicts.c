@@ -39,13 +39,15 @@ int find_direct_replacement(struct i3ctx *ictx, struct pkg *pkg,
                 continue;
 
             if (pkg_cmp_evr(p, pkg) > 0) {
-                *rpkg = p;
+                *rpkg = pkg_link(p);
                 break;
             }
         }
     }
+    n_array_free(pkgs);
 
     if (*rpkg && i3_is_marked(ictx, *rpkg)) {
+        pkg_free(*rpkg);
         *rpkg = NULL;
         return 1;
     }
@@ -77,7 +79,7 @@ int find_indirect_replacement(struct i3ctx *ictx, struct pkg *pkg,
 
             if (pkg_caps_obsoletes_pkg_caps(p, pkg) &&
                 pkg_cmp_name_evr(p, pkg) > 0) { /* XXX bug propably, testit */
-                *rpkg = p;
+                *rpkg = pkg_link(p);
                 break;
             }
         }
@@ -85,6 +87,7 @@ int find_indirect_replacement(struct i3ctx *ictx, struct pkg *pkg,
     }
 
     if (*rpkg && i3_is_marked(ictx, *rpkg)) {
+        pkg_free(*rpkg);
         *rpkg = NULL;
         return 1;
     }
@@ -128,16 +131,25 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
         by_replacement = 1;
 
     } else {
+
         if (i3_is_user_choosable_equiv(ictx->ts))
             candidates = pkgs_array_new(8);
 
+        n_assert(tomark == NULL);
         found = i3_find_req(indent, ictx, pkg, req, &tomark, candidates);
+
+        /* messy a bit, i3_find_req choose tomark among candidates, do pkg_link()
+           here to be consistent with find_direct_replacement */
+        if (tomark)
+            tomark = pkg_link(tomark);
+
         tracef(indent, "%s&%s cnfl %s => req lookup %s\n", pkg_id(pkg), pkg_id(dbpkg),
                capreq_stra(cnfl), tomark ? pkg_id(tomark) : "null");
         capreq_revrel(req);
     }
 
     if (!found) {
+        n_assert(tomark == NULL);
         found = find_indirect_replacement(ictx, dbpkg, cnfl, &tomark);
         by_replacement = 1;
 
@@ -153,13 +165,20 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
                 found = 0;
             }
         }
+
+        if (real_tomark != tomark) {
+            pkg_free(tomark);
+            if (real_tomark != NULL)
+                real_tomark = pkg_link(real_tomark);
+        }
+
         tomark = real_tomark;
     }
 
     if (!found)
         goto l_end;
 
-    if (tomark == NULL)   /* already in inset */
+    if (tomark == NULL)   /* already in inset or user aborts */
         goto l_end;
 
     found = 0;
@@ -171,15 +190,19 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
         found = 1;
         i3tomark = i3pkg_new(tomark, 0, pkg, req, I3PKGBY_REQ);
         i3_process_package(indent, ictx, i3tomark);
+        i3pkg_free(i3tomark);
     } else {
         tracef(indent, "%s&%s cnfl %s => not found\n", pkg_id(pkg), pkg_id(dbpkg),
                capreq_stra(cnfl));
     }
 
-
 l_end:
+    if (tomark)
+        pkg_free(tomark);
+
     n_array_cfree(&candidates);
     capreq_free(req);
+
     return found;
 }
 
