@@ -44,15 +44,40 @@
 
 #define RPM_DEFAULT_DBPATH "/var/lib/rpm"
 
-static int initialized = 0;
+static int pm_refcnt = 0;
 int pm_rpm_verbose = 0;
+
+static int rpmlib_init()
+{
+    /* lp#1644315: save original umask and restore it after rpmReadConfigFiles() call */
+    mode_t mask = umask(0);
+
+    if (rpmReadConfigFiles(NULL, NULL) != 0) {
+        logn(LOGERR, "failed to read rpmlib configs");
+        return 0;
+    }
+
+    umask(mask);
+    return 1;
+}
+
+static void rpmlib_destroy()
+{
+    rpmFreeMacros(NULL);
+    rpmFreeRpmrc();
+}
 
 void pm_rpm_destroy(void *pm_rpm)
 {
     struct pm_rpm *pm = pm_rpm;
 
-    rpmFreeMacros(NULL);
-    rpmFreeRpmrc();
+    DBGF("%d\n", pm_refcnt);
+    n_assert(pm_refcnt > 0);
+
+    if (pm_refcnt == 1) {
+        rpmlib_destroy();
+    }
+    pm_refcnt--;
 
     n_cfree(&pm->rpm);
     n_cfree(&pm->sudo);
@@ -65,18 +90,10 @@ void *pm_rpm_init(void)
 {
     struct pm_rpm *pm_rpm;
 
-    if (initialized == 0) {
-	/* lp#1644315: save original umask and restore it after rpmReadConfigFiles() call */
-	mode_t mask = umask(0);
-
-        if (rpmReadConfigFiles(NULL, NULL) != 0) {
-            logn(LOGERR, "failed to read rpmlib configs");
-            return 0;
-        }
-        initialized = 1;
-
-        umask(mask);
-    }
+    DBGF("%d\n", pm_refcnt);
+    if (pm_refcnt == 0)
+        rpmlib_init();
+    pm_refcnt++;
 
     pm_rpm = n_malloc(sizeof(*pm_rpm));
     memset(pm_rpm, 0, sizeof(*pm_rpm));
@@ -216,8 +233,12 @@ struct rpmorg_db *pm_rpm_opendb(void *pm_rpm, void *dbh,
 
     /* a workaround, rpmdbOpen succeeds even if database does not exists */
     if (mode == O_RDONLY && !db_exists(pm_rpm, rootdir, dbpath)) {
-        logn(LOGERR, _("%s%s: rpm database does not exists"),
-             rootdir ? rootdir:"", dbpath ? dbpath : pm->default_dbpath);
+        const char *r = rootdir ? rootdir : "";
+        if (rootdir && strlen(rootdir) == 1 && *rootdir == '/')
+            r = "";
+
+        logn(LOGERR, _("%s%s: rpm database does not exists"), r,
+             dbpath ? dbpath : pm->default_dbpath);
         rc = 0;
     }
 
@@ -253,8 +274,6 @@ struct rpmorg_db *pm_rpm_opendb(void *pm_rpm, void *dbh,
 
 void pm_rpm_closedb(struct rpmorg_db *db)
 {
-    DBGF("DB %p\n", db);
-
     rpmtsFree(db->ts);           /* closes db->db */
     db->ts = NULL;
     db->db = NULL;
@@ -271,7 +290,7 @@ char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size)
     char *p;
 
     pm_rpm = pm_rpm;
-    n_assert(initialized);
+    n_assert(pm_refcnt > 0);
     p = (char*)rpmGetPath("%{_dbpath}", NULL);
     if (p == NULL || *p == '%')
         n_snprintf(path, size, "%s", RPM_DEFAULT_DBPATH);
