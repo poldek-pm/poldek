@@ -118,8 +118,6 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
         n_die("%d: unknown captag (internal error)", pmcap_tag);
     }
 
-    DBGF("ldcaps %s %d\n", tgs->label, tgs->name_tag);
-
     if (!pm_rpmhdr_ent_get(&e_name, h, tgs->name_tag)) {
         goto l_end;
     }
@@ -174,7 +172,7 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
     }
 
     for (i=0; i < e_name.cnt; i++) {
-        char *name, *evr = NULL;
+        const char *name, *evr = NULL;
         unsigned cr_relflags = 0, cr_flags = 0;
 
         name = names[i];
@@ -210,7 +208,11 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
                cr_flags |= CAPREQ_OBCNFL;
         */
 
-        if ((cr = capreq_new_evr(na, name, evr, cr_relflags, cr_flags)) == NULL) {
+        char *mutevr = NULL;
+        if (evr)
+            n_strdupap(evr, &mutevr);
+
+        if ((cr = capreq_new_evr(na, name, mutevr, cr_relflags, cr_flags)) == NULL) {
             logn(LOGERR, "%s: '%s %s%s%s %s': invalid capability",
                  pkg ? pkg_id(pkg) : "(null)", name,
                  (cr_relflags & REL_LT) ? "<" : "",
