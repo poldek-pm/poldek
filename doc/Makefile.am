@@ -168,7 +168,6 @@ distclean-local:
 	-rm -r $(MANUAL_XHTMLDIR)
 
 CLEANFILES =				\
-	CREDITS				\
 	CREDITS-body.html		\
 	NEWS				\
 	NEWS.html			\
