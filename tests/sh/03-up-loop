@@ -44,6 +44,14 @@ load() {
       fi
   done
 
+  for p in $packages; do
+      name=$(echo $p | cut -f1 -d-)
+      files=$($POLDEK_UP -q --skip-installed -Osource="test,type=pndir $REPOURL" -n test desc -ll $p | grep '/' | cut -f2)
+      msg "pkg $name, files: $files"
+      echo $files | grep -q "/bin/$name"; [ $? -eq 0 ] || fail "/bin/$name: no file"
+      echo $files | grep -q "/usr/share/doc/$name/README"; [ $? -eq 0 ] || fail "/usr/share/doc/$name/README: no file"
+  done
+
   return $ec
 }
 

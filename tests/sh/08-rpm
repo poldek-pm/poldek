@@ -84,12 +84,12 @@ function testRPMdbcache() {
 # e.g. openssl multiple instances
 testUpgradeMultipleInstalled() {
     msgn "Preparing repositories..."
-    build_installed a 0.9.8c-1
-    build_installed a 1.0.0o-1
-    build_installed a 1.1.1j-1
+    build_installed a 1-1
+    build_installed a 2-1
+    build_installed a 3-1
 
-    build a 1.1.1k-1
-    try_install a "a-1.1.1k-1" "a-1.1.1j-1"
+    build a 4
+    try_install a "a-4-1" "a-3-1"
 }
 
 testUpgradeMultipleInstalledWithDeps() {

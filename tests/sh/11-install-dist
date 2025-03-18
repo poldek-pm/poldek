@@ -71,9 +71,9 @@ try_install_dist() {
     if [ "$mode" != "rpm" ]; then
         do_runpoldek $eec $cmd --test
     fi
-
     if [ -n "$expected" ]; then
-    # run again to check installation results
+        # run again to check installation results
+        msg "# executing $POLDEK_INSTALL $cmd --parsable-tr-summary"
         typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | grep -E "^%[IDR]")
         typeset n_all=$(echo $out | sed 's|%|\n%|g' | grep -E '^%[ID]' | wc -l)
         typeset n=$(echo $out | sed 's|%|\n%|g' | grep -E "^%[ID] ($regexp)" | wc -l)

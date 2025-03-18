@@ -21,11 +21,13 @@ build_repo_packages() {
         for i in a b c d e f g h i j k l m n o p r s t u w x y v z; do
             rpm="$i-1-1.noarch.rpm"
             [ -f "$SOURCE_REPO/$rpm" ] && continue
-            ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -v 1  >/dev/null 2>&1 || abort "build package $i failed"
-            ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i" -v 1  >/dev/null 2>&1 || abort "build package $i$i failed"
-            ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i$i" -v 1  >/dev/null 2>&1 || abort "build package $i$i$i failed"
+            ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -f /bin/$i -f /usr/share/doc/$i/README -v 1  >/dev/null 2>&1 || abort "build package $i failed"
+            ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i" -f /bin/$i$i -f /usr/share/doc/$i$i/README -v 1  >/dev/null 2>&1 || abort "build package $i$i failed"
+            ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i$i" -f /bin/$i$i$i -f /usr/share/doc/$i$i$i/README -v 1  >/dev/null 2>&1 || abort "build package $i$i$i failed"
         done
     fi
+    local i=sh
+    ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -f /bin/$i -f /usr/share/doc/$i/README -v 1  >/dev/null 2>&1 || abort "build package $i failed"
 }
 
 build_package() {
@@ -136,8 +138,8 @@ die_if_empty_index() {
 }
 
 die_if_invalid_index() {
-    anindex=$1
-    expected_packages=$2
+    local anindex=$1
+    local expected_packages=$2
 
     GREP="zgrep"
     CAT="zcat"
@@ -158,9 +160,9 @@ die_if_invalid_index() {
     fi
 
     if echo $anindex | grep -q "diff.toc"; then
-        expected_lines="$expected_packages"
+        local expected_lines="$expected_packages"
 
-        lines=$($CAT $anindex | wc -l)
+        local lines=$($CAT $anindex | wc -l)
         if [ "$lines" != "$expected_lines" ]; then
             fail "$anindex contains $lines lines, expected $expected_lines"
         fi
@@ -191,6 +193,47 @@ die_if_invalid_index() {
             fail "$anindex: number of packages mismatch"
        fi
     fi
+}
+
+check_repo_content() {
+    local repo=$1
+    local limit=${2:-"10"}
+
+    if [ -z "$repo" ]; then
+        fail "check_repo_content(): missing repo arg"
+        return 1
+    fi
+
+    msgn "check_repo_content $repo limit=$limit"
+    msg "$POLDEK_NOCONF -v -s $repo --skip-installed --cmd \"ls --qf '%{NAME}\n'\""
+
+    local packages=$($POLDEK_NOCONF -q -s $repo --skip-installed ls --qf '%{NAME}\n');
+    msg "$POLDEK_NOCONF -v -s $repo --skip-installed --cmd 'desc -L *'"
+    $POLDEK_NOCONF -q --skip-installed -s $repo --cmd 'desc -L *' > $TMPDIR/changelogs
+
+    local n=0
+    for p in $packages; do
+        n=$(expr $n + 1)
+        [ $n -gt $limit ] && break
+
+        #msg "package $p"
+
+        # check changelog
+        grep -qP "^\- $p package changelog entry" $TMPDIR/changelogs
+        if [ $? -ne 0 ]; then
+          msgn "$POLDEK_UP -q --skip-installed -s $repo --cmd 'desc -L $p'"
+          fail "$p: missing changelog"
+          break
+        fi
+
+        # check files
+        local files=$($POLDEK_NOCONF -q --skip-installed -s $repo desc -ll $p | grep '/' | cut -f2)
+        #msg "pkg $name, files: $files"
+        echo $files | grep -q "/bin/$p"; [ $? -eq 0 ] || fail "/bin/$p: no file"
+        echo $files | grep -q "/usr/share/doc/$p/README"; [ $? -eq 0 ] || fail "/usr/share/doc/$p/README: no file"
+    done
+    [ $n -eq 0 ] && fail "$repo empty repo?"
+    return 0;
 }
 
 

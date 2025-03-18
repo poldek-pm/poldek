@@ -6,9 +6,9 @@
 #  Index creation use cases:
 Case_a="-s /foo                   =>  dir  -> default type"
 Case_b="--st type -s /foo         =>  type -> default type"
-Case_c="--st type /foo --mt dtype =>  type -> dtype"
-Case_d="-s /foo --mt dtype        =>  dir  -> dtype"
-Case_e="-s /foo --mt dtype,dtype2 =>  dir  -> dtype"
+#Case_c="--st type /foo --mt dtype =>  type -> dtype" # irrelevant, as pndir is only creatable format
+#Case_d="-s /foo --mt dtype        =>  dir  -> dtype" # irrelevant, as pndir is only creatable format
+#Case_e="-s /foo --mt dtype,dtype2 =>  dir  -> dtype" # irrelevant, as pndir is only creatable format
 Case_f="-n foo                    =>  dir (or original type) -> foo's type"
 Case_g="-s /foo --mkidx=/tmp/bar.gz"
 Case_h="-n foo --mkidx=/tmp/bar.gz"
@@ -30,32 +30,44 @@ testCreateDefaultType()
     fi
 }
 
-#  b) --st type -s /foo         =>  type -> default type
-#  c) --st type /foo --mt type  =>  type -> dtype
-XXXtestConvertRepos()           # disabled as pdir indexes are gone since 0.4
+#  b) --st dir -s /foo          =>  dir -> default type
+testCreateFromDir()
 {
-    $POLDEK_NOCONF -s $REPO --mkidx || fail "mkidx failed"
+    $POLDEK_NOCONF --st dir -s $REPO --index || fail "mkidx failed"
     die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
 
-    rm -rf $TMPDIR/packages.*
-    cp $REPO/packages.ndir.* $TMPDIR || fail "cp failed"
+    # move indexes to separate dir to make sure poldek will not faillback to load it as "dir" repo
+    rm -rf $TMPDIR/tmprepo
+    mkdir $TMPDIR/tmprepo
+    mv $REPO/packages.ndir* $TMPDIR/tmprepo || fail "cp failed"
 
+    check_repo_content $TMPDIR/tmprepo
+}
 
-    # c) --st type /foo --mt type =>  type -> dtype
-    msgn "$Case_c"
-    $POLDEK_NOCONF --st pndir -s $TMPDIR --mkidx --mt=pdir || fail "$Case_c failed"
-    die_if_empty_index "$TMPDIR/packages.dir$COMPR_EXT"
+#  b) --st rpmdb -s /foo          =>  rpmdb -> default type
+testCreateFromRpmdb() {
+    rm -rf $TMPDIR/tmproot
+    mkdir $TMPDIR/tmproot
+    rpm --root=$TMPDIR/tmproot --initdb
 
-    # b) --st type -s /foo
-    msgn "$Case_b"
-    rm -f $TMPDIR/packages.ndir*
-    $POLDEK_NOCONF --st pdir -s $TMPDIR --mkidx || fail "$Case_b failed"
-    die_if_empty_index "$TMPDIR/packages.ndir$COMPR_EXT"
+    local rpmop=
+    test is_verbose_mode && rpmop="v"
+
+    msgn "prep: rpm install"
+    rpm --root=$TMPDIR/tmproot -U$rpmop $SOURCE_REPO/sh-*.rpm --noscripts
+    for p in $(ls $SOURCE_REPO/a*.rpm); do
+        rpm --root=$TMPDIR/tmproot -U$rpmop $p --noscripts
+    done
+
+    msgn "test"
+    $POLDEK_NOCONF --st rpmdb -s $TMPDIR/tmproot/var/lib/rpm --index=$TMPDIR/tmproot/packages.ndir$COMPR_EXT || fail "mkidx failed"
+    die_if_empty_index "$TMPDIR/tmproot/packages.ndir$COMPR_EXT"
+    check_repo_content $TMPDIR/tmproot
 }
 
 #  d) -s /foo --mt dtype        =>  dir  -> dtype
 #  e) -s /foo --mt dtype,dtype2 =>  dir  -> dtype
-XXXtestSelectType() # disabled as pdir indexes are gone since 0.4
+xtestSelectType() # disabled as pdir indexes are gone since 0.4
 {
     msgn "$Case_d"
     $POLDEK_NOCONF -s $REPO --mkidx --mt pdir || fail "mkidx failed"
