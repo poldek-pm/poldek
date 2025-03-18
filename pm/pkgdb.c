@@ -347,7 +347,7 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
 {
     struct pkgdb_it        it;
     const struct pm_dbrec  *dbrec;
-    int                    nfound = 0, dbpkgs_was_null = 0;
+    int                    nfound = 0;
 
     pkgdb_it_init(db, &it, tag, value);
     while ((dbrec = pkgdb_it_get(&it))) {
@@ -361,12 +361,14 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
             continue;
         }
 
-        if (*dbpkgs == NULL) {
+        if (*dbpkgs == NULL)
             *dbpkgs = pkgs_array_new_ex(16, pkg_cmp_recno);
-            dbpkgs_was_null = 1;
-        }
 
-        if (!dbpkgs_was_null && dbpkg_array_has(*dbpkgs, dbrec->recno))
+        /* check for dups as rpmdbIterator returns package twice for double conflicts like
+           foo > 1
+           foo < 1
+         */
+        if (dbpkg_array_has(*dbpkgs, dbrec->recno))
             continue;
 
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
@@ -374,8 +376,8 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
             n_array_push(*dbpkgs, pkg);
         }
     }
-
     pkgdb_it_destroy(&it);
+
     return nfound;
 }
 
