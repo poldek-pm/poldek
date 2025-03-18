@@ -694,13 +694,13 @@ struct pkg_dent *load_available(struct poclidek_ctx *cctx)
 
 static int load_installed(struct poclidek_ctx *cctx, int flags)
 {
-#if 0 /* skip-installed is default now  */
+
     if ((cctx->flags & POCLIDEK_SKIP_INSTALLED) && /* --skip-installed  */
         (flags & POCLIDEK_LOAD_RELOAD) == 0) {     /* ...and not reload  */
 
         return 1;
     }
-#endif
+
     int reload = (flags & POCLIDEK_LOAD_RELOAD);
 
     if (reload)
