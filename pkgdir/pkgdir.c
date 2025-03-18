@@ -683,10 +683,9 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
     } else {
         if (poldek_VERBOSE < 2)
             //printf("loading %s\n", pkgdir->type);
-            msgn(1, _("Loading [%s]%s..."), pkgdir->type, pkgdir_idstr(pkgdir));
+            msgn(1, _("Loading [%s]%s..."), pkgdir->type, t_pkgdir_idstr(pkgdir, 20));
         else
-            msgn(2, _("Loading [%s]%s..."), pkgdir->type,
-                 vf_url_slim_s(pkgdir->idxpath, 0));
+            msgn(2, _("Loading [%s]%s..."), pkgdir->type, t_url_slim(pkgdir->idxpath, 20));
     }
 
     rc = 0;

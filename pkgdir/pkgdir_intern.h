@@ -48,6 +48,16 @@ int pkgdir__cache_clean(const char *path, const char *mask, int test);
 const char *pkgdir_localidxpath(const struct pkgdir *pkgdir);
 time_t pkgdir_mtime(const struct pkgdir *pkgdir);
 
+/* url/path slim with term width awareness */
+#include "poldek_term.h"
+#include "vfile/vfile.h"
+
+#define t_url_slim(path, padding) vf_url_slim_s(path, poldek_term_get_width() - padding - 12)
+#define t_pkgdir_idstr(p, padding) \
+ (((p)->flags & PKGDIR_NAMED) ? (p)->name : vf_url_slim_s((p)->idxpath ? \
+ (p)->idxpath : (p)->path ? (p)->path : "anon", poldek_term_get_width() - padding - 12))
+
+
 #include "pkg_store.h"
 
 /* internal module capabilities */

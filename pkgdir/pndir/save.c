@@ -659,8 +659,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     mk_paths(&paths, pathname, pkgdir);
 
     DBGF("path %s, flags %d\n", paths.path, flags);
-    msgn_tty(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
-    msgn_f(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
+    msgn_tty(1, _("Writing %s..."), t_url_slim(paths.path, 12));
+    msgn_f(1, _("Writing %s..."), paths.path);
 
     do_unlink(paths.path);
     db = tndb_creat(paths.path, PNDIR_COMPRLEVEL,
