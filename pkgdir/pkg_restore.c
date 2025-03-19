@@ -202,9 +202,9 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     int                  tag, last_tag, tag_binsize = PKG_STORETAG_SIZENIL;
     const  char          *errmg_double_tag = "%s:%lu: double '%c' tag";
     const  char          *errmg_ldtag = "%s:%lu: load '%c' tag error";
+    int                  load_full_fl = (ldflags & PKGDIR_LD_FULLFLIST);
 
 #if 0
-    printf("FULL %d\n", (ldflags & PKGDIR_LD_FULLFLIST));
     if (depdirs) {
         int i;
         printf("depdirs %p %d\n", depdirs, n_array_size(depdirs));
@@ -387,13 +387,13 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 
             case PKG_STORETAG_FL:
                 pkgt.nodep_files_offs = n_stream_tell(st);
-                //printf("flag_fullflist %d, %p\n", flag_fullflist, depdirs);
-                if ((ldflags & PKGDIR_LD_FULLFLIST) == 0 && depdirs == NULL) {
+                if (!load_full_fl && depdirs == NULL) {
                     pkgfl_skip_st(st);
 
                 } else {
                     tn_tuple *fl;
-                    if (pkgfl_restore_st(na, &fl, st, depdirs, 1) < 0) {
+
+                    if (pkgfl_restore_st(na, &fl, st, load_full_fl ? NULL : depdirs, 1) < 0) {
                         logn(LOGERR, errmg_ldtag, fn, ul_offs, *line);
                         nerr++;
                         goto l_end;
@@ -422,6 +422,10 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 
                         pkgt.pkgfl = ffl;
                     }
+
+                    pkgt.flags |= PKGT_HAS_FILES;
+                    if (load_full_fl)
+                        pkgt.flags |= PKGT_HAS_ALLFILES;
                 }
                 break;
 
