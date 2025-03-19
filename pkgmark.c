@@ -351,8 +351,9 @@ void pkgmark_massset(struct pkgmark_set *pms, int set, uint32_t flag)
         return;
 
     tn_hash_it it;
-    struct pkg_mark *m;
+    n_hash_it_init(&it, pms->ht);
 
+    struct pkg_mark *m;
     while ((m = n_hash_it_get(&it, NULL)) != NULL) {
         if (set)
             m->flags |= flag;
