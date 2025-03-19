@@ -585,9 +585,10 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
             cmdctx_printf(cmdctx, "%-*s %-*s\n",
 			  term_width_div2 + term_width_div2/10 - 1, pkg_name,
 			  (term_width/7), group ? group : "(unset)");
-	}
-        else if (flags & OPT_LS_SOURCERPM) {
-            const char *srcrpm = pkg_srcfilename_s(pkg);
+	} else if (flags & OPT_LS_SOURCERPM) {
+            char buf[512];
+            const char *srcrpm = pkg_srcfilename(pkg, buf, sizeof(buf));
+
             cmdctx_printf(cmdctx, "%-*s %-*s\n",
 			  term_width_div2 + term_width_div2/10 - 1, pkg_name,
 			  (term_width/7), srcrpm ? srcrpm : "(unset)");
