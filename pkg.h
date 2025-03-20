@@ -223,14 +223,14 @@ EXPORT int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
 
 /* src.rpm */
 EXPORT char *pkg_srcfilename(const struct pkg *pkg, char *buf, size_t size);
-#define pkg_srcfilename_s(pkg) pkg_srcfilename(pkg, alloca(512), 512)
+#define pkg_srcfilename_s(pkg) pkg_srcfilename(pkg, alloca(256), 256)
 
 /* RET %path/%name-%version-%release.%arch.rpm  */
 EXPORT char *pkg_filename(const struct pkg *pkg, char *buf, size_t size);
-#define pkg_filename_s(pkg) pkg_filename(pkg, alloca(512), 512)
+#define pkg_filename_s(pkg) pkg_filename(pkg, alloca(256), 256)
 
 EXPORT char *pkg_path(const struct pkg *pkg, char *buf, size_t size);
-#define pkg_path_s(pkg) pkg_path(pkg, alloca(512), 512)
+#define pkg_path_s(pkg) pkg_path(pkg, alloca(256), 256)
 
 EXPORT char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir);
@@ -251,13 +251,13 @@ EXPORT int pkg_printf(const struct pkg *pkg, const char *str);
 EXPORT int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
 EXPORT char *pkg_str(char *str, size_t size, const struct pkg *pkg);
 
-#define pkg_snprintf_s(pkg) pkg_str(alloca(512), 512, pkg)
-#define pkg_snprintf_s0(pkg) pkg_str(alloca(512), 512, pkg)
-#define pkg_snprintf_s1(pkg) pkg_str(alloca(512), 512, pkg)
+#define pkg_snprintf_s(pkg) pkg_str(alloca(256), 256, pkg)
+#define pkg_snprintf_s0(pkg) pkg_str(alloca(256), 256, pkg)
+#define pkg_snprintf_s1(pkg) pkg_str(alloca(256), 256, pkg)
 
 EXPORT int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg);
 EXPORT char *pkg_evr_str(char *str, size_t size, const struct pkg *pkg);
-#define pkg_evr_snprintf_s(pkg) pkg_evr_str(alloca(512), 512, pkg)
+#define pkg_evr_snprintf_s(pkg) pkg_evr_str(alloca(256), 256, pkg)
 
 /* must be free()d by pkguinf_free(); see pkgu.h */
 EXPORT struct pkguinf *pkg_uinf(const struct pkg *pkg);
