@@ -135,7 +135,7 @@ struct file_index *file_index_new(int nelem)
     memset(fi, 0, sizeof(*fi));
 
     fi->dirs = n_hash_new_na(na, nelem, (tn_fn_free)n_array_free);
-    n_hash_ctl(fi->dirs, TN_HASH_NOCPKEY);
+    n_hash_ctl(fi->dirs, TN_HASH_NOCPKEY | TN_HASH_REHASH);
 
     fi->na = na;
     return fi;
@@ -848,6 +848,7 @@ int file_index_report_semiorphans(struct pkgset *ps, tn_array *pkgs)
     for (i=0; i < n_array_size(pkgids); i++) {
         char *id = n_array_nth(pkgids, i);
         tn_array *mreqarr = n_hash_get(missreqh, id);
+        tn_hash *printed = n_hash_new(n_array_size(mreqarr), free);
 
         for (j=0; j < n_array_size(mreqarr); j++) {
             struct missing_req *mreq = n_array_nth(mreqarr, j);
@@ -863,10 +864,16 @@ int file_index_report_semiorphans(struct pkgset *ps, tn_array *pkgs)
                 n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
                                 "...", mreq->ncandidates - 3);
 
-            logn(LOGERR, _("%s: %s: directory not in required packages "
-                 "(missing Requires: %s?)"), id, mreq->path, pkgstr);
+            /* hide same suggestions (different paths but same suggested Requires:) */
+            if (!n_hash_exists(printed, pkgstr)) {
+                logn(LOGERR, _("%s: %s: directory not in required packages "
+                               "(missing Requires: %s?)"), id, mreq->path, pkgstr);
+
+                n_hash_insert(printed, pkgstr, NULL);
+            }
             norphans++;
         }
+        n_hash_free(printed);
     }
     msgn(0, _("%d semi-orphaned directories found"), norphans);
     n_array_free(pkgids);

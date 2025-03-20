@@ -29,13 +29,14 @@ struct pkgset {
 
     struct pm_ctx      *pmctx;
 
-    tn_hash            *_depinfocache;
-
     struct capreq_idx  cap_idx;    /* 'name'  => *pkg[]  */
     struct capreq_idx  req_idx;    /*  -"-               */
     struct capreq_idx  obs_idx;    /*  -"-               */
     struct capreq_idx  cnfl_idx;    /*  -"-               */
     struct file_index  *file_idx;   /* 'file'  => *pkg[]  */
+
+    tn_hash            *_req_cache;
+    tn_hash            *_reqpkgs_cache;
 };
 
 struct pm_ctx;

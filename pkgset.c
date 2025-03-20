@@ -82,9 +82,14 @@ void pkgset_free(struct pkgset *ps)
     if (ps->file_idx)
         file_index_free(ps->file_idx);
 
-    if (ps->_depinfocache) {
-        n_hash_free(ps->_depinfocache);
-        ps->_depinfocache = NULL;
+    if (ps->_req_cache) {
+        n_hash_free(ps->_req_cache);
+        ps->_req_cache = NULL;
+    }
+
+    if (ps->_reqpkgs_cache) {
+        n_hash_free(ps->_reqpkgs_cache);
+        ps->_reqpkgs_cache = NULL;
     }
 
     n_array_cfree(&ps->pkgs);

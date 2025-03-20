@@ -196,14 +196,19 @@ int process_reqs(int indent, tn_array *reqpkgs, struct pkgset *ps, const struct 
         if (capreq_is_rpmlib(req))
             continue;
 
-        const char *streq = capreq_stra(req);
+        //if (capreq_is_boolean(req)) /* TODO: boolean deps */
+        //    continue;
+
         tn_array *matches = NULL;
         char key[512];
         uint32_t khash;
         int klen;
 
+        klen = capreq_snprintf(key, sizeof(key), req);
+        n_assert(klen > 0);
+        const char *streq = key;
+
         //klen = n_snprintf(key, sizeof(key), "%s:%s", pkg_id(pkg), capreq_stra(req));
-        klen = n_snprintf(key, sizeof(key), "%s", capreq_stra(req));
         khash = n_hash_compute_hash(cache, key, klen);
         if (n_hash_hexists(cache, streq, klen, khash)) {
             matches = n_hash_hget(cache, streq, klen, khash);
@@ -258,23 +263,36 @@ tn_array *pkgset_get_required_packages_x(int indent, struct pkgset *ps,
         return NULL;
     }
 
-    if (ps->_depinfocache == NULL) {
-        ps->_depinfocache = n_hash_new(n_array_size(ps->pkgs), (tn_fn_free)n_array_free);
+    if (ps->_req_cache == NULL) {
+        ps->_req_cache = n_hash_new(n_array_size(ps->pkgs), (tn_fn_free)n_array_free);
+        n_hash_ctl(ps->_req_cache, TN_HASH_REHASH);
+    }
+
+    if (ps->_reqpkgs_cache == NULL) {
+        ps->_reqpkgs_cache = n_hash_new(n_array_size(ps->pkgs), (tn_fn_free)n_array_free);
+        n_hash_ctl(ps->_reqpkgs_cache, TN_HASH_REHASH);
     }
 
     if (unreqh && *unreqh == NULL) {
         *unreqh = n_hash_new(128, (tn_fn_free)n_array_free);
+        n_hash_ctl(*unreqh, TN_HASH_REHASH);
     }
 
     pkgset__index_caps(ps);
+    tn_array *reqpkgs = n_hash_get(ps->_reqpkgs_cache, pkg_id(pkg));
+    if (reqpkgs)
+        return n_ref(reqpkgs);
 
-    tn_array *reqpkgs = reqpkgs_array_new(n_array_size(pkg->reqs)/2+2);
-    process_reqs(indent, reqpkgs, ps, pkg, ps->_depinfocache, true,
+    reqpkgs = reqpkgs_array_new(n_array_size(pkg->reqs)/2+2);
+    process_reqs(indent, reqpkgs, ps, pkg, ps->_req_cache, true,
                  unreqh ? *unreqh : NULL);
 
     if (n_array_size(reqpkgs) == 0) {
         n_array_cfree(&reqpkgs);
     }
+
+    if (reqpkgs)
+        n_hash_insert(ps->_reqpkgs_cache, pkg_id(pkg), n_ref(reqpkgs));
 
     return reqpkgs;
 }
