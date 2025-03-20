@@ -22,6 +22,7 @@ suggests=
 obsoletes=
 conflicts=
 files=
+dirs=
 arch="noarch"
 sourcedir="rpm"
 rpmdir="repo"
@@ -64,6 +65,9 @@ while test $# -gt 0 ; do
 
         -f)
             shift; files="$files ${1} "; shift ;;
+
+        -fd)
+            shift; dirs="$dirs ${1} "; shift ;;
 
 	-a)
 	    shift; arch="${1}"; shift;;
@@ -128,8 +132,12 @@ echo -e "%description -l de\n(de)Package build by $COMMAND\n" >> $SPEC
 
 echo -e "%prep\n%pre\n" >> $SPEC
 
-if [ -n "$files" ]; then
+
+if [ -n "$dirs" -o -n "$files" ]; then
     echo "%install" >> $SPEC
+fi
+
+if [ -n "$files" ]; then
     for f in $files; do
         dn=$(dirname $f)
         echo "mkdir -p \$RPM_BUILD_ROOT/$dn" >> $SPEC
@@ -142,8 +150,22 @@ if [ -n "$files" ]; then
     done
 fi
 
+if [ -n "$dirs" ]; then
+    for dn in $dirs; do
+        echo "mkdir -p \$RPM_BUILD_ROOT/$dn" >> $SPEC
+    done
+fi
+
+
 echo -e "%files\n%defattr(644,root,root,755)" >> $SPEC
+if [ -n "$dirs" ]; then
+    for dn in $dirs; do
+        echo "%dir $dn" >> $SPEC
+    done
+fi
+
 if [ -n "$files" ]; then
+    # make all dirnames owned by package
     dirs=""
     for i in $files; do
         dn=$(dirname $f)

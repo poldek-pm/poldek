@@ -123,19 +123,24 @@ xtestUpgradeMultipleInstalledIndir() {
     try_install b-1-1 "a-1.2" "a-1.1-1"
 }
 
-# want to keep old kernel(s) but install new one
+
+# wip: want to keep old kernel(s) but install new one
 xtestKeepUpgrade() {
     msgn "Preparing repositories..."
+    local prefix="kernel"
+    local pkg="${prefix}-5.4"
     for i in 1; do
-        build_installed a $i
-        build_installed a-drm $i -r "'a = $i'"
+        #build_installed $prefix-headers 8
+        build_installed $pkg $i
+        build_installed "${pkg}-drm" $i -r "'$pkg = $i'" # -r "'$prefix-headers = 8'"
     done
 
-    build a 3
-    build a-drm 3 -r "'a = 3'"
+    #build $prefix-headers 9
+    build $pkg 3
+    build "${pkg}-drm" 3 -r "'$pkg = 3'" # -r "'$prefix-headers = 9'"
 
-    POLDEK_INSTALL="$POLDEK_INSTALL -Ohold=a,a-drm --nohold"
-    try_install a "a-3,a-drm-3" ""
+    try_install $pkg-drm "$pkg-3,$pkg-drm-3" ""
+    #try_install $pkg-drm "$pkg-3,$pkg-drm-3,$prefix-headers-9" "$prefix-headers-8"
 }
 
 . ./sh/lib/shunit2

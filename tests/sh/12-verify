@@ -13,15 +13,12 @@ setUp() {
     rm -rf $ORIGREPO/*
 
     REPO="$ORIGREPO/src"
-    REPO2="$ORIGREPO/src2"
-    rm -rf $REPO $REPO2
+    rm -rf $REPO
 
     mkdir -p $REPO || fail "mkdir $REPO failed"
-    mkdir -p $REPO2 || fail "mkdir $REPO2 failed"
 
     RAW_POLDEK="$POLDEK_NOCONF"
-    POLDEK2="$RAW_POLDEK --st dir -s $REPO --st dir -s $REPO2"
-    POLDEK1="$RAW_POLDEK --st dir -s $REPO"
+    POLDEK="$RAW_POLDEK --st pndir -s $REPO"
 }
 
 build() {
@@ -32,75 +29,169 @@ build2() {
    build_package $REPO2 $@
 }
 
+make_index() {
+    $RAW_POLDEK --st dir -s $REPO --index
+}
+
 testVerifySuccess()
 {
     build a -r "foo" -r "bar" -f /etc/foo.conf
     build b -p "foo" -p "bar" -r "baz" -f /etc/bar.conf
     build c -p "baz"
     build sh -p /bin/sh
+    make_index
 
     msgn "deps"
-    $POLDEK1 --verify a
+    $POLDEK --verify a
     assertEquals "verify  failed" "$?" "0"
 
     msgn "order"
-    $POLDEK1 --verify=order a
+    $POLDEK --verify=order a
     assertEquals "verify=order failed" "$?" "0"
 
     msgn "conflicts"
-    $POLDEK1 --verify=conflicts a
+    $POLDEK --verify=conflicts a
     assertEquals "verify=conflicts failed" "$?" "0"
 
     msgn "file conflicts"
-    $POLDEK1 --verify=file-conflicts a
+    $POLDEK --verify=file-conflicts a
     assertEquals "verify=file-conflicts failed" "$?" "0"
 
     msgn "file orphans"
-    $POLDEK1 --verify=file-orphans a
+    $POLDEK --verify=file-orphans a
     assertEquals "verify=file-orphans failed" "$?" "0"
 
     msgn "file missing deps"
-    $POLDEK1 --verify=file-missing-deps a
+    $POLDEK --verify=file-missing-deps a
     assertEquals "verify=missing-deps failed" "$?" "0"
 }
 
-testVerifyDepsError()
+testVerifyDepsFail()
 {
     build a -r "foo" -r "bar.so"
     build b -p "foo" -p "bar" -r "baz"
     build c -p "baz" -r "foo.so"
     build d -r "baz.so"
     build sh -p /bin/sh
+    make_index
 
-    msg "# selected: $POLDEK1 --verify a"
-    $POLDEK1 --verify a >$TMP/verify-log.log
+    msg "# selected: $POLDEK --verify a"
+    $POLDEK --verify a >$TMP/verify-log.log
     assertEquals "poldek succeed, but should fail", "$?" "1"
 
     n=$(grep "error:" $TMP/verify-log.log | grep -P 'req.+not found' | wc -l)
     assertEquals "should report 2 dependency errors" "$n" "2"
 
 
-    msg "# all: $POLDEK1 --verify"
-    $POLDEK1 --verify >$TMP/verify-log.log
+    msg "# all: $POLDEK --verify"
+    $POLDEK --verify >$TMP/verify-log.log
     assertEquals "poldek succeed, but should fail", "$?" "1"
 
     n=$(grep "error:" $TMP/verify-log.log | grep -P 'req.+not found' | wc -l)
     assertEquals "should report 3 dependency errors" "$n" "3"
 }
 
-testVerifyConflictsError()
+testVerifyConflictsFail()
 {
     build a -r "foo" -r "bar" -p "foo.so"
     build b -p "foo" -p "bar" -r "baz"
     build c -p "baz" -c "foo.so"
     build sh -p /bin/sh
+    make_index
 
-    msg "# $POLDEK1 --verify=conflicts a"
-    $POLDEK1 --verify=conflicts a >$TMP/verify-log.log
+    msg "# $POLDEK --verify=conflicts a"
+    $POLDEK --verify=conflicts a >$TMP/verify-log.log
     assertEquals "poldek succeed, but should fail", "$?" "1"
 
     n=$(grep "error:" $TMP/verify-log.log | grep -P 'c-.+conflicts.+foo.so' | wc -l)
     assertEquals "should report 1 conflict" "$n" "1"
+}
+
+testVerifyFileOrphansSuccess()
+{
+    build a -r "foo" -r "bar" -p "foo.so" -f "/usr/bin/a"
+    build b -p "foo" -p "bar" -r "baz" -fd '/usr' -f "/bin/b"
+    make_index
+
+    #msg "$POLDEK desc -ll a"
+    #$POLDEK desc -ll a
+
+    msg "# $POLDEK --verify=file-orphans"
+    is_verbose_mode && $POLDEK --verify=file-orphans
+    $POLDEK --verify=file-orphans >$TMP/verify-log.log
+    assertEquals "poldek fail, but should succeed" "$?" "0"
+    n=$(grep "error:" $TMP/verify-log.log | wc -l)
+    assertEquals "should not report orphans" "$n" "0"
+}
+
+testVerifyFileOrphansFail()
+{
+    build a -r "foo" -r "bar" -p "foo.so" -f "/usr/bin/a"
+    make_index
+
+    #msg "$POLDEK desc -ll a"
+    #$POLDEK desc -ll a
+
+    msg "# $POLDEK --verify=file-orphans"
+    is_verbose_mode && $POLDEK --verify=file-orphans
+    $POLDEK --verify=file-orphans >$TMP/verify-log.log
+    #assertEquals "poldek succeed, but should fail", "$?" "1"
+    n=$(grep "error:" $TMP/verify-log.log | grep -P '/usr: orphaned directory from a-' | wc -l)
+    assertEquals "should report 1 orphan" "$n" "1"
+}
+
+
+testVerifyFileMissingDepsSuccess()
+{
+    build a -r "foo" -f "/usr/bin/a"
+    build b -p "foo" -fd '/usr' -f "/bin/b"
+    make_index
+
+    #msg "$POLDEK desc -ll a"
+    #$POLDEK desc -ll a
+
+    msg "# $POLDEK --verify=file-missing-deps"
+    is_verbose_mode && $POLDEK --verify=file-missing-deps
+    $POLDEK --verify=file-missing-deps >$TMP/verify-log.log
+    assertEquals "poldek fail, but should succeed" "$?" "0"
+    n=$(grep "error: " $TMP/verify-log.log | wc -l)
+    assertEquals "should not report errors" "$n" "0"
+}
+
+testVerifyFileMissingDepsIndirectSuccess()
+{
+    build a -r "foo" -f "/usr/bin/a"
+    build b -p "foo" -r "bar"
+    build c -p "bar" -fd '/usr'
+    make_index
+
+    #msg "$POLDEK desc -ll a"
+    #$POLDEK desc -ll a
+
+    msg "# $POLDEK --verify=file-missing-deps"
+    is_verbose_mode && $POLDEK --verify=file-missing-deps
+    $POLDEK --verify=file-missing-deps >$TMP/verify-log.log
+    assertEquals "poldek fail, but should succeed" "$?" "0"
+    n=$(grep "error: " $TMP/verify-log.log | wc -l)
+    assertEquals "should not report errors" "$n" "0"
+}
+
+
+testVerifyFileMissingDepsFail()
+{
+    build a -r "foo" -r "bar" -p "foo.so" -f "/usr/bin/a"
+    build b -p "xfoo" -p "xbar" -fd '/usr' -f "/bin/b"
+    make_index
+
+    #msg "$POLDEK desc -ll a"
+    #$POLDEK desc -ll a
+
+    msg "# $POLDEK --verify=file-missing-deps"
+    is_verbose_mode && $POLDEK --verify=file-missing-deps
+    $POLDEK --verify=file-missing-deps >$TMP/verify-log.log
+    assertEquals "poldek fail, but should succeed" "$?" "0"
+    n=$(grep "error: a-1-1.noarch: /usr: directory not in required packages (missing Requires: b?)" $TMP/verify-log.log | wc -l)
+    assertEquals "should report one missing dep" "$n" "1"
 }
 
 
