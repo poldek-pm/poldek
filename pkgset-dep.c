@@ -268,22 +268,14 @@ tn_array *pkgset_get_required_packages_x(int indent, struct pkgset *ps,
         n_hash_ctl(ps->_req_cache, TN_HASH_REHASH);
     }
 
-    if (ps->_reqpkgs_cache == NULL) {
-        ps->_reqpkgs_cache = n_hash_new(n_array_size(ps->pkgs), (tn_fn_free)n_array_free);
-        n_hash_ctl(ps->_reqpkgs_cache, TN_HASH_REHASH);
-    }
-
     if (unreqh && *unreqh == NULL) {
         *unreqh = n_hash_new(128, (tn_fn_free)n_array_free);
         n_hash_ctl(*unreqh, TN_HASH_REHASH);
     }
 
     pkgset__index_caps(ps);
-    tn_array *reqpkgs = n_hash_get(ps->_reqpkgs_cache, pkg_id(pkg));
-    if (reqpkgs)
-        return n_ref(reqpkgs);
 
-    reqpkgs = reqpkgs_array_new(n_array_size(pkg->reqs)/2+2);
+    tn_array *reqpkgs = reqpkgs_array_new(n_array_size(pkg->reqs)/2+2);
     process_reqs(indent, reqpkgs, ps, pkg, ps->_req_cache, true,
                  unreqh ? *unreqh : NULL);
 
@@ -291,18 +283,30 @@ tn_array *pkgset_get_required_packages_x(int indent, struct pkgset *ps,
         n_array_cfree(&reqpkgs);
     }
 
-    if (reqpkgs)
-        n_hash_insert(ps->_reqpkgs_cache, pkg_id(pkg), n_ref(reqpkgs));
-
     return reqpkgs;
 }
 
 tn_array *pkgset_get_required_packages(int indent, struct pkgset *ps,
                                        const struct pkg *pkg)
 {
-    return pkgset_get_required_packages_x(indent, ps, pkg, NULL);
-}
+    tn_array *reqpkgs = NULL;
 
+    if (ps->_reqpkgs_cache == NULL) {
+        ps->_reqpkgs_cache = n_hash_new(n_array_size(ps->pkgs), (tn_fn_free)n_array_free);
+        n_hash_ctl(ps->_reqpkgs_cache, TN_HASH_REHASH);
+    } else {
+        reqpkgs = n_hash_get(ps->_reqpkgs_cache, pkg_id(pkg));
+        if (reqpkgs)
+            return n_ref(reqpkgs);
+    }
+
+    reqpkgs = pkgset_get_required_packages_x(indent, ps, pkg, NULL);
+
+    if (reqpkgs)
+        n_hash_insert(ps->_reqpkgs_cache, pkg_id(pkg), n_ref(reqpkgs));
+
+    return reqpkgs;
+}
 
 static
 tn_array *get_conflicted(int indent, struct pkgset *ps,
