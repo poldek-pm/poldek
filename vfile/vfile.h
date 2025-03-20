@@ -174,11 +174,11 @@ EXPORT int vf_url_as_path(char *buf, size_t size, const char *url);
 
 /* replace password with "x" * len(password) */
 EXPORT const char *vf_url_hidepasswd(char *buf, int size, const char *url);
-#define vf_url_hidepasswd_s(url) vf_url_hidepasswd(alloca(PATH_MAX), PATH_MAX, url)
+#define vf_url_hidepasswd_s(url) vf_url_hidepasswd(alloca(256), 256, url)
 
 /* applies vf_url_hidepasswd() + slim down url string to maxl */
 EXPORT const char *vf_url_slim(char *buf, int size, const char *url, int maxl);
-#define vf_url_slim_s(url, maxl) vf_url_slim(alloca(PATH_MAX), PATH_MAX, url, (maxl) > 40 ? (maxl) : 40)
+#define vf_url_slim_s(url, maxl) vf_url_slim(alloca(256), 256, url, (maxl) > 40 ? (maxl) : 40)
 
 EXPORT char *vf_url_unescape(const char *url);
 
