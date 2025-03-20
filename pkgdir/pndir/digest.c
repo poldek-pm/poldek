@@ -237,7 +237,7 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
     if ((vf = vfile_open_ul(path, VFT_STDIO, VFM_RW, pkgdir->name)) == NULL)
         return 0;
 
-    DBGF("brandnew %s %d\n", pkgdir_idstr(pkgdir), brandnew);
+    DBGF("brandnew %s %d\n", pkgdir_idstr_s(pkgdir), brandnew);
     if (!compr)
         compr = COMPR_NONE;
 

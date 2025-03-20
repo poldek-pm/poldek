@@ -100,7 +100,7 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
     tn_stream     *st;
     char *dir, *tmp;
 
-    msgn_i(2, 2, "Creating stub index of %s...", pkgdir_idstr(pkgdir));
+    msgn_i(2, 2, "Creating stub index of %s...", pkgdir_idstr_s(pkgdir));
 
     n_strdupap(path, &tmp);
     dir = n_dirname(tmp);
@@ -229,7 +229,7 @@ void pkgdir__stubindex_update(struct pkgdir *pkgdir)
         return;
     }
 
-    msgn_i(2, 2, "updating stub index of %s...", pkgdir_idstr(pkgdir));
+    msgn_i(2, 2, "updating stub index of %s...", pkgdir_idstr_s(pkgdir));
     int verbosity = poldek_set_verbose(0);
 
     if ((pkgdir->flags & PKGDIR_LOADED) == 0) {

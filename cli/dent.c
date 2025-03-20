@@ -412,12 +412,13 @@ struct pkg_dent *poclidek_dent_setup(struct poclidek_ctx *cctx,
 
         if (pkg->pkgdir != curr_pkgdir) {
             struct pkg_dent *dent;
+            char idbuf[256];
             const char *id;
 
             n_assert(pkg->pkgdir);
             curr_pkgdir = pkg->pkgdir;
 
-            id = pkgdir_idstr(pkg->pkgdir);
+            id = pkgdir_idstr(pkg->pkgdir, idbuf, sizeof(idbuf));
             if ((dent = n_hash_get(dent_ht, id)) == NULL) {
                 char name[256], *p;
                 n_snprintf(name, sizeof(name), "%s", id);

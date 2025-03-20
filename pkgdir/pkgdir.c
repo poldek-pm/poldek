@@ -371,7 +371,7 @@ int pkgdir_update(struct pkgdir *pkgdir)
     rc = pkgdir->mod->update(pkgdir, &uprc);
     if (rc) {
         if (uprc == PKGDIR_UPRC_UPTODATE)
-            msgn(1, _("%s is up to date"), pkgdir_idstr(pkgdir));
+            msgn(1, _("%s is up to date"), pkgdir_idstr_s(pkgdir));
 
         else if (uprc == PKGDIR_UPRC_UPDATED &&
                  (pkgdir->mod->cap_flags & PKGDIR_CAP_NOSAVAFTUP) == 0) {
@@ -383,11 +383,11 @@ int pkgdir_update(struct pkgdir *pkgdir)
     } else if (!rc && uprc == PKGDIR_UPRC_ERR_DESYNCHRONIZED) {
         if (pkgdir->src && (pkgdir->src->flags & PKGSOURCE_AUTOUPA)) {
             msgn(0, _("%s: desynchronized index, trying to update whole index..."),
-                 pkgdir_idstr(pkgdir));
+                 pkgdir_idstr_s(pkgdir));
             rc = pkgdir_update_a(pkgdir->src);
         } else {
             logn(LOGWARN, _("%s: desynchronized index, try --upa"),
-                 pkgdir_idstr(pkgdir));
+                 pkgdir_idstr_s(pkgdir));
         }
     }
 
@@ -549,7 +549,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 void pkgdir_free(struct pkgdir *pkgdir)
 {
 
-    DBGF("%p %s\n", pkgdir,  pkgdir_idstr(pkgdir));
+    DBGF("%p %s\n", pkgdir,  pkgdir_idstr_s(pkgdir));
     n_cfree(&pkgdir->name);
     n_cfree(&pkgdir->path);
     n_cfree(&pkgdir->idxpath);
@@ -653,7 +653,7 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
     tn_array *foreign_depdirs = NULL;
     int rc;
 
-    DBGF("%p %s\n", pkgdir,  pkgdir_idstr(pkgdir));
+    DBGF("%p %s\n", pkgdir,  pkgdir_idstr_s(pkgdir));
 
     if ((ldflags & PKGDIR_LD_FULLFLIST) == 0 && depdirs && pkgdir->depdirs) {
         int i;
@@ -793,7 +793,7 @@ int pkgdir__uniq(struct pkgdir *pkgdir)
         snprintf(m, sizeof(m), ngettext("removed %d duplicate package",
                                         "removed %d duplicate packages", n), n);
 
-        name = pkgdir_idstr(pkgdir);
+        name = pkgdir_idstr_s(pkgdir);
         if (name)
             logn(LOGWARN, "%s: %s", name, m);
         else

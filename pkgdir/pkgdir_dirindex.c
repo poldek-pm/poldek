@@ -294,7 +294,7 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
         verbosity = 1;
 
     msgn(verbosity, _("%s directory index of %s..."),
-         prev_dirindex ? _("Updating") : _("Creating"), pkgdir_idstr(pkgdir));
+         prev_dirindex ? _("Updating") : _("Creating"), pkgdir_idstr_s(pkgdir));
 
     n_strdupap(path, &tmp);
     dir = n_dirname(tmp);
@@ -675,7 +675,7 @@ struct pkgdir_dirindex *load_dirindex(const struct pkgdir *pkgdir,
     int             i;
     struct pkgdir_dirindex *dirindex = NULL;
 
-    msgn_i(2, 2, "Loading directory index of %s...", pkgdir_idstr(pkgdir));
+    msgn_i(2, 2, "Loading directory index of %s...", pkgdir_idstr_s(pkgdir));
     MEMINF("start");
 
     if ((db = open_index_database(pkgdir, path, &keymap)) == NULL)
@@ -855,7 +855,7 @@ void pkgdir__dirindex_update(struct pkgdir *pkgdir)
         return;
     }
 
-    msgn_i(2, 2, "updating directory index of %s...", pkgdir_idstr(pkgdir));
+    msgn_i(2, 2, "updating directory index of %s...", pkgdir_idstr_s(pkgdir));
     int verbosity = poldek_set_verbose(0);
 
     if ((pkgdir->flags & PKGDIR_LOADED) == 0) {

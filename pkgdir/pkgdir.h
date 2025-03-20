@@ -88,13 +88,16 @@ struct pkgdir {
 #define pkgdir_pr_idxpath(pkgdir) \
    (pkgdir->idxpath ? vf_url_hidepasswd_s(pkgdir->idxpath) : NULL)
 
-#define pkgdir_idstr(p) \
+#define pkgdir_idstr(p, buf, size) \
+ (((p)->flags & PKGDIR_NAMED) ? (p)->name : vf_url_slim(buf, size, \
+    (p)->idxpath ? (p)->idxpath : (p)->path ? (p)->path : "anon", 0))
+
+#define pkgdir_idstr_s(p) \
  (((p)->flags & PKGDIR_NAMED) ? (p)->name : vf_url_slim_s((p)->idxpath ? \
  (p)->idxpath : (p)->path ? (p)->path : "anon", 0))
 
 EXPORT struct pkgdir *pkgdir_malloc(void);
 EXPORT void pkgdir_free(struct pkgdir *pkgdir);
-
 
 
 /*

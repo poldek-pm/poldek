@@ -197,7 +197,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         }
 
         n_array_push(ps->pkgdirs, pkgdir);
-        MEMINF("after open %s", pkgdir_idstr(pkgdir));
+        MEMINF("after open %s", pkgdir_idstr_s(pkgdir));
     }
 
     /* merge pkgdis depdirs into ps->depdirs */
