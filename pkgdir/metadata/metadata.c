@@ -25,6 +25,7 @@
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <utime.h>
 #include <fcntl.h>
 
 #include <trurl/nassert.h>
@@ -267,8 +268,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     if (!idx_open(&idx, pkgdir, vfmode))
         return 0;
 
-    DBGF("%s\n", pkgdir->path);
-
     pkgdir->ts = poldek_util_mtime(vfile_localpath(idx.repomd_vf));
     pkgdir->mod_data = n_malloc(sizeof(idx));
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
@@ -311,6 +310,59 @@ void pkg_data_free(tn_alloc *na, void *ptr)
 #endif
 
 static
+struct vfile *zstd2gz(struct vfile *vf)
+{
+    char cmd[PATH_MAX], gzpath[PATH_MAX];
+    char *p;
+
+    if ((p = strrchr(vfile_localpath(vf), '.')) == NULL)
+        return vf;
+
+    if (strcmp(p, ".zst") != 0)
+        return vf;
+
+    n_snprintf(gzpath, sizeof(gzpath), vfile_localpath(vf));
+    p = strrchr(gzpath, '.');
+    n_assert(p);
+    p++; *p++ = 'g'; *p++ = 'z'; *p = '\0';
+
+    if (access(gzpath, R_OK) == 0) {
+        struct stat st, st2;
+        stat(vfile_localpath(vf), &st);
+        stat(gzpath, &st2);
+
+        if (st.st_mtime == st2.st_mtime) {
+            printf("ALREADY gzipped\n");
+            goto l_end;
+        }
+    }
+
+    n_snprintf(cmd, sizeof(cmd), "zstd -dc %s | gzip > %s", vfile_localpath(vf), gzpath);
+
+    if (system(cmd) == 0) {
+        struct utimbuf ut;
+        struct stat st;
+
+        stat(vfile_localpath(vf), &st);
+        ut.actime = ut.modtime = st.st_mtime;
+        utime(gzpath, &ut);
+
+    } else {
+        logn(LOGERR, "zstd->gz conversion failed");
+        vf_unlink(gzpath);
+        return NULL;
+    }
+
+ l_end:
+    vfile_close(vf);
+
+    if ((vf = vfile_open(gzpath, VFT_IO, VFM_RO | VFM_NOEMPTY)) == NULL)
+        return NULL;
+
+    return vf;
+}
+
+static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     struct idx         *idx;
@@ -325,6 +377,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
                             vfmode, pkgdir->name, 0);
     if (vf == NULL)
         return 0;
+
+    vf = zstd2gz(vf);
 
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
