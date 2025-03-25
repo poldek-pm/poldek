@@ -6,6 +6,7 @@ LIBS =
 noinst_LTLIBRARIES = libpkgdir_metadata.la
 libpkgdir_metadata_la_SOURCES = 		\
 	metadata.c				\
+	basearch.c				\
 	load.c					\
 	load.h					\
 	$(NULL)

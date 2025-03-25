@@ -218,12 +218,147 @@ struct vfile *open_metadata_file(tn_hash *repomd,
     return vf;
 }
 
+/* expand $ macros */
+static const char *expand_macros(char *dest, int size, const char *str,
+                                 const tn_hash *values)
+{
+    const char **tl, **tl_save;
+    int n = 0;
+
+
+    tl = tl_save = n_str_tokl(str, "$");
+    if (*str != '$' && tl[1] == NULL) {
+        n_str_tokl_free(tl);
+        return str;
+    }
+
+    if (*str != '$') {
+        n = n_snprintf(dest, size, *tl);
+        tl++;
+    }
+
+    while (*tl) {
+        const char *p,  *vv, *v, *var;
+        char val[256];
+        int  v_len;
+
+
+        p = v = *tl;
+        DBGF("token: %s\n", *tl);
+        tl++;
+
+        if (!isalpha(*v)) {
+            n += n_snprintf(&dest[n], size - n, "$%s", v);
+            continue;
+        }
+
+        vv = v;
+        v_len = 0;
+        while (isalnum(*vv) || *vv == '_' || *vv == '-') {
+            vv++;
+            v_len++;
+        }
+
+        if (!isalpha(*vv))
+            vv++;
+
+        if (v_len + 1 > (int)sizeof(val))
+            return str;
+
+        n_snprintf(val, v_len + 1, v);
+        DBGF("var (%s)\n", val);
+
+        if ((var = n_hash_get(values, val)) == NULL) {
+            n += n_snprintf(&dest[n], size - n, "$%s", p);
+
+        } else {
+            n += n_snprintf(&dest[n], size - n, "%s", var);
+            n += n_snprintf(&dest[n], size - n, "%s", vv);
+        }
+    }
+
+    n_str_tokl_free(tl_save);
+
+    return dest;
+}
+
+const char *get_base_arch();
+
+static char *parse_repo_file(struct vfile *vf)
+{
+    char buf[1024];
+    char tag_baseurl[] = "baseurl";
+
+    while (n_stream_gets(vf->vf_tnstream, buf, sizeof(buf) - 1)) {
+        char *p = buf;
+
+        while (isspace(*p))
+            p++;
+
+        if (strncmp(p, tag_baseurl, sizeof(tag_baseurl) - 1) == 0) {
+            p += sizeof(tag_baseurl) - 1;
+
+            while (!isalpha(*p) && *p)
+                p++;
+
+            char *q = strrchr(p, '\0'); /* eat trailing ws */
+            n_assert(q);
+
+            if (p != q) {
+                q--;
+                while (isspace(*q))
+                    *q-- = '\0';
+            }
+
+            const char *url = p;
+            DBGF("URL.raw %s\n", url);
+
+            if (strchr(url, '$')) {
+                tn_hash *ht = n_hash_new(8, NULL);
+                const char *arch = get_base_arch();
+                n_hash_insert(ht, "basearch", arch);
+                n_hash_insert(ht, "baseos", "linux");
+
+                char urlbuf[PATH_MAX];
+                url = expand_macros(urlbuf, sizeof(urlbuf), p, ht);
+
+                n_hash_free(ht);
+                DBGF("URL.exp %s\n", url);
+            }
+
+            return n_strdup(url);
+        }
+    }
+
+    return NULL;
+}
 
 static
 int idx_open(struct idx *idx, struct pkgdir *pkgdir, int vfmode)
 {
     struct vfile *vf;
     const char *pdir_name = pkgdir->name;
+    char *p;
+
+    /* url to remote .repo like https://example.com/foo/bar.repo */
+    if ((p = strrchr(pkgdir->path, '.')) && n_str_eq(p, ".repo")) {
+        if ((vf = vfile_open_ul(pkgdir->path, VFT_TRURLIO, vfmode, pdir_name)) == NULL)
+            return 0;
+
+        char *baseurl = parse_repo_file(vf);
+
+        vfile_close(vf);
+
+        if (baseurl == NULL) {
+            logn(LOGWARN, "no baseurl found");
+        } else {
+            n_assert(n_str_eq(pkgdir->path, pkgdir->idxpath));
+
+            /* replace to-.repo-url with baseurl */
+            n_free(pkgdir->path);
+            pkgdir->path = baseurl;
+        }
+    }
 
     if (!open_repomd(idx, pkgdir->path, vfmode, pdir_name))
         return 0;
@@ -251,6 +386,7 @@ void idx_close(struct idx *idx)
 
     if (idx->repomd_vf)
         vfile_close(idx->repomd_vf);
+
     idx->repomd_vf = NULL;
 }
 
@@ -259,7 +395,7 @@ static
 int do_open(struct pkgdir *pkgdir, unsigned flags)
 {
     //struct pkgroup_idx   *pkgroups = NULL;
-    struct idx           idx;
+    struct idx           idx = {};
     unsigned             vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
 
     if ((flags & PKGDIR_OPEN_REFRESH) == 0)
@@ -272,6 +408,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     pkgdir->mod_data = n_malloc(sizeof(idx));
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
     pkgdir->pkgroups = NULL;
+
     return 1;
 }
 
