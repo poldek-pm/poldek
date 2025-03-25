@@ -153,13 +153,14 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
     return v;
 }
 
-
 const char *source_guess_type(const char *path)
 {
-    path = path;
-    return NULL;
-}
+    char *p;
+    if ((p = strrchr(path, '.')) && n_str_eq(p, ".repo"))
+        return "metadata";
 
+    return poldek_conf_PKGDIR_DEFAULT_TYPE;
+}
 
 struct source *source_malloc(void)
 {
@@ -290,8 +291,8 @@ struct source *source_set_type(struct source *src, const char *type)
 
 struct source *source_set_defaults(struct source *src)
 {
-    if ((src->flags & PKGSOURCE_TYPE) == 0) /* not set by config*/
-        source_set(&src->type, poldek_conf_PKGDIR_DEFAULT_TYPE);
+    if ((src->flags & PKGSOURCE_TYPE) == 0)  /* not set by config*/
+        source_set(&src->type, source_guess_type(src->path));
 
     if ((src->flags & PKGSOURCE_COMPR) == 0) /* not set by config*/
         source_set(&src->compr, poldek_conf_PKGDIR_DEFAULT_COMPR);
