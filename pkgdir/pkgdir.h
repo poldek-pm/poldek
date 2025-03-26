@@ -94,7 +94,7 @@ struct pkgdir {
 
 #define pkgdir_idstr_s(p) \
  (((p)->flags & PKGDIR_NAMED) ? (p)->name : vf_url_slim_s((p)->idxpath ? \
- (p)->idxpath : (p)->path ? (p)->path : "anon", 0))
+ (p)->idxpath : (p)->path ? (p)->path : "anon", poldek_term_get_width() - 24))
 
 EXPORT struct pkgdir *pkgdir_malloc(void);
 EXPORT void pkgdir_free(struct pkgdir *pkgdir);
