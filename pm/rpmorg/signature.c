@@ -88,10 +88,9 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     }
 
 
-    int tag;
     flags = 0;
     it = headerInitIterator(sign);
-
+    unsigned tag;
     while ((tag = headerNextTag(it)) != RPMTAG_NOT_FOUND) {
         switch (tag) {
             case RPMSIGTAG_RSA:
