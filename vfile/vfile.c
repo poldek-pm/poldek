@@ -51,7 +51,7 @@ struct vfile_configuration vfile_conf = {
     NULL, NULL, NULL,
     &verbose,
     (char*)default_anon_passwd,
-    NULL, NULL, &vf_tty_progress
+    NULL, NULL, NULL, &vf_tty_progress
 };
 
 static inline const char *vfile_cachedir(void)
@@ -195,6 +195,10 @@ int vfile_configure(int param, ...)
     switch (param) {
         case VFILE_CONF_LOGCB:
             vfile_conf.log = va_arg(ap, void*);
+            break;
+
+        case VFILE_CONF_TERM_WIDTH_CB:
+            vfile_conf.term_width = va_arg(ap, void*);
             break;
 
         case VFILE_CONF_PROGRESS:

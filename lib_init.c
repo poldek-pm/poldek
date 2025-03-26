@@ -1374,6 +1374,7 @@ int poldeklib_init(void)
     vfile_configure(VFILE_CONF_SIGINT_REACHED, sigint_reached_reset);
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
+    vfile_configure(VFILE_CONF_TERM_WIDTH_CB, poldek_term_get_width);
 
     if (poldek__is_in_testing_mode()) {
         const char *path = getenv("POLDEK_TESTING_PRELOAD_CONF");

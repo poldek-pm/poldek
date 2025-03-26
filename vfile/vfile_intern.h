@@ -61,6 +61,7 @@ struct vfile_configuration {
     char       *anon_passwd;
     void       (*log)(unsigned flags, const char *fmt, ...);
     int        (*sigint_reached)(int reset);
+    int        (*term_width)(void);
     struct vf_progress *bar;
 };
 
@@ -75,7 +76,7 @@ int vfile_sigint_reached(int reset);
 struct vf_module {
     char       vfmod_name[32];
     unsigned   vf_protocols;
-    
+
     int        (*init)(void);
     void       (*destroy)(void);
     int        (*fetch)(struct vf_request *req);
@@ -91,4 +92,4 @@ int vf_decompressable(const char *path, char *uncmpr_path, int size);
 int vf_extdecompress(const char *path, const char *destpath);
 int vf_extcompress(const char *path, const char *ext);
 
-#endif 
+#endif

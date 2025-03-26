@@ -215,15 +215,25 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
 }
 
 static int make_url_label(char *buf, size_t size,
-                          const char *counter, const char *label, const char *url)
+                          const char *counter, const char *label,
+                          const char *url, int preserved_space)
 {
     char *url_unescaped = vf_url_unescape(url);
+    const char *purl = url_unescaped;
+
+    if (!label && preserved_space > 0 && vfile_conf.term_width) {
+        int w = vfile_conf.term_width() - preserved_space;
+        if (w < 40)
+            w = 40;
+
+        purl = vf_url_slim_s(url_unescaped, w);
+    }
 
     int n = n_snprintf(buf, size, "%s%s%s%s",
                        counter ? counter : "",
                        label ? label : "",
                        label ? "::" : "",
-                       label ? n_basenam(url_unescaped) : PR_URL(url_unescaped));
+                       label ? n_basenam(url_unescaped) : purl);
 
     free(url_unescaped);
     return n;
@@ -256,11 +266,12 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 
     n_assert(destdir);
 
-    make_url_label(url_label, sizeof(url_label), counter, urlabel, url);
+    const char *logfmt = _("Retrieving %s...\n");
+    make_url_label(url_label, sizeof(url_label), counter, urlabel, url, strlen(logfmt));
 
     if ((mod = select_vf_module(url)) == NULL) { /* no internal module found */
         if ((flags & VF_FETCH_NOLABEL) == 0)
-            vf_loginfo(_("Retrieving %s...\n"), url_label);
+            vf_loginfo(logfmt, url_label);
 
         rc = vf_fetch_ext(url, destdir);
         goto l_end;
@@ -315,7 +326,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 
     /* label displaying moved to vf_progress */
     if (*vfile_verbose > 2 && (flags & VF_FETCH_NOLABEL) == 0)
-        vf_loginfo(_("Retrieving %s...\n"), url_label);
+        vf_loginfo(logfmt, url_label);
 
     if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req, flags, url_label)) == 0) {
         if ((req->flags & VF_REQ_INT_REDIRECTED) == 0) {
@@ -376,9 +387,20 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
             vf_log(VFILE_LOG_WARN, "%s could not find \"stat\" handler\n",
                    req->proto);
     } else {
-        if ((flags & VF_FETCH_NOLABEL) == 0)
-            vf_loginfo(_("Retrieving status of %s...\n"),
-                       urlabel ? urlabel : PR_URL(req->url));
+        if ((flags & VF_FETCH_NOLABEL) == 0) {
+            const char *logfmt = _("Retrieving status of %s...\n");
+            const char *purl = NULL;
+            int w = 40;
+
+            if (vfile_conf.term_width) {
+                w = vfile_conf.term_width() - strlen(logfmt);
+                if (w < 40)
+                    w = 40;
+            }
+
+            purl = vf_url_slim_s(req->url, w);
+            vf_loginfo(logfmt, urlabel ? urlabel : purl);
+        }
 
         if ((rc = do_vfile_req(REQTYPE_STAT, mod, req, flags, NULL))) {
             vfstat->vf_size = req->st_remote_size > 0 ? req->st_remote_size : 0;
