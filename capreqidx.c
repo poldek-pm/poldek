@@ -41,7 +41,7 @@ int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)
     MEMINF("START");
     idx->na = n_alloc_new(4, TN_ALLOC_OBSTACK);
     idx->ht = n_oash_new_na(idx->na, nelem, (tn_fn_free)capreq_ent_free);
-    n_oash_ctl(idx->ht, TN_HASH_NOCPKEY);
+    n_oash_ctl(idx->ht, TN_HASH_NOCPKEY | TN_HASH_REHASH);
     MEMINF("END");
     return 1;
 }
