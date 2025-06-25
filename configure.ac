@@ -46,8 +46,6 @@ fi
 AC_SUBST(VERSION_CVSTAG)
 AC_DEFINE_UNQUOTED([VERSION_YEAR], "$VERSION_YEAR", [version year])
 
-ALL_LINGUAS="pl de"
-
 dnl cond. building NFY
 dnl AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile operations])
 
