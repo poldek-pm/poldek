@@ -147,7 +147,7 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
         if ((it->flags & PKG_ITER_REQUN) && !capreq_is_prereq_un(req))
             return pkg_req_iter_get(it);
 
-        else if ((it->flags & PKG_ITER_REQUN) == 0 && capreq_is_prereq_un(req))
+        else if ((it->flags & PKG_ITER_REQUN) == 0 && !capreq_is_prereq(req) && capreq_is_prereq_un(req))
             return pkg_req_iter_get(it);
 
         /* set type of returned (current) req */
