@@ -1460,33 +1460,33 @@ int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v)
 int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
 {
     const char *v;
-    int bool;
+    int b;
 
     if ((v = poldek_conf_get(htconf, name, NULL)) == NULL)
         return default_v;
 
-    if ((bool = poldek_util_parse_bool(v)) < 0) {
+    if ((b = poldek_util_parse_bool(v)) < 0) {
         logn(LOGERR, _("invalid value ('%s') of boolean option '%s'"), v, name);
-        bool = default_v;
+        b = default_v;
     }
 
-    return bool;
+    return b;
 }
 
 int poldek_conf_get_bool3(const tn_hash *htconf, const char *name, int default_v)
 {
     const char *v;
-    int bool;
+    int b;
 
     if ((v = poldek_conf_get(htconf, name, NULL)) == NULL)
         return default_v;
 
-    if ((bool = poldek_util_parse_bool3(v)) < 0) {
+    if ((b = poldek_util_parse_bool3(v)) < 0) {
         logn(LOGERR, _("invalid value ('%s') of option '%s'"), v, name);
-        bool = default_v;
+        b = default_v;
     }
 
-    return bool;
+    return b;
 }
 
 
