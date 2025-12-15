@@ -221,6 +221,10 @@ void arg_packages_clean(struct arg_packages *aps)
     aps->flags = 0;
 }
 
+void arg_packages__clean_masks(struct arg_packages *aps)
+{
+    n_array_clean(aps->package_masks);
+}
 
 int arg_packages_size(struct arg_packages *aps)
 {
@@ -346,7 +350,9 @@ int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
 
 int arg_packages_add_pkg(struct arg_packages *aps, struct pkg *pkg)
 {
-    n_array_push(aps->packages, pkg_link(pkg));
+    if (!n_array_bsearch(aps->packages, pkg))
+        n_array_push(aps->packages, pkg_link(pkg));
+
     return 1;
 }
 
@@ -676,9 +682,6 @@ static inline char *prepare_mask(char *mask) {
 */
 int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpkgs, tn_array **resolved, int quiet)
 {
-    if (n_array_size(aps->packages) > 0)
-        return -1;              /* cannot be validated with stubs */
-
     if (n_array_size(aps->package_lists) > 0)
         return -1;
 
@@ -697,6 +700,10 @@ int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpk
 
     if (!resolve_masks(re, aps, stubpkgs, NULL, 0, quiet))
         return 0;
+
+    if (n_array_size(aps->packages) > 0) {
+        n_array_concat_ex(re, aps->packages, (tn_fn_dup)pkg_link);
+    }
 
     return 1;
 }

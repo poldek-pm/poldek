@@ -613,6 +613,8 @@ int poldek_ts_get_arg_count(struct poldek_ts *ts)
     return arg_packages_size(ts->aps);
 }
 
+
+static int ts_prerun(struct poldek_ts *ts);
 /*
    -1: cannot be validated with stubs
    0: invalid
@@ -622,6 +624,9 @@ int poldek_ts_validate_args_with_stubs(struct poldek_ts *ts, tn_array *stubpkgs)
 {
     int quiet = ts->getop(ts, POLDEK_OP_CAPLOOKUP);
     tn_array *resolved = NULL;
+
+    if (!ts_prerun(ts))
+        return 0;
 
     int rc = arg_packages__validate_with_stubs(ts->aps, stubpkgs, &resolved, quiet);
     if (rc != 1) {
@@ -644,12 +649,19 @@ int poldek_ts_validate_args_with_stubs(struct poldek_ts *ts, tn_array *stubpkgs)
     }
 
     int freshen = ts->getop(ts, POLDEK_OP_FRESHEN);
+
     if (ts->db && !freshen) { /* check against db breaks upgrade foo-* */
+        /* add resolved from masks installable packages to aps packages and cleanup masks */
+        rc = 0;
         for (int i = 0; i < n_array_size(resolved); i++) {
-            if (i3_is_pkg_installable(ts, n_array_nth(resolved, i), 1) != 1) {
-                rc = 0;
+            struct pkg *pkg = n_array_nth(resolved, i);
+
+            if (i3_is_pkg_installable(ts, pkg, 1) == 1) {
+                arg_packages_add_pkg(ts->aps, pkg);
+                rc = 1;
             }
         }
+        arg_packages__clean_masks(ts->aps);
     }
 
     if (db) {

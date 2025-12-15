@@ -22,7 +22,7 @@ setUp() {
 }
 
 tearDown() {
-    rpm_down
+    #rpm_down
 }
 
 build() {
@@ -37,6 +37,10 @@ index() {
     $RAW_POLDEK --st dir -s $REPO --index
 }
 
+testNoop() {
+    return 0
+}
+
 testInstall()
 {
     build a
@@ -44,6 +48,22 @@ testInstall()
 
     msg $POLDEK install -v a
     $POLDEK install -v a
+    assertEquals "install failed" "$?" "0"
+    rpm_state_check "a" ""
+}
+
+# https://github.com/poldek-pm/poldek/issues/27
+testInstallAlreadyInstalled() {
+    msgn "Preparing repositories..."
+    build_installed b
+
+    build a
+    build b
+    index
+    $POLDEK up                  # to create stubindex
+
+    msg $POLDEK install -v a b
+    $POLDEK install -v a b
     assertEquals "install failed" "$?" "0"
     rpm_state_check "a" ""
 }

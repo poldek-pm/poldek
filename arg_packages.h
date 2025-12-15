@@ -31,6 +31,7 @@ EXPORT void arg_packages_free(struct arg_packages *aps);
 EXPORT void arg_packages_clean(struct arg_packages *aps);
 EXPORT int arg_packages_size(struct arg_packages *aps);
 
+
 EXPORT tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed);
 
 EXPORT int arg_packages_add_pkgmask(struct arg_packages *aps, const char *mask);
@@ -52,6 +53,7 @@ EXPORT int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
 
 int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpkgs,
                                       tn_array **resolved, int quiet);
+void arg_packages__clean_masks(struct arg_packages *aps);
 
 EXPORT int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
                                 struct pkgset *ps, unsigned flags);
