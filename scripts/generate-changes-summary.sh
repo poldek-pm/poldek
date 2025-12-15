@@ -175,19 +175,23 @@ categorize_commit() {
     local type=""
     
     # Check conventional commit format
+    # Match patterns more precisely: type: or type(scope):
     case "$msg" in
-        feat:*|feat\(*\)*) type="Features" ;;
-        fix:*|fix\(*\)*|Fix:*|Fixed*) type="Bug Fixes" ;;
-        docs:*|docs\(*\)*|doc:*) type="Documentation" ;;
-        chore:*|chore\(*\)*) type="Chores" ;;
+        feat:*|feat\(*\):*) type="Features" ;;
+        fix:*|fix\(*\):*|Fix:*|Fixed*) type="Bug Fixes" ;;
+        docs:*|docs\(*\):*|doc:*) type="Documentation" ;;
+        chore:*|chore\(*\):*) type="Chores" ;;
         test:*|tests:*) type="Tests" ;;
-        refactor:*) type="Refactoring" ;;
-        perf:*) type="Performance" ;;
-        style:*) type="Style" ;;
-        build:*|ci:*) type="Build/CI" ;;
+        refactor:*|refactor\(*\):*) type="Refactoring" ;;
+        perf:*|perf\(*\):*) type="Performance" ;;
+        style:*|style\(*\):*) type="Style" ;;
+        build:*|build\(*\):*|ci:*|ci\(*\):*) type="Build/CI" ;;
         Merge\ pull\ request*) type="Merges" ;;
         *) type="Other Changes" ;;
     esac
+    
+    # Sanitize the type to prevent directory traversal
+    type=$(echo "$type" | tr '/' '_' | tr -d '.')
     
     echo "$type"
 }
@@ -225,8 +229,9 @@ if [ "$GROUP_BY_TYPE" -eq 1 ]; then
                 echo "### $category ($count)"
                 echo ""
                 while IFS='|' read -r hash subject author email date; do
-                    # Clean up the subject line - handle both lowercase and uppercase prefixes
-                    clean_subject=$(echo "$subject" | sed 's/^[a-zA-Z]*: //' | sed 's/^[a-zA-Z]*([^)]*): //')
+                    # Clean up the subject line - remove conventional commit prefixes
+                    # Match: type: or type(scope): at the start of the line
+                    clean_subject=$(echo "$subject" | sed -E 's/^[a-zA-Z]+: //' | sed -E 's/^[a-zA-Z]+\([^)]+\): //')
                     echo "* $clean_subject (\`$hash\`) - $author, $date"
                 done < "$TMPDIR/${category}.txt"
                 echo ""
@@ -262,6 +267,9 @@ if [ "$SHOW_STATS" -eq 1 ]; then
     # Get git diff stats once and store in variable
     DIFF_STATS=$(git diff --stat ${FROM_REF}..HEAD)
     
+    # Extract only the file lines (not the summary line)
+    FILE_STATS=$(echo "$DIFF_STATS" | head -n -1)
+    
     if [ "$OUTPUT_FORMAT" = "markdown" ]; then
         echo "#### Files Changed"
         echo "\`\`\`"
@@ -270,14 +278,16 @@ if [ "$SHOW_STATS" -eq 1 ]; then
         echo ""
         echo "#### Most Modified Files"
         echo "\`\`\`"
-        echo "$DIFF_STATS" | sort -rn -k2 | head -10
+        # Sort by the number after the pipe (changes count), using numeric sort
+        echo "$FILE_STATS" | sort -t'|' -k2 -rn | head -10
         echo "\`\`\`"
     else
         echo "${BOLD}Files changed:${NC}"
         echo "$DIFF_STATS" | tail -1
         echo ""
         echo "${BOLD}Most modified files:${NC}"
-        echo "$DIFF_STATS" | sort -rn -k2 | head -10
+        # Sort by the number after the pipe (changes count), using numeric sort
+        echo "$FILE_STATS" | sort -t'|' -k2 -rn | head -10
     fi
     echo ""
 fi
