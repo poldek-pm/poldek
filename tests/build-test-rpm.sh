@@ -16,6 +16,7 @@ version=
 release="1"
 requires=
 requires_pre=""
+requires_preun=""
 requires_post=""
 provides=
 suggests=
@@ -50,6 +51,9 @@ while test $# -gt 0 ; do
 
         -rpre)
             shift; requires_pre="$requires_pre ${1},"; shift ;;
+
+        -rpreun)
+            shift; requires_preun="$requires_preun ${1},"; shift ;;
 
         -rpost)
             shift; requires_post="$requires_post ${1},"; shift ;;
@@ -124,7 +128,13 @@ echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
 [ -n "$obsoletes" ] && echo "Obsoletes: $obsoletes" >> $SPEC
 [ -n "$conflicts" ] && echo "Conflicts: $conflicts" >> $SPEC
 [ -n "$requires_pre" ] && echo "Requires(pre): $requires_pre" >> $SPEC
-[ -n "$requires_post" ] && echo "Requires(post): $requires_post" >> $SPEC
+
+if [ -n "$requires_post" -a "$requires_post" = "$requires_preun" ]; then
+    echo "Requires(post,preun): $requires_post" >> $SPEC
+else
+    [ -n "$requires_post" ] && echo "Requires(post): $requires_post" >> $SPEC
+    [ -n "$requires_preun" ] && echo "Requires(preun): $requires_preun" >> $SPEC
+fi
 
 echo -e "%description\nPackage build by $COMMAND\n" >> $SPEC
 echo -e "%description -l pl\n(pl)Package build by $COMMAND\n" >> $SPEC
@@ -196,4 +206,6 @@ ec=$?
 if [ -d "$rpmdir/$arch" ]; then
     mv -f $rpmdir/$arch/$name-*.rpm $rpmdir/ 2>/dev/null
 fi
+
+cat $SPEC
 exit $ec
