@@ -176,10 +176,10 @@ categorize_commit() {
     
     # Check conventional commit format
     case "$msg" in
-        feat:*|feat\(*) type="Features" ;;
-        fix:*|fix\(*|Fix:*|Fixed*) type="Bug Fixes" ;;
-        docs:*|docs\(*|doc:*) type="Documentation" ;;
-        chore:*|chore\(*) type="Chores" ;;
+        feat:*|feat\(*\)*) type="Features" ;;
+        fix:*|fix\(*\)*|Fix:*|Fixed*) type="Bug Fixes" ;;
+        docs:*|docs\(*\)*|doc:*) type="Documentation" ;;
+        chore:*|chore\(*\)*) type="Chores" ;;
         test:*|tests:*) type="Tests" ;;
         refactor:*) type="Refactoring" ;;
         perf:*) type="Performance" ;;
