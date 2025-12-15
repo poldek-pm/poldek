@@ -316,7 +316,9 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
                 } else if (x_node_eq(n, "group")) {
                     char *g;
                     if ((g = (char *) xmlNodeGetContent(n))) {
-                        pkg.groupid = pkgroup_idx_add(pkgroups, g);
+                        if (strlen(g) > 0)
+                            pkg.groupid = pkgroup_idx_add(pkgroups, g);
+
                         xmlFree(g);
                     }
                 }
