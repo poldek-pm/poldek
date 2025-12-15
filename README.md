@@ -37,6 +37,26 @@ poldek help
 ```
 Run `poldek` without arguments to get interactive shell mode with command and package name completion.
 
+## Development
+
+### Generating Changes Summary
+
+To generate a summary of changes since the last release for release notes:
+
+```sh
+# Text format with colors
+./scripts/generate-changes-summary.sh
+
+# Markdown format with statistics and authors
+./scripts/generate-changes-summary.sh --format=markdown --stats --authors
+
+# Using make (after running autogen.sh)
+make changes-summary
+make changes-summary-markdown
+```
+
+See [scripts/README.md](scripts/README.md) for more information about available development scripts.
+
 ## License
 
 This project is licensed under the GNU General Public License v2.0 - see the [LICENSE](LICENSE) file for details.

@@ -111,6 +111,15 @@ conf_sections.c: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl
 check-sh:
 	$(MAKE) -C tests check-sh
 
+.PHONY: changes-summary
+changes-summary:
+	@echo "Generating changes summary since last release..."
+	@$(top_srcdir)/scripts/generate-changes-summary.sh
+
+.PHONY: changes-summary-markdown
+changes-summary-markdown:
+	@$(top_srcdir)/scripts/generate-changes-summary.sh --format=markdown --stats --authors
+
 dist-hook:
 	@if test -d "$(srcdir)/.git"; then \
 		echo "Creating ChangeLog" && \
