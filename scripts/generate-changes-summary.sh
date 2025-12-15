@@ -225,8 +225,8 @@ if [ "$GROUP_BY_TYPE" -eq 1 ]; then
                 echo "### $category ($count)"
                 echo ""
                 while IFS='|' read -r hash subject author email date; do
-                    # Clean up the subject line
-                    clean_subject=$(echo "$subject" | sed 's/^[a-z]*: //' | sed 's/^[a-z]*([^)]*): //')
+                    # Clean up the subject line - handle both lowercase and uppercase prefixes
+                    clean_subject=$(echo "$subject" | sed 's/^[a-zA-Z]*: //' | sed 's/^[a-zA-Z]*([^)]*): //')
                     echo "* $clean_subject (\`$hash\`) - $author, $date"
                 done < "$TMPDIR/${category}.txt"
                 echo ""
@@ -259,22 +259,25 @@ if [ "$SHOW_STATS" -eq 1 ]; then
     print_section "Statistics"
     echo ""
     
+    # Get git diff stats once and store in variable
+    DIFF_STATS=$(git diff --stat ${FROM_REF}..HEAD)
+    
     if [ "$OUTPUT_FORMAT" = "markdown" ]; then
         echo "#### Files Changed"
         echo "\`\`\`"
-        git diff --stat ${FROM_REF}..HEAD | tail -1
+        echo "$DIFF_STATS" | tail -1
         echo "\`\`\`"
         echo ""
         echo "#### Most Modified Files"
         echo "\`\`\`"
-        git diff --stat ${FROM_REF}..HEAD | sort -rn -k2 | head -10
+        echo "$DIFF_STATS" | sort -rn -k2 | head -10
         echo "\`\`\`"
     else
         echo "${BOLD}Files changed:${NC}"
-        git diff --stat ${FROM_REF}..HEAD | tail -1
+        echo "$DIFF_STATS" | tail -1
         echo ""
         echo "${BOLD}Most modified files:${NC}"
-        git diff --stat ${FROM_REF}..HEAD | sort -rn -k2 | head -10
+        echo "$DIFF_STATS" | sort -rn -k2 | head -10
     fi
     echo ""
 fi
@@ -285,15 +288,18 @@ if [ "$SHOW_AUTHORS" -eq 1 ]; then
     print_section "Contributors"
     echo ""
     
+    # Get authors once and store in variable
+    AUTHORS_LIST=$(git log ${FROM_REF}..HEAD --pretty=format:"%an <%ae>" | sort | uniq -c | sort -rn)
+    
     if [ "$OUTPUT_FORMAT" = "markdown" ]; then
         echo "#### Authors (by commit count)"
         echo ""
-        git log ${FROM_REF}..HEAD --pretty=format:"%an <%ae>" | sort | uniq -c | sort -rn | while read count name; do
+        echo "$AUTHORS_LIST" | while read count name; do
             echo "* $name - $count commits"
         done
     else
         echo "${BOLD}Authors (by commit count):${NC}"
-        git log ${FROM_REF}..HEAD --pretty=format:"%an <%ae>" | sort | uniq -c | sort -rn | while read count name; do
+        echo "$AUTHORS_LIST" | while read count name; do
             echo "  $name - $count commits"
         done
     fi
