@@ -793,6 +793,11 @@ const char *vf_url_slim(char *buf, int size, const char *url, int maxl)
         url = buf;
     }
 
+    int n = strlen(buf);
+    if (n > 0 && buf[n-1] == '/') { /* ends with '/' */
+        buf[n-1] = '\0';
+    }
+
     bn = n_basenam(buf);
     bn_len = strlen(bn);
     maxl -= bn_len;
