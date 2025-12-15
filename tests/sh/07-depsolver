@@ -255,6 +255,12 @@ testPrePostRequirements() {
   try_install_a "a,b,c"
 }
 
+# https://github.com/poldek-pm/poldek/pull/25
+testPostPreunRequirements() {
+  build a -rpreun "b" -rpost "b"
+  build b
+  try_install_a "a,b"
+}
 
 # if packages "bar" and "baz" have Obsoletes: foo, Provides: foo, Conflicts: foo,
 # then librpm knows that you can only have "bar" or "baz" but not both
