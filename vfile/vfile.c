@@ -43,7 +43,7 @@ static const char   *vfile_err_ctx = NULL;
 static int          verbose = 0;
 int                 *vfile_verbose = &verbose;
 
-static const char   default_anon_passwd[] = "poldek@znienacka.net";
+static const char   default_anon_passwd[] = "poldek@pld-linux.org";
 extern struct vf_progress vf_tty_progress;
 
 struct vfile_configuration vfile_conf = {
