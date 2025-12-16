@@ -15,7 +15,7 @@
 // taken from libdnf
 static const struct {
     const char  base[16];
-    const char  native[11][12];
+    const char  native[11][13];
 } amap[] =  {
     { "aarch64",    { "aarch64" } },
     { "alpha",      { "alpha", "alphaev4", "alphaev45", "alphaev5", "alphaev56", "alphaev6", "alphaev67", "alphaev68", "alphaev7", "alphapca56" } },
