@@ -37,9 +37,11 @@ testConf()
 
 testConfAsRoot()
 {
-    if ldd $POLDEK_RAW | grep -q asan; then
-        msgn "asan detected, skipped this test"
-        return 0
+    if command -v ldd >/dev/null; then
+        if ldd $POLDEK_RAW | grep -q asan; then
+            msgn "asan detected, skipped this test"
+            return 0
+        fi
     fi
 
     create_local_conf
