@@ -272,7 +272,7 @@ fi
 
 
 AC_MSG_CHECKING([for rpmorg (>= 4.14)])
-PKG_CHECK_EXISTS([rpm >= 4.14 rpm < 5.0], [is_rpmorg=yes], [is_rpmorg=no])
+PKG_CHECK_EXISTS([rpm >= 6.0], [is_rpmorg=yes], [PKG_CHECK_EXISTS([rpm >= 4.14 rpm < 5.0], [is_rpmorg=yes], [is_rpmorg=no])])
 if test "${is_rpmorg}." = "yes."; then
     AC_MSG_RESULT(yes)
     AM_CONDITIONAL(WITH_RPMORG, true)
@@ -286,7 +286,7 @@ else
 fi
 
 AC_MSG_CHECKING([for rpm5])
-PKG_CHECK_EXISTS([rpm >= 5.0], [is_rpm5=yes], [is_rpm5=no])
+PKG_CHECK_EXISTS([rpm >= 5.0 rpm < 6.0], [is_rpm5=yes], [is_rpm5=no])
 
 if test "${is_rpm5}." = "yes."; then
     AC_DEFINE([HAVE_RPM_5], [1], [])
