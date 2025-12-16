@@ -1,3 +1,24 @@
+## 0.45 (2025/12/16)
+* Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)
+* Fixed compatibility with gettext >= 0.24 by @jpalus in https://github.com/poldek-pm/poldek/pull/26
+* Fixed skipping requirements which are both pre and preun by @jpalus in https://github.com/poldek-pm/poldek/pull/25
+* Added support for direct use of metadata `.repo` files (source type auto-detected from URL). e.g.:
+  ```shell
+      $ poldek -s https://example.com/example.repo
+  ```
+* Handle metadata (aka dnf) compressed with ztsd
+* Faster index loading in threads (lock-free memory alocation, atomic cache, etc)
+* Improved deps indexing speed (timsort) and memory usage (deduplication mem allocator)
+* Fixed handling of trailing slash in paths
+* Fixed required packages caching when unmet deps are needed (install dist case)
+* Fixed several memleaks and buffer/ stack overflows
+* Fixed `--verify` crashes
+* Fix: `-q` always quiet regardless `-v`/`-q` order
+* Restored `desc -B`
+* Restored the ability to `--verify all` packages
+* Fixed checking http connection with `HEAD /` when proxied
+* Fixed SIGSEV on reinstall
+
 ## 0.44.0 (2025/02/27)
 * Interactive mode (*shell*) commands can be invoked directly from command line, like:
   ```shell
@@ -11,7 +32,7 @@
   - `desc`      => `info`
 
   Means `$ poldek install` and `$ poldek add` do the same.
-  Two new commands has been added `up` (wortks like `--up` switch) and `clean` (`--clean`).
+  Two new commands has been added `up` (works like `--up` switch) and `clean` (`--clean`).
 
   See `poldek help` and `poldek <command> --help` for details.
 * Simplified available *repo* list display
