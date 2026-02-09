@@ -400,15 +400,13 @@ l_skip_end:
     return rpkg;
 }
 
-
 tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
 {
     xmlDocPtr doc;
     xmlNode  *root = NULL, *node;
     tn_array *pkgs;
 
-    pkgs = n_array_new(1024, NULL, NULL);
-    doc = xmlReadFile(path, NULL, XML_PARSE_NONET);
+    doc = xmlReadFile(path, NULL, XML_PARSE_NONET | XML_PARSE_UNZIP);
 
     if (doc == NULL) {
         logn(LOGERR, "%s: parser error", path);
@@ -420,6 +418,7 @@ tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
         return NULL;
     }
 
+    pkgs = n_array_new(1024, NULL, NULL);
     for (node = root->children; node; node = node->next) {
         char *type;
 

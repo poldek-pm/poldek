@@ -469,7 +469,6 @@ struct vfile *zstd2gz(struct vfile *vf)
         stat(gzpath, &st2);
 
         if (st.st_mtime == st2.st_mtime) {
-            printf("ALREADY gzipped\n");
             goto l_end;
         }
     }
