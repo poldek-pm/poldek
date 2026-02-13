@@ -16,13 +16,13 @@ DEPENDENCY_SOLVER=3
 setUp() {
     [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
     [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
-    rm -rf $ORIGREPO/*
+    $SUDO rm -rf $ORIGREPO/*
 
     REPO="$ORIGREPO/src"
     REPO2="$ORIGREPO/src2"
     DESTINATION_REPO="$ORIGREPO/dest";
 
-    rm -rf $REPO $REPO2 $DESTINATION_REPO
+    $SUDO rm -rf $REPO $REPO2 $DESTINATION_REPO
 
     mkdir -p $REPO || fail "mkdir $REPO failed"
     mkdir -p $REPO2 || fail "mkdir $REPO2 failed"
@@ -94,11 +94,12 @@ try_install() {
         pkg=$1
     fi
 
-
     try_install_dist $eec "dir" "-v" "$@"
 }
 
 testInstallDist() {
+    is_rpm_testing_off && return
+
     build a -r "foo" -r "bar"
     build b -p "foo" -p "bar" -r "baz"
     build c -p "baz"
@@ -111,6 +112,8 @@ testInstallDist() {
 # install-dist cannot resolve this (by picking c) as regular install do
 # and it simply report unmet dep here
 testInstallDistMissingDepAlt() {
+    is_rpm_testing_off && return
+
     build a -r "foo" -r "bar"
     build b -p "foo" -p "bar" -r "baz"
     build c -p "foo" -p "bar"
@@ -126,6 +129,8 @@ testInstallDistMissingDepAlt() {
 }
 
 testInstallDistDepError() {
+    is_rpm_testing_off && return
+
     build a -r "b"
     build b -r "c"
     build c -r "unmetreq" -r "d"
@@ -141,6 +146,8 @@ testInstallDistDepError() {
 }
 
 testInstallDistDepErrorNoDeps() {
+    is_rpm_testing_off && return
+
     build a -r "b"
     build b -r "c"
     build c -r "unmetreq" -r "d"
@@ -155,6 +162,8 @@ testInstallDistDepErrorNoDeps() {
 # install-dist cannot resolve this conflict (by picking c) as regular install do
 # and it simply report conflict here
 testInstallDistConflictError() {
+    is_rpm_testing_off && return
+
     build a -r "foo" -r "bar"
     build b -p "foo" -p "bar" -c "a"
     build c -p "foo" -p "bar"
@@ -169,6 +178,8 @@ testInstallDistConflictError() {
 }
 
 testInstallDistConflictErrorForce() {
+    is_rpm_testing_off && return
+
     build a -r "foo" -r "bar"
     build b -p "foo" -p "bar" -c "a"
     build c -p "foo" -p "bar"

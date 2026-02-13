@@ -12,12 +12,18 @@ DESTINATION_REPO=
 DEPENDENCY_SOLVER=3
 
 setUp() {
+    is_rpm_testing_off && return
+
     rpm_up
     # provide /bin/sh auto requirement
     rpm_build_installed sh -p /bin/sh
 
-    RAW_POLDEK="$POLDEK_NOCONF -Ouse_sudo=n"
+    local use_sudo="n"
+    [ -n "$SUDO" ] && use_sudo=y
+
+    RAW_POLDEK="$POLDEK_NOCONF -Ouse_sudo=$use_sudo"
     POLDEK="$RAW_POLDEK --st pndir -s $REPO --root $DESTINATION_REPO --justdb"
+
     $RAW_POLDEK clean
 }
 
@@ -43,6 +49,8 @@ testNoop() {
 
 testInstall()
 {
+    is_rpm_testing_off && return
+
     build a
     index
 
@@ -54,6 +62,8 @@ testInstall()
 
 # https://github.com/poldek-pm/poldek/issues/27
 testInstallAlreadyInstalled() {
+    is_rpm_testing_off && return
+
     msgn "Preparing repositories..."
     build_installed b
 
@@ -70,6 +80,8 @@ testInstallAlreadyInstalled() {
 
 testUpgrade()
 {
+    is_rpm_testing_off && return
+
     build a -v 2
     build a-libs -v 2
     index
@@ -92,6 +104,8 @@ testUpgrade()
 
 testUninstall()
 {
+    is_rpm_testing_off && return
+
     build a
     index
 
@@ -111,6 +125,8 @@ testUninstall()
 
 testClean()
 {
+    is_rpm_testing_off && return
+
     typeset n=$(find $CACHEDIR | wc -l)
     assertEquals "$CACHEDIR should be empty" "$n" "1"
 

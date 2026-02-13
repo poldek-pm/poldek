@@ -1,18 +1,68 @@
 #!/bin/sh
 
-tearDown() {
+is_root() {
+   test $(id -u) = "0"
+}
+
+SUDO=
+SUDO_INFO_LOGGED=
+
+sudo_up() {
+    [ -n "$SUDO" ] && return
+
+    is_root && return
+    command -v sudo 2>&1 >/dev/null || return
+    sudo -n rpm --version >/dev/null 2>/dev/null || return
+
+    if [ -z "$SUDO_INFO_LOGGED" ]; then
+        msgn "Will use SUDO to test with /bin/rpm"
+        SUDO_INFO_LOGGED=1
+    fi
+
+    SUDO="sudo"
+}
+
+# rpm --root DIR and poldek --install-dist=DIR calls chroot(), so we need to be a root/ have sudo for such tests
+is_rpm_testing_off() {
+    sudo_up
+
+    if [ -z "$SUDO" -a $(id -u) != "0" ]; then
+        startSkipping
+        fail # to count skipping tests
+        endSkipping
+        return 0
+    fi
+
+    return 1
+}
+
+repo_up() {
+    sudo_up
+
     POLDEK_TESTING_DENIED_FILES=""
-    [ -n "$REPO" ] && rm -rf $REPO/packages.*
-    [ -n "$TMPDIR" ] && rm -rf $TMPDIR/*.*
+    [ -n "$REPO" ] && $SUDO rm -rf $REPO/packages.*
+    [ -n "$TMPDIR" ] && $SUDO rm -rf $TMPDIR/*.*
+}
+
+tearDown() {
+    repo_up
 }
 
 setUp() {
-    tearDown
+    repo_up
 }
 
 abort() {
     echo "$1, ABORT"
     exit 1
+}
+
+ensure_commands() {
+    while [ $# -gt 0 ]; do
+        local cmd=$1
+        shift
+        command -v $cmd 2>&1 >/dev/null || abort "$cmd is missing"
+    done
 }
 
 build_repo_packages() {
@@ -21,6 +71,7 @@ build_repo_packages() {
         for i in a b c d e f g h i j k l m n o p r s t u w x y v z; do
             rpm="$i-1-1.noarch.rpm"
             [ -f "$SOURCE_REPO/$rpm" ] && continue
+            #msgn "./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -f /bin/$i -f /usr/share/doc/$i/README -v 1"
             ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -f /bin/$i -f /usr/share/doc/$i/README -v 1  >/dev/null 2>&1 || abort "build package $i failed"
             ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i" -f /bin/$i$i -f /usr/share/doc/$i$i/README -v 1  >/dev/null 2>&1 || abort "build package $i$i failed"
             ./build-test-rpm.sh -d $SOURCE_REPO/ -n "$i$i$i" -f /bin/$i$i$i -f /usr/share/doc/$i$i$i/README -v 1  >/dev/null 2>&1 || abort "build package $i$i$i failed"
@@ -66,6 +117,9 @@ build_package() {
 }
 
 oneTimeSetUp() {
+    sudo_up
+    ensure_commands "grep" "zgrep" "zstdgrep" "perl" "fakeroot" "rpm" "rpmbuild"
+
     [ ! -d "$PWD/sh/lib" ] && abort "$PWD is not a tests directory (missing sh/lib)"
 
     SHLIBDIR="$PWD/sh/lib"
@@ -83,7 +137,7 @@ oneTimeSetUp() {
 
     export TMP TMPDIR
 
-    rm -rf $TMPDIR
+    $SUDO rm -rf $TMPDIR
     mkdir -p $TMPDIR
     [ ! -d $TMPDIR ] && abort "$TMPDIR: no such directory"
 
@@ -227,6 +281,7 @@ check_repo_content() {
         fi
 
         # check files
+        msg "$POLDEK_NOCONF -q --skip-installed -s $repo desc -ll $p"
         local files=$($POLDEK_NOCONF -q --skip-installed -s $repo desc -ll $p | grep '/' | cut -f2)
         #msg "pkg $name, files: $files"
         echo $files | grep -q "/bin/$p"; [ $? -eq 0 ] || fail "/bin/$p: no file"

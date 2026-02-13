@@ -2,6 +2,15 @@
 # $Id$
 
 # --mkidx tests
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/compr-setup
+. ./sh/lib/rpm-setup
+
+setUp() {
+    #repo_up
+    sudo_up
+}
 
 #  Index creation use cases:
 Case_a="-s /foo                   =>  dir  -> default type"
@@ -13,9 +22,6 @@ Case_f="-n foo                    =>  dir (or original type) -> foo's type"
 Case_g="-s /foo --mkidx=/tmp/bar.gz"
 Case_h="-n foo --mkidx=/tmp/bar.gz"
 
-. ./sh/lib/setup
-. ./sh/lib/repo-setup
-. ./sh/lib/compr-setup
 
 testCreateDefaultType()
 {
@@ -46,17 +52,19 @@ testCreateFromDir()
 
 #  b) --st rpmdb -s /foo          =>  rpmdb -> default type
 testCreateFromRpmdb() {
+    is_rpm_testing_off && return
+
     rm -rf $TMPDIR/tmproot
     mkdir $TMPDIR/tmproot
-    rpm --root=$TMPDIR/tmproot --initdb
+    $SUDO rpm --root=$TMPDIR/tmproot --initdb
 
     local rpmop=
     test is_verbose_mode && rpmop="v"
 
     msgn "prep: rpm install"
-    rpm --root=$TMPDIR/tmproot -U$rpmop $SOURCE_REPO/sh-*.rpm --noscripts
+    $SUDO rpm --root=$TMPDIR/tmproot -U$rpmop $SOURCE_REPO/sh-*.rpm --noscripts
     for p in $(ls $SOURCE_REPO/a*.rpm); do
-        rpm --root=$TMPDIR/tmproot -U$rpmop $p --noscripts
+        $SUDO rpm --root=$TMPDIR/tmproot -U$rpmop $p --noscripts
     done
 
     msgn "test"

@@ -15,6 +15,10 @@ INSTALL_MODE=${INSTALL_MODE:-"dir"}
 #    [ -n "$REPO" ] && rm -f $REPO/*.*
 #}
 
+is_rpm_mode_and_rpm_testing_off() {
+    [ "$INSTALL_MODE" = "rpm" ] && is_rpm_testing_off
+}
+
 setUp() {
     [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
     [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
@@ -46,6 +50,7 @@ build() {
 }
 
 build_installed() {
+    is_rpm_mode_and_rpm_testing_off && return
     [ "$INSTALL_MODE" = "rpm" ] && rpm_build_installed $@
     [ "$INSTALL_MODE" = "dir" ] && build_package $DESTINATION_REPO $@
 }
@@ -53,6 +58,8 @@ build_installed() {
 # try to install package and check result
 # usage: try_install <package> <expected installed> [<expected removed>] [<extra poldek switches>]
 try_install() {
+    is_rpm_mode_and_rpm_testing_off && return
+
     if [ "$INSTALL_MODE" = "rpm" ]; then
         rpm_install $@
     elif [ "$INSTALL_MODE" = "dir" ]; then

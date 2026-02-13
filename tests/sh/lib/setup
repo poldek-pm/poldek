@@ -31,7 +31,6 @@ is_verbose_mode() {
    test "$QUIET" != "-q"
 }
 
-
 msgn() {
     msg "\n## $@"
 }
