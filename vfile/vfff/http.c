@@ -674,10 +674,7 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
             break;
 
         case HTTP_STATUS_NOT_FOUND:
-            if (*vfile_conf.verbose > 0) // kill error if verbose = 0
-                vfff_set_err(ENOENT, _("%s: no such file"), path);
-            else
-                is_err = 0;
+            vfff_set_err(ENOENT, _("%s: no such file"), path);
             break;
 
         case HTTP_STATUS_FORBIDDEN:
