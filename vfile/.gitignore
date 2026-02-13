@@ -27,4 +27,3 @@ ttest
 .libs
 *.la
 vfget
-test_[a-z]*

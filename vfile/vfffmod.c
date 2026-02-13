@@ -276,17 +276,24 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
     } else if (*vreq.redirected_to) {
         char topath[PATH_MAX + 128], *topathp = vreq.redirected_to;
         int  foreign_proto = 0;
+        const char *to = vreq.redirected_to;
 
         n_assert(cn->proto == VCN_PROTO_HTTP || cn->proto == VCN_PROTO_HTTPS);
 
-        if (*vreq.redirected_to == '/') {
-            snprintf(topath, sizeof(topath), "http%s://%s%s", cn->proto == VCN_PROTO_HTTPS ? "s" : "" , req->host,
-                     vreq.redirected_to);
+        if (*to == '/') {
+            snprintf(topath, sizeof(topath), "http%s://%s:%d%s",
+                     cn->proto == VCN_PROTO_HTTPS ? "s" : "",
+                     req->host, req->port, to);
             topathp = topath;
-        } else if (strncmp(vreq.redirected_to, "http://", 7) != 0)
+        } else if (strncmp(to, "http://", 7) != 0 && strncmp(to, "https://", 8) != 0) {
             foreign_proto = 1;
+        }
 
-        if (topathp && vf_request_redirto(req, topathp)) {
+        /* denied HTTPS => HTTP */
+        if (cn->proto == VCN_PROTO_HTTPS && strncmp(topathp, "http://", 7) == 0) {
+            set_err(req, EINVAL, "HTTPS to HTTP downgrade not allowed");
+            rc = 0;
+        } else if (topathp && vf_request_redirto(req, topathp)) {
             rc = 0;
             if (foreign_proto == 0)
                 rc = do_vfn(dofn, req, ++recursion_deep);

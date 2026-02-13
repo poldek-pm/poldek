@@ -25,6 +25,8 @@
 #include <trurl/nmalloc.h>
 
 #include "vfff.h"
+#include "../vfile.h"           /* for VFILE_CONF_SSL_VERIFY_NONE */
+#include "../vfile_intern.h"    /* for vfile_conf */
 
 struct sslmod {
     SSL_CTX *ctx;
@@ -119,27 +121,32 @@ static struct sslmod *init_ssl(const struct vcn *cn)
         goto l_err;
     }
 
-    /* load system default CA certificates for server verification */
-    if (!SSL_CTX_set_default_verify_paths(ctx)) {
-        vfff_set_err(EPROTO, "openssl: failed to load CA certificates");
-        goto l_err;
-    }
+    if (vfile_conf.flags & VFILE_CONF_SSL_VERIFY_NONE) {
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+    } else {
+        /* load system default CA certificates for server verification */
+        if (!SSL_CTX_set_default_verify_paths(ctx)) {
+            vfff_set_err(EPROTO, "openssl: failed to load CA certificates");
+            goto l_err;
+        }
 
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+    }
 
     ssl = SSL_new(ctx);
     if (ssl == NULL)
         goto l_err;
 
-    /* enable hostname verification against the server cert */
-    SSL_set_hostflags(ssl, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-    if (!SSL_set1_host(ssl, cn->host)) {
-        vfff_set_err(EPROTO, "openssl: failed to set verification hostname");
-        goto l_err;
+    if ((vfile_conf.flags & VFILE_CONF_SSL_VERIFY_NONE) == 0) {
+        /* enable hostname verification against the server cert */
+        SSL_set_hostflags(ssl, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+        if (!SSL_set1_host(ssl, cn->host)) {
+            vfff_set_err(EPROTO, "openssl: failed to set verification hostname");
+            goto l_err;
+        }
     }
 
     SSL_set_tlsext_host_name(ssl, cn->host);
-
     SSL_set_fd(ssl, cn->sockfd);
 
     if (SSL_connect(ssl) != 1)

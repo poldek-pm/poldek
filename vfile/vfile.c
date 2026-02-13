@@ -297,6 +297,14 @@ int vfile_configure(int param, ...)
             vfile_conf.sigint_reached = va_arg(ap, void*);
             break;
 
+        case VFILE_CONF_SSL_VERIFY_NONE:
+            v = va_arg(ap, int);
+            if (v)
+                vfile_conf.flags |= VFILE_CONF_SSL_VERIFY_NONE;
+            else
+                vfile_conf.flags &= ~VFILE_CONF_SSL_VERIFY_NONE;
+            break;
+
         default: {
             v = va_arg(ap, int);
             if (v)

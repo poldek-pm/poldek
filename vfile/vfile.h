@@ -50,7 +50,9 @@
 #define VFILE_CONF_EXTCOMPR               (1 << 12) /* use external script to
                                                        file (de)compression */
 #define VFILE_CONF_PROGRESS_NONE          (1 << 13)
+#define VFILE_CONF_SSL_VERIFY_NONE        (1 << 14) /* disable SSL cert verification */
 #define VFILE_CONF_SIGINT_REACHED         (1 << 15)
+
 EXPORT int vfile_configure(int param, ...);
 
 /* run it after configuration is done */

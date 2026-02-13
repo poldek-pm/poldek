@@ -7,4 +7,7 @@ Makefile
 *.la
 tmp.*
 .deps
+*.trs
 test_vfile
+test_vhttp
+test_vopen3
