@@ -13,10 +13,12 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/x509v3.h>
 
 //#include <trurl/nbuf.h>
 #include <trurl/nassert.h>
@@ -87,12 +89,16 @@ static void set_ssl_errors(void)
 
     buf[0] = '\0';
     while ((e = ERR_get_error())) {
+        if (n > 0 && n < (int)sizeof(buf) - 2) {
+            buf[n++] = ';';
+            buf[n++] = ' ';
+        }
         ERR_error_string_n(e, &buf[n], sizeof(buf) - n);
-        n += strlen(buf);
+        n = strlen(buf);
     }
 
     if (*buf)
-        vfff_set_err(e, "openssl: %s", buf);
+        vfff_set_err(EPROTO, "openssl: %s", buf);
 }
 
 
@@ -102,16 +108,38 @@ static struct sslmod *init_ssl(const struct vcn *cn)
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
 
-    OpenSSL_add_all_algorithms();
-    SSL_load_error_strings();
-
     method = TLS_client_method();
     ctx = SSL_CTX_new(method);
     if (ctx == NULL)
         goto l_err;
 
+    /* TLS >= 1.2 */
+    if (!SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)) {
+        vfff_set_err(EPROTO, "openssl: failed to set TLS >= 1.2");
+        goto l_err;
+    }
+
+    /* load system default CA certificates for server verification */
+    if (!SSL_CTX_set_default_verify_paths(ctx)) {
+        vfff_set_err(EPROTO, "openssl: failed to load CA certificates");
+        goto l_err;
+    }
+
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+
     ssl = SSL_new(ctx);
+    if (ssl == NULL)
+        goto l_err;
+
+    /* enable hostname verification against the server cert */
+    SSL_set_hostflags(ssl, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    if (!SSL_set1_host(ssl, cn->host)) {
+        vfff_set_err(EPROTO, "openssl: failed to set verification hostname");
+        goto l_err;
+    }
+
     SSL_set_tlsext_host_name(ssl, cn->host);
+
     SSL_set_fd(ssl, cn->sockfd);
 
     if (SSL_connect(ssl) != 1)

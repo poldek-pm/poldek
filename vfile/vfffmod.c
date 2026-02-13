@@ -249,8 +249,10 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
         return 0;
     }
 
-    if ((cn = vcn_pool_do_connect(req)) == NULL)
+    if ((cn = vcn_pool_do_connect(req)) == NULL) {
+        req->req_errno = vfff_errno;
         return 0;
+    }
 
     memset(&vreq, 0, sizeof(vreq));
     vreq.uri = req->proxy_host ? req->url : req->uri;

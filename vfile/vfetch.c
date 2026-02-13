@@ -182,6 +182,7 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
             case ENOENT:
             case EINTR:
             case ENOSPC:
+            case EPROTO:
                 goto l_endloop;
                 break;
         }
