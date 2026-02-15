@@ -1,5 +1,5 @@
-SUBDIRS   = vfff
-DIST_SUBDIRS = $(SUBDIRS) tests
+SUBDIRS   = vfff tests
+DIST_SUBDIRS = $(SUBDIRS)
 
 AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
