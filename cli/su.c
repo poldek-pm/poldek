@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <grp.h>
 #include <unistd.h>
 
 #include <trurl/trurl.h>
@@ -96,6 +97,11 @@ int poldek_su(const char *user)
         pw.pw_shell = "/bin/sh";
 
     modify_environment(&pw);
+
+    if (initgroups(pw.pw_name, pw.pw_gid) != 0) {
+        logn(LOGERR, _("initgroups %s: %m"), user);
+        return 0;
+    }
 
     if (setgid(pw.pw_gid) != 0) {
         logn(LOGERR, _("setgid %s: %m"), user);
