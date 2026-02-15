@@ -38,9 +38,9 @@ START_TEST (test_custom_rpmdb) {
     pmctx = pm_new("rpm");
     fail_if(pmctx == NULL);
 
-    system("rm -rf /tmp/poldek-tests/");
-    const char *path = "/tmp/poldek-tests/bar/baz";
-    const char *dbpath = "/tmp/poldek-tests/bar/baz" "/var/lib/rpm";
+    system("rm -rf /tmp/poldek-unit-tests/");
+    const char *path = "/tmp/poldek-unit-tests/bar/baz";
+    const char *dbpath = "/tmp/poldek-unit-tests/bar/baz" "/var/lib/rpm";
 
     db = pkgdb_open(pmctx, path, NULL, O_RDONLY, NULL);
     fail_if(db != NULL);

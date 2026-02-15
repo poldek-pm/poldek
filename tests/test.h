@@ -28,8 +28,6 @@
 #endif
 #include "pkgmisc.h"
 
-#define fail_ifnot fail_unless
-
 struct test_case {
     const char *name;
     void (*test_fn)(int);

@@ -1,7 +1,9 @@
+#include <trurl/nhash.h>
+
 #include "test.h"
 #include "conf_intern.h"
 #include "conf.h"
-#include <trurl/nhash.h>
+
 
 #define TEST_POLDEK_CONFIG "poldek_test_conf.conf"
 
@@ -75,7 +77,7 @@ START_TEST (test_config) {
             }
 
             if (t->flags & CONF_TYPE_F_ENV) {
-                fail_ifnot(t->flags & CONF_TYPE_STRING);
+                fail_unless(t->flags & CONF_TYPE_STRING);
                 dv = expand_env_var(dv);
             }
 
@@ -129,7 +131,7 @@ static int verify_list(tn_array *list, int maxno, const char *op)
 
     while (n_array_size(list) > 0) {
         const char *o = n_array_pop(list);
-        fail_ifnot(n_hash_exists(dict, o), "missing list element %s", o);
+        fail_unless(n_hash_exists(dict, o), "missing list element %s", o);
     }
     return 1;
 }
