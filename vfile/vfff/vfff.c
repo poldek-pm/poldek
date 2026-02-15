@@ -30,6 +30,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <openssl/crypto.h>
+
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
 #include <trurl/nhash.h>
@@ -316,20 +318,29 @@ void vcn_close(struct vcn *cn)
     vfff_io_destroy(cn);
 }
 
+static void cfree(char **ptr)
+{
+    if (*ptr) {
+        OPENSSL_cleanse(*ptr, strlen(*ptr));
+        n_free(*ptr);
+        *ptr = NULL;
+    }
+}
+
 void vcn_free(struct vcn *cn)
 {
     vcn_close(cn);
 
     n_cfree(&cn->host);
 
-    n_cfree(&cn->login);
-    n_cfree(&cn->passwd);
+    cfree(&cn->login);
+    cfree(&cn->passwd);
 
-    n_cfree(&cn->proxy_login);
-    n_cfree(&cn->proxy_passwd);
+    cfree(&cn->proxy_login);
+    cfree(&cn->proxy_passwd);
 
-    n_cfree(&cn->auth_basic_str);
-    n_cfree(&cn->proxy_auth_basic_str);
+    cfree(&cn->auth_basic_str);
+    cfree(&cn->proxy_auth_basic_str);
 
     if (cn->resp)
         cn->m_free(cn->resp);
