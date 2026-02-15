@@ -824,7 +824,7 @@ static void docbook_opt(tn_hash *idh, FILE **st,
     fprintf(stream, "<varlistentry><term><option");
     id = alloca(256);
     if (opt->name)
-        strcpy(id, opt->name);
+        n_strncpy(id, opt->name, 256);
     else {
         c = opt->key;
         n_assert (c > 0 && c < 255 && isascii(c));
