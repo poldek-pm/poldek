@@ -274,10 +274,10 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
         val_len = nread - (val - line);
 
         switch (tag) {
-            case PKG_STORETAG_NAME:
-            case PKG_STORETAG_EVR:
-            case PKG_STORETAG_ARCH:
-            case PKG_STORETAG_OS:
+            case PKG_STORETAG_NAME: /* legacy, stored in key */
+            case PKG_STORETAG_EVR:  /* -"- */
+            case PKG_STORETAG_ARCH: /* -"-  */
+            case PKG_STORETAG_OS:   /* -"-  */
             case PKG_STORETAG_FN:
             case PKG_STORETAG_SRCFN:
                 if (tag_binsize != PKG_STORETAG_SIZENIL) {
@@ -466,7 +466,12 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 }
 
 
-#define sizeof_pkgt(memb) (sizeof((pkgt)->memb) - 1)
+#define copy2tag(ptr, val, val_len)                     \
+    do {                                                \
+        n_assert((val_len) < (int)sizeof((ptr)));       \
+        memcpy((ptr), (val), (val_len));                \
+        (ptr)[(val_len)] = '\0';                        \
+    } while (0)
 
 static
 int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value, int value_len,
@@ -482,7 +487,8 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value, int value_len,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                memcpy(pkgt->name, value, (int)sizeof(pkgt->name)-1);
+
+                copy2tag(pkgt->name, value, value_len);
                 pkgt->flags |= PKGT_HAS_NAME;
             }
             break;
@@ -492,9 +498,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value, int value_len,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                n_assert(value_len < (int)sizeof(pkgt->evr));
-                memcpy(pkgt->evr, value, value_len + 1);
-                pkgt->evr[value_len + 1] = '\0';
+                copy2tag(pkgt->evr, value, value_len);
                 pkgt->flags |= PKGT_HAS_EVR;
             }
             break;
@@ -504,9 +508,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value, int value_len,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                n_assert(value_len < (int)sizeof(pkgt->arch));
-                memcpy(pkgt->arch, value, value_len + 1);
-                pkgt->arch[value_len + 1] = '\0';
+                copy2tag(pkgt->arch, value, value_len);
                 pkgt->flags |= PKGT_HAS_ARCH;
             }
             break;
@@ -516,9 +518,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value, int value_len,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                n_assert(value_len < (int)sizeof(pkgt->os));
-                memcpy(pkgt->os, value, value_len + 1);
-                pkgt->os[value_len + 1] = '\0';
+                copy2tag(pkgt->os, value, value_len);
                 pkgt->flags |= PKGT_HAS_OS;
             }
             break;
@@ -528,16 +528,14 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value, int value_len,
                 logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
-                n_assert(value_len < (int)sizeof(pkgt->fn));
-                memcpy(pkgt->fn, value, value_len + 1);
+                copy2tag(pkgt->fn, value, value_len);
                 pkgt->flags |= PKGT_HAS_FN;
             }
             break;
 
         case PKG_STORETAG_SRCFN:
             n_assert((pkgt->flags & PKGT_HAS_SRCFN) == 0);
-            n_assert(value_len < (int)sizeof(pkgt->srcfn));
-            memcpy(pkgt->srcfn, value, value_len + 1);
+            copy2tag(pkgt->srcfn, value, value_len);
             pkgt->flags |= PKGT_HAS_SRCFN;
             break;
 
