@@ -1,0 +1,35 @@
+#!/bin/sh
+# $Id$
+
+# metadata (dnf,yum) repo
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+
+setUp() {
+    POLDEK="$POLDEK_NOCONF"
+}
+
+tearDown() {
+}
+
+testLoad()
+{
+    msg $POLDEK -s ../metadata/02.repo ls
+    local n=$($POLDEK -s metadata/02.repo ls | grep fake_bash | wc -l)
+    assertEquals "load failed" "$n" "1"
+}
+
+testLoadZst()
+{
+    msg $POLDEK -s ../metadata/02zst.repo ls
+    local n=$($POLDEK -s metadata/02zst.repo ls | grep fake_bash | wc -l)
+    assertEquals "load failed" "$n" "1"
+}
+
+
+. ./sh/lib/shunit2

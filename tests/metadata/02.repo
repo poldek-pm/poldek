@@ -1,0 +1,4 @@
+[repo02]
+name=Repo02
+enabled=1
+baseurl=repo_02

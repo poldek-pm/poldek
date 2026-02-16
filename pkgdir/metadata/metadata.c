@@ -131,6 +131,7 @@ int open_repomd(struct idx *idx, const char *path, int vfmode,
         return 0;
     }
 
+    DBGF("repomd %s\n", apath);
     idx->repomd_vf = vfile_open_ul(apath, VFT_IO, vfmode, pdir_name);
     if (idx->repomd_vf == NULL)
         return 0;
@@ -181,6 +182,7 @@ int verify_digest(struct repomd_ent *ent, const char *path)
 
     n_assert(len > 0);
     n_assert(digest[len] == '\0');
+    DBGF("%s %s vs. %s\n", ent->checksum_type, ent->checksum, digest);
     return n_str_eq(ent->checksum, digest);
 }
 
@@ -286,7 +288,7 @@ const char *get_base_arch();
 
 static char *parse_repo_file(struct vfile *vf)
 {
-    char buf[1024];
+    char buf[1024], urlbuf[1024];
     char tag_baseurl[] = "baseurl";
 
     while (n_stream_gets(vf->vf_tnstream, buf, sizeof(buf) - 1)) {
@@ -319,11 +321,26 @@ static char *parse_repo_file(struct vfile *vf)
                 n_hash_insert(ht, "basearch", arch);
                 n_hash_insert(ht, "baseos", "linux");
 
-                char urlbuf[PATH_MAX];
                 url = expand_macros(urlbuf, sizeof(urlbuf), p, ht);
 
                 n_hash_free(ht);
                 DBGF("URL.exp %s\n", url);
+            }
+
+            /* not remote? (testing repo probably) */
+            if (strstr(url, "://") == NULL && *url != '/') {
+                char *pathp, *urlp;
+
+                n_strdupap(url, &urlp); /* copy as buf may point to buf */
+                n_strdupap(vf->vf_path, &pathp);
+
+                char *dn = n_dirname(pathp);
+
+                DBGF("url %s, dn = %s\n", urlp, dn);
+                n_snprintf(buf, sizeof(buf), "%s/%s", dn, urlp);
+
+                url = buf;
+                DBGF("url %s\n", url);
             }
 
             return n_strdup(url);
@@ -346,6 +363,7 @@ int idx_open(struct idx *idx, struct pkgdir *pkgdir, int vfmode)
             return 0;
 
         char *baseurl = parse_repo_file(vf);
+        DBGF("baseurl %s\n", baseurl);
 
         vfile_close(vf);
 
@@ -359,7 +377,7 @@ int idx_open(struct idx *idx, struct pkgdir *pkgdir, int vfmode)
             pkgdir->path = baseurl;
         }
     }
-
+    DBGF("repomd %s\n", pkgdir->path);
     if (!open_repomd(idx, pkgdir->path, vfmode, pdir_name))
         return 0;
 
@@ -439,27 +457,51 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
     return NULL;
 }
 
-static
-void pkg_data_free(tn_alloc *na, void *ptr)
+static void pkg_data_free(tn_alloc *na, void *ptr)
 {
     na->na_free(na, ptr);
 }
 #endif
 
-static
-struct vfile *zstd2gz(struct vfile *vf)
+static struct vfile *zstd2gz(struct vfile *vf)
 {
-    char cmd[PATH_MAX], gzpath[PATH_MAX];
-    char *p;
+    char gzpath[PATH_MAX];
+    char *ext;
 
-    if ((p = strrchr(vfile_localpath(vf), '.')) == NULL)
+    DBGF("%s\n", vfile_localpath(vf));
+
+    if ((ext = strrchr(vfile_localpath(vf), '.')) == NULL)
         return vf;
 
-    if (strcmp(p, ".zst") != 0)
+    if (strcmp(ext, ".zst") != 0)
         return vf;
 
-    n_snprintf(gzpath, sizeof(gzpath), vfile_localpath(vf));
-    p = strrchr(gzpath, '.');
+    const char *cachedir = vf_cachedir();
+    int clen = strlen(cachedir);
+
+    if (strncmp(vfile_localpath(vf), cachedir, clen) == 0) { /* under cachedir? */
+        n_snprintf(gzpath, sizeof(gzpath), vfile_localpath(vf));
+
+    } else {
+        char *p, localdir[PATH_MAX];
+        n_strdupap(vfile_localpath(vf), &p);
+        vf_localdirpath(localdir, sizeof(localdir), n_dirname(p));
+
+        if (!vf_valid_path(localdir))
+            return NULL;
+
+        if (!util__isdir(localdir)) {
+            if (mkdir(localdir, 0755) != 0) {
+                logn(LOGERR, "%s: mkdir: %m", localdir);
+                return NULL;
+            }
+        }
+
+        vf_localpath(gzpath, sizeof(gzpath), vfile_localpath(vf));
+    }
+
+    /* set extension to .gz */
+    char *p = strrchr(gzpath, '.');
     n_assert(p);
     p++; *p++ = 'g'; *p++ = 'z'; *p = '\0';
 
@@ -472,27 +514,32 @@ struct vfile *zstd2gz(struct vfile *vf)
             goto l_end;
         }
     }
+    DBGF("gzpath %s -> %s\n", vfile_localpath(vf), gzpath);
 
-    n_snprintf(cmd, sizeof(cmd), "zstd -dc %s | gzip > %s", vfile_localpath(vf), gzpath);
-
-    if (system(cmd) == 0) {
-        struct utimbuf ut;
-        struct stat st;
-
-        stat(vfile_localpath(vf), &st);
-        ut.actime = ut.modtime = st.st_mtime;
-        utime(gzpath, &ut);
-
-    } else {
-        logn(LOGERR, "zstd->gz conversion failed");
-        vf_unlink(gzpath);
+    tn_stream *in = n_stream_open(vfile_localpath(vf), "r", TN_STREAM_ZSTDIO);
+    if (!in) {
+        logn(LOGERR, "%s: open error", vfile_localpath(vf));
         return NULL;
     }
 
+    tn_stream *out = n_stream_open(gzpath, "w", TN_STREAM_GZIO);
+    if (!out) {
+        n_stream_close(in);
+        logn(LOGERR, "%s: open error", gzpath);
+        return NULL;
+    }
+
+    char buf[4096];
+    int n;
+    while ((n = n_stream_read(in, buf, sizeof(buf))) > 0) {
+        n_stream_write(out, buf, n);
+    }
+    n_stream_close(in);
+    n_stream_close(out);
+
  l_end:
     vfile_close(vf);
-
-    if ((vf = vfile_open(gzpath, VFT_IO, VFM_RO | VFM_NOEMPTY)) == NULL)
+    if ((vf = vfile_open(gzpath, VFT_TRURLIO, VFM_RO | VFM_NOEMPTY)) == NULL)
         return NULL;
 
     return vf;
@@ -515,6 +562,9 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         return 0;
 
     vf = zstd2gz(vf);
+
+    if (vf == NULL)
+        return 0;
 
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
