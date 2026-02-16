@@ -219,8 +219,8 @@ struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
         memcpy(idxpath, idx->idxpath, len);
 
         if ((p = strstr(idxpath, tss)) && p != idxpath && *(p - 1) == '.') {
-            //*(p - 1) = '\0';
-            strcpy(p - 1, p + tss_len);
+            //strcpy(p - 1, p + tss_len);
+            memmove(p - 1, p + tss_len, strlen(p + tss_len) + 1);
         } else {
             *tss = '\0';
         }
