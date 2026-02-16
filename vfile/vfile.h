@@ -51,7 +51,8 @@
                                                        file (de)compression */
 #define VFILE_CONF_PROGRESS_NONE          (1 << 13)
 #define VFILE_CONF_SSL_VERIFY_NONE        (1 << 14) /* disable SSL cert verification */
-#define VFILE_CONF_SIGINT_REACHED         (1 << 15)
+#define VFILE_CONF_NOTFOUND_OK            (1 << 15) /* hacky, ignore NOT FOUND errors */
+#define VFILE_CONF_SIGINT_REACHED         (1 << 16)
 
 EXPORT int vfile_configure(int param, ...);
 

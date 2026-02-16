@@ -49,7 +49,8 @@
 #include <sigint/sigint.h>
 
 #include "vfff.h"
-#include "../vfile_intern.h" // for verbose level
+#include "../vfile.h"        /* for VFILE_CONF_NOTFOUND_OK */
+#include "../vfile_intern.h" /* for vfile_conf */
 #include "i18n.h"
 #include "sigint/sigint.h"
 
@@ -674,12 +675,12 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
             break;
 
         case HTTP_STATUS_NOT_FOUND:
-            // XXX hide 404 if verbose is zero, used by pndir_m_update()
-            // to dismiss non-critical vf_stat() errors
-            if (*vfile_conf.verbose > 0)
-                vfff_set_err(ENOENT, _("%s: no such file"), path);
-            else
+            // used by pndir_m_update() to hide non-critical vf_stat() errors
+            if (vfile_conf.flags & VFILE_CONF_NOTFOUND_OK) {
                 is_err = 0;
+            } else {
+                vfff_set_err(ENOENT, _("%s: no such file"), path);
+            }
             break;
 
         case HTTP_STATUS_FORBIDDEN:

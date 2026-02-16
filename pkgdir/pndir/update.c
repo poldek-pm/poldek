@@ -302,6 +302,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
     // to keep quiet vf_stat
     vfile_configure(VFILE_CONF_VERBOSE, 0);
+    vfile_configure(VFILE_CONF_NOTFOUND_OK, 1);
 
     snprintf(path, sizeof(path), "%s.ndir%s", idx_path, idx_ext);
     if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
@@ -380,7 +381,10 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 	}
     }
 
+    /* restore verbosity */
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
+    vfile_configure(VFILE_CONF_NOTFOUND_OK, 0);
+
     n_stream_seek(vf->vf_tnstream, 0L, SEEK_SET); // to the begining
 
     first_patch_found = 0;
