@@ -674,7 +674,12 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
             break;
 
         case HTTP_STATUS_NOT_FOUND:
-            vfff_set_err(ENOENT, _("%s: no such file"), path);
+            // XXX hide 404 if verbose is zero, used by pndir_m_update()
+            // to dismiss non-critical vf_stat() errors
+            if (*vfile_conf.verbose > 0)
+                vfff_set_err(ENOENT, _("%s: no such file"), path);
+            else
+                is_err = 0;
             break;
 
         case HTTP_STATUS_FORBIDDEN:
