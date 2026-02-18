@@ -38,6 +38,7 @@
 #include "pkg.h"
 #include "pkgdir/pkgdir.h"
 #include "pkgmisc.h"
+#include "misc.h"
 
 static
 tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
@@ -46,42 +47,41 @@ tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
     struct vfile      *vf;
 
     if (fpath == NULL) {
-        char *homedir;
-
-        if ((homedir = getenv("HOME")) == NULL)
+        char home[512];
+        if (get_homedir(home, sizeof(home)) == NULL)
             return NULL;
 
         switch (type) {
             case PKG_HELD:
-                snprintf(path, sizeof(path), "%s/.poldek-hold", homedir);
+                snprintf(path, sizeof(path), "%s/.poldek-hold", home);
                 if (access(path, R_OK) != 0) /* backward compat */
-                    snprintf(path, sizeof(path), "%s/.poldek_hold", homedir);
-        	
+                    snprintf(path, sizeof(path), "%s/.poldek_hold", home);
+
                 break;
 
             case PKG_IGNORED:
-                snprintf(path, sizeof(path), "%s/.poldek-ignore", homedir);
+                snprintf(path, sizeof(path), "%s/.poldek-ignore", home);
                 break;
 
             default:
                 n_assert(0);
                 break;
         }
-        
+
         if (access(path, R_OK) != 0)
             return patterns;
 
         fpath = path;
     }
-    
-    if ((vf = vfile_open(fpath, VFT_STDIO, VFM_RO)) == NULL) 
+
+    if ((vf = vfile_open(fpath, VFT_STDIO, VFM_RO)) == NULL)
         return NULL;
 
     while (fgets(buf, sizeof(buf), vf->vf_stream)) {
         char *p;
         int  len;
 
-        
+
         p = buf;
         while (isspace(*p))
             p++;
@@ -98,18 +98,18 @@ tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
             DBGF("read %s\n", p);
             n_array_push(patterns, n_strdup(p));
         }
-        
+
     }
-    
+
     vfile_close(vf);
     return patterns;
 }
 
 
-void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg) 
+void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg)
 {
     int n = 0;
-    
+
     if (pkg->pkgdir)
         n += n_snprintf(psc->pkgbuf, sizeof(psc->pkgbuf),
                         "%s:", pkg->pkgdir->name);
@@ -117,12 +117,12 @@ void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg)
     // pkgname_off - size of pkgdir_name
     psc->pkgname_off = n;
     // pkgbuf - "repo_name:name-ver-rel.arch"
-    
+
     n_snprintf(&psc->pkgbuf[n], sizeof(psc->pkgbuf) - n, "%s-%s-%s.%s", pkg->name, pkg->ver, pkg->rel, pkg_arch(pkg));
     psc->pkg = pkg;
 }
 
-    
+
 // return 0 if not match
 int pkgscore_match(struct pkgscore_s *psc, const char *mask)
 {
@@ -134,22 +134,22 @@ int pkgscore_match(struct pkgscore_s *psc, const char *mask)
     if (psc->pkgname_off &&
         fnmatch(mask, &psc->pkgbuf[psc->pkgname_off], 0) == 0)
         return 1;
-    
+
     // match "repo_name:name-ver-rel.arch" as string
     return fnmatch(mask, psc->pkgbuf, 0) == 0;
 }
 
-    
 
-void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag) 
+
+void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
 {
     int i, j;
-    
+
 
     n_assert(patterns);
-    if (n_array_size(patterns) == 0) 
+    if (n_array_size(patterns) == 0)
         read_patterns(NULL, patterns, scoreflag);
-    
+
     if (n_array_size(patterns) == 0)
         return;
 
@@ -159,7 +159,7 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
 
         pkg = n_array_nth(pkgs, i);
         pkgscore_match_init(&psc, pkg);
-        
+
         for (j=0; j < n_array_size(patterns); j++) {
             const char *mask = n_array_nth(patterns, j);
 
@@ -178,34 +178,34 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
                         DBGF("IGNORED %s\n", pkg_snprintf_s(pkg));
                         pkg_score(pkg, PKG_IGNORED);
                         break;
-                        
+
                     default:
                         n_assert(0);
                         break;
                 }
-                
+
                 break;
             }
         }
     }
 }
 
-static int cmp_isignored(struct pkg *pkg, void *dummy) 
+static int cmp_isignored(struct pkg *pkg, void *dummy)
 {
     dummy = dummy;
     if (pkg_is_scored(pkg, PKG_IGNORED))
         return 0;
-    
+
     return 1;
 }
 
 int packages_score_ignore(tn_array *pkgs, tn_array *patterns, int remove)
 {
     int n = n_array_size(pkgs);
-    
+
     packages_score(pkgs, patterns, PKG_IGNORED);
     if (remove)
         n_array_remove_ex(pkgs, NULL, (tn_fn_cmp)cmp_isignored);
-        
+
     return n - n_array_size(pkgs);
 }

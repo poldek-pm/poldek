@@ -146,30 +146,77 @@ int mhexdigest(FILE *stream, char *mdhex, int *mdhex_size, int digest_type)
     return *mdhex_size;
 }
 
+static int is_setuid() {
+    return getuid() != geteuid();
+}
+
+static int valid_env_path(const char *path)
+{
+    if (!path)
+        return 0;
+
+    if (!vf_valid_path(path))
+        return 0;
+
+    if (strstr(path, "..") != NULL)
+        return 0;
+
+    if (strlen(path) > PATH_MAX / 2)
+        return 0;
+
+    n_assert(!is_setuid());
+
+    return 1;
+}
+
+char *get_homedir(char *dest, int size) {
+    const char *home = NULL;
+
+    if (poldek__is_in_testing_mode()) {
+        home = getenv("HOME");
+        if (valid_env_path(home)) {
+            n_snprintf(dest, size, "%s", home);
+            return dest;
+        }
+    }
+
+    struct passwd *pw = getpwuid(getuid());
+    if (!pw || !pw->pw_dir)
+        return NULL;
+
+    n_snprintf(dest, size, "%s", pw->pw_dir);
+    return dest;
+}
+
+char *getenv_path(const char *name) {
+    char *val = getenv(name);
+
+    if (val && *val && valid_env_path(val))
+        return val;
+
+    return NULL;
+}
+
 static char *setup_default_cachedir(void)
 {
     char *dir, path[PATH_MAX], inhome_path[PATH_MAX], *tmp_cachedir = NULL;
     const char *cachedn = ".poldek-cache";
-    struct passwd *pw = NULL;
-    const char *home = NULL;
+    char home[512] = {0};
 
-    if ((pw = getpwuid(getuid()))) { /* use $HOME/.poldek-cache if exists */
-        home = pw->pw_dir;
-        if (poldek__is_in_testing_mode())
-            home = getenv("HOME");
-
-        if (home) {
-            n_snprintf(inhome_path, sizeof(inhome_path), "%s/%s", home, cachedn);
-            if (poldek_util_is_rwxdir(inhome_path)) {
-                tmp_cachedir = inhome_path;
-                goto l_end;
-            }
+    if (get_homedir(home, sizeof(home))) { /* use $HOME/.poldek-cache if exists */
+        n_snprintf(inhome_path, sizeof(inhome_path), "%s/%s", home, cachedn);
+        if (poldek_util_is_rwxdir(inhome_path)) {
+            tmp_cachedir = inhome_path;
+            goto l_end;
         }
+    } else {
+        n_assert(*home == '\0');
     }
 
     n_assert(tmp_cachedir == NULL);
-    dir = getenv("XDG_CACHE_HOME");        /* try env XDG_CACHE_HOME */
-    if ((dir == NULL || *dir == '\0') && home && *home) {
+
+    dir = getenv_path("XDG_CACHE_HOME");  /* try env XDG_CACHE_HOME */
+    if ((dir == NULL || *dir == '\0') && *home) { /* $HOME/.cache if XDG_CACHE_HOME unset */
         int size = strlen(home) + 1 /* '/' */ + strlen(".cache") + 1;
         dir = alloca(size);
         n_snprintf(dir, size, "%s/.cache", home);
@@ -187,12 +234,14 @@ static char *setup_default_cachedir(void)
             goto l_end;
         }
     }
-
+    /* ${TMPDIR}/poldek-cache-${username} */
     n_assert(tmp_cachedir == NULL);
-    dir = getenv("TMPDIR");        /* try env $TMP* */
+    dir = getenv_path("TMPDIR");        /* try env $TMP* */
     if (dir == NULL || *dir == '\0')
-        dir = getenv("TMP");
+        dir = getenv_path("TMP");
+
     if (dir && *dir && poldek_util_is_rwxdir(dir)) {
+        struct passwd *pw = NULL;
         const char *dn = cachedn + 1; /* in $TMP -> unhide */
         char suffix[32];
 
@@ -212,21 +261,17 @@ static char *setup_default_cachedir(void)
     }
     n_assert(tmp_cachedir == NULL);
 
-    if (pw) {                     /* try $HOME */
-        char *d = pw->pw_dir;
-        if (poldek__is_in_testing_mode())
-            d = getenv("HOME");
-
-        if (d && poldek_util_is_rwxdir(d) && util__mksubdir(d, cachedn)) {
-            n_snprintf(path, sizeof(path), "%s/%s", d, cachedn);
-            tmp_cachedir = path;
-        }
+    /* fallback to $HOME/.poldek-cache */
+    if (poldek_util_is_rwxdir(home) && util__mksubdir(home, cachedn)) {
+        n_snprintf(path, sizeof(path), "%s/%s", home, cachedn);
+        tmp_cachedir = path;
     }
 
     if (tmp_cachedir == NULL)   /* weird */
         tmp_cachedir = "/tmp";
 
 l_end:
+
     return n_strdup(tmp_cachedir);
 }
 
@@ -234,6 +279,9 @@ char *util__setup_cachedir(const char *path)
 {
     if (path == NULL)
         return setup_default_cachedir();
+
+    if (!vf_valid_path(path))
+        return NULL;
 
     if (!poldek_util_is_rwxdir(path)) {
         struct stat st;
@@ -322,9 +370,6 @@ int util__mksubdir(const char *path, const char *dn)
     struct stat st;
     char fpath[PATH_MAX];
 
-    if (!vf_valid_path(path))
-        return 0;
-
     if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) {
         logn(LOGERR, _("%s: no such directory"), path);
         return 0;
@@ -336,6 +381,9 @@ int util__mksubdir(const char *path, const char *dn)
     }
 
     snprintf(fpath, sizeof(fpath), "%s/%s", path, dn);
+    if (!vf_valid_path(fpath))
+        return 0;
+
     if (!util__isdir(fpath)) {
         if (mkdir(fpath, 0755) != 0) {
             logn(LOGERR, "%s: mkdir: %m", fpath);
@@ -345,7 +393,6 @@ int util__mksubdir(const char *path, const char *dn)
 
     return 1;
 }
-
 
 int util__mkdir_p(const char *path, const char *dn)
 {
@@ -363,6 +410,12 @@ int util__mkdir_p(const char *path, const char *dn)
             continue;
 
         n += n_snprintf(&dpath[n], sizeof(dpath) - n, "/%s", d);
+
+        if (!vf_valid_path(dpath)) {
+            nerr++;
+            break;
+        }
+
         if (!util__isdir(dpath)) {
             if (mkdir(dpath, 0755) != 0) {
                 logn(LOGERR, "%s: mkdir: %m", dpath);
@@ -385,25 +438,27 @@ const char *poldek_util_ngettext_n_packages_fmt(int n)
 #endif
 }
 
-
-static char *get_env(char *dest, int size, const char *name)
+static char *do_getenv(char *dest, int size, const char *name)
 {
-    struct passwd *pw;
+    if (strcmp(name, "HOME") == 0)
+        return get_homedir(dest, size);
+
     char *val;
-
     if ((val = getenv(name)) != NULL) {
-        if (*val)
-            return val;
-        else
-            val = NULL;
+        if (*val == '\0')
+            return NULL;
+
+        /* path? */
+        if (strchr(val, '/') != NULL && !valid_env_path(val)) {
+            logn(LOGWARN, "%s: invalid env path (%s), ignoring", name, val);
+            return NULL;
+        }
+
+        n_snprintf(dest, size, "%s", val);
+        return dest;
     }
 
-    if (strcmp(name, "HOME") == 0 && (pw = getpwuid(getuid()))) {
-        snprintf(dest, size, "%s", pw->pw_dir);
-        val = dest;
-    }
-
-    return val;
+    return NULL;
 }
 
 const char *poldek_util_expand_vars(char *dest, int size, const char *src,
@@ -470,8 +525,7 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
                 n_array_push(usedvars, n_strdup(val));
 
         } else if (varmark == '$') {
-            var = get_env(buf, sizeof(buf), val);
-
+            var = do_getenv(buf, sizeof(buf), val);
         }
 
         if (var == NULL) {

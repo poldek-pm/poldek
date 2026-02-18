@@ -73,6 +73,8 @@ const char *lc_messages_lang(void);
 void *timethis_begin(void);
 void timethis_end(int verbose_level, void *tvp, const char *prefix);
 
+char *get_homedir(char *dest, int size);
+char *getenv_path(const char *name);
 char *strtime_(time_t t);
 
 

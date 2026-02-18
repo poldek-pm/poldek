@@ -1268,17 +1268,17 @@ tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
 
 static int default_config_path(char *path, int size)
 {
-    char *homedir;
     char *sysconfdir = "/etc";
-    char legacypath[PATH_MAX];
+    char legacypath[PATH_MAX], home[512];
 
 #ifdef SYSCONFDIR
     if (access(SYSCONFDIR, R_OK) == 0)
         sysconfdir = SYSCONFDIR;
 #endif
 
-    if ((homedir = getenv("HOME")) != NULL) {
-        int n = n_snprintf(path, size, "%s/.poldekrc", homedir);
+    if (get_homedir(home, sizeof(home)) != NULL) {
+        int n = n_snprintf(path, size, "%s/.poldekrc", home);
+
         if (access(path, R_OK) == 0)
             return n;
     }
