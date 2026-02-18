@@ -11,3 +11,4 @@ tmp.*
 test_vfile
 test_vhttp
 test_vopen3
+test_valid_path
