@@ -176,7 +176,7 @@ static void store_capreq_array(const struct pkg *pkg, tn_array *capreqs, int8_t 
             break;
         }
 
-        msgn(1, "%s: capabilities will be splitted due to their size over 64KB", pkg_id(pkg));
+        msgn(2, "%s: capabilities will be splitted due to their size over 64KB", pkg_id(pkg));
 
         tag = PKG_STORETAG_CONT;
         while (nstored > 0) {   /* store the rest as CONT */
