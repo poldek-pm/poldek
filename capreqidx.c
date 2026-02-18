@@ -174,6 +174,7 @@ inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
     return 1;
 }
 
+#if 0
 static int cap_is_owned_by_pkg(const char *capname, const struct pkg *pkg) {
     int owned = 0;
 
@@ -186,6 +187,7 @@ static int cap_is_owned_by_pkg(const char *capname, const struct pkg *pkg) {
 
     return owned;
 }
+#endif
 
 int capreq_idx_add(struct capreq_idx *idx,
                    const char *capname, int capname_len,
