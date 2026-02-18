@@ -243,10 +243,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     switch (is_uptodate(pkgdir->idxpath, idx->dg, &dg_remote, idx->srcnam)) {
         case 1:
             *uprc = PKGDIR_UPRC_UPTODATE;
-            rc = 1;
-            //if ((pkgdir->flags & PKGDIR_VERIFIED) == 0)
-            //    rc = pndir_digest_verify(idx->dg, idx->vf);
-            return rc;
+            return 1;
             break;
 
         case -1:
