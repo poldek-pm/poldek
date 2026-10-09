@@ -14,9 +14,12 @@
 #define POLDEK_PKG_VER_CMP_H
 
 extern int pm_rpm_arch_score(const char *arch);
+extern int pm_rpm_arch_color(const char *arch);
 extern int pm_rpm_vercmp(const char *one, const char *two);
 
 #define pkg_version_compare(v1, v2) pm_rpm_vercmp(v1, v2)
 #define pm_architecture_score(arch) pm_rpm_arch_score(arch)
+/* arch color as assigned by rpm's archcolor: table, -1 if unknown */
+#define pm_architecture_color(arch) pm_rpm_arch_color(arch)
 
 #endif

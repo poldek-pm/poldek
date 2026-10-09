@@ -380,6 +380,8 @@ AC_CHECK_FUNCS(rpmlog vrpmlog rpmCheckSig rpmVerifySignature)
 dnl rpm 4.2?
 AC_CHECK_FUNCS(rpmtsColor, AC_DEFINE([HAVE_RPM_4_2],1,[]))
 AC_CHECK_FUNCS(hGetColor, AC_DEFINE([HAVE_RPM_HGETCOLOR],1,[]))
+dnl rpm 6.0? arch colors (archcolor: table), see rpmGetArchColor()
+AC_CHECK_FUNCS(rpmGetArchColor, AC_DEFINE([HAVE_RPMGETARCHCOLOR],1,[]))
 
 if test "${is_rpmorg}." != "yes."; then
 AC_CHECK_HEADERS([db_185.h],,[

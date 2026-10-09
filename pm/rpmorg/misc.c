@@ -190,3 +190,21 @@ int pm_rpm_arch_score(const char *arch)
 
     return machine_score(PMMSTAG_ARCH, arch);
 }
+
+/* Color assigned to an arch by rpm's archcolor: table, -1 if unknown arch.
+   Requires initialized rpm macro context (see pm_rpm_setup()).
+   rpm < 6.0 does not provide rpmGetArchColor() -- report unknown arch then,
+   so callers stay conservative and keep the old "let it happen" behavior. */
+int pm_rpm_arch_color(const char *arch)
+{
+#ifdef HAVE_RPMGETARCHCOLOR
+    if (arch == NULL)
+        return -1;
+
+    return rpmGetArchColor(arch);
+#else
+    arch = arch;
+    return -1;
+#endif
+}
+

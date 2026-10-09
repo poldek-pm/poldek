@@ -10,6 +10,7 @@
   - use `memmove()` for overlapping memory regions
   - fix metadata handling with libxml2 (`XML_PARSE_UNZIP` flag)
   - improved zstd to gzip conversion for metadata repos
+  - multilib: do not treat uncolored packages (e.g. `-devel`) from different arch families as interchangeable - poldek-nocolor-cmp.patch (https://github.com/pld-linux/poldek/commit/d0226c1cb0de9b8f759d6890562e8ff7bea23ae1)
 
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)

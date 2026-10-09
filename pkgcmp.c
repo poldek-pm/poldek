@@ -72,6 +72,24 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
 }
 #endif
 
+/* Whether packages belong to different arch families.
+   Mirrors rpm's addSelfErasures() (lib/depends.cc): when colors cannot tell
+   two packages apart, compare arch colors (rpm's archcolor: table) and treat
+   packages from different arch families as non-interchangeable.  Arch color 0
+   is noarch (always replaceable), negative means unknown arch -- then stay
+   conservative and allow the replacement. */
+static int pkg_arch_color_differs(const struct pkg *p1, const struct pkg *p2)
+{
+    int c1 = pm_architecture_color(pkg_arch(p1));
+    int c2 = pm_architecture_color(pkg_arch(p2));
+    int differs = (c1 > 0 && c2 > 0 && c1 != c2);
+
+    DBGF("%s(ac=%d), %s(ac=%d) => %s\n", pkg_id(p1), c1, pkg_id(p2), c2,
+         differs ? "DIFFERENT" : "same/unknown");
+
+    return differs;
+}
+
 int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
 {
     if (!poldek_conf_MULTILIB)
@@ -80,8 +98,11 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
     if (pkg->color && candidate->color)
         return (pkg->color & candidate->color) > 0;
 
-    /* either new or old package contains no binary files, let it happen */
-    return 1;
+    /* When at least one package has no ELF binaries (color 0), fall back
+       to arch colors. This prevents treating uncolored packages from
+       different architectures (e.g. xz-devel.x32 vs xz-devel.x86_64) as
+       interchangeable, the very way rpm does it in addSelfErasures(). */
+    return !pkg_arch_color_differs(candidate, pkg);
 }
 
 /* ret : 1 if pkg is cappable to upgrade arch<=>arch, arch<=>noarch */

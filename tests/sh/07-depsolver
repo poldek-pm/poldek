@@ -388,6 +388,8 @@ testUpgradeObsolete() {
     try_install a "a,a-devel,a-static,bar" "a,a-devel,a-static,foo"
 }
 
+# note: rpm6 ERASE for the same arch family, for arch aliases (amd64/x86_64)
+# and for noarch; KEEP BOTH across families (x86_64 vs i686 vs x32).
 testUpgradeMultilib() {
     ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
     POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
@@ -414,17 +416,24 @@ testUpgradeMultilib() {
                                  "a-1-1.x86_64,a-devel-1-1.x86_64"
 
     msgn " uncolored package #2"
+    # only the same arch (family) installed package is replaced; the uncolored
+    # a-devel-1-1.x86_64 belongs to another arch family and stays installed,
+    # the same way rpm's addSelfErasures() does it (see rpm's multicolor-fixes)
     try_install_with_ask_allowed a-devel-2-2.i686 \
                                  "a-2-2.i686,a-devel-2-2.i686" \
-                                 "a-1-1.i686,a-devel-1-1.x86_64"
+                                 "a-1-1.i686"
     msgn "  upgrade-dist"
     runpoldek --upgrade-dist
     n=$(ls $DESTINATION_REPO/a* | grep 1-1 | wc -l)
     assertEquals "not all packages were upgraded by upgrade-dist" "$n" "0"
 
     msgn "  uncolored package #3"
-    # Multilib upgrade uncolored package (arch flip-flop regardless of arch)
-    try_install a-devel-2-2.i686 "a-devel-2-2.i686" "a-devel-2-2.x86_64"
+    # Multilib: an uncolored package must not erase an uncolored package of
+    # another arch family (x86_64 vs i686), even when versions are equal.
+    # No removals expected at all (see the assert below).
+    try_install a-devel-2-2.i686 "a-devel-2-2.i686" ""
+    n=$(ls $DESTINATION_REPO/a-devel* | grep -c "2-2.x86_64")
+    assertEquals "a-devel-2-2.x86_64 was erased by a-devel-2-2.i686" "$n" "1"
 
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }

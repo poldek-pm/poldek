@@ -132,10 +132,6 @@ int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec, void *apkg)
     if (pkg_is_colored_like(&dbpkg, pkg))
         return 1;
 
-    /* any uncolored -> rpm allows upgrade */
-    if (dbpkg.color == 0 || pkg->color == 0)
-        return 1;
-
     return 0;
 }
 
