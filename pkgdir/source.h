@@ -55,6 +55,7 @@ struct source {
     tn_array  *exclude_path;
     tn_array  *ign_patterns;    /* ignore package patterns */
     char      *original_type;   /* type of source repo for this source  */
+    char      *config_origin;   /* config file:line where source was defined */
     unsigned  subopt_flags;
     int       _refcnt;
     char      *group;

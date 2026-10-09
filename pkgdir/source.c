@@ -176,6 +176,7 @@ struct source *source_malloc(void)
     //src->flags |= PKGSOURCE_PRI;
     src->name = src->path = src->pkg_prefix = NULL;
     src->group = src->dscr = NULL;
+    src->config_origin = NULL;
     src->lc_lang = NULL;
     src->_refcnt = 0;
     src->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
@@ -213,6 +214,7 @@ struct source *source_clone(const struct source *src)
     cp_str_ifnotnull(&nsrc->group, src->group);
     cp_str_ifnotnull(&nsrc->lc_lang, src->lc_lang);
     cp_str_ifnotnull(&nsrc->original_type, src->original_type);
+    cp_str_ifnotnull(&nsrc->config_origin, src->config_origin);
 
     n_array_free(nsrc->exclude_path);
     nsrc->exclude_path = n_ref(src->exclude_path);
@@ -241,6 +243,7 @@ void source_free(struct source *src)
     n_cfree(&src->group);
     n_cfree(&src->lc_lang);
     n_cfree(&src->original_type);
+    n_cfree(&src->config_origin);
 
     if (src->exclude_path)
         n_array_free(src->exclude_path);
@@ -662,6 +665,10 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
     if (vs)
         src->original_type = n_strdup(vs);
 
+    vs = poldek_conf_get(htcnf, "__file__line", NULL);
+    if (vs)
+        src->config_origin = n_strdup(vs);
+
     get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
     get_conf_opt_list(htcnf, "ignore", src->ign_patterns);
     return src;
@@ -687,11 +694,16 @@ int source_cmp_uniq(const struct source *s1, const struct source *s2)
         rc = strcmp(n1, n2);
     }
 
-    if (rc == 0)
+    if (rc == 0) {
         logn(LOGWARN, _("removed duplicated source %s%s%s"),
              (s2->flags & PKGSOURCE_NAMED) ? s2->name : "",
              (s2->flags & PKGSOURCE_NAMED) ? " -- " : "",
              s2->path);
+        if (s1->config_origin || s2->config_origin)
+            logn(LOGWARN, _("  defined at %s and %s"),
+                 s1->config_origin ? s1->config_origin : "(unknown)",
+                 s2->config_origin ? s2->config_origin : "(unknown)");
+    }
 
     return rc;
 }

@@ -505,7 +505,7 @@ static int verify_param_presence(tn_hash *ht_sect, const char *section,
 
     if (overwrite || (tag->flags & CONF_TYPE_F_MULTI_EXCL)) {
         if (!overwrite || poldek_VERBOSE > 1)
-            logn(LOGWARN, _("%s %s::%s redefined"), filemark, section, name);
+            logn(LOGWARN, _("%s: %s::%s redefined"), filemark, section, name);
         n_hash_remove(ht_sect, name);
 
     } else if ((tag->flags & CONF_TYPE_F_MULTI) == 0) {
@@ -541,9 +541,9 @@ static int add_param(tn_hash *ht_sect, const char *section,
     validate = (flags & ADD_PARAM_VALIDATE);
 
     if (path)
-        n_snprintf(filemark, sizeof(filemark), "%s:%d:", path, nline);
+        n_snprintf(filemark, sizeof(filemark), "%s:%d", path, nline);
     else
-        n_snprintf(filemark, sizeof(filemark), "config:");
+        n_snprintf(filemark, sizeof(filemark), "config");
 
     if ((tagindex = find_tag(section, name, &sect)) == -1) {
         if (*name == '_')       /* internal or _macro */
@@ -554,7 +554,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
             tag = &unknown_tag;
 
         } else {
-            logn(LOGWARN, _("%s unknown option '%s::%s'"), filemark,
+            logn(LOGWARN, _("%s: unknown option '%s::%s'"), filemark,
                  section, name);
             return 0;
         }
@@ -604,7 +604,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
         val = "";
 
     if (val == NULL) {
-        logn(LOGERR, _("%s invalid value of '%s::%s'"), filemark, section, name);
+        logn(LOGERR, _("%s: invalid value of '%s::%s'"), filemark, section, name);
         return 0;
     }
 
@@ -618,7 +618,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
         }
 
         if (!valid) {
-            logn(LOGWARN, _("%s invalid value '%s' of '%s::%s'"), filemark,
+            logn(LOGWARN, _("%s: invalid value '%s' of '%s::%s'"), filemark,
                  val, section, name);
             return 0;
         }
@@ -826,7 +826,7 @@ static tn_hash *open_section_ht(tn_hash *htconf,
         char filemark[PATH_MAX];
         struct copt *opt;
 
-        n_snprintf(filemark, sizeof(filemark), "%s:%d:", path, nline);
+        n_snprintf(filemark, sizeof(filemark), "%s:%d", path, nline);
         opt = copt_new("__file__line");
         opt->val = n_strdup(filemark);
         n_hash_insert(ht_sect, opt->name, opt);

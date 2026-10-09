@@ -10,8 +10,9 @@
   - use `memmove()` for overlapping memory regions
   - fix metadata handling with libxml2 (`XML_PARSE_UNZIP` flag)
   - improved zstd to gzip conversion for metadata repos
-  - multilib: do not treat uncolored packages (e.g. `-devel`) from different arch families as interchangeable - poldek-nocolor-cmp.patch (https://github.com/pld-linux/poldek/commit/d0226c1cb0de9b8f759d6890562e8ff7bea23ae1)
-  - multilib: `install` with a bare package name resolves to the native arch only, instead of pulling in a foreign-arch dependency chain; globs (`install curl*`) and explicit names (`install curl-8.19.0-1.i686`) still match all arches, and a package available only for a foreign arch must be named explicitly - poldek-multilib-bare-name-install.patch (https://github.com/pld-linux/poldek/commit/dcf566fbc923ff4bc085c2d9981dfeda98862bdf)
+* multilib: do not treat uncolored packages (e.g. `-devel`) from different arch families as interchangeable - poldek-nocolor-cmp.patch (https://github.com/pld-linux/poldek/commit/d0226c1cb0de9b8f759d6890562e8ff7bea23ae1)
+* multilib: `install` with a bare package name resolves to the native arch only, instead of pulling in a foreign-arch dependency chain; globs (`install foo*`) and explicit names (`install foo-1.0.0-1.i686`) still match all arches, and a package available only for a foreign arch must be named explicitly - poldek-multilib-bare-name-install.patch (https://github.com/pld-linux/poldek/commit/dcf566fbc923ff4bc085c2d9981dfeda98862bdf)
+* Show config file origin when removing duplicated sources - poldek-dup-sources.patch (https://github.com/pld-linux/poldek/commit/d1adbc7551110e290d82895d4a88bb8b93e975c0)
 
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)
