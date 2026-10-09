@@ -370,6 +370,22 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
         if (sc->score > best_score) {
             best_score = sc->score;
             i_best = i;
+        } else if (sc->score == best_score) {
+            /* EVR tiebreaker: when scores are tied, prefer the
+               candidate with the highest epoch-version-release.
+               Without this, the winner is the first candidate in
+               alphabetical name order, which systematically picks
+               the oldest version (e.g. php4-program over
+               php85-program when 23 packages provide /usr/bin/php).
+               This is safe because version constraints are enforced
+               before candidates reach scoring — only packages that
+               satisfy the requirement are considered here.
+               See also prepare_icap() for the --caplookup path. */
+            struct pkg *pbest = n_array_nth(candidates, i_best);
+            struct pkg *pcand = n_array_nth(candidates, i);
+            if (pkg_cmp_evr(pcand, pbest) > 0) {
+                i_best = i;
+            }
         }
 
         if (sc->satscore > best_satscore) {

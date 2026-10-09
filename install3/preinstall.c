@@ -90,8 +90,16 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
             }
         }
 
-        if (pkg == NULL)
+        if (pkg == NULL) {
+            /* EVR tiebreaker: pick highest EVR instead of
+               alphabetically first; see also do_select_best_pkg() */
             pkg = n_array_nth(pkgs, 0);
+            for (i = 1; i < n_array_size(pkgs); i++) {
+                struct pkg *p = n_array_nth(pkgs, i);
+                if (pkg_cmp_evr(p, pkg) > 0)
+                    pkg = p;
+            }
+        }
 
         pkg_hand_mark(ts->pms, pkg);
         return 1;

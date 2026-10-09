@@ -1019,4 +1019,29 @@ testInstallGlobMultilibAllArches() {
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
+# when candidates score equally, the highest EVR wins -- not the alphabetically
+# first one, which used to pick the oldest version (php4 over php85)
+testEvrTiebreakHighest() {
+    msgn "Preparing repositories..."
+    build a 1-1 -p "'PROG = 1'"
+    build b 2-2 -p "'PROG = 2'"
+    build c 3-3 -p "'PROG = 3'"
+    build req 1-1 -r "'PROG'"
+
+    msgn "Tie on scores should pick the highest EVR (c-3-3)"
+    try_install_with_ask_allowed req "req-1-1,c-3-3" ""
+}
+
+# the tiebreaker must not override a version constraint of the requirement
+testEvrTiebreakRespectsVersionConstraint() {
+    msgn "Preparing repositories..."
+    build a 1-1 -p "'PROG = 1'"
+    build b 2-2 -p "'PROG = 2'"
+    build c 3-3 -p "'PROG = 3'"
+    build req2 1-1 -r "'PROG < 2'"
+
+    msgn "req PROG < 2 should stay with a-1-1"
+    try_install_with_ask_allowed req2 "req2-1-1,a-1-1" ""
+}
+
 . ./sh/lib/shunit2
