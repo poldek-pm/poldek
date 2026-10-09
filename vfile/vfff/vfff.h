@@ -39,7 +39,8 @@ extern int *vfff_verbose;
 extern void (*vfff_vlog_cb)(const char *fmt, va_list ap);
 
 const char *vfff_errmsg(void);
-void vfff_set_err(int err_no, const char *fmt, ...);
+void vfff_set_err(int err_no, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
 void vfff_log(const char *fmt, ...);
 int vfff_sigint_reached(void);
 int vfff_to_connect(const char *host, const char *service, int *af);

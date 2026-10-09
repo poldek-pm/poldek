@@ -499,7 +499,7 @@ static int parse_pasv(const char *resp, char *addr, int addr_size, int *port)
     is_err = 0;
 
     p = resp;
-    while (!isdigit(*p))
+    while (*p && !isdigit(*p))
         p++;
 
     if (sscanf(p, "%d,%d,%d,%d,%d,%d", &a[0], &a[1], &a[2], &a[3],
@@ -556,8 +556,11 @@ static int vftpcn_pasv(struct vcn *cn)
     if (!vftpcn_cmd(cn, cmd))
         return 0;
 
-    if (!vftpcn_resp(cn) || resp_code(cn) != req_code) {
-        vfff_set_err(EIO, resp_msg(cn));
+    if (!vftpcn_resp(cn))       /* no response at all; readresp() set the cause */
+        return 0;
+
+    if (resp_code(cn) != req_code) {
+        vfff_set_err(EIO, "%s", resp_msg(cn));
         return 0;
     }
 

@@ -15,6 +15,8 @@
 * Show config file origin when removing duplicated sources - poldek-dup-sources.patch (https://github.com/pld-linux/poldek/commit/d1adbc7551110e290d82895d4a88bb8b93e975c0)
 * depsolver: break ties between equivalent providers by preferring highest EVR - poldek-scoring-evr.patch (https://github.com/pld-linux/poldek/commit/3c9d98c7c3b231827a10714d48ccf0f894a9a93f)
 * Repo (source) `ignore` config option is merged with the global one instead of overwriting it - poldek-global-ignore-merges.patch (https://github.com/pld-linux/poldek/commit/1d3b08124897ca8e21a70944d5eb3291cc16a635)
+* Fix: unreadable FTP PASV response is reported as an error and a non-conforming reply is printed verbatim - poldek-ftp-pasv-crash.patch (https://github.com/pld-linux/poldek/commit/59e3fec55abec6a69632766852c42ac36aec064b)
+* Fix: digit-less FTP PASV reply is reported as a parse error - poldek-ftp-pasv-parse.patch (https://github.com/pld-linux/poldek/commit/59e3fec55abec6a69632766852c42ac36aec064b)
 
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)
