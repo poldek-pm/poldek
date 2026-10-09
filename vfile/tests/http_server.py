@@ -32,7 +32,13 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests"""
         path = self.path
-        
+
+        # Proxy request (absolute-form request target): record the URI the
+        # client sent and serve the path part as if it were a direct request
+        if path.startswith("http://") or path.startswith("https://"):
+            self._handle_proxied(path)
+            return
+
         # Control endpoints
         if path == "/stop":
             self.send_response(HTTPStatus.OK)
@@ -134,6 +140,28 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         
         self.send_error(HTTPStatus.NOT_FOUND)
     
+    def _handle_proxied(self, target):
+        """Handle an absolute-form request target (proxy mode).
+
+        Logs the absolute URI so tests can assert what the client actually
+        sent, then serves the path part from the data directory.
+        """
+        if self.server.proxy_log:
+            with open(self.server.proxy_log, "a") as f:
+                f.write(target + "\n")
+
+        rest = target.split("://", 1)[1]
+        slash = rest.find("/")
+        if slash == -1:
+            self.send_error(HTTPStatus.BAD_REQUEST)
+            return
+
+        path = rest[slash:]
+        if path.startswith("/file/"):
+            self._serve_file(path[6:])
+        else:
+            self.send_error(HTTPStatus.NOT_FOUND)
+
     def _serve_file(self, filename):
         """Serve file from data directory"""
         # Security: prevent path traversal
@@ -220,21 +248,24 @@ class TestHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     allow_reuse_address = True
     daemon_threads = True
     
-    def __init__(self, server_address, RequestHandlerClass, data_dir, verbose=False, https_port=443):
+    def __init__(self, server_address, RequestHandlerClass, data_dir, verbose=False,
+                 https_port=443, proxy_log=None):
         super().__init__(server_address, RequestHandlerClass)
         self.data_dir = data_dir
         self.verbose = verbose
         self.running = True
         self.server_port = server_address[1]
         self.https_port = https_port
+        self.proxy_log = proxy_log
 
 
 class TestHTTPSServer(TestHTTPServer):
     """HTTPS test server with self-signed certificate"""
     
     def __init__(self, server_address, RequestHandlerClass, data_dir, 
-                 cert_file, key_file, verbose=False):
-        super().__init__(server_address, RequestHandlerClass, data_dir, verbose)
+                 cert_file, key_file, verbose=False, proxy_log=None):
+        super().__init__(server_address, RequestHandlerClass, data_dir, verbose,
+                         proxy_log=proxy_log)
         
         # Create SSL context
         self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -314,6 +345,8 @@ def main():
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Verbose logging')
     parser.add_argument('--write-port', help='Write port number to this file')
+    parser.add_argument('--proxy-log',
+                        help='Log absolute-form (proxy) request targets here')
     parser.add_argument('--https-port', type=int, default=443,
                         help='HTTPS port for HTTP->HTTPS upgrade redirects')
     
@@ -352,11 +385,13 @@ def main():
     
     if args.https:
         httpd = TestHTTPSServer(server_address, TestHTTPRequestHandler,
-                                args.data_dir, cert_file, key_file, args.verbose)
+                                args.data_dir, cert_file, key_file, args.verbose,
+                                proxy_log=args.proxy_log)
         proto = "HTTPS"
     else:
         httpd = TestHTTPServer(server_address, TestHTTPRequestHandler,
-                               args.data_dir, args.verbose, args.https_port)
+                               args.data_dir, args.verbose, args.https_port,
+                               proxy_log=args.proxy_log)
         proto = "HTTP"
     
     actual_port = httpd.server_port

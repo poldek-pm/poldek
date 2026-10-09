@@ -86,6 +86,10 @@ else
     fi
 fi
 
+# Log for absolute-form (proxy) request targets, used by the proxy test
+PROXY_LOG="$TEST_DATA_DIR/proxy.log"
+: > "$PROXY_LOG"
+
 # Start HTTPS server first (if available) so HTTP server knows the port
 if [ "$HAVE_CRYPTO" -eq 1 ]; then
     vprint "Starting HTTPS server on port $HTTPS_PORT..."
@@ -115,11 +119,13 @@ if [ "$HAVE_CRYPTO" -eq 1 ]; then
         --port "$HTTP_PORT" \
         --data-dir "$TEST_DATA_DIR" \
         --https-port "$HTTPS_PORT" \
+        --proxy-log "$PROXY_LOG" \
         --write-port "$PORT_FILE_HTTP" &
 else
     "$PYTHON" "$SCRIPT_DIR/http_server.py" \
         --port "$HTTP_PORT" \
         --data-dir "$TEST_DATA_DIR" \
+        --proxy-log "$PROXY_LOG" \
         --write-port "$PORT_FILE_HTTP" &
 fi
 HTTP_PID="$!"
@@ -161,6 +167,7 @@ export TEST_SERVER_HOST="127.0.0.1"
 export TEST_HTTP_PORT="$HTTP_PORT"
 export TEST_HTTPS_PORT="$HTTPS_PORT"
 export TEST_DATA_DIR="$TEST_DATA_DIR"
+export TEST_PROXY_LOG="$PROXY_LOG"
 
 vprint ""
 vprint "=== Running Tests ==="

@@ -283,9 +283,14 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
         n_assert(cn->proto == VCN_PROTO_HTTP || cn->proto == VCN_PROTO_HTTPS);
 
         if (*to == '/') {
-            snprintf(topath, sizeof(topath), "http%s://%s:%d%s",
-                     cn->proto == VCN_PROTO_HTTPS ? "s" : "",
-                     req->host, req->port, to);
+            if (req->port > 0)
+                snprintf(topath, sizeof(topath), "http%s://%s:%d%s",
+                         cn->proto == VCN_PROTO_HTTPS ? "s" : "",
+                         req->host, req->port, to);
+            else
+                snprintf(topath, sizeof(topath), "http%s://%s%s",
+                         cn->proto == VCN_PROTO_HTTPS ? "s" : "",
+                         req->host, to);
             topathp = topath;
         } else if (strncmp(to, "http://", 7) != 0 && strncmp(to, "https://", 8) != 0) {
             foreign_proto = 1;

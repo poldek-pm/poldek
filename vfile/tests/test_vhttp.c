@@ -210,6 +210,63 @@ START_TEST(test_http_redirect_chain)
 }
 END_TEST
 
+/* Through a proxy vfile sends the absolute request URL in the request line
+   (vfffmod.c: vreq.uri = req->proxy_host ? req->url : req->uri).  An explicit
+   port in the requested URL must survive vf_request_new(), otherwise the proxy
+   is told to fetch the very same resource from the protocol default port. */
+START_TEST(test_http_proxy_keeps_port)
+{
+    char url[512], proxy[256], expect[512], dest[PATH_MAX];
+    char line[1024];
+    const char *proxy_log = getenv("TEST_PROXY_LOG");
+    FILE *f;
+    int found = 0;
+
+    fail_if(http_port == 0);
+    fail_if(proxy_log == NULL || *proxy_log == '\0', "TEST_PROXY_LOG not set");
+
+    /* proxy is the test server itself, reached on its non-default port */
+    if ((size_t)snprintf(proxy, sizeof(proxy), "http://%s:%d",
+                         server_host, http_port) >= sizeof(proxy))
+        ck_abort_msg("proxy url truncated");
+
+    if ((size_t)snprintf(url, sizeof(url), "http://%s:%d/file/%s",
+                         server_host, http_port, TEST_FILE_SMALL) >= sizeof(url))
+        ck_abort_msg("url truncated");
+
+    if ((size_t)snprintf(expect, sizeof(expect), "http://%s:%d/file/%s",
+                         server_host, http_port, TEST_FILE_SMALL) >= sizeof(expect))
+        ck_abort_msg("expect truncated");
+
+    setenv("http_proxy", proxy, 1);
+    setenv("no_proxy", "", 1);
+    setenv("VFILE_CONF_NOPROXY", "", 1);
+
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    unsetenv("http_proxy");
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    fail_if(access(dest, F_OK) != 0);
+    fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
+
+    /* the proxy must have seen the absolute URI, port included */
+    f = fopen(proxy_log, "r");
+    fail_if(f == NULL, "cannot read proxy log %s", proxy_log);
+    while (fgets(line, sizeof(line), f) != NULL) {
+        char *eol = strchr(line, '\n');
+        if (eol)
+            *eol = '\0';
+        if (strcmp(line, expect) == 0)
+            found = 1;
+    }
+    fclose(f);
+
+    fail_if(found == 0, "proxy did not receive '%s'", expect);
+}
+END_TEST
+
 START_TEST(test_http_auth_success)
 {
     char url[512];
@@ -398,6 +455,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_auth_success);
     tcase_add_test(tc_http, test_http_auth_fail);
     tcase_add_test(tc_http, test_http_upgrade_redirect);
+    tcase_add_test(tc_http, test_http_proxy_keeps_port);
     suite_add_tcase(s, tc_http);
 
     /* HTTPS tests */
