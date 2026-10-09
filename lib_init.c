@@ -245,12 +245,11 @@ struct source *do_source_new_htcnf(struct poldek_ctx *ctx,
                                         (tn_fn_dup)strdup);
     }
 
-    if (n_array_size(src->ign_patterns) == 0 && /* take global  */
-        n_array_size(ctx->ts->ign_patterns) > 0) {
-
-        n_array_free(src->ign_patterns);
-        src->ign_patterns = n_array_dup(ctx->ts->ign_patterns,
-                                        (tn_fn_dup)strdup);
+    if (n_array_size(ctx->ts->ign_patterns) > 0) {
+        n_array_concat_ex(src->ign_patterns, ctx->ts->ign_patterns,
+                          (tn_fn_dup)strdup);
+        n_array_sort(src->ign_patterns);
+        n_array_uniq(src->ign_patterns);
     }
 
     return src;

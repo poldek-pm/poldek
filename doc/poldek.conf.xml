@@ -395,7 +395,10 @@ and [filename]*-source.conf[/filename], file getters are declared in
 
   <option name="ignore" type="string" list="yes" default="vserver-packages" multiple="yes">
     <description>
-    Ignore package list - packages fits given mask will be invisible.
+    Ignore package list - packages matching given masks will be invisible.
+    Patterns listed here apply to every [option]source[/option]; any
+    per-source [option]ignore[/option] entry adds more masks on top of this
+    global list rather than replacing it.
     [screen]
  ignore = *-smp-* foo*
  ignore = vserver-packages
@@ -634,7 +637,9 @@ Every repository is configured in its own [ source ] section.
 
   <option name="ignore" type="string" list="yes" default="" multiple="yes">
     <description>
-    Have the same meaning as [ global ] parameter. Example:
+    Additional ignore masks for this source, merged with the [ global ]
+    [option]ignore[/option] list (global patterns always apply; per-source
+    entries add more). Example:
     [screen]
  ignore = kernel*smp* dev
     [/screen]

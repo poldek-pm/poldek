@@ -204,13 +204,6 @@ tn_array *source_stubload(struct source *src)
     if (pkgs == NULL)
         return NULL;
 
-    if (src->ign_patterns) {
-        const struct pkgdir_module *mod = pkgdir_mod_find(src->type);
-        /* module does not handle "ignore" itself  */
-        if (mod && (mod->cap_flags & PKGDIR_CAP_HANDLEIGNORE) == 0)
-            packages_score_ignore(pkgs, src->ign_patterns, 1);
-    }
-
     return pkgs;
 }
 

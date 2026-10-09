@@ -14,6 +14,7 @@
 * multilib: `install` with a bare package name resolves to the native arch only, instead of pulling in a foreign-arch dependency chain; globs (`install foo*`) and explicit names (`install foo-1.0.0-1.i686`) still match all arches, and a package available only for a foreign arch must be named explicitly - poldek-multilib-bare-name-install.patch (https://github.com/pld-linux/poldek/commit/dcf566fbc923ff4bc085c2d9981dfeda98862bdf)
 * Show config file origin when removing duplicated sources - poldek-dup-sources.patch (https://github.com/pld-linux/poldek/commit/d1adbc7551110e290d82895d4a88bb8b93e975c0)
 * depsolver: break ties between equivalent providers by preferring highest EVR - poldek-scoring-evr.patch (https://github.com/pld-linux/poldek/commit/3c9d98c7c3b231827a10714d48ccf0f894a9a93f)
+* Do not overwrite [global] ignore with per-source ignore - poldek-global-ignore-merges.patch (https://github.com/pld-linux/poldek/commit/1d3b08124897ca8e21a70944d5eb3291cc16a635)
 
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)

@@ -129,6 +129,7 @@ tn_array *poldek_load_stubs(struct poldek_ctx *ctx)
 
     n_array_isort_ex(sources, (tn_fn_cmp)source_cmp_pri);
     tn_array *stubpkgs = pkgs_array_new(4096);
+    int do_ignore = ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE);
 
     for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
@@ -144,6 +145,9 @@ tn_array *poldek_load_stubs(struct poldek_ctx *ctx)
             n_array_cfree(&stubpkgs);
             return 0;
         }
+
+        if (do_ignore && n_array_size(src->ign_patterns) > 0)
+            packages_score_ignore(pkgs, src->ign_patterns, 1);
 
         while (n_array_size(pkgs) > 0) {
             struct pkg *pkg = n_array_shift(pkgs);
