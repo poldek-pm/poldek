@@ -1,13 +1,15 @@
 CPPFLAGS = @CPPFLAGS@ @CHECK_CFLAGS@
 LDADD = @CHECK_LIBS@ $(top_builddir)/vfile/libvfile.la
 
-check_PROGRAMS = test_vfile test_vopen3 test_vhttp test_valid_path
+check_PROGRAMS = test_vfile test_vopen3 test_vhttp test_valid_path \
+		 test_vfnet
 
 TESTS = test_vfile test_vopen3 test_valid_path
-EXTRA_DIST = test.h http_server.py run_http_tests.sh
+EXTRA_DIST = test.h http_server.py run_http_tests.sh \
+	      net_servers.py run_net_tests.sh
 
 # test_vhttp is run via check-http target with server setup
-check-local: check-http
+check-local: check-http check-net
 
 clean-local:
 	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
@@ -15,6 +17,11 @@ clean-local:
 # Run HTTP tests with server setup
 check-http: test_vhttp$(EXEEXT)
 	$(SHELL) $(srcdir)/run_http_tests.sh ./test_vhttp$(EXEEXT)
+
+# test_vfnet needs its own FTP/HTTP servers, so it is not part of "make check";
+# run it with: make check-net
+check-net: test_vfnet$(EXEEXT)
+	$(SHELL) $(srcdir)/run_net_tests.sh ./test_vfnet$(EXEEXT)
 
 runtests: poldek_test_conf.conf
 	$(MAKE) check
