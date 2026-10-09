@@ -136,19 +136,26 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
     return 1;
 }
 
-int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
+#ifdef HAVE_RPM_4_1
+static rpmVSFlags default_vsflags(void)
+{
+    return RPMVSF_NOSHA1HEADER | RPMVSF_NOMD5HEADER |
+           RPMVSF_NOSHA1 | RPMVSF_NOMD5 |
+           RPMVSF_NODSAHEADER | RPMVSF_NORSAHEADER |
+           RPMVSF_NODSA | RPMVSF_NODSA;
+}
+#endif
+
+int pm_rpmhdr_loadfdt_ts(FD_t fdt, Header *hdr, const char *path, rpmts ts)
 {
     int rc = 0;
 
 #ifndef HAVE_RPM_4_1
+    (void)ts;
     rc = rpmReadPackageHeader(fdt, hdr, NULL, NULL, NULL);
 #else
     rpmRC rpmrc;
-    rpmts ts = rpmtsCreate();
-    rpmtsSetVSFlags(ts, RPMVSF_NOSHA1HEADER | RPMVSF_NOMD5HEADER |
-                        RPMVSF_NOSHA1 | RPMVSF_NOMD5 |
-                        RPMVSF_NODSAHEADER | RPMVSF_NORSAHEADER |
-                        RPMVSF_NODSA | RPMVSF_NODSA);
+
     rpmrc = rpmReadPackageFile(ts, fdt, path, hdr);
     switch (rpmrc) {
         case RPMRC_NOTTRUSTED:
@@ -160,13 +167,25 @@ int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
         default:
             rc = 1;
     }
-    rpmtsFree(ts);
 #endif
     return rc == 0;
 }
 
+int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
+{
+#ifndef HAVE_RPM_4_1
+    return pm_rpmhdr_loadfdt_ts(fdt, hdr, path, NULL);
+#else
+    int rc;
+    rpmts ts = rpmtsCreate();
+    rpmtsSetVSFlags(ts, default_vsflags());
+    rc = pm_rpmhdr_loadfdt_ts(fdt, hdr, path, ts);
+    rpmtsFree(ts);
+    return rc;
+#endif
+}
 
-int pm_rpmhdr_loadfile(const char *path, Header *hdr)
+int pm_rpmhdr_loadfile_ts(const char *path, Header *hdr, rpmts ts)
 {
     FD_t  fdt;
     int   rc = 0;
@@ -178,11 +197,33 @@ int pm_rpmhdr_loadfile(const char *path, Header *hdr)
         logn(LOGERR, "open %s: error", path); /* XXX */
 #endif
     } else {
-        rc = pm_rpmhdr_loadfdt(fdt, hdr, path);
+        rc = pm_rpmhdr_loadfdt_ts(fdt, hdr, path, ts);
         Fclose(fdt);
     }
 
     return rc;
+}
+
+int pm_rpmhdr_loadfile(const char *path, Header *hdr)
+{
+    rpmts ts = pm_rpmhdr_ts_create();
+    int rc = pm_rpmhdr_loadfile_ts(path, hdr, ts);
+    pm_rpmhdr_ts_free(ts);
+    return rc;
+}
+
+rpmts pm_rpmhdr_ts_create(void)
+{
+    rpmts ts = rpmtsCreate();
+#ifdef HAVE_RPM_4_1
+    rpmtsSetVSFlags(ts, default_vsflags());
+#endif
+    return ts;
+}
+
+void pm_rpmhdr_ts_free(rpmts ts)
+{
+    rpmtsFree(ts);
 }
 
 Header pm_rpmhdr_readfdt(void *fdt)

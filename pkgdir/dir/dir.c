@@ -192,11 +192,14 @@ int load_dir(struct pkgdir *pkgdir,
     DIR            *dir;
     int            n, nnew = 0;
     char           *sepchr = "/";
+    rpmts          ts;
 
     if ((dir = opendir(dirpath)) == NULL) {
         logn(LOGERR, "opendir %s: %m", dirpath);
         return -1;
     }
+
+    ts = pm_rpmhdr_ts_create();
 
     if (prev_pkgdir)
         mtime_index = build_mtime_index(prev_pkgdir->pkgs);
@@ -232,7 +235,7 @@ int load_dir(struct pkgdir *pkgdir,
         }
 
         if (pkg == NULL) {  /* mtime changed, but try compare content */
-            if (!pm_rpmhdr_loadfile(path, &h)) {
+            if (!pm_rpmhdr_loadfile_ts(path, &h, ts)) {
                 logn(LOGWARN, _("%s: read header failed, skipped"), path);
                 continue;
             }
@@ -306,6 +309,7 @@ int load_dir(struct pkgdir *pkgdir,
         msg(1, "_%d\n", n);
 
     closedir(dir);
+    pm_rpmhdr_ts_free(ts);
     if (mtime_index)
         n_hash_free(mtime_index);
 

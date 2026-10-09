@@ -92,8 +92,13 @@ int pm_rpm_vercmp(const char *one, const char *two);
 /************/
 /*  rpmhdr  */
 int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path);
+int pm_rpmhdr_loadfdt_ts(FD_t fdt, Header *hdr, const char *path, rpmts ts);
 int pm_rpmhdr_loadfile(const char *path, Header *hdr);
+int pm_rpmhdr_loadfile_ts(const char *path, Header *hdr, rpmts ts);
 Header pm_rpmhdr_readfdt(void *fdt); /* headerRead */
+
+rpmts pm_rpmhdr_ts_create(void);
+void pm_rpmhdr_ts_free(rpmts ts);
 
 int pm_rpmhdr_nevr(void *h, const char **name, int32_t *epoch,
                    const char **version, const char **release,
