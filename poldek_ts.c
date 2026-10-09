@@ -696,6 +696,11 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
     if (flags & TS_MARK_CAPSINLINE)
         apsflags |= ARG_PACKAGES_RESOLV_CAPSINLINE;
 
+    /* multilib: bare package names resolve to the native arch only; this has to
+       match arg_packages__validate_with_stubs(), which validates against stubs
+       long before real packages are marked here */
+    apsflags |= arg_packages_resolv_flags_install();
+
     if (arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs,
                              ts->ctx->ps, apsflags)) {
         tn_array *pkgs;

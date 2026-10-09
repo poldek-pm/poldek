@@ -457,6 +457,31 @@ tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
     return pkgs;
 }
 
+/*
+  multilib: should this package be skipped for a bare-name mask match?
+
+  Problem: "install curl" on a multilib system resolves to curl.x86_64,
+  curl.i686, curl.x32 — pulling in a massive foreign-arch dependency
+  chain.  The user just wanted the native-arch package.
+
+  This only applies to bare-name matches (strcmp with pkg->name).
+  Explicit names ("install curl-1.0-1.i686") and globs ("install curl*")
+  go through the fnmatch path and are not affected.
+
+  Returns true if the package should be skipped:
+  - caller asked for PREFER_NATIVE (install path, not ls/search)
+  - multilib mode is on
+  - package is not noarch (noarch is always installable)
+  - package arch score != 1 (not the native/base architecture)
+*/
+static int multilib_skip_foreign(const struct pkg *pkg, unsigned flags)
+{
+    return (flags & ARG_PACKAGES_RESOLV_PREFER_NATIVE) &&
+           poldek_conf_MULTILIB &&
+           !pkg_is_noarch(pkg) &&
+           pkg_arch_score(pkg) != 1;
+}
+
 static
 int resolve_masks(tn_array *re,
                   struct arg_packages *aps, tn_array *avpkgs,
@@ -465,6 +490,7 @@ int resolve_masks(tn_array *re,
 {
     int i, j, nmasks, rc = 1;
     int *matches, *matches_bycmp;
+    const char **first_foreign_id;
 
     nmasks = n_array_size(aps->package_masks);
 
@@ -473,6 +499,12 @@ int resolve_masks(tn_array *re,
 
     matches_bycmp = alloca(nmasks * sizeof(*matches_bycmp));
     memset(matches_bycmp, 0, nmasks * sizeof(*matches_bycmp));
+
+    /* first_foreign_id[j]: when a bare-name mask skips a foreign-arch
+       package, remember its pkg_id (e.g. "curl-8.19.0-1.i686") so we
+       can suggest it in the warning if no native arch exists at all */
+    first_foreign_id = alloca(nmasks * sizeof(*first_foreign_id));
+    memset(first_foreign_id, 0, nmasks * sizeof(*first_foreign_id));
 
     for (i=0; i < n_array_size(avpkgs); i++) {
         struct pkg *pkg = n_array_nth(avpkgs, i);
@@ -494,11 +526,16 @@ int resolve_masks(tn_array *re,
 
             DBGF("%s cmp %s or %s\n", mask, pkg->name, pkg_id(pkg));
             if (strcmp(mask, pkg->name) == 0) {
-                if (re)
-                    n_array_push(re, pkg_link(pkg));
+                if (multilib_skip_foreign(pkg, flags)) {
+                    if (!first_foreign_id[j])
+                        first_foreign_id[j] = pkg_id(pkg);
+                } else {
+                    if (re)
+                        n_array_push(re, pkg_link(pkg));
 
-                matches_bycmp[j]++;
-                matches[j]++;
+                    matches_bycmp[j]++;
+                    matches[j]++;
+                }
 
             } else if (fnmatch(mask, pkg_id(pkg), 0) == 0) {
                 if (re)
@@ -519,6 +556,17 @@ int resolve_masks(tn_array *re,
                 matches[j]++;
                 continue;
             }
+        }
+
+        /* multilib: bare name matched only foreign-arch packages;
+           fail like "no such package" — the user must be explicit */
+        if (unmatched && first_foreign_id[j]) {
+            if (!quiet)
+                logn(LOGWARN, _("%s: no native arch package available;"
+                     " to install use explicit name, e.g.: %s"),
+                     mask, first_foreign_id[j]);
+            rc = 0;
+            continue;
         }
 
         if (unmatched && (flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
@@ -680,6 +728,11 @@ static inline char *prepare_mask(char *mask) {
    0: invalid
    1: valid
 */
+unsigned arg_packages_resolv_flags_install(void)
+{
+    return poldek_conf_MULTILIB ? ARG_PACKAGES_RESOLV_PREFER_NATIVE : 0;
+}
+
 int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpkgs, tn_array **resolved, int quiet)
 {
     if (n_array_size(aps->package_lists) > 0)
@@ -698,7 +751,9 @@ int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpk
         re = *resolved;
     }
 
-    if (!resolve_masks(re, aps, stubpkgs, NULL, 0, quiet))
+    unsigned resolve_flags = arg_packages_resolv_flags_install();
+
+    if (!resolve_masks(re, aps, stubpkgs, NULL, resolve_flags, quiet))
         return 0;
 
     if (n_array_size(aps->packages) > 0) {

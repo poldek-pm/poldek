@@ -50,9 +50,20 @@ EXPORT int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
 #define ARG_PACKAGES_RESOLV_CAPSINLINE  (1 << 4)/* add packages found by caps
                                                    to resolved packages */
 #define ARG_PACKAGES_RESOLV_WARN_ONLY   (1 << 5)/* warn only*/
+#define ARG_PACKAGES_RESOLV_PREFER_NATIVE (1 << 6)/* multilib: "install curl"
+                                                      resolves only to native arch;
+                                                      "install curl-1.0-1.i686" and
+                                                      "install curl*" still match all */
 
 int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpkgs,
                                       tn_array **resolved, int quiet);
+
+/* resolve flags for the install path: in multilib mode bare package names
+   ("install curl") must resolve to the native arch only.  Must be used both
+   when validating args against stubs and when marking real packages, or the
+   filter is applied too late to matter.  ls/search/uninstall keep their own
+   flags and see all architectures. */
+unsigned arg_packages_resolv_flags_install(void);
 void arg_packages__clean_masks(struct arg_packages *aps);
 
 EXPORT int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,

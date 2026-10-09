@@ -486,7 +486,7 @@ testUpgradeMultilibOneTransactionForSamePackagesDifferentSource() {
     build2 FooBar 2-2 -a x86_64 -f "/hello.x86_64" -f "/README"
 
     msgn "Up"
-    try_install FooBar "FooBar-2-2.i686,FooBar-2-2.x86_64" "FooBar-1-1.i686,FooBar-1-1.x86_64"
+    try_install "FooBar-2-2.*" "FooBar-2-2.i686,FooBar-2-2.x86_64" "FooBar-1-1.i686,FooBar-1-1.x86_64"
 
     #"a-2-2.x86_64" "a-1-1.x86_64"
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
@@ -974,6 +974,49 @@ xtestUninstallHold() {
     try_uninstall a "a-1-1,a-devel-1-1"
 }
 
+# bare-name install in multilib should only install native arch
+testInstallBareNameMultilibNativeOnly() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
 
+    msgn "Preparing repositories..."
+    build a 1-1 -a x86_64 -f "/hello.x86_64"
+    build a 1-1 -a i686 -f "/hello.i686"
+
+    msgn "Bare-name install should pick only native arch"
+    try_install a "a-1-1.x86_64"
+
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+# explicit name-version.arch should install that specific arch
+testInstallExplicitArchMultilib() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    build a 1-1 -a x86_64 -f "/hello.x86_64"
+    build a 1-1 -a i686 -f "/hello.i686"
+
+    msgn "Explicit arch should install that specific arch"
+    try_install a-1-1.i686 "a-1-1.i686"
+
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+# glob pattern should install all matching arches
+testInstallGlobMultilibAllArches() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    build a 1-1 -a x86_64 -f "/hello.x86_64"
+    build a 1-1 -a i686 -f "/hello.i686"
+
+    msgn "Glob should install all matching arches"
+    try_install_with_ask_allowed "a*" "a-1-1.x86_64,a-1-1.i686"
+
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
 
 . ./sh/lib/shunit2
