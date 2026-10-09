@@ -88,7 +88,9 @@ static int toremove_cn_fakecmp(const void *a, const void *b)
 
 void vcn_pool_vacuum(void)
 {
-    n_list_remove_ex(vcn_pool, NULL, toremove_cn_fakecmp);
+    /* pool is TN_LIST_UNIQ, so one call drops at most one dead connection */
+    while (n_list_remove_ex(vcn_pool, NULL, toremove_cn_fakecmp) > 0)
+        ;
 }
 
 static struct vcn *vcn_pool_do_connect(struct vf_request *req)

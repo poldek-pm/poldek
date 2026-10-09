@@ -353,6 +353,9 @@ int vcn_is_alive(struct vcn *cn)
 {
     vfff_errno = 0;
 
+    if (cn->state != VCN_ALIVE)
+        return 0;
+
     if (cn->ts_is_alive > 0) {
         time_t ts = time(0);
 

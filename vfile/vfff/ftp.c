@@ -750,6 +750,7 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
 
     if (!vfff_transfer_file(cn, req, total_size)) {
         cn->sockfd = tmp_sockfd;
+        cn->state = VCN_DEAD;   /* reply to the aborted RETR stays unread */
         goto l_err;
     }
 
