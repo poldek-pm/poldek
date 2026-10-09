@@ -278,6 +278,11 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     else 
         req->uri = n_strdupl(tmp, len);
 
+    /* req->url is the canonical form of the request and it is re-parsed by
+       callers: the redirect retries in vf_fetch()/vf_stat() feed it back to
+       vf_request_new(), and it is handed to a proxy verbatim. So an explicit
+       port has to be part of it -- req->port alone is not enough, a retry
+       would end up on the protocol default port. */
     if (rreq.port > 0)
         len = n_snprintf(tmp, sizeof(tmp), "%s://%s:%d%s", rreq.proto, rreq.host,
                          rreq.port, req->uri);
@@ -287,6 +292,11 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     req->url = n_strdupl(tmp, len);
     req->port = rreq.port;
 
+    if (req->port > 0) {
+        char *at = strrchr(req->url, ':');
+        n_assert(at != NULL && atoi(at + 1) == req->port);
+    }
+
     
     if (rreq.login)
         req->login = n_strdup(rreq.login);
@@ -295,9 +305,15 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
         req->passwd = n_strdup(rreq.passwd);
 
     if (proxy && *proxy) {
-        len = n_snprintf(tmp, sizeof(tmp), "%s://%s", preq.proto, preq.host);
+        /* same rule as for req->url above: keep an explicit port, so the URL
+           stays usable for anything re-parsing it */
+        if (preq.port > 0)
+            len = n_snprintf(tmp, sizeof(tmp), "%s://%s:%d", preq.proto,
+                             preq.host, preq.port);
+        else
+            len = n_snprintf(tmp, sizeof(tmp), "%s://%s", preq.proto, preq.host);
         req->proxy_url = n_strdupl(tmp, len);
-        
+
         req->proxy_proto = n_strdup(preq.proto);
         req->proxy_host = n_strdup(preq.host);
         if (preq.login)
