@@ -1,3 +1,16 @@
+## 0.46 (TBD)
+* Security hardening:
+  - enable SSL/TLS certificate verification for HTTPS connections
+  - block HTTPS to HTTP downgrade on redirects
+  - validate environment variable paths (HOME, TMPDIR, XDG_CACHE_HOME)
+  - zero HTTP auth credentials before freeing memory
+  - call `initgroups()` when dropping privileges
+* Bug fixes:
+  - fix path traversal detection (trailing `/..`)
+  - use `memmove()` for overlapping memory regions
+  - fix metadata handling with libxml2 (`XML_PARSE_UNZIP` flag)
+  - improved zstd to gzip conversion for metadata repos
+
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)
 * Fixed compatibility with gettext >= 0.24 by @jpalus in https://github.com/poldek-pm/poldek/pull/26
