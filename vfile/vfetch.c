@@ -408,9 +408,12 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
             vfstat->vf_mtime = req->st_remote_mtime > 0 ? req->st_remote_mtime : 0;
 
         } else if (req->flags & VF_REQ_INT_REDIRECTED) {
+            char redir_url[PATH_MAX];
+
+            snprintf(redir_url, sizeof(redir_url), "%s", req->url);
             vf_request_free(req);
             req = NULL;
-            rc = vf_stat(destdir, req->url, vfstat, NULL);
+            rc = vf_stat(redir_url, destdir, vfstat, NULL);
 
         } else {
             vfile_set_errno(mod->vfmod_name, req->req_errno);
