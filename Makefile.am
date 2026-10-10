@@ -18,9 +18,15 @@ POD2MAN   = @POD2MAN@
 
 libVERINFO         = 4:0:0
 lib_LTLIBRARIES    = libpoldek.la
+# unit tests link the objects directly: -fvisibility=hidden keeps the
+# internals they exercise out of libpoldek.so
+noinst_LTLIBRARIES = libpoldek_core.la
 
 libpoldek_la_LDFLAGS = -version-info $(libVERINFO)
-libpoldek_la_SOURCES = \
+libpoldek_la_SOURCES =
+libpoldek_la_LIBADD = libpoldek_core.la
+
+libpoldek_core_la_SOURCES = \
 	  compiler.h	\
 	  log.c log.h	   \
 	  poldek_term.c poldek_term.h	\
@@ -71,7 +77,7 @@ libHEADERS = poldek.h poldek_ts.h pkg.h pkgcmp.h capreq.h pkgu.h pkgmisc.h arg_p
 nobase_pkginclude_HEADERS = $(libHEADERS)
 
 
-libpoldek_la_LIBADD = \
+libpoldek_core_la_LIBADD = \
 			sigint/libsigint.la  \
 			pkgdir/libpkgdir.la  \
 			install3/libinstall3.la \

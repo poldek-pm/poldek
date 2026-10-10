@@ -90,12 +90,13 @@ if test -n "$GCC"; then
     	 extern __attribute__((__visibility__("hidden"))) int hiddenfunc (void);
     	 extern __attribute__((__visibility__("default"))) int exportedfunc (void);],
     	[],
-    	AC_MSG_RESULT(yes),
     	[
-    	    AC_MSG_WARN([compiler does not support visibility])
-    	    CFLAGS="$cflags_save"
-	    ]
+    	    AC_MSG_RESULT(yes)
+    	    AM_CFLAGS="$AM_CFLAGS -fvisibility=hidden"
+    	],
+    	AC_MSG_WARN([compiler does not support visibility])
     )
+    CFLAGS="$cflags_save"
 fi
 
 PKG_PROG_PKG_CONFIG()
