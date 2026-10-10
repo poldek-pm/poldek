@@ -189,7 +189,7 @@ static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
                                 tn_array *choices, int hint)
 {
     char message[512], *question;
-    char *yns = "N/y/s", *yn = "N/y";
+    char *yns = "N/y/s/Q", *yn = "N/y/Q";
     int i, a, ac;
 
     foo = foo; ts = ts;
@@ -198,8 +198,8 @@ static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
         return hint;
 
     if (hint) {
-        yns = "Y/n/s";
-        yn = "Y/n";
+        yns = "Y/n/s/Q";
+        yn = "Y/n/Q";
     }
 
     n_snprintf(message, sizeof(message),
@@ -217,14 +217,14 @@ static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
 
     if (n_array_size(caps) > 1) {
         msg_ask("%s ", question);
-        msg_ask(_("(y - all, n - nothing, s - select some of)? [%s]"),
+        msg_ask(_("(y - all, n - nothing, s - select some of, Q - abort)? [%s]"),
                 yns);
 
-        a = poldek_term_ask(STDIN_FILENO, "YyNnSs\n", NULL);
+        a = poldek_term_ask(STDIN_FILENO, "YyNnSsQq\n", NULL);
     } else {
         msg_ask("%s [%s]", question, yn);
 
-        a = poldek_term_ask(STDIN_FILENO, "YyNn\n", NULL);
+        a = poldek_term_ask(STDIN_FILENO, "YyNnQq\n", NULL);
     }
 
     a = toupper(a);
@@ -232,6 +232,7 @@ static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
         case 'Y': a = 1; ac = 'y'; break;
         case 'N': a = 0; ac = 'n'; break;
         case 'S': a = 2; ac = 's'; break;
+        case 'Q': a = -1; ac = 'q'; break;
         case '\n': a = hint; ac = hint ? 'y':'n'; break;
         default:
             n_assert(0);
