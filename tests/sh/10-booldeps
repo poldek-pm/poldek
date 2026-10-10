@@ -321,4 +321,75 @@ testWithoutInstalled() {
     try_install "a" "a,y"
 }
 
+testIfWithOrInstalled() {
+    # the installed x satisfies the condition, so z is required
+    build_installed x 1-1 -p bar -p baz
+    build x 1-1 -p bar -p baz
+    build p 1-1 -p foo
+    build z
+    build a 1-1 -r "'(z if ((foo or bar) with baz))'"
+    try_install "a" "a,z"
+}
+
+testIfWithoutOrInstalled() {
+    build_installed x 1-1 -p bar
+    build x 1-1 -p bar
+    build p 1-1 -p foo -p qux
+    build z
+    build a 1-1 -r "'(z if ((foo or bar) without qux))'"
+    try_install "a" "a,z"
+}
+
+testWithNoLeftProvider() {
+    # used to crash: eval_with/eval_without freed an uninitialized right
+    # dvalue when the left side had no providers
+    build a 1-1 -r "'(foo with bar)'"
+    build b 1-1 -p "bar"
+
+    typeset out=$($POLDEK_INSTALL -uvt a)
+    echo $out | grep -q 'error' || fail "unexpected success (missing 'error')"
+}
+
+testOrWithNoProvider() {
+    # used to crash: eval_or freed the NULL dvalue of an unsatisfiable
+    # with-branch
+    build a 1-1 -r "'((foo with bar) or c)'"
+    build c
+    try_install "a" "a,c"
+}
+
+testAndWithFail() {
+    # an unsatisfiable with-conjunct used to be dropped from the and
+    build a 1-1 -r "'(c and (foo with bar))'"
+    build c
+    build p 1-1 -p "foo"
+    build q 1-1 -p "bar"
+
+    typeset out=$($POLDEK_INSTALL -uvt a)
+    echo $out | grep -q 'error' || fail "unexpected success (missing 'error')"
+}
+
+testAndWithInstalled() {
+    # the with is satisfied by the installed x, the and must not fail on it
+    build_installed x 1-1 -p foo -p bar
+    build a 1-1 -r "'(c and (foo with bar))'"
+    build c
+    try_install "a" "a,c"
+}
+
+testWithoutNoRightProvider() {
+    # nothing provides bar, so every foo provider qualifies
+    build a 1-1 -r "'(foo without bar)'"
+    build b 1-1 -p "foo"
+    try_install "a" "a,b"
+}
+
+testWithOr() {
+    # only p provides foo and one of the or alternatives
+    build a 1-1 -r "'(foo with (bar or baz))'"
+    build p 1-1 -p "foo" -p "baz"
+    build q 1-1 -p "bar"
+    try_install "a" "a,p"
+}
+
 . ./sh/lib/shunit2
