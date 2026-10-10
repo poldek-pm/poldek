@@ -266,4 +266,11 @@ path = ${REPOURL}x4
     assertEquals "Where is poldek.conf cached copy??" "$n" "1"
 }
 
+# argp prints the bug address only if it can see poldek's argp_program_bug_address
+testHelpShowsBugAddress()
+{
+    out=$(LC_ALL=C $POLDEK --help)
+    echo "$out" | grep -q "^Report bugs to " || fail "no bug address in --help: $(echo "$out" | tail -2)"
+}
+
 . ./sh/lib/shunit2
