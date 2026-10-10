@@ -178,11 +178,6 @@ static struct dvalue *eval_unless(struct node *node, const struct booldep_eval_c
 }
 
 
-static int pkg_eq_ptr(const struct pkg *p1, const struct pkg *p2)
-{
-    return p1 == p2 ? 0 : 1;
-}
-
 static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *ctx)
 {
     if (n_array_size(pkgs) == 1) {
@@ -272,6 +267,7 @@ static struct dvalue *eval_with(struct node *node, const struct booldep_eval_ctx
 static struct dvalue *eval_without(struct node *node, const struct booldep_eval_ctx *ctx)
 {
     struct dvalue *left = NULL, *right = NULL;
+    tn_array *re = NULL;
 
     left = eval(node->args[0], ctx);
     if (left == NULL || left->providers == NULL || n_array_size(left->providers) == 0)
@@ -284,16 +280,20 @@ static struct dvalue *eval_without(struct node *node, const struct booldep_eval_
     dvalue_dump(left, "without.left");
     dvalue_dump(right, "without.right");
 
-    for (int i=0; i < n_array_size(right->providers); i++) {
-        struct pkg *pkg = n_array_nth(right->providers, i);
-
-        n_array_remove_ex(left->providers, pkg, (tn_fn_cmp)pkg_eq_ptr);
-        if (n_array_size(left->providers) == 0)
-            break;
+    /* compared, not by pointer: each lookup of installed packages yields
+       new pkg instances */
+    re = pkgs_array_new(4);
+    for (int i=0; i < n_array_size(left->providers); i++) {
+        struct pkg *pkg = n_array_nth(left->providers, i);
+        if (n_array_bsearch(right->providers, pkg) == NULL)
+            n_array_push(re, pkg_link(pkg));
     }
 
-    if (n_array_size(left->providers) == 0) /* no packages fullfills both sides */
+    if (n_array_size(re) == 0) /* no packages fullfills both sides */
         goto l_none;
+
+    n_array_free(left->providers);
+    left->providers = re;
 
     capreq_free(left->req);
     left->req = take_best(left->providers, ctx);
@@ -309,6 +309,9 @@ static struct dvalue *eval_without(struct node *node, const struct booldep_eval_
 
     if (right)
         dvalue_free(right);
+
+    if (re)
+        n_array_free(re);
 
     return NULL;
 }

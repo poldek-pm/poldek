@@ -267,4 +267,58 @@ testWithWithout() {
     try_install "a" "a,c"
 }
 
+testWithInstalled() {
+    # only an installed package that no repository carries provides both
+    build_installed x 1-1 -p foo -p bar
+    build a 1-1 -r "'(foo with bar)'"
+    try_install "a" "a"
+}
+
+testWithRangeInstalled() {
+    # installed x 1.5 is within the range: no upgrade to the available 1.6
+    build_installed x 1.5-1
+    build x 1.6-1
+    build a 1-1 -r "'(x >= 1 with x < 2)'"
+    try_install "a" "a"
+}
+
+testWithInstalledFile() {
+    # the installed x provides foo and owns the file
+    build_installed x 1-1 -p foo -f /usr/bin/booldep-x
+    build a 1-1 -r "'(foo with /usr/bin/booldep-x)'"
+    try_install "a" "a"
+}
+
+testWithoutInstalledFile() {
+    # the installed x owns the file, so only y qualifies
+    build_installed x 1-1 -p foo -f /usr/bin/booldep-x
+    build y 1-1 -p foo
+    build z 1-1 -f /usr/bin/booldep-x
+    build a 1-1 -r "'(foo without /usr/bin/booldep-x)'"
+    try_install "a" "a,y"
+}
+
+testWithInstalledProvidedPath() {
+    # the installed x declares the path in Provides, without the file
+    build_installed x 1-1 -p foo -p /usr/bin/booldep-v
+    build a 1-1 -r "'(foo with /usr/bin/booldep-v)'"
+    try_install "a" "a"
+}
+
+testWithoutInstalledProvidedPath() {
+    build_installed x 1-1 -p foo -p /usr/bin/booldep-v
+    build y 1-1 -p foo
+    build z 1-1 -p /usr/bin/booldep-v
+    build a 1-1 -r "'(foo without /usr/bin/booldep-v)'"
+    try_install "a" "a,y"
+}
+
+testWithoutInstalled() {
+    # installed x provides both sides, so only y satisfies the without
+    build_installed x 1-1 -p foo -p bar
+    build y 1-1 -p foo
+    build a 1-1 -r "'(foo without bar)'"
+    try_install "a" "a,y"
+}
+
 . ./sh/lib/shunit2
