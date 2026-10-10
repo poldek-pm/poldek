@@ -481,7 +481,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
             real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
 
             if (real_tomark == NULL) { /* user abort */
-                i3_stop_processing(ictx, 1);
+                i3_cancel(ictx);
                 goto l_end;
             }
         }
@@ -569,6 +569,8 @@ static int process_req(int indent, struct i3ctx *ictx,
     const char       *strreq, *errfmt;
     int              rc = 1, indentt = indent + 1;
 
+    i3_return_zero_if_stoppped(ictx);
+
     pkg = i3pkg->pkg;
     strreq = capreq_stra(req);
 
@@ -616,7 +618,7 @@ static int process_req(int indent, struct i3ctx *ictx,
             real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
 
             if (real_tomark == NULL) { /* user abort */
-                ictx->abort = 1;
+                i3_cancel(ictx);
                 rc = 0;
                 goto l_end;
             }
@@ -673,9 +675,12 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     tn_array *suggests = NULL, *choices = NULL;
     struct pkg *oldpkg = NULL;
     char *autochoice = NULL;    /* testing only */
-    int i;
+    int i, answer;
 
     if (pkg->sugs == NULL)
+        return NULL;
+
+    if (sigint_reached() || ictx->abort)
         return NULL;
 
     /* tests automation */
@@ -734,7 +739,8 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
             continue;
         }
 
-        if (autochoice && n_str_ne(autochoice, "all") && n_str_ne(autochoice, capreq_name(req))) {
+        if (autochoice && n_str_ne(autochoice, "all") && n_str_ne(autochoice, "abort") &&
+            n_str_ne(autochoice, capreq_name(req))) {
             trace(indent, "- %s: skipped by autochoice (%s)", reqstr, autochoice);
             continue;
         }
@@ -748,20 +754,26 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
         return NULL;
     }
 
-    if (autochoice)
+    if (autochoice && n_str_ne(autochoice, "abort"))
         return suggests;
 
     choices = n_array_clone(suggests);
     n_array_ctl_set_freefn(choices, NULL); /* 'weak' ref */
 
-    switch (poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0)) {
+    /* autochoice "abort" simulates answering 'Q' */
+    answer = autochoice ? -1 : poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0);
+    switch (answer) {
 	/* do not install any of suggested packages */
 	case 0:
 	    n_array_free(choices);
 	    n_array_cfree(&suggests);
 	    break;
-	/* TOFIX: why 'Q' means install all? */
+	/* user aborted */
 	case -1:
+	    n_array_free(choices);
+	    n_array_cfree(&suggests);
+	    i3_cancel(ictx);
+	    break;
 	/* install all suggested packages */
 	case 1:
 	    n_array_free(choices);

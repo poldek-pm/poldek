@@ -223,6 +223,7 @@ void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
     ictx->multi_obsoleted = n_hash_new(8, (tn_fn_free)n_array_free);
     ictx->errors = n_hash_new(8, (tn_fn_free)n_array_free);
     ictx->abort = 0;
+    ictx->cancelled = 0;
 }
 
 void i3ctx_destroy(struct i3ctx *ictx)
@@ -262,4 +263,10 @@ int i3_stop_processing(struct i3ctx *ictx, int stop)
 {
     ictx->abort = stop;
     return ictx->abort;
+}
+
+void i3_cancel(struct i3ctx *ictx)
+{
+    ictx->abort = 1;
+    ictx->cancelled = 1;
 }
