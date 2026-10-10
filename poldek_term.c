@@ -33,6 +33,9 @@
 #include "log.h"
 #include "poldek_term.h"
 
+/* argp loops or crashes when its right margin is narrower */
+#define ARGP_MIN_WIDTH 40
+
 static int term_width  = TERM_DEFAULT_WIDTH;
 static int term_height = TERM_DEFAULT_HEIGHT;
 static volatile sig_atomic_t winch_reached = 0;
@@ -255,7 +258,8 @@ static void update_term_width(void)
         }
 
         //https://www.gnu.org/software/libc/manual/html_node/Argp-User-Customization.html
-        snprintf(tmp, sizeof(tmp), "no-dup-args-note,rmargin=%d", term_width - 1);
+        snprintf(tmp, sizeof(tmp), "no-dup-args-note,rmargin=%d",
+                 (term_width < ARGP_MIN_WIDTH ? ARGP_MIN_WIDTH : term_width) - 1);
         setenv("ARGP_HELP_FMT", tmp, 1);
         winch_reached = 0;
     }

@@ -35,6 +35,18 @@ testConf()
     assertEquals "2 sources expected, but not those" "$n" "2"
 }
 
+# argp loops or crashes on --help below about 38 columns; poldek gives it at least 40
+testHelpNarrowTerminal()
+{
+    if ! command -v script >/dev/null; then
+        msgn "no script(1), skipped this test"
+        return 0
+    fi
+
+    timeout 10 script -qec "stty cols 20; $POLDEK --help" /dev/null </dev/null >/dev/null
+    assertEquals "--help on a 20-column terminal" "0" "$?"
+}
+
 testConfAsRoot()
 {
     if command -v ldd >/dev/null; then
