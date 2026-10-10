@@ -2453,6 +2453,10 @@ msgstr "%s: b³±d interpretacji odpowiedzi"
 msgid "response line too long"
 msgstr "zbyt d³uga linia w odpowiedzi"
 
+#: vfile/vfff/ftp.c:349 vfile/vfff/http.c:528
+msgid "connection closed by peer"
+msgstr "po³±czenie zamkniête przez drug± stronê"
+
 #: vfile/vfff/ftp.c:350 vfile/vfff/http.c:527
 msgid "unexpected EOF"
 msgstr "niespodziewany EOF"
