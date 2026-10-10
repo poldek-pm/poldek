@@ -43,8 +43,8 @@ int find_direct_replacement(struct i3ctx *ictx, struct pkg *pkg,
                 break;
             }
         }
+        n_array_free(pkgs);
     }
-    n_array_free(pkgs);
 
     if (*rpkg && i3_is_marked(ictx, *rpkg)) {
         pkg_free(*rpkg);
