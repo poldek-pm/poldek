@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include "../vfile.h"
 #include "test.h"
@@ -348,6 +349,34 @@ START_TEST(test_https_noverify)
 }
 END_TEST
 
+/* the server closes a pooled TLS connection without close_notify; OpenSSL
+   answers the bare EOF on the next request with an alert, and that write to
+   the closed connection must not kill the process before it reconnects */
+START_TEST(test_https_keepalive_no_close_notify)
+{
+    char url[512], dest[PATH_MAX];
+
+    fail_if(https_port == 0);
+
+    signal(SIGPIPE, SIG_DFL);   /* the harness may have left it ignored */
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 1);
+
+    snprintf(url, sizeof(url), "https://%s:%d/keepalive-drop/%s",
+             server_host, https_port, TEST_FILE_SMALL);
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest)) ck_abort_msg("path truncated");
+
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+    unlink(dest);
+    usleep(200000);             /* let the server's FIN arrive */
+
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+    fail_if(access(dest, F_OK) != 0);
+    unlink(dest);
+
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 0);
+}
+END_TEST
+
 START_TEST(test_https_downgrade_redirect)
 {
     char url[512];
@@ -465,6 +494,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_https, test_https_noverify);
     tcase_add_test(tc_https, test_https_downgrade_redirect);
     tcase_add_test(tc_https, test_https_redirect_ok);
+    tcase_add_test(tc_https, test_https_keepalive_no_close_notify);
     suite_add_tcase(s, tc_https);
 
     return s;

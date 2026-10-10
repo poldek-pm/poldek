@@ -14,8 +14,10 @@
 #endif
 
 #include <errno.h>
+#include <signal.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
@@ -40,7 +42,8 @@ static int raw_read(struct vcn *cn, void *buf, size_t n)
 
 static int raw_write(struct vcn *cn, void *buf, size_t n)
 {
-    return write(cn->sockfd, buf, n);
+    /* a connection the peer closed gives EPIPE, not a fatal SIGPIPE */
+    return send(cn->sockfd, buf, n, MSG_NOSIGNAL);
 }
 
 static int raw_select(struct vcn *cn, unsigned timeout)
@@ -54,20 +57,63 @@ static int raw_select(struct vcn *cn, unsigned timeout)
     return select(cn->sockfd + 1, &fdset, NULL, NULL, &to);
 }
 
+/* OpenSSL writes to the socket on its own, even in SSL_read() (an alert after
+   a bare EOF): hold back the SIGPIPE a closed connection raises meanwhile */
+static void sigpipe_hold(sigset_t *oldmask)
+{
+    sigset_t set;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &set, oldmask);
+}
+
+/* drop a SIGPIPE held back by sigpipe_hold(), restore the signal mask */
+static void sigpipe_release(const sigset_t *oldmask)
+{
+    int saved_errno = errno;
+    sigset_t set, pending;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGPIPE);
+
+    if (!sigismember(oldmask, SIGPIPE) && sigpending(&pending) == 0 &&
+        sigismember(&pending, SIGPIPE)) {
+        const struct timespec nowait = { 0, 0 };
+
+        sigtimedwait(&set, NULL, &nowait);
+    }
+
+    pthread_sigmask(SIG_SETMASK, oldmask, NULL);
+    errno = saved_errno;
+}
+
 static int ssl_read(struct vcn *cn, void *buf, size_t n)
 {
     struct sslmod *mod = cn->iomod;
-    n_assert(mod);
+    sigset_t mask;
+    int rc;
 
-    return SSL_read(mod->ssl, buf, n);
+    n_assert(mod);
+    sigpipe_hold(&mask);
+    rc = SSL_read(mod->ssl, buf, n);
+    sigpipe_release(&mask);
+
+    return rc;
 }
 
 static int ssl_write(struct vcn *cn, void *buf, size_t n)
 {
     struct sslmod *mod = cn->iomod;
+    sigset_t mask;
+    int rc;
 
     n_assert(mod);
-    return SSL_write(mod->ssl, buf, n);
+    sigpipe_hold(&mask);
+    rc = SSL_write(mod->ssl, buf, n);
+    sigpipe_release(&mask);
+
+    return rc;
 }
 
 static int ssl_select(struct vcn *cn, unsigned timeout)
@@ -109,6 +155,8 @@ static struct sslmod *init_ssl(const struct vcn *cn)
     const SSL_METHOD *method = NULL;
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
+    sigset_t mask;
+    int rc;
 
     method = TLS_client_method();
     ctx = SSL_CTX_new(method);
@@ -149,7 +197,10 @@ static struct sslmod *init_ssl(const struct vcn *cn)
     SSL_set_tlsext_host_name(ssl, cn->host);
     SSL_set_fd(ssl, cn->sockfd);
 
-    if (SSL_connect(ssl) != 1)
+    sigpipe_hold(&mask);
+    rc = SSL_connect(ssl);
+    sigpipe_release(&mask);
+    if (rc != 1)
         goto l_err;
 
     struct sslmod *mod = n_malloc(sizeof(*mod));

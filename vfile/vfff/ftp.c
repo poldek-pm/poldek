@@ -88,7 +88,7 @@ static int do_ftp_cmd(int sock, char *fmt, va_list args)
     if (*vfff_verbose > 1)
         vfff_log("< %s", buf);
 
-    if (write(sock, buf, n) != n) {
+    if (send(sock, buf, n, MSG_NOSIGNAL) != n) {   /* EPIPE, not SIGPIPE */
         vfff_set_err(errno, _("write to socket %s: %m"), buf);
         return 0;
     }
