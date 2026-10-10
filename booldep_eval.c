@@ -58,6 +58,9 @@ static struct dvalue *dvalue_new(void)
 }
 
 static void dvalue_free(struct dvalue *dv) {
+    if (dv == NULL)            /* with/without yield NULL when unsatisfiable */
+        return;
+
     if (dv->next)
         dvalue_free(dv->next);
 
@@ -122,6 +125,14 @@ static struct dvalue *eval_and(struct node *node, const struct booldep_eval_ctx 
     struct dvalue *left = eval(node->args[0], ctx);
     struct dvalue *right = eval(node->args[1], ctx);
 
+    /* an unsatisfiable with/without conjunct (NULL) makes the whole
+       conjunction unsatisfiable - it must not be silently dropped */
+    if (left == NULL || right == NULL) {
+        dvalue_free(left);
+        dvalue_free(right);
+        return NULL;
+    }
+
     struct dvalue *dv = left;
     while (dv->next)
         dv = dv->next;
@@ -153,6 +164,38 @@ static struct dvalue *eval_or(struct node *node, const struct booldep_eval_ctx *
     return left;
 }
 
+/* with/without operands are package sets (rpm evaluates them the same
+   way): an or there is the union of its alternatives' providers, not
+   the cheaper alternative */
+static struct dvalue *eval_set(struct node *node, const struct booldep_eval_ctx *ctx)
+{
+    if (node == NULL || node->type != OP_OR)
+        return eval(node, ctx);
+
+    struct dvalue *left = eval_set(node->args[0], ctx);
+    struct dvalue *right = eval_set(node->args[1], ctx);
+
+    if (left == NULL || left->providers == NULL) {
+        dvalue_free(left);
+        return right;
+    }
+
+    if (right && right->providers) {
+        n_array_sort(left->providers);
+        for (int i = 0; i < n_array_size(right->providers); i++) {
+            struct pkg *pkg = n_array_nth(right->providers, i);
+            if (n_array_bsearch(left->providers, pkg) == NULL) {
+                n_array_push(left->providers, pkg_link(pkg));
+                n_array_sort(left->providers);
+            }
+        }
+    }
+    dvalue_free(right);
+
+    dvalue_dump(left, "or.SET");
+    return left;
+}
+
 static struct dvalue *eval_if(struct node *node, const struct booldep_eval_ctx *ctx)
 {
     struct dvalue *cond = eval(node->args[1], ctx);
@@ -178,17 +221,16 @@ static struct dvalue *eval_unless(struct node *node, const struct booldep_eval_c
 }
 
 
-static int pkg_eq_ptr(const struct pkg *p1, const struct pkg *p2)
-{
-    return p1 == p2 ? 0 : 1;
-}
-
-static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *ctx)
+/* the cheapest of pkgs as a "name = evr" requirement, its cost in *best_cost */
+static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *ctx,
+                                int *best_cost)
 {
     if (n_array_size(pkgs) == 1) {
         struct pkg *pkg = n_array_nth(pkgs, 0);
-        return capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver,
-                          pkg->rel, REL_EQ, CAPREQ_BASTARD);
+        struct capreq *req = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver,
+                                        pkg->rel, REL_EQ, CAPREQ_BASTARD);
+        *best_cost = ctx->req_cost ? ctx->req_cost(req, NULL, ctx->ctx) : 0;
+        return req;
     }
 
     struct capreq *best = NULL;
@@ -213,6 +255,7 @@ static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *c
         }
     }
 
+    *best_cost = min_cost;
     return best;
 }
 
@@ -221,11 +264,11 @@ static struct dvalue *eval_with(struct node *node, const struct booldep_eval_ctx
     struct dvalue *left = NULL, *right = NULL;
     tn_array *re = NULL;
 
-    left = eval(node->args[0], ctx);
+    left = eval_set(node->args[0], ctx);
     if (left == NULL || left->providers == NULL || n_array_size(left->providers) == 0)
         goto l_none;
 
-    right = eval(node->args[1], ctx);
+    right = eval_set(node->args[1], ctx);
     if (right == NULL || right->providers == NULL || n_array_size(right->providers) == 0)
         goto l_none;
 
@@ -246,7 +289,7 @@ static struct dvalue *eval_with(struct node *node, const struct booldep_eval_ctx
     dvalue_free(right);
 
     capreq_free(left->req);
-    left->req = take_best(re, ctx);
+    left->req = take_best(re, ctx, &left->cost);
 
     n_array_free(left->providers);
     left->providers = re;
@@ -272,31 +315,36 @@ static struct dvalue *eval_with(struct node *node, const struct booldep_eval_ctx
 static struct dvalue *eval_without(struct node *node, const struct booldep_eval_ctx *ctx)
 {
     struct dvalue *left = NULL, *right = NULL;
+    tn_array *re = NULL;
 
-    left = eval(node->args[0], ctx);
+    left = eval_set(node->args[0], ctx);
     if (left == NULL || left->providers == NULL || n_array_size(left->providers) == 0)
         goto l_none;
 
-    right = eval(node->args[1], ctx);
-    if (right == NULL || right->providers == NULL || n_array_size(right->providers) == 0)
-        goto l_none;
+    right = eval_set(node->args[1], ctx);
 
     dvalue_dump(left, "without.left");
     dvalue_dump(right, "without.right");
 
-    for (int i=0; i < n_array_size(right->providers); i++) {
-        struct pkg *pkg = n_array_nth(right->providers, i);
-
-        n_array_remove_ex(left->providers, pkg, (tn_fn_cmp)pkg_eq_ptr);
-        if (n_array_size(left->providers) == 0)
-            break;
+    /* compared, not by pointer: each lookup of installed packages yields
+       new pkg instances */
+    re = pkgs_array_new(4);
+    for (int i=0; i < n_array_size(left->providers); i++) {
+        struct pkg *pkg = n_array_nth(left->providers, i);
+        /* no right-side providers at all: nothing to take away */
+        if (right == NULL || right->providers == NULL ||
+            n_array_bsearch(right->providers, pkg) == NULL)
+            n_array_push(re, pkg_link(pkg));
     }
 
-    if (n_array_size(left->providers) == 0) /* no packages fullfills both sides */
+    if (n_array_size(re) == 0) /* no packages fullfills both sides */
         goto l_none;
 
+    n_array_free(left->providers);
+    left->providers = re;
+
     capreq_free(left->req);
-    left->req = take_best(left->providers, ctx);
+    left->req = take_best(left->providers, ctx, &left->cost);
 
     dvalue_dump(left, "without.RE");
     dvalue_free(right);
@@ -309,6 +357,9 @@ static struct dvalue *eval_without(struct node *node, const struct booldep_eval_
 
     if (right)
         dvalue_free(right);
+
+    if (re)
+        n_array_free(re);
 
     return NULL;
 }

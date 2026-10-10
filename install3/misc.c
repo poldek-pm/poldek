@@ -694,6 +694,39 @@ struct eval_ctx {
     struct pkg   *pkg;
 };
 
+/* installed packages providing req, except those being removed */
+static void add_installed_providers(struct i3ctx *ictx, const struct capreq *req,
+                                    tn_array **providers)
+{
+    const tn_array *exclude = iset_packages_by_recno(ictx->unset);
+    int is_file = capreq_is_file(req);
+    tn_array *dbpkgs = NULL;
+
+    pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_CAP, capreq_name(req), exclude,
+                 PKG_LDCAPS);
+
+    /* a path is provided by a Provides: of it or by owning the file */
+    if (is_file)
+        pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_FILE, capreq_name(req), exclude,
+                     PKG_LDCAPS | PKG_LDFL_WHOLE);
+
+    if (dbpkgs == NULL)
+        return;
+
+    for (int i = 0; i < n_array_size(dbpkgs); i++) {
+        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
+
+        if (!pkg_satisfies_req(dbpkg, req, 1) &&
+            !(is_file && pkg_caps_match_req(dbpkg, req, 0)))
+            continue;
+
+        if (*providers == NULL)
+            *providers = pkgs_array_new(4);
+        n_array_push(*providers, pkg_link(dbpkg));
+    }
+    n_array_free(dbpkgs);
+}
+
 static
 int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
 {
@@ -702,9 +735,11 @@ int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
     struct pkg *pkg = ctx->pkg;
     int indent = ctx->indent;
 
-    /* TODO: get providers from installed set too */
-    if (providers)
+    /* with/without intersect the providers: installed ones count too */
+    if (providers) {
         pkgset_find_match_packages(ictx->ps, pkg, req, providers, 1);
+        add_installed_providers(ictx, req, providers);
+    }
 
     if (iset_provides(ictx->inset, req)) {
         tracef(indent, "%s %s => iset", pkg_id(pkg), capreq_stra(req));
