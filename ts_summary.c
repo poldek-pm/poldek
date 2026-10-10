@@ -397,8 +397,11 @@ void poldek__ts_display_summary(struct poldek_ts *ts)
 
     parseable = ts->getop(ts, POLDEK_OP_PARSABLETS);
 
-    tn_hash *global = poldek_conf_get_section(ts->ctx->htconf, "global");
-    const char *style = poldek_conf_get(global, "summary style", NULL);
+    const char *style = NULL;
+    if (ts->ctx->htconf) {      /* NULL with --noconf and no -O */
+        tn_hash *global = poldek_conf_get_section(ts->ctx->htconf, "global");
+        style = poldek_conf_get(global, "summary style", NULL);
+    }
     int coloured = (style == NULL || n_str_eq(style, "color"));
 
     if (!parseable && coloured) {

@@ -60,6 +60,19 @@ testInstall()
     rpm_state_check "a" ""
 }
 
+testInstallNoConfig()
+{
+    is_rpm_testing_off && return
+
+    build a
+    index
+
+    # any -O option creates a configuration, so run without RAW_POLDEK's ones
+    msg $POLDEK_RAW --noconf --cachedir $CACHEDIR --st pndir -s $REPO --root $DESTINATION_REPO -t install -v a
+    $POLDEK_RAW --noconf --cachedir $CACHEDIR --st pndir -s $REPO --root $DESTINATION_REPO -t install -v a
+    assertEquals "install failed" "$?" "0"
+}
+
 # https://github.com/poldek-pm/poldek/issues/27
 testInstallAlreadyInstalled() {
     is_rpm_testing_off && return
