@@ -119,6 +119,16 @@ testUpgradeMultipleInstalledWithDeps() {
     try_install a "a-1.1.1k-1" "a-1.1.1j-1"
 }
 
+# poldek's rpmlog() hides rpm's notices such as "<file>: digests OK"
+testInstallRpmNoticesFiltered() {
+    is_rpm_testing_off && return
+    build a 1-1
+
+    typeset out=$($POLDEK_INSTALL -uv a 2>&1)
+    echo "$out" | grep -q 'digests OK' && fail "rpm notices are not filtered: $out"
+    rpm_state_check "a" ""
+}
+
 # not implemented yet
 xtestUpgradeMultipleInstalledIndir() {
     is_rpm_testing_off && return

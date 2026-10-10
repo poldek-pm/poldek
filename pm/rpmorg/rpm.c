@@ -380,6 +380,9 @@ rpmlogSetCallback(rpmlog_callback, NULL);
    struct rpmlogRec_s is not exposed in rpmlib headers, so rpmlogSetCallback() is
    quite useless
 */
+/* exported so it overrides librpmio's rpmlog() despite -fvisibility=hidden */
+void rpmlog(int prii, const char *fmt, ...) __attribute__ ((visibility("default")));
+
 void rpmlog(int prii, const char *fmt, ...)
 {
     va_list args;
