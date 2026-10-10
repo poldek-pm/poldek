@@ -791,22 +791,7 @@ tn_array *eval_boolreq(const struct capreq *req,
 {
     const char *expr = req->name;
 
-    /* to be able to test booldeps without booldeps support (rpm5) */
-    if (poldek__is_in_testing_mode() && *expr == '_') {
-        char *s;
-
-        /* memleak in testing mode */
-        n_strdupapl(expr + 2, req->namelen - 2, &s);
-        expr = s;
-        while (*s) {
-            if (*s == '_')
-                *s = ' ';
-            s++;
-        }
-        DBGF_F("%s => %s\n", req->name, expr);
-    }
-
-    struct booldep *dep = booldep_parse(expr);
+    struct booldep *dep = booldep_parse_capreq(req);
     if (!dep) {
         logn(LOGERR, "%s: boolean dependency parse error", expr);
         return NULL;
@@ -839,19 +824,6 @@ tn_array *eval_boolreq(const struct capreq *req,
     return reqs;
 }
 
-inline static int req_is_boolean(const struct capreq *req)
-{
-    if (capreq_is_boolean(req))
-        return 1;
-
-    if (poldek__is_in_testing_mode()) {
-        if (*req->name == '_' && *(req->name + 1) == '_')
-            return 1;
-    }
-
-    return 0;
-}
-
 const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
 {
     const struct capreq *req;
@@ -868,7 +840,7 @@ const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
     }
 
     req = pkg_req_iter_get(it->it);
-    if (req && req_is_boolean(req)) {
+    if (req && booldep_is_boolean_req(req)) {
         n_array_cfree(&it->breqs); /* free if any */
         it->breqs = eval_boolreq(req, &it->bctx);
         if (it->breqs) {
