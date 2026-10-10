@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,9 +34,13 @@
 #include "log.h"
 #include "poldek_term.h"
 
+/* argp loops or crashes when its right margin is narrower */
+#define ARGP_MIN_WIDTH 40
+
 static int term_width  = TERM_DEFAULT_WIDTH;
 static int term_height = TERM_DEFAULT_HEIGHT;
-static volatile sig_atomic_t winch_reached = 0;
+/* 1: size unknown, compute it on first use (stdout may not be a tty) */
+static volatile sig_atomic_t winch_reached = 1;
 static void (*orig_sigwinch_handler)(int) = NULL;
 static int sigwinch_attached = 0;
 
@@ -239,23 +244,44 @@ void poldek_term_destroy(void)
 }
 
 
+/* $COLUMNS or $LINES if within struct winsize's range, else dflt */
+static int getenv_term_size(const char *name, int dflt)
+{
+    const char *s = getenv(name);
+    char *end;
+    long n;
+
+    if (s == NULL || *s == '\0')
+        return dflt;
+
+    n = strtol(s, &end, 10);
+    if (*end != '\0' || n < 1 || n > USHRT_MAX)
+        return dflt;
+
+    return n;
+}
+
 static void update_term_width(void)
 {
     struct winsize ws;
 
     if (winch_reached) {
         char tmp[256];
+        term_width = term_height = 0;
         if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
             term_width  = ws.ws_col;
             term_height = ws.ws_row;
-
-        } else {
-            term_width  = TERM_DEFAULT_WIDTH;
-            term_height = TERM_DEFAULT_HEIGHT;
         }
 
+        /* 0: stdout is not a terminal, or is a pty with no size set */
+        if (term_width == 0)
+            term_width = getenv_term_size("COLUMNS", TERM_DEFAULT_WIDTH);
+        if (term_height == 0)
+            term_height = getenv_term_size("LINES", TERM_DEFAULT_HEIGHT);
+
         //https://www.gnu.org/software/libc/manual/html_node/Argp-User-Customization.html
-        snprintf(tmp, sizeof(tmp), "no-dup-args-note,rmargin=%d", term_width - 1);
+        snprintf(tmp, sizeof(tmp), "no-dup-args-note,rmargin=%d",
+                 (term_width < ARGP_MIN_WIDTH ? ARGP_MIN_WIDTH : term_width) - 1);
         setenv("ARGP_HELP_FMT", tmp, 1);
         winch_reached = 0;
     }
