@@ -828,34 +828,6 @@ static int is_closing_connection_status(struct http_resp *resp)
     return close_cn;
 }
 
-static int vhttp_vcn_is_alive(struct vcn *cn)
-{
-    char req_line[256];
-
-    if (cn->state != VCN_ALIVE)
-        return 0;
-
-    if (cn->flags & VCN_PROXIED)
-        return 0;
-
-    make_req_line(req_line, sizeof(req_line), "HEAD", "/");
-
-    if (!httpcn_req(cn, req_line, NULL))
-        return 0;
-
-    if (!httpcn_get_resp(cn)) {
-        cn->state = VCN_DEAD;
-        return 0;
-    }
-
-    if (is_closing_connection_status(cn->resp)) {
-        cn->state = VCN_DEAD;
-        return 0;
-    }
-
-    return 1;
-}
-
 static
 int is_redirected_connection(struct http_resp *resp, struct vfff_req *rreq)
 {
@@ -1076,7 +1048,8 @@ void vhttp_vcn_init(struct vcn *cn)
     cn->m_open = NULL;
     cn->m_close = NULL;
     cn->m_free = (void (*)(void*))http_resp_free;
-    cn->m_is_alive = vhttp_vcn_is_alive;
+    /* no probe: the request itself catches a dropped keep-alive (VCN_STALE) */
+    cn->m_is_alive = NULL;
     cn->m_retr = vhttp_vcn_retr;
     cn->m_stat = vhttp_vcn_stat;
 }
