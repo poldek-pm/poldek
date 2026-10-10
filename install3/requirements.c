@@ -481,7 +481,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
             real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
 
             if (real_tomark == NULL) { /* user abort */
-                i3_stop_processing(ictx, 1);
+                i3_cancel(ictx);
                 goto l_end;
             }
         }
@@ -569,6 +569,8 @@ static int process_req(int indent, struct i3ctx *ictx,
     const char       *strreq, *errfmt;
     int              rc = 1, indentt = indent + 1;
 
+    i3_return_zero_if_stoppped(ictx);
+
     pkg = i3pkg->pkg;
     strreq = capreq_stra(req);
 
@@ -616,7 +618,7 @@ static int process_req(int indent, struct i3ctx *ictx,
             real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
 
             if (real_tomark == NULL) { /* user abort */
-                ictx->abort = 1;
+                i3_cancel(ictx);
                 rc = 0;
                 goto l_end;
             }
@@ -676,6 +678,9 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     int i;
 
     if (pkg->sugs == NULL)
+        return NULL;
+
+    if (sigint_reached() || ictx->abort)
         return NULL;
 
     /* tests automation */

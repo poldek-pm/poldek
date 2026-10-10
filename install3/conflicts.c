@@ -105,6 +105,8 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
     tn_array   *candidates = NULL;
     int found = 0, by_replacement = 0;
 
+    i3_return_zero_if_stoppped(ictx);
+
     if (!ictx->ts->getop(ictx->ts, POLDEK_OP_FOLLOW))
         return 0;
 
@@ -161,7 +163,7 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
             real_tomark = i3_choose_equiv(ictx->ts, pkg, req, candidates, tomark);
             n_array_cfree(&candidates);
             if (real_tomark == NULL) { /* user aborts */
-                ictx->abort = 1;
+                i3_cancel(ictx);
                 found = 0;
             }
         }
@@ -326,6 +328,8 @@ int i3_process_pkg_conflicts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
 {
     struct pkg *pkg = i3pkg->pkg;
     int i, n, ncnfl = 0;
+
+    i3_return_zero_if_stoppped(ictx);
 
     if (!ictx->ts->getop(ictx->ts, POLDEK_OP_CONFLICTS))
         return 1;
