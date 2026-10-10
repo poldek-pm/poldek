@@ -2,7 +2,7 @@
 """
 Network fault-injection servers for the vfile tests.
 
-Runs a minimal FTP server and a minimal HTTP redirector on loopback.  Both
+Runs a minimal FTP server and a minimal HTTP server on loopback.  Both
 are only good enough to drive vfile; the point is the faults they can inject.
 
 FTP faults are selected by the requested path (the server learns it from
@@ -11,11 +11,25 @@ SIZE/MDTM, which poldek sends before PASV):
   /pasv-nodigits/<name> - answer PASV with a 227 carrying no address at all
   /data-reset/<name>    - reset the data connection during RETR and leave
                           the reply to the aborted transfer unread
+  /ctrl-drop-after-data/<name>
+                        - send the whole file, then close the control
+                          connection instead of replying 226; fires once
+                          per path, the next RETR of it is served normally
+  /retr-cut-reply/<name>
+                        - close the control connection in the middle of the
+                          reply to RETR; fires once per path
+  /ctrl-close-idle/<name>
+                        - reply 226, then close the control connection
+                          without a 421, like a server dropping it as idle
 
-HTTP serves nothing but redirects:
+HTTP redirects:
   /to-ftp/<name>        - 302 to ftp://127.0.0.1:<ftp port>/<name>
   /to-dead-https/<name> - 302 to https://127.0.0.1:1/<name>
   /rel-to-ftp/<name>    - 302 to the relative path /to-ftp/<name>
+
+HTTP keep-alive faults, serving <name> over HTTP/1.1 without Connection: close:
+  /keepalive-drop/<name>  - close the connection right after the response
+  /keepalive-reset/<name> - reset the connection right after the response
 """
 
 import argparse
@@ -50,6 +64,10 @@ def reset(sock):
         pass
 
 
+# paths whose one-shot fault already fired
+FIRED = set()
+
+
 class FTPSession:
     def __init__(self, sock, data_dir, verbose):
         self.sock = sock
@@ -58,6 +76,7 @@ class FTPSession:
         self.stream = sock.makefile('rwb', buffering=0)
         self.datasock = None
         self.path = ''
+        self.dropped = False
 
     def log(self, msg):
         log(self.verbose, "ftpd: %s" % msg)
@@ -139,6 +158,8 @@ class FTPSession:
                 self.send("350 ok\r\n")
             elif cmd == 'RETR':
                 self.retr()
+                if self.dropped:
+                    return
             elif cmd == 'QUIT':
                 self.send("221 bye\r\n")
                 break
@@ -150,6 +171,17 @@ class FTPSession:
     def retr(self):
         if not os.path.isfile(self.localpath()) or self.datasock is None:
             self.send("550 no such file\r\n")
+            return
+
+        if 'retr-cut-reply' in self.path and self.path not in FIRED:
+            FIRED.add(self.path)
+            self.log("!! closing control connection mid-reply")
+            self.stream.write(b"150 Opening")
+            self.stream.close()
+            self.sock.close()
+            self.datasock.close()
+            self.datasock = None
+            self.dropped = True
             return
 
         size = os.path.getsize(self.localpath())
@@ -169,10 +201,25 @@ class FTPSession:
         conn.close()
         self.datasock.close()
         self.datasock = None
+
+        if 'ctrl-drop-after-data' in self.path and self.path not in FIRED:
+            FIRED.add(self.path)
+            self.log("!! closing control connection instead of 226")
+            self.stream.close()
+            self.sock.close()
+            self.dropped = True
+            return
+
         self.send("226 Transfer complete\r\n")
 
+        if 'ctrl-close-idle' in self.path:
+            self.log("!! closing control connection after 226")
+            self.stream.close()
+            self.sock.close()
+            self.dropped = True
 
-def http_session(sock, ftp_port, verbose):
+
+def http_session(sock, ftp_port, data_dir, verbose):
     try:
         req = b""
         while b"\r\n\r\n" not in req:
@@ -184,6 +231,23 @@ def http_session(sock, ftp_port, verbose):
         log(verbose, "httpd: < %s" % line)
         path = line.split()[1]
         name = os.path.basename(path)
+
+        # keep-alive that is dropped right after the response, like Apache
+        # closing an idle connection: the client's next request on the
+        # reused connection sees EOF and has to reconnect on its own
+        if path.startswith("/keepalive-drop/") or path.startswith("/keepalive-reset/"):
+            with open(os.path.join(data_dir, name), 'rb') as f:
+                body = f.read()
+            sock.sendall(("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n"
+                          % len(body)).encode() + body)
+            # keepalive-reset: RST instead of FIN, so it is the client's next
+            # write on the reused connection that fails, not the read
+            if path.startswith("/keepalive-reset/"):
+                log(verbose, "httpd: > 200 keep-alive, then reset")
+                reset(sock)
+            else:
+                log(verbose, "httpd: > 200 keep-alive, then close")
+            return
 
         if path.startswith("/to-ftp/"):
             to = "ftp://127.0.0.1:%d/%s" % (ftp_port, name)
@@ -243,7 +307,8 @@ def main():
     while True:
         conn, _ = http_srv.accept()
         threading.Thread(target=http_session,
-                         args=(conn, ftp_port, verbose), daemon=True).start()
+                         args=(conn, ftp_port, args.data_dir, verbose),
+                         daemon=True).start()
 
 
 if __name__ == '__main__':

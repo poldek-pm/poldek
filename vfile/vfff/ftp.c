@@ -105,11 +105,15 @@ static int vftpcn_cmd(struct vcn *cn, char *fmt, ...)
     if (cn->state != VCN_ALIVE)
         return 0;
 
+    cn->flags &= ~VCN_STALE;
+
     va_start(args, fmt);
     rc = do_ftp_cmd(cn->sockfd, fmt, args);
     va_end(args);
-    if (rc == 0)
+    if (rc == 0) {
+        cn->flags |= VCN_STALE; /* nothing got through, whatever the cause */
         cn->state = VCN_DEAD;
+    }
 
     return rc;
 }
@@ -250,7 +254,7 @@ int response_complete(struct ftp_resp *resp)
 
 static int readresp(int sockfd, struct ftp_resp *resp, int readln)
 {
-    int is_err = 0, buf_pos = 0, ttl;
+    int is_err = 0, is_eof = 0, buf_pos = 0, ttl;
     char buf[4096];
 
     vfff_errno = 0;
@@ -299,6 +303,10 @@ static int readresp(int sockfd, struct ftp_resp *resp, int readln)
                 is_err = 1;
                 if (n == 0 || errno == 0)
                     errno = ECONNRESET;
+                if (n == 0)
+                    is_eof = 1;
+                if (buf_pos > 0)    /* a cut-off line still counts as a reply */
+                    n_buf_addz(resp->buf, buf, buf_pos);
                 break;
 
             } else if (n >= 1) {
@@ -339,7 +347,10 @@ static int readresp(int sockfd, struct ftp_resp *resp, int readln)
 
             case ETIMEDOUT:
             case ECONNRESET:
-                vfff_set_err(vfff_errno, "%m");
+                if (is_eof)
+                    vfff_set_err(vfff_errno, _("connection closed by peer"));
+                else
+                    vfff_set_err(vfff_errno, "%m");
                 break;
 
             case EINTR:
@@ -413,8 +424,13 @@ int vftpcn_resp_ext(struct vcn *cn, int readln)
     cn->resp = ftp_resp_new();
 
     rc = do_ftp_resp(cn->sockfd, cn->resp, readln);
-    if (rc == 0)
+    if (rc == 0) {
+        struct ftp_resp *resp = cn->resp;
+
+        if (vfff_errno == ECONNRESET && n_buf_size(resp->buf) == 0)
+            cn->flags |= VCN_STALE;
         cn->state = VCN_DEAD;
+    }
 
     return rc;
 }

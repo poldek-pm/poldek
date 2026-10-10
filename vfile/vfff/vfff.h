@@ -62,6 +62,8 @@ struct vfff_req;
 #define VCN_SUPPORTS_SIZE  (1 << 0)
 #define VCN_SUPPORTS_MDTM  (1 << 1)
 #define VCN_PROXIED        (1 << 9)
+/* the last request died before any response byte arrived */
+#define VCN_STALE          (1 << 10)
 
 struct vcn {
     int       proto;
@@ -115,6 +117,8 @@ struct vfff_req {
 
     void         (*progress_fn)(void *data, long total, long amount);
     void         *progress_fn_data;
+
+    int          out_written;   /* set once anything reached out_fd */
 
     char         redirected_to[PATH_MAX];
 

@@ -429,6 +429,7 @@ int vfff_transfer_file(struct vcn *cn, struct vfff_req *vreq, long total_size)
                     is_err = 1;
                     break;
                 }
+                vreq->out_written = 1;
                 amount += nw;
                 if (vreq->progress_fn)
                     vreq->progress_fn(vreq->progress_fn_data, total_size, amount);

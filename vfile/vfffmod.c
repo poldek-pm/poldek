@@ -93,13 +93,15 @@ void vcn_pool_vacuum(void)
         ;
 }
 
-static struct vcn *vcn_pool_do_connect(struct vf_request *req)
+/* *reused tells whether cn comes from the pool (1) or is a fresh one (0) */
+static struct vcn *vcn_pool_do_connect(struct vf_request *req, int *reused)
 {
     tn_list_iterator   it;
     struct vcn         *cn;
     char               *host, *login = NULL, *passwd = NULL;
     int                port, vcn_proto = 0;
 
+    *reused = 0;
 
     host = req->host;
     port = req->port;
@@ -199,6 +201,7 @@ static struct vcn *vcn_pool_do_connect(struct vf_request *req)
                             cn->login ? cn->login : "",
                             cn->login ? "@" : "",
                             cn->host, cn->port);
+            *reused = 1;
             break;
         }
     }
@@ -241,7 +244,7 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
 {
     struct vcn        *cn;
     struct vfff_req   vreq;
-    int                rc;
+    int                rc, reused;
 
     vfff_verbose = vfile_verbose;
     req->req_errno = 0;
@@ -251,7 +254,7 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
         return 0;
     }
 
-    if ((cn = vcn_pool_do_connect(req)) == NULL) {
+    if ((cn = vcn_pool_do_connect(req, &reused)) == NULL) {
         req->req_errno = vfff_errno;
         return 0;
     }
@@ -271,7 +274,25 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
 
     *vreq.redirected_to = '\0';
 
-    if ((rc = dofn->fn(cn, &vreq))) {
+    rc = dofn->fn(cn, &vreq);
+
+    /* the server dropped the pooled connection before the request got
+       through; FTP reads its 226 only after the transfer, hence out_written */
+    if (rc == 0 && reused && (cn->flags & VCN_STALE) && !vreq.out_written) {
+        if (*vfile_verbose > 1)
+            vf_loginfo("Stale connection to %s:%d, reconnecting\n",
+                       cn->host, cn->port);
+
+        if ((cn = vcn_pool_do_connect(req, &reused)) == NULL) {
+            req->req_errno = vfff_errno;
+            return 0;
+        }
+
+        *vreq.redirected_to = '\0';
+        rc = dofn->fn(cn, &vreq);
+    }
+
+    if (rc) {
         req->st_remote_mtime = vreq.st_remote_mtime;
         req->st_remote_size = vreq.st_remote_size;
 

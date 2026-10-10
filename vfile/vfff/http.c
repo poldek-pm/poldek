@@ -154,6 +154,8 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
     if (cn->state != VCN_ALIVE)
         return 0;
 
+    cn->flags &= ~VCN_STALE;
+
     n = 0;
     n += n_snprintf(&req[n], sizeof(req) - n, "%s", req_line);
     if (*vfff_verbose > 1)
@@ -219,6 +221,7 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
     n += n_snprintf(&req[n], sizeof(req) - n, "\r\n");
 
     if (cn->io_write(cn, req, n) != n) {
+        cn->flags |= VCN_STALE; /* nothing got through, whatever the cause */
         vfff_set_err(errno, _("write to socket %s: %m"), req);
         cn->state = VCN_DEAD;
         rc = 0;
@@ -430,7 +433,7 @@ int response_complete(struct http_resp *resp)
 
 static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
 {
-    int is_err = 0, buf_pos = 0, ttl = VFFF_TIMEOUT;
+    int is_err = 0, is_eof = 0, buf_pos = 0, ttl = VFFF_TIMEOUT;
     char buf[4096];
 
     vfff_errno = 0;
@@ -477,6 +480,10 @@ static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
                 is_err = 1;
                 if (n == 0 || errno == 0)
                     errno = ECONNRESET;
+                if (n == 0)
+                    is_eof = 1;
+                if (buf_pos == 0 && n_buf_size(resp->buf) == 0)
+                    cn->flags |= VCN_STALE;
                 break;
 
             } else if (n >= 1) {
@@ -517,7 +524,10 @@ static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
 
             case ETIMEDOUT:
             case ECONNRESET:
-                vfff_set_err(vfff_errno, "%m");
+                if (is_eof)
+                    vfff_set_err(vfff_errno, _("connection closed by peer"));
+                else
+                    vfff_set_err(vfff_errno, "%m");
                 break;
 
             case EINTR:
