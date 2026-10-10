@@ -32,6 +32,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "capreq.h"
+#include "booldep.h"
 #include "pkg.h"
 #include "pkgmisc.h"
 #include "pkgset.h"
@@ -86,6 +87,8 @@ void pkgset_free(struct pkgset *ps)
         n_hash_free(ps->_req_cache);
         ps->_req_cache = NULL;
     }
+
+    n_array_cfree(&ps->_booldep_capnames);
 
     if (ps->_reqpkgs_cache) {
         n_hash_free(ps->_reqpkgs_cache);
@@ -161,6 +164,38 @@ static int index_package_caps(struct pkgset *ps, const struct pkg *pkg)
 }
 
 
+/* boolean dep: index under constituent names too (as rpmdb does), so
+   what-requires lookups by a plain name reach it */
+static void index_boolean_req(struct pkgset *ps, const struct capreq *req,
+                              const struct pkg *pkg, int add)
+{
+    struct booldep *dep = booldep_parse_capreq(req);
+    if (dep == NULL)
+        return;
+
+    tn_array *leaves = booldep_leaves(dep);
+    for (int i=0; i < n_array_size(leaves); i++) {
+        struct capreq *leaf = n_array_nth(leaves, i);
+
+        if (!add) {
+            capreq_idx_remove(&ps->req_idx, capreq_name(leaf), pkg);
+            continue;
+        }
+
+        /* the index keeps key pointers, so the name must live as long
+           as the pkgset */
+        char *name = n_strdupl(capreq_name(leaf), capreq_name_len(leaf));
+
+        if (ps->_booldep_capnames == NULL)
+            ps->_booldep_capnames = n_array_new(64, free, NULL);
+        n_array_push(ps->_booldep_capnames, name);
+
+        capreq_idx_add(&ps->req_idx, name, capreq_name_len(leaf), pkg);
+    }
+    n_array_free(leaves);
+    booldep_free(dep);
+}
+
 static int index_package_reqs(struct pkgset *ps, const struct pkg *pkg)
 {
     if (pkg->reqs)
@@ -169,6 +204,9 @@ static int index_package_reqs(struct pkgset *ps, const struct pkg *pkg)
             if (capreq_is_rpmlib(req)) /* rpm caps are too expensive */
                 continue;
             capreq_idx_add(&ps->req_idx, capreq_name(req), capreq_name_len(req), pkg);
+
+            if (booldep_is_boolean_req(req))
+                index_boolean_req(ps, req, pkg, 1);
         }
 
     if (pkg->cnfls)
@@ -275,6 +313,9 @@ int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg)
             for (j=0; j < n_array_size(pkg->reqs); j++) {
                 struct capreq *req = n_array_nth(pkg->reqs, j);
                 capreq_idx_remove(&ps->req_idx, capreq_name(req), pkg);
+
+                if (booldep_is_boolean_req(req))
+                    index_boolean_req(ps, req, pkg, 0);
             }
 
         if (pkg->cnfls)

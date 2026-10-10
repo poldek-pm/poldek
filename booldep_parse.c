@@ -329,3 +329,25 @@ struct booldep *booldep_parse_capreq(const struct capreq *req)
 
     return booldep_parse(expr);
 }
+
+static void collect_leaves(const struct node *node, tn_array *re)
+{
+    if (node == NULL)
+        return;
+
+    if (node->type == 0) {          /* identifier */
+        if (node->cap)
+            n_array_push(re, capreq_clone(NULL, node->cap));
+        return;
+    }
+
+    for (int i = 0; i < NARY_MAX && node->args[i] != NULL; i++)
+        collect_leaves(node->args[i], re);
+}
+
+tn_array *booldep_leaves(const struct booldep *dep)
+{
+    tn_array *re = capreq_arr_new(4);
+    collect_leaves(dep->node, re);
+    return re;
+}
