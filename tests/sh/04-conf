@@ -35,6 +35,36 @@ testConf()
     assertEquals "2 sources expected, but not those" "$n" "2"
 }
 
+# argp loops or crashes on --help below about 38 columns; poldek gives it at least 40
+testHelpNarrowTerminal()
+{
+    if ! command -v script >/dev/null; then
+        msgn "no script(1), skipped this test"
+        return 0
+    fi
+
+    timeout 10 script -qec "stty cols 20; $POLDEK --help" /dev/null </dev/null >/dev/null
+    assertEquals "--help on a 20-column terminal" "0" "$?"
+}
+
+# with stdout a pipe or a pty with no size set, the width comes from $COLUMNS
+testListSourcesColumns()
+{
+    path="/nonexistent/$(printf 'long-directory-name-%02d/' 1 2 3 4 5)repo"
+
+    out=$(COLUMNS=500 $POLDEK --noconf -s $path --st dir -l)
+    echo "$out" | grep -qF "$path" || fail "path shortened with COLUMNS=500: $out"
+
+    out=$(COLUMNS= $POLDEK --noconf -s $path --st dir -l)
+    echo "$out" | grep -qF '[...]' || fail "path not shortened to 80 columns: $out"
+
+    # script(1) run without a terminal gives a pty with no size set
+    if command -v script >/dev/null; then
+        out=$(COLUMNS=500 script -qec "$POLDEK --noconf -s $path --st dir -l" /dev/null </dev/null)
+        echo "$out" | grep -qF "$path" || fail "path shortened on a pty with no size: $out"
+    fi
+}
+
 testConfAsRoot()
 {
     if command -v ldd >/dev/null; then
