@@ -384,7 +384,9 @@ int pkgdir_update(struct pkgdir *pkgdir)
         if (pkgdir->src && (pkgdir->src->flags & PKGSOURCE_AUTOUPA)) {
             msgn(0, _("%s: desynchronized index, trying to update whole index..."),
                  pkgdir_idstr_s(pkgdir));
-            rc = pkgdir_update_a(pkgdir->src);
+            /* it refreshes the dir and stub indexes from the new index;
+               this pkgdir still holds the old one */
+            return pkgdir_update_a(pkgdir->src);
         } else {
             logn(LOGWARN, _("%s: desynchronized index, try --upa"),
                  pkgdir_idstr_s(pkgdir));
