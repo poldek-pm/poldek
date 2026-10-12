@@ -43,8 +43,12 @@ testHelpNarrowTerminal()
         return 0
     fi
 
-    timeout 10 script -qec "stty cols 20; $POLDEK --help" /dev/null </dev/null >/dev/null
-    assertEquals "--help on a 20-column terminal" "0" "$?"
+    typeset out=$(timeout 10 script -qec "stty cols 20; $POLDEK --help" /dev/null </dev/null 2>&1)
+    typeset rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "$out" >&2
+        fail "--help on a 20-column terminal failed with exit $rc"
+    fi
 }
 
 # with stdout a pipe or a pty with no size set, the width comes from $COLUMNS
