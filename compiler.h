@@ -17,9 +17,13 @@
 #ifdef __GNUC__
 #  undef EXPORT
 #  define EXPORT extern __attribute__((visibility("default")))
+#  undef EXPORT_VAR
+#  define EXPORT_VAR __attribute__((visibility("default")))
 #else
 #  undef EXPORT
 #  define EXPORT extern
+#  undef EXPORT_VAR
+#  define EXPORT_VAR
 #  undef __attribute__
 #  undef extern__inline
 #  define __attribute__(x) /* noop */

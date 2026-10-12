@@ -28,6 +28,7 @@
 #include <trurl/n_snprintf.h>
 
 
+#include "compiler.h"
 #include "vfile/vfile.h"
 #include "sigint/sigint.h"
 #include "i18n.h"
@@ -328,16 +329,13 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
 
 #if !defined ENABLE_STATIC && (defined HAVE_RPMLOG || defined HAVE_VRPMLOG)
 /* XXX hack: rpmlib dumps messges to stdout only... (AFAIK)  */
+/* exported so it overrides librpmio's rpmlog() despite -fvisibility=hidden */
 #if defined HAVE_RPMLOG
-void rpmlog(int prii, const char *fmt, ...) __attribute__ ((visibility("default")));
-
-void rpmlog(int prii, const char *fmt, ...)
+EXPORT void rpmlog(int prii, const char *fmt, ...)
 {
     va_list args;
 #elif defined HAVE_VRPMLOG
-void vrpmlog(unsigned prii, const char *fmt, va_list args) __attribute__ ((visibility("default")));
-
-void vrpmlog(unsigned prii, const char *fmt, va_list args)
+EXPORT void vrpmlog(unsigned prii, const char *fmt, va_list args)
 {
 #endif
     int pri, mask;

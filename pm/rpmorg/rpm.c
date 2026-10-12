@@ -30,6 +30,7 @@
 #include <trurl/n_snprintf.h>
 
 
+#include "compiler.h"
 #include "vfile/vfile.h"
 #include "sigint/sigint.h"
 #include "i18n.h"
@@ -381,9 +382,7 @@ rpmlogSetCallback(rpmlog_callback, NULL);
    quite useless
 */
 /* exported so it overrides librpmio's rpmlog() despite -fvisibility=hidden */
-void rpmlog(int prii, const char *fmt, ...) __attribute__ ((visibility("default")));
-
-void rpmlog(int prii, const char *fmt, ...)
+EXPORT void rpmlog(int prii, const char *fmt, ...)
 {
     va_list args;
     int pri, mask;

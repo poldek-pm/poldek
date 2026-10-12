@@ -45,8 +45,8 @@
 extern int poclidek_shell(struct poclidek_ctx *cctx);
 
 /* exported so glibc's argp uses them instead of its own despite -fvisibility=hidden */
-const char *argp_program_version __attribute__ ((visibility("default"))) = poldek_VERSION_BANNER;
-const char *argp_program_bug_address __attribute__ ((visibility("default"))) = poldek_BUG_MAILADDR;
+EXPORT_VAR const char *argp_program_version = poldek_VERSION_BANNER;
+EXPORT_VAR const char *argp_program_bug_address = poldek_BUG_MAILADDR;
 static char args_doc[] = N_("[PACKAGE...]");
 
 /* FIXME: only way to disable --version opt in argp
