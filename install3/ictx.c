@@ -265,6 +265,8 @@ void i3ctx_reset(struct i3ctx *ictx)
     ictx->reqnames = NULL;
     ictx->reqnames_loaded = 0;
     ictx->abort = 0;
+    /* ictx->cancelled is intentionally preserved: once the user answered Q,
+       all remaining particle sets must be skipped (see install.c). */
 }
 
 int i3_stop_processing(struct i3ctx *ictx, int stop)
