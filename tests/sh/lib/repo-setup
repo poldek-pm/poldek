@@ -118,7 +118,7 @@ build_package() {
 
 oneTimeSetUp() {
     sudo_up
-    ensure_commands "grep" "zgrep" "zstdgrep" "perl" "fakeroot" "rpm" "rpmbuild"
+    ensure_commands "grep" "zgrep" "zstdgrep" "perl" "fakeroot" "rpm" "rpmbuild" "timeout"
 
     [ ! -d "$PWD/sh/lib" ] && abort "$PWD is not a tests directory (missing sh/lib)"
 
