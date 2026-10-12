@@ -432,6 +432,9 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
             if (!install_packages(&ictx))
                 nerr++;
 
+            if (ictx.cancelled)
+                break;
+
             ts_reset(ictx.ts);
             i3ctx_reset(&ictx);
         }

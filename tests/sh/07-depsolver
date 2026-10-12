@@ -306,6 +306,54 @@ testSuggestsSome() {
     POLDEK_TESTING_WITH_SUGGESTS=
 }
 
+# 'Q' at the suggests prompt must abort the whole transaction (lp#1532694)
+testSuggestsAbort() {
+    build_installed suggested
+    build a -s "suggested" -s "b" -s "c"
+    build b
+    build c
+
+    msgn "Abort at suggests prompt"
+    POLDEK_TESTING_WITH_SUGGESTS="abort" # simulate answering 'Q'
+    export POLDEK_TESTING_WITH_SUGGESTS
+    try_install_a_should_fail "none"
+    POLDEK_TESTING_WITH_SUGGESTS=
+}
+
+# 'Q' also cancels the package sets that follow (particle install)
+testSuggestsAbortSkipsNextSet() {
+    build a -s "b"
+    build b
+    build z
+
+    POLDEK_TESTING_WITH_SUGGESTS="abort" # simulate answering 'Q'
+    export POLDEK_TESTING_WITH_SUGGESTS
+    typeset out=$($POLDEK_INSTALL -uv --test --parsable-tr-summary a z)
+    POLDEK_TESTING_WITH_SUGGESTS=
+
+    if echo "$out" | grep -q "^%I z"; then
+        fail "z installed after the abort: $out"
+    fi
+}
+
+# after 'Q' poldek asks nothing more, here which provider of cap to take
+testSuggestsAbortAsksNoMore() {
+    build a -s "b"
+    build b
+    build p1 -p "cap"
+    build p2 -p "cap"
+    build x -r "a" -r "cap"
+
+    POLDEK_TESTING_WITH_SUGGESTS="abort" # simulate answering 'Q'
+    export POLDEK_TESTING_WITH_SUGGESTS
+    typeset out=$($POLDEK_INSTALL -uv --test x)
+    POLDEK_TESTING_WITH_SUGGESTS=
+
+    if echo "$out" | grep -q "^%choose "; then
+        fail "asked for a provider of cap after the abort: $out"
+    fi
+}
+
 testUpgradeSet() {
     msgn "Preparing repositories..."
     prev_i=

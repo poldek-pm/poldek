@@ -92,8 +92,8 @@ msgstr[2] "Spróbowaæ je zainstalowaæ?"
 
 #: ask.c:220
 #, c-format
-msgid "(y - all, n - nothing, s - select some of)? [%s]"
-msgstr "(y - wszystkie, n - ¿aden, s - wybierz z listy)? [%s]"
+msgid "(y - all, n - nothing, s - select some of, Q - abort)? [%s]"
+msgstr "(y - wszystkie, n - ¿aden, s - wybierz z listy, Q - przerwij)? [%s]"
 
 #: ask.c:245
 #, c-format

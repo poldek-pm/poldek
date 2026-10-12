@@ -277,10 +277,10 @@ int poldek_term_get_height(void)
 int poldek_term_ask(int fd, const char *validchrs, const char *msg)
 {
     struct termios t, tmp;
-    unsigned char c;
+    unsigned char c = 0;
 
     if (!isatty(fd))
-        return 0;
+        return '\n';            /* no terminal: the default answer, as Enter */
 
     tcgetattr(fd, &t);
     memcpy(&tmp, &t, sizeof(tmp));
@@ -293,7 +293,8 @@ int poldek_term_ask(int fd, const char *validchrs, const char *msg)
     tcsetattr(0, TCSAFLUSH, &t);
 
     while (1) {
-        if ((read(fd, &c, sizeof(c)) == 1) && strchr(validchrs, c))
+        /* strchr() also matches the terminating NUL */
+        if ((read(fd, &c, sizeof(c)) == 1) && c != '\0' && strchr(validchrs, c))
             break;
 
 	// map pgup/pgdown to backspace/tab
@@ -314,7 +315,7 @@ int poldek_term_ask(int fd, const char *validchrs, const char *msg)
 
         // terminal lost - so prevent loop
         if (!isatty(fd))
-            return 0;
+            return '\n';
 
         if (msg)
             printf("%s\n", msg);
