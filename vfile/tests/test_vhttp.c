@@ -30,6 +30,9 @@ static char test_data_dir[PATH_MAX] = "./data";
 /* Temp directory for downloads */
 static char tmpdir[PATH_MAX];
 
+/* Saved SIGPIPE disposition, restored in teardown */
+static struct sigaction sigpipe_old;
+
 /* Flag for vfile initialization */
 static int vfile_initialized = 0;
 
@@ -102,11 +105,24 @@ static void http_setup(void)
     /* Create temp directory */
     snprintf(tmpdir, sizeof(tmpdir), "/tmp/vfile_test_%d_%ld", getpid(), (long)time(NULL));
     mkdir(tmpdir, 0755);
+
+    /* The harness may have left SIGPIPE ignored; start each test with DFL
+       and restore the previous disposition afterwards. */
+    {
+        struct sigaction act;
+        memset(&act, 0, sizeof(act));
+        act.sa_handler = SIG_DFL;
+        sigemptyset(&act.sa_mask);
+        sigaction(SIGPIPE, &act, &sigpipe_old);
+    }
 }
 
 /* Teardown: Called after each test */
 static void http_teardown(void)
 {
+    /* Restore the SIGPIPE disposition the harness had before this test */
+    sigaction(SIGPIPE, &sigpipe_old, NULL);
+
     /* Cleanup temp directory */
     /* Note: vf_fetch deletes files, but we clean up the dir */
     rmdir(tmpdir);
@@ -358,7 +374,7 @@ START_TEST(test_https_keepalive_no_close_notify)
 
     fail_if(https_port == 0);
 
-    signal(SIGPIPE, SIG_DFL);   /* the harness may have left it ignored */
+    /* SIGPIPE is set to SIG_DFL in http_setup */
     vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 1);
 
     snprintf(url, sizeof(url), "https://%s:%d/keepalive-drop/%s",
