@@ -136,6 +136,25 @@ testUninstall()
     rpm_state_check "b" "a,a-libs"
 }
 
+# without repositories desc runs in /installed: -R and -B look among the
+# installed packages
+testDescInstalled()
+{
+    is_rpm_testing_off && return
+
+    build_installed b
+    build_installed a -r b
+    build_installed c -r a
+
+    msg $RAW_POLDEK --root $DESTINATION_REPO desc -R -B a
+    out=$($RAW_POLDEK --root $DESTINATION_REPO desc -R -B a)
+    assertEquals "desc failed" "$?" "0"
+    echo "$out" | grep -qE '^Required\(pkgs\): +sh, b$'
+    assertEquals "a should require b" "$?" "0"
+    echo "$out" | grep -qE '^Required\(by\): +c$'
+    assertEquals "a should be required by c" "$?" "0"
+}
+
 testClean()
 {
     is_rpm_testing_off && return
