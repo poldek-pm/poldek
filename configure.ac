@@ -94,7 +94,10 @@ if test -n "$GCC"; then
     	    AC_MSG_RESULT(yes)
     	    AM_CFLAGS="$AM_CFLAGS -fvisibility=hidden"
     	],
-    	AC_MSG_WARN([compiler does not support visibility])
+    	[
+    	    AC_MSG_RESULT(no)
+    	    AC_MSG_WARN([compiler does not support visibility])
+    	]
     )
     CFLAGS="$cflags_save"
 fi
