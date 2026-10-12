@@ -1,5 +1,5 @@
 CPPFLAGS = @CPPFLAGS@ @CHECK_CFLAGS@
-LDADD = $(top_builddir)/libpoldek.la @CHECK_LIBS@
+LDADD = $(top_builddir)/libpoldek_core.la @CHECK_LIBS@
 
 check_PROGRAMS = test_match test_env test_pmdb test_op test_config \
 		 test_store test_cmp test_booldeps test_getenv_path \
