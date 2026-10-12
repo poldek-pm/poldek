@@ -49,6 +49,7 @@ char *next_token(char **str, char delim, int *toklen);
 
 
 int util__isdir(const char *path);
+int util__set_cache_mtime(const char *path, time_t src_mtime);
 int util__mksubdir(const char *path, const char *dn);
 int util__mkdir_p(const char *path, const char *dn);
 

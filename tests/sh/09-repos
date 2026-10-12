@@ -38,7 +38,6 @@ build2() {
 
 mkidx() {
     local repo=$1
-    sleep 0.9
     $POLDEK_NOCONF -s $repo --mkidx --mt pndir || fail "mkidx $repo failed"
 }
 
@@ -138,12 +137,17 @@ testInvalidateStubindexForLocalRepo()
 
     build a 1-1
     mkidx $REPO
+    # an index mtime ahead of the clock: changed "just now" for any stub
+    # made before it, however long the run takes
+    local mtime=$(( $(date +%s) + 3600 ))
+    touch -d @$mtime $REPO/packages.ndir*
 
     msgn "Testing..."
     expect_count 1
 
     build a 2-2
     mkidx $REPO
+    touch -d @$mtime $REPO/packages.ndir*  # rebuilt within the same second
     expect_count 2
 }
 
