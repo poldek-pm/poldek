@@ -194,5 +194,35 @@ testVerifyFileMissingDepsFail()
     assertEquals "should report one missing dep" "$n" "1"
 }
 
+# a requires x itself; that must not hide a from b, which requires x too
+testVerifyFileMissingDepsSelfRequirerSuccess()
+{
+    build a -p "x" -r "x" -fd '/usr' -f "/bin/a"
+    build b -r "x" -f "/usr/bin/b"
+    make_index
+
+    msg "# $POLDEK --verify=file-missing-deps"
+    is_verbose_mode && $POLDEK --verify=file-missing-deps
+    $POLDEK --verify=file-missing-deps >$TMP/verify-log.log
+    assertEquals "poldek fail, but should succeed" "$?" "0"
+    n=$(grep "error: " $TMP/verify-log.log | wc -l)
+    assertEquals "should not report errors" "$n" "0"
+}
+
+# required packages do not depend on the packages asked about before
+testRequiredPackagesSelfRequirer()
+{
+    build a -p "x" -r "x"
+    build b -r "x"
+    make_index
+
+    msg "# $POLDEK desc -R a b"
+    out=$($POLDEK desc -R a b)
+    echo "$out" | grep -A1 '^Package: *a-1-1' | grep -q '^Required(pkgs):'
+    assertEquals "a should require no package" "$?" "1"
+    echo "$out" | grep -A1 '^Package: *b-1-1' | grep -qE '^Required\(pkgs\): +a$'
+    assertEquals "b should require a" "$?" "0"
+}
+
 
 . ./sh/lib/shunit2

@@ -179,6 +179,15 @@ int process_req(tn_array *reqpkgs, struct capreq *req, tn_array *matches)
     return 1;
 }
 
+static bool has_package(const tn_array *pkgs, const struct pkg *pkg)
+{
+    for (int i=0; i < n_array_size(pkgs); i++)
+        if (n_array_nth(pkgs, i) == pkg)
+            return true;
+
+    return false;
+}
+
 static
 int process_reqs(int indent, tn_array *reqpkgs, struct pkgset *ps, const struct pkg *pkg,
                  tn_hash *cache, bool strict, tn_hash *unreqh)
@@ -214,7 +223,9 @@ int process_reqs(int indent, tn_array *reqpkgs, struct pkgset *ps, const struct 
             matches = n_hash_hget(cache, streq, klen, khash);
 
         } else {
-            int found = pkgset_find_match_packages(ps, pkg, req, &matches, strict);
+            /* shared by all requirers: all providers, the requirer among
+               them is checked below */
+            int found = pkgset_find_match_packages(ps, NULL, req, &matches, strict);
             if (found && matches == NULL)
                 matches = pkgs_array_new(2);
 
@@ -225,7 +236,7 @@ int process_reqs(int indent, tn_array *reqpkgs, struct pkgset *ps, const struct 
             goto l_err_notfound;
         }
 
-        if (n_array_size(matches) == 0) { /* selfmatches */
+        if (n_array_size(matches) == 0 || has_package(matches, pkg)) { /* selfmatches */
             msgn_i(4, indent, _(" req %-35s --> self/ internal"), streq);
             continue;
 
