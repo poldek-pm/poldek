@@ -278,6 +278,16 @@ testRpmOrgMutualExclusive_2() {
     try_install "baz" "baz" "baz"
 }
 
+# a versioned conflict with an installed package that no repository has
+testConflictWithInstalledNotAvailable() {
+    build_installed b -p "'cap = 1'"
+    build a -c "'cap < 2'"
+
+    $POLDEK_INSTALL -uv --test a >/dev/null 2>&1
+    typeset rc=$?
+    assertEquals "the conflict should be reported (exit 1), not crash poldek" "1" "$rc"
+}
+
 
 # suggested packages should be installed
 testSuggestsAll() {
