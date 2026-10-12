@@ -35,6 +35,7 @@
 #include "pkgdir_dirindex.h"
 #include "pkgdir_intern.h"
 #include "poldek_util.h"
+#include "misc.h"
 #ifdef HAVE_RPMORG
 # include "pm/rpmorg/pm_rpm.h"
 #else
@@ -257,8 +258,8 @@ int dbcache_create(struct pkgdir *pkgdir, const char *path, unsigned flags)
 
     int ok = pkgdir_module_pndir.create(pkgdir, path, flags);
 
-    /* set same mtime as rpmdb (to use symlinked dirindex) */
-    poldek_util_set_mtime(path, pkgdir_mtime(pkgdir));
+    /* rpmdb's mtime, for the symlinked dirindex; see util__set_cache_mtime() */
+    util__set_cache_mtime(path, pkgdir_mtime(pkgdir));
 
     /* symlink original dirindex as rpmdbcache's one */
     if (pkgdir->dirindex)
