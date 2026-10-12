@@ -195,6 +195,88 @@ START_TEST(test_relative_redirect_keeps_port)
 }
 END_TEST
 
+/* second fetch reuses the pooled connection the server has already closed;
+   with retrying disabled it can only succeed by reconnecting transparently */
+START_TEST(test_http_keepalive_dropped)
+{
+    char url[512];
+    int i;
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/keepalive-drop/" TEST_FILE_SMALL,
+             server_host, http_port);
+
+    for (i = 0; i < 2; i++) {
+        fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+        fail_if(!have_file(TEST_FILE_SMALL));
+        drop_file(TEST_FILE_SMALL);
+    }
+}
+END_TEST
+
+/* like above but the server resets the connection, so it is the write of
+   the second request that fails (ECONNRESET), not the read */
+START_TEST(test_http_keepalive_reset)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/keepalive-reset/" TEST_FILE_SMALL,
+             server_host, http_port);
+
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+    drop_file(TEST_FILE_SMALL);
+
+    usleep(200000);             /* let the RST arrive before the next write */
+
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+    fail_if(!have_file(TEST_FILE_SMALL));
+}
+END_TEST
+
+/* the server closed the pooled control connection without a 421, as on an
+   idle timeout; the next fetch can only succeed by reconnecting transparently */
+START_TEST(test_ftp_ctrl_closed_idle)
+{
+    fail_if(ftp_port == 0);
+
+    fail_if(fetch_ftp("ctrl-close-idle/" TEST_FILE_SMALL) == 0);
+    drop_file(TEST_FILE_SMALL);
+
+    fail_if(fetch_ftp(TEST_FILE_SMALL) == 0);
+    fail_if(!have_file(TEST_FILE_SMALL));
+}
+END_TEST
+
+/* the reply to RETR breaks off mid-line: the server did answer, so the
+   connection is not stale and the request must not be repeated silently */
+START_TEST(test_ftp_reply_cut_short)
+{
+    fail_if(ftp_port == 0);
+
+    fail_if(fetch_ftp(TEST_FILE_SMALL) == 0);    /* pool the connection */
+    drop_file(TEST_FILE_SMALL);
+
+    fail_if(fetch_ftp("retr-cut-reply/" TEST_FILE_SMALL) != 0);
+}
+END_TEST
+
+/* control connection lost after the whole file arrived: the stale-connection
+   retry must not kick in and silently download everything again; the fetch
+   fails and is left to the resuming retry */
+START_TEST(test_ftp_ctrl_drop_after_data)
+{
+    fail_if(ftp_port == 0);
+
+    fail_if(fetch_ftp(TEST_FILE_SMALL) == 0);    /* pool the connection */
+    drop_file(TEST_FILE_SMALL);
+
+    fail_if(fetch_ftp("ctrl-drop-after-data/" TEST_FILE_SMALL) != 0);
+}
+END_TEST
+
 static Suite *vfnet_suite(void)
 {
     Suite *s = suite_create("vfnet");
@@ -208,6 +290,11 @@ static Suite *vfnet_suite(void)
     tcase_add_test(tc, test_stat_redirect_failed);
     tcase_add_test(tc, test_redirect_keeps_port);
     tcase_add_test(tc, test_relative_redirect_keeps_port);
+    tcase_add_test(tc, test_http_keepalive_dropped);
+    tcase_add_test(tc, test_http_keepalive_reset);
+    tcase_add_test(tc, test_ftp_ctrl_closed_idle);
+    tcase_add_test(tc, test_ftp_reply_cut_short);
+    tcase_add_test(tc, test_ftp_ctrl_drop_after_data);
     suite_add_tcase(s, tc);
 
     return s;

@@ -55,6 +55,12 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
         
+        # keep-alive response, then the connection is closed anyway (over TLS
+        # without close_notify): /keepalive-drop/<filename>
+        if path.startswith("/keepalive-drop/"):
+            self._serve_keepalive_then_drop(path[len("/keepalive-drop/"):])
+            return
+
         # File serving: /file/<filename>
         if path.startswith("/file/"):
             self._serve_file(path[6:])
@@ -185,6 +191,17 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, str(e))
     
+    def _serve_keepalive_then_drop(self, filename):
+        """HTTP/1.1 response without Connection: close, so the client pools
+           the connection; the handler then closes it (HTTP/1.0 server), and
+           ssl's shutdown() skips close_notify, leaving the client a bare EOF"""
+        filepath = os.path.join(self.server.data_dir, os.path.basename(filename))
+        with open(filepath, 'rb') as f:
+            content = f.read()
+        self.wfile.write(b"HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n"
+                         % len(content) + content)
+        self.close_connection = True
+
     def _handle_redirect(self, redirect_spec):
         """Handle redirect chains like /redirect/3/file/small.txt"""
         try:

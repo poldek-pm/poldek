@@ -356,6 +356,9 @@ int vcn_is_alive(struct vcn *cn)
     if (cn->state != VCN_ALIVE)
         return 0;
 
+    if (cn->m_is_alive == NULL)
+        return 1;
+
     if (cn->ts_is_alive > 0) {
         time_t ts = time(0);
 
@@ -429,6 +432,7 @@ int vfff_transfer_file(struct vcn *cn, struct vfff_req *vreq, long total_size)
                     is_err = 1;
                     break;
                 }
+                vreq->out_written = 1;
                 amount += nw;
                 if (vreq->progress_fn)
                     vreq->progress_fn(vreq->progress_fn_data, total_size, amount);

@@ -154,6 +154,8 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
     if (cn->state != VCN_ALIVE)
         return 0;
 
+    cn->flags &= ~VCN_STALE;
+
     n = 0;
     n += n_snprintf(&req[n], sizeof(req) - n, "%s", req_line);
     if (*vfff_verbose > 1)
@@ -219,6 +221,7 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
     n += n_snprintf(&req[n], sizeof(req) - n, "\r\n");
 
     if (cn->io_write(cn, req, n) != n) {
+        cn->flags |= VCN_STALE; /* nothing got through, whatever the cause */
         vfff_set_err(errno, _("write to socket %s: %m"), req);
         cn->state = VCN_DEAD;
         rc = 0;
@@ -430,7 +433,7 @@ int response_complete(struct http_resp *resp)
 
 static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
 {
-    int is_err = 0, buf_pos = 0, ttl = VFFF_TIMEOUT;
+    int is_err = 0, is_eof = 0, buf_pos = 0, ttl = VFFF_TIMEOUT;
     char buf[4096];
 
     vfff_errno = 0;
@@ -477,6 +480,10 @@ static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
                 is_err = 1;
                 if (n == 0 || errno == 0)
                     errno = ECONNRESET;
+                if (n == 0)
+                    is_eof = 1;
+                if (buf_pos == 0 && n_buf_size(resp->buf) == 0)
+                    cn->flags |= VCN_STALE;
                 break;
 
             } else if (n >= 1) {
@@ -517,7 +524,10 @@ static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
 
             case ETIMEDOUT:
             case ECONNRESET:
-                vfff_set_err(vfff_errno, "%m");
+                if (is_eof)
+                    vfff_set_err(vfff_errno, _("connection closed by peer"));
+                else
+                    vfff_set_err(vfff_errno, "%m");
                 break;
 
             case EINTR:
@@ -818,34 +828,6 @@ static int is_closing_connection_status(struct http_resp *resp)
     return close_cn;
 }
 
-static int vhttp_vcn_is_alive(struct vcn *cn)
-{
-    char req_line[256];
-
-    if (cn->state != VCN_ALIVE)
-        return 0;
-
-    if (cn->flags & VCN_PROXIED)
-        return 0;
-
-    make_req_line(req_line, sizeof(req_line), "HEAD", "/");
-
-    if (!httpcn_req(cn, req_line, NULL))
-        return 0;
-
-    if (!httpcn_get_resp(cn)) {
-        cn->state = VCN_DEAD;
-        return 0;
-    }
-
-    if (is_closing_connection_status(cn->resp)) {
-        cn->state = VCN_DEAD;
-        return 0;
-    }
-
-    return 1;
-}
-
 static
 int is_redirected_connection(struct http_resp *resp, struct vfff_req *rreq)
 {
@@ -1066,7 +1048,8 @@ void vhttp_vcn_init(struct vcn *cn)
     cn->m_open = NULL;
     cn->m_close = NULL;
     cn->m_free = (void (*)(void*))http_resp_free;
-    cn->m_is_alive = vhttp_vcn_is_alive;
+    /* no probe: the request itself catches a dropped keep-alive (VCN_STALE) */
+    cn->m_is_alive = NULL;
     cn->m_retr = vhttp_vcn_retr;
     cn->m_stat = vhttp_vcn_stat;
 }
