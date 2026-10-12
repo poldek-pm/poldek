@@ -71,6 +71,24 @@ static int compare_with_expected(const char *downloaded, const char *expected_na
     return memcmp(buf1, buf2, n1);
 }
 
+static int have_file(const char *name)
+{
+    char dest[PATH_MAX];
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, name) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    return access(dest, F_OK) == 0;
+}
+
+static void drop_file(const char *name)
+{
+    char dest[PATH_MAX];
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, name) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    unlink(dest);
+}
+
 /* Setup: Called before each test */
 static void http_setup(void)
 {
@@ -227,6 +245,22 @@ START_TEST(test_http_redirect_chain)
 }
 END_TEST
 
+/* stat over a redirect that switches protocol and then fails; the failed
+   branch used to dereference the already freed request */
+START_TEST(test_http_stat_redirect_failed)
+{
+    char url[512];
+    struct vf_stat vfst;
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/to-dead-https/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+
+    fail_if(vf_stat(url, tmpdir, &vfst, NULL) != 0);
+}
+END_TEST
+
 /* Through a proxy vfile sends the absolute request URL in the request line
    (vfffmod.c: vreq.uri = req->proxy_host ? req->url : req->uri).  An explicit
    port in the requested URL must survive vf_request_new(), otherwise the proxy
@@ -356,6 +390,47 @@ START_TEST(test_http_proxy_keepalive_reuse)
     fail_if(first_fd == -1, "proxy did not log any request");
     fail_if(reused == 0, "proxy connection was not reused (fd %d != %d)",
             first_fd, other_fd);
+}
+END_TEST
+
+/* second fetch reuses the pooled connection the server has already closed;
+   with retrying disabled it can only succeed by reconnecting transparently */
+START_TEST(test_http_keepalive_dropped)
+{
+    char url[512];
+    int i;
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/keepalive-drop/" TEST_FILE_SMALL,
+             server_host, http_port);
+
+    for (i = 0; i < 2; i++) {
+        fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+        fail_if(!have_file(TEST_FILE_SMALL));
+        drop_file(TEST_FILE_SMALL);
+    }
+}
+END_TEST
+
+/* like above but the server resets the connection, so it is the write of
+   the second request that fails (ECONNRESET), not the read */
+START_TEST(test_http_keepalive_reset)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/keepalive-reset/" TEST_FILE_SMALL,
+             server_host, http_port);
+
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+    drop_file(TEST_FILE_SMALL);
+
+    usleep(200000);             /* let the RST arrive before the next write */
+
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+    fail_if(!have_file(TEST_FILE_SMALL));
 }
 END_TEST
 
@@ -572,11 +647,14 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_404);
     tcase_add_test(tc_http, test_http_redirect_302);
     tcase_add_test(tc_http, test_http_redirect_chain);
+    tcase_add_test(tc_http, test_http_stat_redirect_failed);
     tcase_add_test(tc_http, test_http_auth_success);
     tcase_add_test(tc_http, test_http_auth_fail);
     tcase_add_test(tc_http, test_http_upgrade_redirect);
     tcase_add_test(tc_http, test_http_proxy_keeps_port);
     tcase_add_test(tc_http, test_http_proxy_keepalive_reuse);
+    tcase_add_test(tc_http, test_http_keepalive_dropped);
+    tcase_add_test(tc_http, test_http_keepalive_reset);
     suite_add_tcase(s, tc_http);
 
     /* HTTPS tests */

@@ -8,8 +8,10 @@ import argparse
 import base64
 import http.server
 import os
+import socket
 import socketserver
 import ssl
+import struct
 import sys
 import threading
 import tempfile
@@ -59,6 +61,12 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         # without close_notify): /keepalive-drop/<filename>
         if path.startswith("/keepalive-drop/"):
             self._serve_keepalive_then_drop(path[len("/keepalive-drop/"):])
+            return
+
+        # keep-alive response, then the connection is reset (RST): the client's
+        # next write on the reused connection fails with ECONNRESET
+        if path.startswith("/keepalive-reset/"):
+            self._serve_keepalive_then_reset(path[len("/keepalive-reset/"):])
             return
 
         # File serving: /file/<filename>
@@ -127,7 +135,17 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Location", f"https://{host}/file/small.txt")
             self.end_headers()
             return
-        
+
+        # Redirect to a dead HTTPS server (connection refused): used to test
+        # vf_stat on a protocol-changing redirect that fails on the target.
+        if path.startswith("/to-dead-https/"):
+            name = os.path.basename(path)
+            self.send_response(HTTPStatus.FOUND)  # 302
+            self.send_header("Location", f"https://127.0.0.1:1/{name}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         # Default 404
         self.send_error(HTTPStatus.NOT_FOUND)
     
@@ -201,6 +219,23 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             content = f.read()
         self.wfile.write(b"HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n"
                          % len(content) + content)
+        self.close_connection = True
+
+    def _serve_keepalive_then_reset(self, filename):
+        """HTTP/1.1 response without Connection: close, then RST the socket
+           so the client's next write on the reused connection fails."""
+        filepath = os.path.join(self.server.data_dir, os.path.basename(filename))
+        with open(filepath, 'rb') as f:
+            content = f.read()
+        self.wfile.write(b"HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n"
+                         % len(content) + content)
+        self.wfile.flush()
+        try:
+            self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+                                       struct.pack('ii', 1, 0))
+            self.connection.close()
+        except OSError:
+            pass
         self.close_connection = True
 
     def _handle_redirect(self, redirect_spec):

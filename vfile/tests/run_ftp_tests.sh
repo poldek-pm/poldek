@@ -35,7 +35,7 @@ if ! "$PYTHON" --version >/dev/null 2>&1; then
 fi
 
 vprint "Starting test servers..."
-"$PYTHON" "$SCRIPT_DIR/net_servers.py" \
+"$PYTHON" "$SCRIPT_DIR/ftp_server.py" \
     --data-dir "$TEST_DATA_DIR" \
     --write-ports "$PORT_FILE" &
 SRV_PID="$!"
@@ -61,12 +61,12 @@ export TEST_DATA_DIR="$TEST_DATA_DIR"
 
 if [ $# -eq 0 ]; then
     cd "$SCRIPT_DIR"
-    if [ -x ./test_vfnet ]; then
-        ./test_vfnet
-    elif [ -x ./.libs/test_vfnet ]; then
-        ./.libs/test_vfnet
+    if [ -x ./test_vftp ]; then
+        ./test_vftp
+    elif [ -x ./.libs/test_vftp ]; then
+        ./.libs/test_vftp
     else
-        echo "ERROR: test_vfnet not found. Run 'make test_vfnet' first."
+        echo "ERROR: test_vftp not found. Run 'make test_vftp' first."
         exit 1
     fi
 else

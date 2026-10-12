@@ -148,22 +148,6 @@ START_TEST(test_ftp_reuse_after_aborted_transfer)
 }
 END_TEST
 
-/* stat over a redirect that switches protocol and then fails; the failed
-   branch used to dereference the already freed request */
-START_TEST(test_stat_redirect_failed)
-{
-    char url[512];
-    struct vf_stat vfst;
-
-    fail_if(http_port == 0);
-
-    snprintf(url, sizeof(url), "http://%s:%d/to-dead-https/" TEST_FILE_SMALL,
-             server_host, http_port);
-
-    fail_if(vf_stat(url, tmpdir, &vfst, NULL) != 0);
-}
-END_TEST
-
 /* the retried request is built from req->url, which used to lose the port */
 START_TEST(test_redirect_keeps_port)
 {
@@ -189,47 +173,6 @@ START_TEST(test_relative_redirect_keeps_port)
 
     snprintf(url, sizeof(url), "http://%s:%d/rel-to-ftp/" TEST_FILE_SMALL,
              server_host, http_port);
-
-    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
-    fail_if(!have_file(TEST_FILE_SMALL));
-}
-END_TEST
-
-/* second fetch reuses the pooled connection the server has already closed;
-   with retrying disabled it can only succeed by reconnecting transparently */
-START_TEST(test_http_keepalive_dropped)
-{
-    char url[512];
-    int i;
-
-    fail_if(http_port == 0);
-
-    snprintf(url, sizeof(url), "http://%s:%d/keepalive-drop/" TEST_FILE_SMALL,
-             server_host, http_port);
-
-    for (i = 0; i < 2; i++) {
-        fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
-        fail_if(!have_file(TEST_FILE_SMALL));
-        drop_file(TEST_FILE_SMALL);
-    }
-}
-END_TEST
-
-/* like above but the server resets the connection, so it is the write of
-   the second request that fails (ECONNRESET), not the read */
-START_TEST(test_http_keepalive_reset)
-{
-    char url[512];
-
-    fail_if(http_port == 0);
-
-    snprintf(url, sizeof(url), "http://%s:%d/keepalive-reset/" TEST_FILE_SMALL,
-             server_host, http_port);
-
-    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
-    drop_file(TEST_FILE_SMALL);
-
-    usleep(200000);             /* let the RST arrive before the next write */
 
     fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
     fail_if(!have_file(TEST_FILE_SMALL));
@@ -277,9 +220,9 @@ START_TEST(test_ftp_ctrl_drop_after_data)
 }
 END_TEST
 
-static Suite *vfnet_suite(void)
+static Suite *vftp_suite(void)
 {
-    Suite *s = suite_create("vfnet");
+    Suite *s = suite_create("vftp");
 
     TCase *tc = tcase_create("net");
     tcase_add_checked_fixture(tc, net_setup, net_teardown);
@@ -287,11 +230,8 @@ static Suite *vfnet_suite(void)
     tcase_add_test(tc, test_ftp_pasv_control_drop);
     tcase_add_test(tc, test_ftp_pasv_no_digits);
     tcase_add_test(tc, test_ftp_reuse_after_aborted_transfer);
-    tcase_add_test(tc, test_stat_redirect_failed);
     tcase_add_test(tc, test_redirect_keeps_port);
     tcase_add_test(tc, test_relative_redirect_keeps_port);
-    tcase_add_test(tc, test_http_keepalive_dropped);
-    tcase_add_test(tc, test_http_keepalive_reset);
     tcase_add_test(tc, test_ftp_ctrl_closed_idle);
     tcase_add_test(tc, test_ftp_reply_cut_short);
     tcase_add_test(tc, test_ftp_ctrl_drop_after_data);
@@ -305,7 +245,7 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
     int nerr;
-    Suite *s = vfnet_suite();
+    Suite *s = vftp_suite();
     SRunner *sr = srunner_create(s);
 
     srunner_run_all(sr, CK_ENV);

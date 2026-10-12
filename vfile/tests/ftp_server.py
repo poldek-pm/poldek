@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Network fault-injection servers for the vfile tests.
+FTP fault-injection server plus a minimal HTTP redirector for vfile tests.
 
-Runs a minimal FTP server and a minimal HTTP server on loopback.  Both
+Runs a minimal FTP server and a minimal HTTP redirector on loopback.  Both
 are only good enough to drive vfile; the point is the faults they can inject.
 
 FTP faults are selected by the requested path (the server learns it from
@@ -22,14 +22,9 @@ SIZE/MDTM, which poldek sends before PASV):
                         - reply 226, then close the control connection
                           without a 421, like a server dropping it as idle
 
-HTTP redirects:
+HTTP serves nothing but redirects:
   /to-ftp/<name>        - 302 to ftp://127.0.0.1:<ftp port>/<name>
-  /to-dead-https/<name> - 302 to https://127.0.0.1:1/<name>
   /rel-to-ftp/<name>    - 302 to the relative path /to-ftp/<name>
-
-HTTP keep-alive faults, serving <name> over HTTP/1.1 without Connection: close:
-  /keepalive-drop/<name>  - close the connection right after the response
-  /keepalive-reset/<name> - reset the connection right after the response
 """
 
 import argparse
@@ -219,7 +214,7 @@ class FTPSession:
             self.dropped = True
 
 
-def http_session(sock, ftp_port, data_dir, verbose):
+def http_session(sock, ftp_port, verbose):
     try:
         req = b""
         while b"\r\n\r\n" not in req:
@@ -232,29 +227,10 @@ def http_session(sock, ftp_port, data_dir, verbose):
         path = line.split()[1]
         name = os.path.basename(path)
 
-        # keep-alive that is dropped right after the response, like Apache
-        # closing an idle connection: the client's next request on the
-        # reused connection sees EOF and has to reconnect on its own
-        if path.startswith("/keepalive-drop/") or path.startswith("/keepalive-reset/"):
-            with open(os.path.join(data_dir, name), 'rb') as f:
-                body = f.read()
-            sock.sendall(("HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n"
-                          % len(body)).encode() + body)
-            # keepalive-reset: RST instead of FIN, so it is the client's next
-            # write on the reused connection that fails, not the read
-            if path.startswith("/keepalive-reset/"):
-                log(verbose, "httpd: > 200 keep-alive, then reset")
-                reset(sock)
-            else:
-                log(verbose, "httpd: > 200 keep-alive, then close")
-            return
-
         if path.startswith("/to-ftp/"):
             to = "ftp://127.0.0.1:%d/%s" % (ftp_port, name)
         elif path.startswith("/rel-to-ftp/"):
             to = "/to-ftp/%s" % name
-        elif path.startswith("/to-dead-https/"):
-            to = "https://127.0.0.1:1/%s" % name
         else:
             sock.sendall(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n"
                          b"Connection: close\r\n\r\n")
@@ -307,7 +283,7 @@ def main():
     while True:
         conn, _ = http_srv.accept()
         threading.Thread(target=http_session,
-                         args=(conn, ftp_port, args.data_dir, verbose),
+                         args=(conn, ftp_port, verbose),
                          daemon=True).start()
 
 
