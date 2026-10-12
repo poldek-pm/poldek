@@ -172,6 +172,11 @@ EXPORT int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
                         const tn_array *exclude, unsigned ldflags);
 
 
+/* installed providers of req (a capability, or the owner of a path) not in
+   exclude, appended to *providers (created if NULL); returns their number */
+int pkgdb_q_providers(struct pkgdb *db, tn_array **providers,
+                      const struct capreq *req, const tn_array *exclude);
+
 EXPORT int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                                  const struct capreq *cap,
                                  const tn_array *exclude, unsigned ldflags,
