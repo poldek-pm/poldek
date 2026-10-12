@@ -282,6 +282,9 @@ static void update_term_width(void)
         //https://www.gnu.org/software/libc/manual/html_node/Argp-User-Customization.html
         snprintf(tmp, sizeof(tmp), "no-dup-args-note,rmargin=%d",
                  (term_width < ARGP_MIN_WIDTH ? ARGP_MIN_WIDTH : term_width) - 1);
+        /* Note: this affects argp output produced after poldek_term_get_width()
+           has been called (e.g. -l).  For --help on a pipe argp prints help
+           before any width update happens, so ARGP_HELP_FMT is not consulted. */
         setenv("ARGP_HELP_FMT", tmp, 1);
         winch_reached = 0;
     }
