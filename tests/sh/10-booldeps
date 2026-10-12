@@ -420,6 +420,147 @@ testWithOr() {
     try_install "a" "a,p"
 }
 
+# upgrading a provider out of an installed package's boolean requirement
+# upgrades that package as well
+testUpgradeBreaksBooleanUpgradesDependent() {
+    build_installed x 1-1
+    build_installed q 1-1 -r "'(x >= 1 with x < 2)'"
+    build x 2-1
+    build q 2-1 -r "'(x >= 2 with x < 3)'"
+    try_install x "x-2-1,q-2-1" "x-1-1,q-1-1"
+}
+
+# an alternative the package manager provides keeps the requirement met
+testUpgradeBooleanHeldByPackageManager() {
+    build_installed x 1-1
+    build_installed q 1-1 -r "'(rpmlib(CompressedFileNames) <= 3.0.4-1 or x < 2)'"
+    build x 2-1
+    build q 2-1
+    try_install x "x-2-1" "x-1-1"
+}
+
+# ... or installs what the requirement still comes down to; b-1 going away
+# is no alternative though the repository has it
+testUpgradeBreaksBooleanInstallsAlternative() {
+    build_installed b 1-1 -p bcap
+    build_installed q 1-1 -r "'(bcap or c)'"
+    build b 1-1 -p bcap
+    build b 2-1
+    build c 1-1
+    try_install b "b-2-1,c-1-1" "b-1-1"
+}
+
+# a cap the new version adds can break it too
+testUpgradeAddsCapBreaksBoolean() {
+    build_installed a 1-1 -p x
+    build_installed q 1-1 -r "'(x without y)'"
+    build a 2-1 -p x -p y
+    build q 2-1
+    try_install a "a-2-1,q-2-1" "a-1-1,q-1-1"
+}
+
+# ... and so can a cap that moves to another package: b takes y from c
+testUpgradeMovesCapBreaksBoolean() {
+    build_installed c 1-1 -p x -p y
+    build_installed q 1-1 -r "'(x with y)'"
+    build b 1-1 -p y -r "'c >= 2'"
+    build c 2-1 -p x
+    build q 2-1
+    try_install b "b-1-1,c-2-1,q-2-1" "c-1-1,q-1-1"
+}
+
+# ... and so can a path the new version adds
+testUpgradeAddsPathBreaksBoolean() {
+    build_installed a 1-1 -p x
+    build_installed q 1-1 -r "'(x without /opt/zzbool/tool)'"
+    build a 2-1 -p x -f /opt/zzbool/tool
+    build q 2-1
+    try_install a "a-2-1,q-2-1" "a-1-1,q-1-1"
+}
+
+# what to install is the package itself, not a name = version q provides
+testUpgradeBooleanInstallsProviderNotAlias() {
+    build_installed a 1-1 -p x -p y
+    build_installed q 1-1 -p "'zzprovider = 1-1'" -r "'(x with y)'"
+    build a 2-1 -p x
+    build zzprovider 1-1 -p x -p y
+    try_install a "a-2-1,zzprovider-1-1" "a-1-1"
+}
+
+# nor does such a name = version meet a with in a condition: q providing
+# zzprovider = 1-1 does not put the zzprovider package there
+testUpgradeBooleanConditionNotMetByAlias() {
+    build_installed a 1-1 -p z
+    build_installed q 1-1 -p "'zzprovider = 1-1'" -r "'(x if (c with d) else z)'"
+    build a 2-1
+    build x
+    build z
+    build zzprovider 1-1 -p c -p d
+    try_install a "a-2-1,z-1-1" "a-1-1"
+}
+
+# a path the pndir index does not list can't be seen in the new version:
+# the requirement is left to rpm
+testUpgradeBooleanPathUnlisted() {
+    build_installed a 1-1 -f /opt/zzbool/tool
+    build_installed q 1-1 -r "'(a with /opt/zzbool/tool)'"
+    build a 2-1 -f /opt/zzbool/tool
+    $POLDEK_NOCONF --st dir -s $REPO --index >/dev/null 2>&1
+
+    POLDEK_INSTALL=$(echo "$POLDEK_INSTALL" | sed 's/--st dir/--st pndir/')
+    try_install a "a-2-1" "a-1-1"
+}
+
+# the user picks among equivalent providers, as for a plain requirement
+testUpgradeBreaksBooleanAsksForEquivalent() {
+    [ "$INSTALL_MODE" = "dir" ] || return 0 # the rpm mode runs with --noask
+    build_installed b 1-1 -p bcap
+    build_installed q 1-1 -r "'(bcap or c)'"
+    build b 2-1
+    build c1 1-1 -p c
+    build c2 1-1 -p c
+
+    typeset n=$($POLDEK_INSTALL -uv --test b | grep -c '^%choose ')
+    assertEquals "user not asked to choose a provider of c" "2" "$n"
+}
+
+# ... and is refused when neither helps
+testUpgradeBreaksBooleanFail() {
+    is_rpm_mode_and_rpm_testing_off && return
+    build_installed x 1-1
+    build_installed q 1-1 -r "'(x >= 1 with x < 2)'"
+    build x 2-1
+
+    typeset out=$($POLDEK_INSTALL -uvt x 2>&1)
+    echo "$out" | grep -q 'is required by installed q-1-1' || fail "upgrade of x not refused"
+}
+
+# --nofollow refuses what needs a package installed, as for a plain
+# requirement, instead of upgrading the dependent
+testUpgradeBreaksBooleanNoFollow() {
+    is_rpm_mode_and_rpm_testing_off && return
+    build_installed b 1-1 -p bcap
+    build_installed q 1-1 -r "'(bcap or c)'"
+    build b 2-1
+    build c
+    build q 2-1
+
+    typeset out=$($POLDEK_INSTALL -uvt --nofollow b 2>&1)
+    echo "$out" | grep -q 'is required by installed q-1-1' || fail "upgrade of b not refused"
+}
+
+# a downgrade takes the dependent down too
+testDowngradeBreaksBooleanDowngradesDependent() {
+    build_installed x 2-1
+    build_installed q 2-1 -r "'(x >= 2 with x < 3)'"
+    build x 1-1
+    build q 1-1 -r "'(x >= 1 with x < 2)'"
+
+    local p=x-1-1.noarch
+    [ "$INSTALL_MODE" = "dir" ] && p=x-1-1   # dir mode names packages without arch
+    try_install $p "x-1-1,q-1-1" "x-2-1,q-2-1" --downgrade
+}
+
 # uninstall side: erase must cascade over packages whose boolean requirement
 # stops being satisfiable, and leave the rest alone
 

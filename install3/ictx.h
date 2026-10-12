@@ -103,6 +103,9 @@ struct i3ctx {
 
     tn_hash           *multi_obsoleted; /* pkg_id => real obsoleted packages (muli-instances upgrade) */
 
+    tn_hash           *reqnames;    /* keys of the rpmdb requirement index */
+    int                reqnames_loaded;
+
     unsigned           ma_flags;    /* match flags (POLDEK_MA_*) */
     int                abort;       /* abort processing? */
     int                cancelled;   /* the user answered Q, skip the remaining sets too */
@@ -186,6 +189,17 @@ void i3_req_iter_destroy(struct i3_req_iter *it);
 
 
 const struct i3req *i3_req_iter_get(struct i3_req_iter *it);
+
+/* Does boolean req of installed pkg hold after the transaction, met by the
+   packages that stay or come in, or by rpm itself? Yes if it can't be told. */
+int i3_boolreq_holds(int indent, struct i3ctx *ictx, struct pkg *pkg,
+                     const struct capreq *req);
+
+/* The parts boolean req of installed pkg comes down to that no package staying
+   or coming in meets, each the packages the depsolver would install for it;
+   NULL if a part can't be met */
+tn_array *i3_boolreq_unmet(int indent, struct i3ctx *ictx, struct pkg *pkg,
+                           const struct capreq *req);
 
 /* conflicts.c */
 int i3_resolve_conflict(int indent, struct i3ctx *ictx,

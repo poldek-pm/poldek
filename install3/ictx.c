@@ -222,6 +222,8 @@ void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
 
     ictx->multi_obsoleted = n_hash_new(8, (tn_fn_free)n_array_free);
     ictx->errors = n_hash_new(8, (tn_fn_free)n_array_free);
+    ictx->reqnames = NULL;
+    ictx->reqnames_loaded = 0;
     ictx->abort = 0;
     ictx->cancelled = 0;
 }
@@ -238,6 +240,8 @@ void i3ctx_destroy(struct i3ctx *ictx)
 
     n_hash_free(ictx->multi_obsoleted);
     n_hash_free(ictx->errors);
+    if (ictx->reqnames)
+        n_hash_free(ictx->reqnames);
     memset(ictx, 0, sizeof(*ictx));
 }
 
@@ -256,6 +260,10 @@ void i3ctx_reset(struct i3ctx *ictx)
 
     n_hash_clean(ictx->multi_obsoleted);
     n_hash_clean(ictx->errors);
+    if (ictx->reqnames)         /* the set just installed changed the rpmdb */
+        n_hash_free(ictx->reqnames);
+    ictx->reqnames = NULL;
+    ictx->reqnames_loaded = 0;
     ictx->abort = 0;
 }
 

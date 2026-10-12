@@ -412,6 +412,86 @@ l_end:
     return install;
 }
 
+/* A boolean requirement of installed pkg the transaction breaks, handled as
+   a plain one: install what it comes down to or upgrade pkg, else report */
+static int process_orphan_boolreq(int indent, struct i3ctx *ictx,
+                                  struct pkg *pkg, struct capreq *req)
+{
+    struct poldek_ts *ts = ictx->ts;
+    int greedy = ts->getop(ts, POLDEK_OP_GREEDY), giveup = 0, ok = 1, done = 0;
+    tn_array *parts, *tomarks, *tomark_cands;
+
+    if (i3_boolreq_holds(indent, ictx, pkg, req))
+        return 1;
+
+    if (greedy && try_to_upgrade_orphan(indent, ictx, pkg, req, NULL))
+        return 1;
+
+    /* each package to install and its equivalents */
+    tomarks = pkgs_array_new(4);
+    tomark_cands = n_array_new(4, (tn_fn_free)n_array_free, NULL);
+
+    parts = i3_boolreq_unmet(indent, ictx, pkg, req);
+    for (int i = 0; ok && parts && i < n_array_size(parts); i++) {
+        tn_array *cands = n_array_dup(n_array_nth(parts, i), (tn_fn_dup)pkg_link);
+        struct pkg *tomark = NULL;
+
+        if (!i3_pick_pkg(indent, ictx, pkg, cands, &tomark) || tomark == NULL) {
+            ok = 0;
+
+        } else if (iset_has_kind_of_pkg(ictx->unset, tomark)) {
+            ok = 0;             /* a version of what goes away */
+            giveup = 1;
+
+        } else {
+            n_array_push(tomarks, pkg_link(tomark));
+            n_array_push(tomark_cands, cands);
+            continue;
+        }
+        n_array_free(cands);
+    }
+    /* it does not hold, so with nothing to install it stays broken */
+    if (parts == NULL || n_array_size(tomarks) == 0)
+        ok = 0;
+    n_array_cfree(&parts);
+
+    if (ok && ts->getop(ts, POLDEK_OP_FOLLOW)) {
+        for (int i = 0; i < n_array_size(tomarks); i++) {
+            struct pkg *tomark = n_array_nth(tomarks, i);
+            tn_array *cands = n_array_nth(tomark_cands, i);
+            struct i3pkg *i3tomark;
+
+            if (i3_is_user_choosable_equiv(ts) && n_array_size(cands) > 1) {
+                tomark = i3_choose_equiv(ts, pkg, req, cands, tomark);
+                if (tomark == NULL) { /* user abort */
+                    i3_cancel(ictx);
+                    break;
+                }
+            }
+
+            i3tomark = i3pkg_new(tomark, 0, pkg, req, I3PKGBY_ORPHAN);
+            i3_process_package(indent, ictx, i3tomark);
+            i3pkg_free(i3tomark);
+        }
+        done = 1;
+    }
+
+    n_array_free(tomark_cands);
+    n_array_free(tomarks);
+
+    if (done)
+        return 1;
+
+    /* as for a plain one: upgrade pkg only if there is nothing to install */
+    if (!greedy && !ok && !giveup &&
+        try_to_upgrade_orphan(indent, ictx, pkg, req, NULL))
+        return 1;
+
+    i3_error(ictx, pkg, I3ERR_REQUIREDBY, _("%s is required by installed %s"),
+             capreq_stra(req), pkg_id(pkg));
+    return 1;
+}
+
 static int process_orphan_req(int indent, struct i3ctx *ictx,
                               struct pkg *pkg, struct capreq *req)
 
@@ -421,6 +501,9 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
     tn_array         *candidates = NULL;
     const char       *strreq;
     int              giveup = 0, indentt = indent + 1;
+
+    if (booldep_is_boolean_req(req))
+        return process_orphan_boolreq(indent, ictx, pkg, req);
 
     strreq = capreq_stra(req);
     tracef(indent, "%s, req: %s (%s)", pkg_id(pkg), capreq_stra(req), strreq);

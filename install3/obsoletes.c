@@ -25,7 +25,34 @@ static void orphan_free(struct orphan *o)
     free(o);
 }
 
-static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps)
+/* Does boolean req name one of caps? */
+static int boolreq_names_cap(const struct capreq *req, const tn_array *caps)
+{
+    struct booldep *dep = booldep_parse_capreq(req);
+    tn_array *leaves;
+    int found = 0;
+
+    if (dep == NULL)
+        return 0;
+
+    leaves = booldep_leaves(dep);
+    for (int i = 0; !found && i < n_array_size(leaves); i++) {
+        const struct capreq *leaf = n_array_nth(leaves, i);
+
+        for (int j = 0; !found && j < n_array_size(caps); j++) {
+            const struct capreq *cap = n_array_nth(caps, j);
+            found = strcmp(capreq_name(leaf), capreq_name(cap)) == 0;
+        }
+    }
+
+    n_array_free(leaves);
+    booldep_free(dep);
+    return found;
+}
+
+static struct orphan *orphan_new(int indent, struct i3ctx *ictx,
+                                 struct pkg *pkg, tn_array *caps,
+                                 tn_array *changed_caps)
 {
     struct orphan *o;
     int i;
@@ -35,7 +62,7 @@ static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps)
     o->reqs = capreq_arr_new(4);
     n_array_ctl_set_freefn(o->reqs, NULL); /* weak ref */
 
-    for (i=0; i < n_array_size(caps); i++) {
+    for (i=0; caps && i < n_array_size(caps); i++) {
         const struct capreq *req;
         struct capreq *cap = n_array_nth(caps, i);
 
@@ -43,6 +70,18 @@ static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps)
         tracef(indent, "%s requires %s? %s", pkg_id(pkg), capreq_stra(cap), req ? "yes" : "no");
         if (req)
             n_array_push(o->reqs, (struct capreq *)req);
+    }
+
+    /* a boolean requirement names the caps in it, and only the whole
+       expression tells whether it still holds */
+    for (i=0; pkg->reqs && i < n_array_size(pkg->reqs); i++) {
+        struct capreq *req = n_array_nth(pkg->reqs, i);
+
+        if (booldep_is_boolean_req(req) && boolreq_names_cap(req, changed_caps) &&
+            !i3_boolreq_holds(indent, ictx, pkg, req)) {
+            tracef(indent, "%s requires %s? yes", pkg_id(pkg), capreq_stra(req));
+            n_array_push(o->reqs, req);
+        }
     }
 
     if (n_array_size(o->reqs) == 0) { /* not an orphan */
@@ -67,7 +106,7 @@ static int toin_provides(int indent, struct i3ctx *ictx,
 
 /* get packages required by pkg */
 static int get_orphaned(int indent, struct i3ctx *ictx,
-                        tn_array *orphaned, const tn_array *unsatisfied_caps)
+                        tn_array *orphaned, const tn_array *caps)
 {
     struct pkgdb *db = ictx->ts->db;
     unsigned ldflags = PKG_LDNEVR | PKG_LDREQS;
@@ -78,8 +117,8 @@ static int get_orphaned(int indent, struct i3ctx *ictx,
 
     MEMINF("process_pkg_orphans:");
 
-    for (i=0; i < n_array_size(unsatisfied_caps); i++) {
-        struct capreq *cap = n_array_nth(unsatisfied_caps, i);
+    for (i=0; i < n_array_size(caps); i++) {
+        struct capreq *cap = n_array_nth(caps, i);
         unsigned ma_flags = POLDEK_MA_PROMOTE_CAPEPOCH;
         int n = 0;
 
@@ -352,6 +391,60 @@ int process_multiinsts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg, tn_a
 }
 
 
+/* may an installed package require name: the requirement index has it? */
+static int is_required_name(struct i3ctx *ictx, const char *name)
+{
+    if (!ictx->reqnames_loaded) {
+        ictx->reqnames = pkgdb_reqnames(ictx->ts->db);
+        ictx->reqnames_loaded = 1;
+    }
+
+    return ictx->reqnames == NULL || n_hash_exists(ictx->reqnames, name);
+}
+
+/* caps and files pkg provides and dbpkg, the package it replaces, did not,
+   and some installed package may require; requirers are looked up by name,
+   so a name already in caps is not added again */
+static void push_added_caps(struct i3ctx *ictx, tn_array **caps,
+                            struct pkg *pkg, struct pkg *dbpkg)
+{
+    struct pkg_cap_iter *it = pkg_cap_iter_new(pkg);
+    const struct capreq *cap;
+    tn_array *added = NULL;
+
+    while ((cap = pkg_cap_iter_get(it))) {
+        if (capreq_is_file(cap)) {
+            if (!is_requireable_path(capreq_name(cap)) ||
+                pkg_satisfies_req(dbpkg, cap, 1))
+                continue;
+
+        } else if (!is_requireable_cap(capreq_name(cap)) ||
+                   (dbpkg->caps && n_array_bsearch(dbpkg->caps, cap))) {
+            continue;
+        }
+
+        if (!is_required_name(ictx, capreq_name(cap)))
+            continue;
+
+        if (*caps && capreq_arr_contains(*caps, capreq_name(cap)))
+            continue;
+
+        if (added == NULL)
+            added = capreq_arr_new(24);
+        n_array_push(added, capreq_clone(NULL, cap));
+    }
+    pkg_cap_iter_free(it);
+
+    if (added == NULL)
+        return;
+
+    if (*caps == NULL)
+        *caps = capreq_arr_new(24);
+    while (n_array_size(added))
+        n_array_push(*caps, n_array_shift(added));
+    n_array_free(added);
+}
+
 int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg)
 {
     struct pkg       *pkg = i3pkg->pkg;
@@ -359,7 +452,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
     struct iset      *unset = ictx->unset;
     unsigned         getflags = PKGDB_GETF_OBSOLETEDBY_NEVR;
     tn_array         *obsoleted = NULL, *orphaned = NULL, *orphans = NULL;
-    tn_array         *unsatisfied_caps = NULL;
+    tn_array         *unsatisfied_caps = NULL, *changed_caps = NULL;
     int              n, i;
 
     if (!poldek_ts_issetf(ictx->ts, POLDEK_TS_UPGRADE))
@@ -442,16 +535,28 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
                 trace(indent + 2, "- %s (to verify)", capreq_stra(cap));
                 n_array_push(unsatisfied_caps, capreq_clone(NULL, cap));
             }
+
+            /* for boolean requirements it also matters which package
+               provides a cap, (x with y), and what the successor adds,
+               (x without y) */
+            if (is_satisfied != 1) {
+                if (changed_caps == NULL)
+                    changed_caps = capreq_arr_new(24);
+                n_array_push(changed_caps, capreq_clone(NULL, cap));
+            }
         }
         pkg_cap_iter_free(it);
+
+        push_added_caps(ictx, &changed_caps, pkg, dbpkg);
     }
     n_array_cfree(&obsoleted);
 
-    if (unsatisfied_caps == NULL)
+    if (changed_caps == NULL)   /* holds the unsatisfied ones too */
         return 0;
 
-    n_assert(n_array_size(unsatisfied_caps));
-    n_array_uniq(unsatisfied_caps);
+    n_array_uniq(changed_caps);
+    if (unsatisfied_caps)
+        n_array_uniq(unsatisfied_caps);
 
     orphaned = pkgs_array_new_ex(16, pkg_cmp_recno);
 
@@ -459,18 +564,18 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
       determine what exactly requirements are missed, i.e no more
       "foreign" dependencies skipping needed
     */
-    if (!get_orphaned(indent + 1, ictx, orphaned, unsatisfied_caps)) {
+    if (!get_orphaned(indent + 1, ictx, orphaned, changed_caps)) {
         n_assert(n_array_size(orphaned) == 0);
 
     } else {
         n_assert(n_array_size(orphaned));
-        n_assert(n_array_size(unsatisfied_caps));
 
         orphans = n_array_new(16, (tn_fn_free)orphan_free, NULL);
 
         for (i=0; i < n_array_size(orphaned); i++) {
-            struct orphan *o = orphan_new(indent + 3, n_array_nth(orphaned, i),
-                                          unsatisfied_caps);
+            struct orphan *o = orphan_new(indent + 3, ictx,
+                                          n_array_nth(orphaned, i),
+                                          unsatisfied_caps, changed_caps);
             if (o)
 		n_array_push(orphans, o);
         }
@@ -496,7 +601,8 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
     }
 
     n_array_cfree(&orphans);
-    n_array_free(unsatisfied_caps);
+    n_array_cfree(&unsatisfied_caps);
+    n_array_free(changed_caps);
 
     return 1;
 }

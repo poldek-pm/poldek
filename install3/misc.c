@@ -834,3 +834,198 @@ const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
 
     return &it->i3req;
 }
+
+/* booldep_eval() cost callback for the system the transaction leaves: 0 if
+   a package that stays or comes in meets req, or rpm itself does, else -1 */
+static int present_cost_cb(const struct capreq *req, tn_array **providers,
+                           void *ctxptr)
+{
+    struct eval_ctx *ctx = ctxptr;
+    struct i3ctx *ictx = ctx->ictx;
+    tn_array *avail, *provs = NULL;
+
+    if ((avail = pkgset_find_providers(ictx->ps, req, 1))) {
+        for (int i = 0; i < n_array_size(avail); i++) {
+            struct pkg *p = n_array_nth(avail, i);
+
+            if (!i3_is_marked(ictx, p))
+                continue;
+
+            if (provs == NULL)
+                provs = pkgs_array_new(4);
+            n_array_push(provs, pkg_link(p));
+        }
+        n_array_free(avail);
+    }
+
+    pkgdb_q_providers(ictx->ts->db, &provs, req,
+                      iset_packages_by_recno(ictx->unset), 0);
+
+    int found = provs != NULL || pkgset_pm_satisfies(ictx->ps, req);
+    if (providers && provs) {
+        n_array_sort(provs);
+        *providers = provs;
+    } else {
+        n_array_cfree(&provs);
+    }
+
+    return found ? 0 : -1;
+}
+
+/* the providers present_cost_cb() gives are all there */
+static int present_pkg_cost(const struct pkg *pkg, void *ctxptr)
+{
+    (void)pkg;
+    (void)ctxptr;
+    return 0;
+}
+
+int i3_boolreq_holds(int indent, struct i3ctx *ictx, struct pkg *pkg,
+                     const struct capreq *req)
+{
+    struct eval_ctx ectx = { indent, ictx, pkg };
+    struct booldep_eval_ctx bctx = { &ectx, present_cost_cb, present_pkg_cost };
+    struct booldep *dep;
+    tn_array *conjs;
+
+    if ((dep = booldep_parse_capreq(req)) == NULL) {
+        logn(LOGWARN, "%s: boolean dependency parse error", capreq_stra(req));
+        return 1;               /* left to rpm */
+    }
+
+    /* the new packages' owners of such a path can't be seen: left to rpm */
+    if (pkgset_booldep_path_unlisted(ictx->ps, dep)) {
+        booldep_free(dep);
+        return 1;
+    }
+
+    conjs = booldep_eval_providers(dep, &bctx);
+    booldep_free(dep);
+
+    if (conjs == NULL)
+        return 0;
+
+    n_array_free(conjs);
+    return 1;
+}
+
+struct unmet_ctx {
+    int          indent;
+    struct i3ctx *ictx;
+    struct pkg   *pkg;
+    tn_array     *present;      /* the providers that stay or come in */
+};
+
+/* booldep_eval() cost callback for what to install: 0 if a package that
+   stays or comes in meets req, or rpm itself does, 1 if one the depsolver
+   would install does, else -1; the providers are those packages */
+static int unmet_cost_cb(const struct capreq *req, tn_array **providers,
+                         void *ctxptr)
+{
+    struct unmet_ctx *uc = ctxptr;
+    struct i3ctx *ictx = uc->ictx;
+    tn_array *avail, *provs = NULL;
+    int cost = -1;
+
+    if (pkgset_pm_satisfies(ictx->ps, req))
+        return 0;               /* met with no package */
+
+    if (pkgdb_q_providers(ictx->ts->db, &provs, req,
+                          iset_packages_by_recno(ictx->unset), 0) > 0) {
+        cost = 0;
+        for (int i = 0; i < n_array_size(provs); i++)
+            n_array_push(uc->present, pkg_link(n_array_nth(provs, i)));
+    }
+
+    if ((avail = pkgset_find_providers(ictx->ps, req, 1))) {
+        for (int i = 0; i < n_array_size(avail); i++) {
+            struct pkg *p = n_array_nth(avail, i), *best = NULL;
+
+            if (i3_is_marked(ictx, p)) {
+                cost = 0;
+                n_array_push(uc->present, pkg_link(p));
+
+            } else {        /* would the depsolver pick it? */
+                tn_array *one = pkgs_array_new(1);
+
+                n_array_push(one, pkg_link(p));
+                i3_pick_pkg(uc->indent, ictx, uc->pkg, one, &best);
+                n_array_free(one);
+                if (best == NULL)
+                    continue;
+                if (cost < 0)
+                    cost = 1;
+            }
+
+            if (provs == NULL)
+                provs = pkgs_array_new(4);
+            n_array_push(provs, pkg_link(p));
+        }
+        n_array_free(avail);
+    }
+
+    if (providers && provs) {
+        n_array_sort(provs);
+        *providers = provs;
+    } else {
+        n_array_cfree(&provs);
+    }
+
+    return cost;
+}
+
+static int is_present(const tn_array *present, const struct pkg *pkg)
+{
+    for (int i = 0; i < n_array_size(present); i++)
+        if (n_array_nth(present, i) == pkg)
+            return 1;
+
+    return 0;
+}
+
+static int has_present(const tn_array *present, const tn_array *pkgs)
+{
+    for (int i = 0; i < n_array_size(pkgs); i++)
+        if (is_present(present, n_array_nth(pkgs, i)))
+            return 1;
+
+    return 0;
+}
+
+/* unmet_cost_cb() gives the providers there and those the depsolver
+   would install */
+static int unmet_pkg_cost(const struct pkg *pkg, void *ctxptr)
+{
+    struct unmet_ctx *uc = ctxptr;
+
+    return is_present(uc->present, pkg) ? 0 : 1;
+}
+
+tn_array *i3_boolreq_unmet(int indent, struct i3ctx *ictx, struct pkg *pkg,
+                           const struct capreq *req)
+{
+    struct unmet_ctx uc = { indent, ictx, pkg, NULL };
+    struct booldep_eval_ctx bctx = { &uc, unmet_cost_cb, unmet_pkg_cost };
+    struct booldep *dep;
+    tn_array *conjs, *unmet = NULL;
+
+    if ((dep = booldep_parse_capreq(req)) == NULL)
+        return NULL;
+
+    uc.present = n_array_new(16, (tn_fn_free)pkg_free, NULL);
+    if ((conjs = booldep_eval_providers(dep, &bctx))) {
+        unmet = n_array_new(4, (tn_fn_free)n_array_free, NULL);
+        for (int i = 0; i < n_array_size(conjs); i++) {
+            tn_array *pkgs = n_array_nth(conjs, i);
+
+            /* a part none of whose packages is there needs one installed */
+            if (n_array_size(pkgs) > 0 && !has_present(uc.present, pkgs))
+                n_array_push(unmet, n_ref(pkgs));
+        }
+        n_array_free(conjs);
+    }
+
+    n_array_free(uc.present);
+    booldep_free(dep);
+    return unmet;
+}
