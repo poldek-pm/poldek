@@ -115,6 +115,37 @@ testUpgrade()
     rpm_state_check "a-2,a-libs-2" "a-1,a-libs-1"
 }
 
+# desc -B lists a package whose requirement the described version satisfies,
+# not any requirer of its name
+testDescRequiredByVersion()
+{
+    is_rpm_testing_off && return
+
+    build x 1-1
+    build x 2-1
+    build y 1-1 -r "'x < 2'"
+    build z 1-1 -r "'x >= 2'"
+    build w 1-1 -r x
+    build py27 2.7.18-1 -p "'python(abi) = 2.7'"
+    build py3 3.13.1-1 -p "'python(abi) = 3.13'"
+    build d 1-1 -r "'python(abi) = 2.7'"
+    build e 1-1 -r "'python(abi) = 3.13'"
+    # as in the dependency solver, a capability without a version
+    # does not satisfy a versioned requirement
+    build u 1-1 -p foo
+    build r 1-1 -r "'foo >= 2'"
+    build s 1-1 -r foo
+    index
+
+    for t in "x-1-1:w, y" "x-2-1:w, z" "py27-2.7.18-1:d" "py3-3.13.1-1:e" "u-1-1:s"; do
+        p=${t%%:*}
+        out=$($POLDEK desc -B $p.noarch)
+        assertEquals "desc $p failed" "$?" "0"
+        reqby=$(echo "$out" | sed -n 's/^Required(by): *//p')
+        assertEquals "$p required by" "${t#*:}" "$reqby"
+    done
+}
+
 testUninstall()
 {
     is_rpm_testing_off && return
