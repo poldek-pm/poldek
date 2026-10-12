@@ -268,19 +268,94 @@ START_TEST(test_http_proxy_keeps_port)
     fail_if(access(dest, F_OK) != 0);
     fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
 
-    /* the proxy must have seen the absolute URI, port included */
+    /* the proxy must have seen the absolute URI, port included;
+       proxy.log format is "<fileno> <uri>" */
     f = fopen(proxy_log, "r");
     fail_if(f == NULL, "cannot read proxy log %s", proxy_log);
     while (fgets(line, sizeof(line), f) != NULL) {
         char *eol = strchr(line, '\n');
+        char *uri;
         if (eol)
             *eol = '\0';
-        if (strcmp(line, expect) == 0)
+        uri = strchr(line, ' ');
+        if (uri && strcmp(uri + 1, expect) == 0)
             found = 1;
     }
     fclose(f);
 
     fail_if(found == 0, "proxy did not receive '%s'", expect);
+}
+END_TEST
+
+/* After dropping the HTTP keep-alive liveness probe, a pooled connection
+   through a proxy should be reused instead of opening a new one every time. */
+START_TEST(test_http_proxy_keepalive_reuse)
+{
+    char url[512], proxy[256], dest[PATH_MAX];
+    char line[1024];
+    const char *proxy_log = getenv("TEST_PROXY_LOG");
+    FILE *f;
+    int first_fd = -1, other_fd = -1, reused = 1;
+
+    fail_if(http_port == 0);
+    fail_if(proxy_log == NULL || *proxy_log == '\0', "TEST_PROXY_LOG not set");
+
+    /* proxy is the test server itself, reached on its non-default port */
+    if ((size_t)snprintf(proxy, sizeof(proxy), "http://%s:%d",
+                         server_host, http_port) >= sizeof(proxy))
+        ck_abort_msg("proxy url truncated");
+
+    if ((size_t)snprintf(url, sizeof(url), "http://%s:%d/file/%s",
+                         server_host, http_port, TEST_FILE_SMALL) >= sizeof(url))
+        ck_abort_msg("url truncated");
+
+    setenv("http_proxy", proxy, 1);
+    setenv("no_proxy", "", 1);
+    setenv("VFILE_CONF_NOPROXY", "", 1);
+
+    /* start with an empty log */
+    f = fopen(proxy_log, "w");
+    fail_if(f == NULL, "cannot truncate proxy log %s", proxy_log);
+    fclose(f);
+
+    /* first fetch opens a new connection to the proxy */
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    unlink(dest);
+
+    /* second fetch should reuse the same proxy connection */
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    unsetenv("http_proxy");
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    fail_if(access(dest, F_OK) != 0);
+    fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
+
+    /* both proxy requests must have come over the same connection */
+    f = fopen(proxy_log, "r");
+    fail_if(f == NULL, "cannot read proxy log %s", proxy_log);
+    while (fgets(line, sizeof(line), f) != NULL) {
+        char *eol = strchr(line, '\n');
+        int fd;
+        if (eol)
+            *eol = '\0';
+        if (sscanf(line, "%d ", &fd) != 1)
+            continue;
+        if (first_fd == -1)
+            first_fd = fd;
+        else if (fd != first_fd) {
+            other_fd = fd;
+            reused = 0;
+        }
+    }
+    fclose(f);
+
+    fail_if(first_fd == -1, "proxy did not log any request");
+    fail_if(reused == 0, "proxy connection was not reused (fd %d != %d)",
+            first_fd, other_fd);
 }
 END_TEST
 
@@ -501,6 +576,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_auth_fail);
     tcase_add_test(tc_http, test_http_upgrade_redirect);
     tcase_add_test(tc_http, test_http_proxy_keeps_port);
+    tcase_add_test(tc_http, test_http_proxy_keepalive_reuse);
     suite_add_tcase(s, tc_http);
 
     /* HTTPS tests */

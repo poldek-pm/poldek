@@ -149,12 +149,13 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def _handle_proxied(self, target):
         """Handle an absolute-form request target (proxy mode).
 
-        Logs the absolute URI so tests can assert what the client actually
-        sent, then serves the path part from the data directory.
+        Logs the connection file descriptor and absolute URI so tests can
+        assert what the client actually sent and whether the connection was
+        reused, then serves the path part from the data directory.
         """
         if self.server.proxy_log:
             with open(self.server.proxy_log, "a") as f:
-                f.write(target + "\n")
+                f.write(f"{self.connection.fileno()} {target}\n")
 
         rest = target.split("://", 1)[1]
         slash = rest.find("/")
