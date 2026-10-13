@@ -719,6 +719,12 @@ int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
         return 0;
     }
 
+    /* rpmlib() and the like are there with no package to install */
+    if (pkgset_pm_satisfies(ictx->ps, req)) {
+        tracef(indent, "%s %s => pm", pkg_id(pkg), capreq_stra(req));
+        return 0;
+    }
+
     if (pkgset_find_match_packages(ictx->ps, pkg, req, NULL, 1)) {
         tracef(indent, "%s %s => aset", pkg_id(pkg), capreq_stra(req));
         return 1;

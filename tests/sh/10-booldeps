@@ -89,6 +89,13 @@ testOrInstalled() {
     try_install "a" "a" ""
 }
 
+# what the package manager provides itself is there with no package
+testOrPackageManager() {
+    build a 1-1 -r "'(b or rpmlib(CompressedFileNames) <= 3.0.4-1)'"
+    build b
+    try_install "a" "a"
+}
+
 testOrFail() {
     build a 1-1 -r "'(b or c)'"
 
