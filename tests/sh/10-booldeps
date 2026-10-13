@@ -446,6 +446,13 @@ testUninstallOrAlternativePresent() {
     try_uninstall a "a-1-1"
 }
 
+# what the package manager provides itself keeps an alternative alive
+testUninstallOrPackageManager() {
+    build_installed a 1-1
+    build_installed b 1-1 -r "'(rpmlib(CompressedFileNames) <= 3.0.4-1 or a)'"
+    try_uninstall a "a-1-1"
+}
+
 testUninstallOrLastProvider() {
     build_installed a 1-1
     build_installed b 1-1 -r "'(a or c)'"

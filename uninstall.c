@@ -229,8 +229,8 @@ struct boolreq_ctx {
     const tn_array       *exclude;      /* db packages not counted */
 };
 
-/* booldep_eval() cost callback: 0 if req is provided by the dependent itself or
-   the db without the excluded packages, -1 if not */
+/* booldep_eval() cost callback: 0 if req is provided by the dependent itself,
+   the db without the excluded packages or the package manager, -1 if not */
 static int boolreq_req_cost(const struct capreq *req, tn_array **providers,
                             void *ctxptr)
 {
@@ -244,7 +244,8 @@ static int boolreq_req_cost(const struct capreq *req, tn_array **providers,
 
     pkgdb_q_providers(bc->uctx->db, &provs, req, bc->exclude);
 
-    int found = provs != NULL;
+    /* rpmlib() and the like: met with no package */
+    int found = provs != NULL || pm_satisfies(bc->uctx->ts->pmctx, req);
     if (providers && provs) {
         n_array_sort(provs);
         *providers = provs;
