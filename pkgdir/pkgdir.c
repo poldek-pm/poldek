@@ -43,6 +43,7 @@
 #include "pkgdir_intern.h"
 #include "pkg.h"
 #include "capreq.h"
+#include "booldep.h"
 #include "pkgroup.h"
 #include "pkgmisc.h"
 #include "pkgdir_dirindex.h"
@@ -814,6 +815,21 @@ static char *std_depdirs[] = { "bin", "etc", "lib", "sbin", "usr/X11R6/bin",
 
 static void is_depdir_req(const struct capreq *req, tn_array *depdirs)
 {
+    if (booldep_is_boolean_req(req)) { /* the paths it names count too */
+        struct booldep *dep = booldep_parse_capreq(req);
+
+        if (dep) {
+            tn_array *leaves = booldep_leaves(dep);
+
+            for (int i = 0; i < n_array_size(leaves); i++)
+                is_depdir_req(n_array_nth(leaves, i), depdirs);
+
+            n_array_free(leaves);
+            booldep_free(dep);
+        }
+        return;
+    }
+
     if (capreq_is_file(req)) {
         const char *reqname;
         char *p;
