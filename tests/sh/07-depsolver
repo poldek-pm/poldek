@@ -1022,6 +1022,25 @@ testUninstallGreedy() {
     try_uninstall_package "dir" "-evtgg" a "a-1-1,a-devel-1-1,b-1-1,c-1-1"
 }
 
+# --greedy takes only the installed packages that meet the requirement
+testUninstallGreedyVersion() {
+    msgn "Preparing repositories..."
+    build_installed d 1-1       # to prevent sh from uninstalling
+    build_installed b 1-1
+    build_installed b 2-1
+    build_installed a 1-1 -r "'b < 2'"
+    try_uninstall_package "dir" "-evt --greedy" a "a-1-1,b-1-1"
+}
+
+# ... the owner of a required path among them
+testUninstallGreedyPath() {
+    msgn "Preparing repositories..."
+    build_installed d 1-1
+    build_installed b 1-1 -f /opt/zzgreedy/tool
+    build_installed a 1-1 -r /opt/zzgreedy/tool
+    try_uninstall_package "dir" "-evt --greedy" a "a-1-1,b-1-1"
+}
+
 # TODO
 xtestUninstallHold() {
     msgn "Preparing repositories..."

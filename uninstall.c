@@ -174,18 +174,31 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
                             struct pkg *pkg, int deep)
 {
     int i, j;
-    tn_array *dbpkgs = NULL;
+    tn_array *dbpkgs = NULL, *seen;
 
     if (pkg->reqs == NULL)
         return 1;
 
+    /* found for an earlier req or being removed: not loaded again */
+    seen = n_array_dup(uctx->unpkgs, (tn_fn_dup)pkg_link);
+
     for (i=0; i < n_array_size(pkg->reqs); i++) {
         struct capreq *req = n_array_nth(pkg->reqs, i);
-        pkgdb_search(uctx->db, &dbpkgs, PMTAG_NAME, capreq_name(req),
-                     uctx->unpkgs, uninst_LDFLAGS);
+        tn_array *provs = NULL;
 
-        pkgdb_search(uctx->db, &dbpkgs, PMTAG_CAP, capreq_name(req),
-                     uctx->unpkgs, uninst_LDFLAGS);
+        /* only what meets req: the right version, the owners of a path */
+        pkgdb_q_providers(uctx->db, &provs, req, seen, uninst_LDFLAGS);
+        if (provs) {
+            if (dbpkgs == NULL)
+                dbpkgs = pkgs_array_new_ex(16, pkg_cmp_recno);
+
+            for (j=0; j < n_array_size(provs); j++) {
+                struct pkg *prov = n_array_nth(provs, j);
+                n_array_push(dbpkgs, pkg_link(prov));
+                n_array_push(seen, pkg_link(prov));
+            }
+            n_array_free(provs);
+        }
 
         if (dbpkgs == NULL)
             continue;
@@ -217,6 +230,7 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
     if (dbpkgs)
         n_array_free(dbpkgs);
 
+    n_array_free(seen);
     return 1;
 }
 
