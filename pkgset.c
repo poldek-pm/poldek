@@ -477,6 +477,21 @@ int pkgset_path_unlisted(const struct pkgset *ps, const char *path)
     return 0;
 }
 
+int pkgset_booldep_path_unlisted(const struct pkgset *ps,
+                                 const struct booldep *dep)
+{
+    tn_array *leaves = booldep_leaves(dep);
+    int re = 0;
+
+    for (int i = 0; !re && i < n_array_size(leaves); i++) {
+        struct capreq *leaf = n_array_nth(leaves, i);
+        re = capreq_is_file(leaf) && pkgset_path_unlisted(ps, capreq_name(leaf));
+    }
+    n_array_free(leaves);
+
+    return re;
+}
+
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         const char *value)
 {

@@ -83,6 +83,11 @@ tn_array *pkgset_find_providers(struct pkgset *ps, const struct capreq *req,
 /* can a package own path while its loaded file list does not show it? */
 int pkgset_path_unlisted(const struct pkgset *ps, const char *path);
 
+/* does a boolean dependency name such a path? */
+struct booldep;
+int pkgset_booldep_path_unlisted(const struct pkgset *ps,
+                                 const struct booldep *dep);
+
 struct pkg_unreq {
     bool          mismatch;
     char          req[0];

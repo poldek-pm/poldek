@@ -292,19 +292,7 @@ static int bool_req_cost(const struct capreq *req, tn_array **providers,
    left out of a pndir file list can't be seen: neither can be decided */
 static int is_undecidable(const struct pkgset *ps, const struct booldep *dep)
 {
-    int re = booldep_is_conditional(dep);
-
-    if (!re) {
-        tn_array *leaves = booldep_leaves(dep);
-
-        for (int i = 0; !re && i < n_array_size(leaves); i++) {
-            struct capreq *leaf = n_array_nth(leaves, i);
-            re = capreq_is_file(leaf) && pkgset_path_unlisted(ps, capreq_name(leaf));
-        }
-        n_array_free(leaves);
-    }
-
-    return re;
+    return booldep_is_conditional(dep) || pkgset_booldep_path_unlisted(ps, dep);
 }
 
 static int pkgs_has(const tn_array *pkgs, const struct pkg *pkg)
