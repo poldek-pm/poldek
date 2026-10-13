@@ -242,7 +242,7 @@ static int boolreq_req_cost(const struct capreq *req, tn_array **providers,
         n_array_push(provs, pkg_link(bc->self));
     }
 
-    pkgdb_q_providers(bc->uctx->db, &provs, req, bc->exclude);
+    pkgdb_q_providers(bc->uctx->db, &provs, req, bc->exclude, 0);
 
     /* rpmlib() and the like: met with no package */
     int found = provs != NULL || pm_satisfies(bc->uctx->ts->pmctx, req);
@@ -294,7 +294,7 @@ static struct pkg *boolreq_culprit(struct uninstall_ctx *uctx, struct pkg *pkg,
 
     /* only a removed provider of one of its names can bring it back */
     for (int i = 0; i < n_array_size(leaves); i++)
-        pkgdb_q_providers(uctx->db, &cands, n_array_nth(leaves, i), NULL);
+        pkgdb_q_providers(uctx->db, &cands, n_array_nth(leaves, i), NULL, 0);
     n_array_free(leaves);
     n_array_sort(cands);
     n_array_uniq(cands);

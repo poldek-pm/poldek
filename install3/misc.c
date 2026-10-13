@@ -706,7 +706,7 @@ int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
     if (providers) {
         pkgset_find_match_packages(ictx->ps, pkg, req, providers, 1);
         pkgdb_q_providers(ictx->ts->db, providers, req,
-                          iset_packages_by_recno(ictx->unset));
+                          iset_packages_by_recno(ictx->unset), 0);
     }
 
     if (iset_provides(ictx->inset, req)) {

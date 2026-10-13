@@ -454,15 +454,17 @@ static int db_match(struct pkgdb *db, enum pkgdb_it_tag tag,
 
 
 int pkgdb_q_providers(struct pkgdb *db, tn_array **providers,
-                      const struct capreq *req, const tn_array *exclude)
+                      const struct capreq *req, const tn_array *exclude,
+                      unsigned ldflags)
 {
     int is_file = capreq_is_file(req), n = 0;
     tn_array *dbpkgs = NULL;
 
-    pkgdb_search(db, &dbpkgs, PMTAG_CAP, capreq_name(req), exclude, PKG_LDCAPS);
+    pkgdb_search(db, &dbpkgs, PMTAG_CAP, capreq_name(req), exclude,
+                 ldflags | PKG_LDCAPS);
     if (is_file)
         pkgdb_search(db, &dbpkgs, PMTAG_FILE, capreq_name(req), exclude,
-                     PKG_LDCAPS | PKG_LDFL_WHOLE);
+                     ldflags | PKG_LDCAPS | PKG_LDFL_WHOLE);
 
     if (dbpkgs == NULL)
         return 0;
