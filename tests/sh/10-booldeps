@@ -96,6 +96,15 @@ testOrPackageManager() {
     try_install "a" "a"
 }
 
+# the version an upgrade takes away is no alternative, even if available
+testOrUpgradedAway() {
+    build_installed b 1-1 -p bcap
+    build b 1-1 -p bcap
+    build b 2-1 -r "'(bcap or c)'"
+    build c
+    try_install b "b-2-1,c-1-1" "b-1-1"
+}
+
 testOrFail() {
     build a 1-1 -r "'(b or c)'"
 

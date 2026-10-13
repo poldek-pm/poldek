@@ -725,9 +725,13 @@ int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
         return 0;
     }
 
-    if (pkgset_find_match_packages(ictx->ps, pkg, req, NULL, 1)) {
-        tracef(indent, "%s %s => aset", pkg_id(pkg), capreq_stra(req));
-        return 1;
+    /* the depsolver's own pick: not a version going away, nor a package
+       another version of which is already marked */
+    struct pkg *tomark = NULL;
+    if (i3_find_req(indent, ictx, pkg, req, &tomark, NULL)) {
+        tracef(indent, "%s %s => %s", pkg_id(pkg), capreq_stra(req),
+               tomark ? "aset" : "iset");
+        return tomark ? 1 : 0;
     }
 
     return -1;
