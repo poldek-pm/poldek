@@ -25,10 +25,14 @@
 #include "compiler.h"
 #include "i18n.h"
 #include "log.h"
+#include "booldep.h"
 #include "capreq.h"
 #include "capreqidx.h"
 #include "pkg.h"
 #include "pkgset.h"
+
+static int process_boolreq(int indent, tn_array *reqpkgs, struct pkgset *ps,
+                           const struct pkg *pkg, struct capreq *req, bool strict);
 
 void *pkg_na_malloc(const struct pkg *pkg, size_t size);
 
@@ -196,8 +200,14 @@ int process_reqs(int indent, tn_array *reqpkgs, struct pkgset *ps, const struct 
         if (capreq_is_rpmlib(req))
             continue;
 
-        //if (capreq_is_boolean(req)) /* TODO: boolean deps */
-        //    continue;
+        if (booldep_is_boolean_req(req)) {
+            if (!process_boolreq(indent, reqpkgs, ps, pkg, req, strict)) {
+                nerrors++;
+                if (unreqh)
+                    add_unreq(unreqh, pkg, req, false);
+            }
+            continue;
+        }
 
         tn_array *matches = NULL;
         char key[512];
@@ -254,6 +264,99 @@ int process_reqs(int indent, tn_array *reqpkgs, struct pkgset *ps, const struct 
     }
 
     return nerrors;
+}
+
+struct bool_ctx {
+    struct pkgset    *ps;
+    const struct pkg *pkg;
+    bool             strict;
+};
+
+/* booldep_eval() cost: the whole set counts as present, 0 if pkg or another
+   package of it provides req, -1 if none does */
+static int bool_req_cost(const struct capreq *req, tn_array **providers,
+                         void *ptr)
+{
+    struct bool_ctx *bc = ptr;
+
+    if (!pkgset_find_match_packages(bc->ps, bc->pkg, req, NULL, bc->strict))
+        return -1;
+
+    if (providers)              /* with/without intersect the providers */
+        *providers = pkgset_find_providers(bc->ps, req, bc->strict);
+
+    return 0;
+}
+
+/* if/unless hold depending on what gets installed, and the owners of a path
+   left out of a pndir file list can't be seen: neither can be decided */
+static int is_undecidable(const struct pkgset *ps, const struct booldep *dep)
+{
+    int re = booldep_is_conditional(dep);
+
+    if (!re) {
+        tn_array *leaves = booldep_leaves(dep);
+
+        for (int i = 0; !re && i < n_array_size(leaves); i++) {
+            struct capreq *leaf = n_array_nth(leaves, i);
+            re = capreq_is_file(leaf) && pkgset_path_unlisted(ps, capreq_name(leaf));
+        }
+        n_array_free(leaves);
+    }
+
+    return re;
+}
+
+static int pkgs_has(const tn_array *pkgs, const struct pkg *pkg)
+{
+    for (int i = 0; i < n_array_size(pkgs); i++)
+        if (n_array_nth(pkgs, i) == pkg)
+            return 1;
+
+    return 0;
+}
+
+/* Adds the packages a boolean requirement comes down to; 0 if it can't be
+   satisfied in the set or decided. */
+static int process_boolreq(int indent, tn_array *reqpkgs, struct pkgset *ps,
+                           const struct pkg *pkg, struct capreq *req, bool strict)
+{
+    struct bool_ctx bc = { ps, pkg, strict };
+    struct booldep_eval_ctx ectx = { &bc, bool_req_cost };
+    struct booldep *dep;
+    tn_array *conjs = NULL;
+    int ok = 1;
+
+    if ((dep = booldep_parse_capreq(req)) == NULL)
+        return 0;
+
+    if (is_undecidable(ps, dep))
+        msgn_i(4, indent, " req %-35s --> undecidable", capreq_stra(req));
+    else
+        conjs = booldep_eval_providers(dep, &ectx);
+
+    booldep_free(dep);
+
+    if (conjs == NULL)
+        return 0;
+
+    msgn_i(4, indent, " req %-35s --> %d conjunct(s)",
+           capreq_stra(req), n_array_size(conjs));
+
+    for (int i = 0; ok && i < n_array_size(conjs); i++) {
+        tn_array *pkgs = n_array_nth(conjs, i);
+
+        /* met with no package, or by pkg itself */
+        if (n_array_size(pkgs) == 0 || pkgs_has(pkgs, pkg))
+            continue;
+
+        n_array_sort(pkgs);
+        /* stores req: its Requires(pre) puts the provider first */
+        ok = process_req(reqpkgs, req, pkgs);
+    }
+
+    n_array_free(conjs);
+    return ok;
 }
 
 tn_array *pkgset_get_required_packages_x(int indent, struct pkgset *ps,

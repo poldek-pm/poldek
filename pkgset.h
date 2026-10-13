@@ -76,6 +76,13 @@ int pkgset_find_match_packages(struct pkgset *ps,
                                const struct pkg *pkg, const struct capreq *req,
                                tn_array **packages, bool strict);
 
+/* all packages providing req, the requiring one included; NULL if none */
+tn_array *pkgset_find_providers(struct pkgset *ps, const struct capreq *req,
+                                bool strict);
+
+/* can a package own path while its loaded file list does not show it? */
+int pkgset_path_unlisted(const struct pkgset *ps, const char *path);
+
 struct pkg_unreq {
     bool          mismatch;
     char          req[0];

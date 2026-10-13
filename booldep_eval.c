@@ -424,3 +424,28 @@ tn_array *booldep_eval(struct booldep *dep, const struct booldep_eval_ctx *ctx)
 
     return reqs;
 }
+
+tn_array *booldep_eval_providers(struct booldep *dep,
+                                 const struct booldep_eval_ctx *ctx)
+{
+    struct dvalue *dv = eval(dep->node, ctx);
+
+    if (dv == NULL)
+        return NULL;
+
+    tn_array *re = n_array_new(4, (tn_fn_free)n_array_free, NULL);
+    for (struct dvalue *v = dv; v != NULL; v = v->next) {
+        if (v->req == NULL)         /* empty branch */
+            continue;
+
+        if (v->cost < 0) {
+            n_array_cfree(&re);
+            break;
+        }
+
+        n_array_push(re, v->providers ? n_ref(v->providers) : pkgs_array_new(1));
+    }
+    dvalue_free(dv);
+
+    return re;
+}

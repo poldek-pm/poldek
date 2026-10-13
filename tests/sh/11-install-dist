@@ -109,6 +109,90 @@ testInstallDist() {
     try_install a "a,b,c,sh"
 }
 
+# install-dist for real (rpm database only): rpm must find every dependency met
+assert_dist_db() {
+    $POLDEK_INSTALL --justdb "$@" >/dev/null 2>&1
+    assertEquals "install-dist $* failed" "$?" "0"
+    typeset out=$(rpm --root $DESTINATION_REPO -Va --nofiles --nodigest --nosignature 2>&1)
+    assertEquals "rpm reports: $out" "" "$out"
+}
+
+# install-dist refused: nothing may be installed
+assert_dist_none() {
+    $POLDEK_INSTALL --justdb "$@" >/dev/null 2>&1
+    typeset out=$(rpm --root $DESTINATION_REPO -qa 2>/dev/null)
+    assertEquals "installed: $out" "" "$out"
+}
+
+# boolean requirements come down to the packages they need
+testInstallDistBoolean() {
+    is_rpm_testing_off && return
+
+    build a -r "'(b or c)'" -r "'(y with ycap)'" -r "'(x with xcap)'" -p "'zzp = 1-1'"
+    build b
+    build c
+    build y -p ycap
+    build z -p y
+    # provides y's name and version, but not ycap
+    build q -p "'y = 1-1'"
+    # a provides zzp's name and version, zzp provides x and xcap
+    build zzp -p x -p xcap
+    build sh -p /bin/sh
+
+    try_install a "a,b,y,zzp,sh"
+    assert_dist_db a
+}
+
+# paths in boolean requirements, read from a pndir index
+testInstallDistBooleanPath() {
+    is_rpm_testing_off && return
+
+    build a -r "'(x without /opt/zzbool/tool)'" -r "'(z with /opt/zzbool/tool2)'"
+    build px -p x -f /opt/zzbool/tool
+    build qx -p x
+    build pz -p z -f /opt/zzbool/tool2
+    # provides the path, not z
+    build e -p /opt/zzbool/tool2
+    build sh -p /bin/sh
+    $RAW_POLDEK --st dir -s $REPO --index >/dev/null 2>&1
+
+    POLDEK_INSTALL="$RAW_POLDEK --st pndir -s $REPO --install-dist=$DESTINATION_REPO"
+    try_install a "a,qx,pz,sh"
+    assert_dist_db a
+}
+
+# an index made without a's requirement keeps no /opt/zzbool files, so
+# who owns /opt/zzbool/tool can't be told and the requirement is reported
+testInstallDistBooleanPathUnlisted() {
+    is_rpm_testing_off && return
+
+    build px -p x -f /opt/zzbool/tool
+    build sh -p /bin/sh
+    $RAW_POLDEK --st dir -s $REPO --index >/dev/null 2>&1
+    build2 a -r "'(x without /opt/zzbool/tool)'"
+
+    POLDEK_INSTALL="$RAW_POLDEK --st pndir -s $REPO --st dir -s $REPO2 --install-dist=$DESTINATION_REPO"
+    try_install --failok a ""
+    assert_dist_none a
+}
+
+# whether b or d is needed depends on c, which install-dist may not install,
+# so the requirement is reported instead of resolved
+testInstallDistBooleanConditional() {
+    is_rpm_testing_off && return
+
+    build a -r "'(b if c else d)'"
+    build b
+    build c
+    build d
+    build sh -p /bin/sh
+
+    try_install --failok a ""
+    $POLDEK_INSTALL a | grep -q "error: a-1-1.noarch: req (b if c else d) not found"
+    assertEquals "poldek should report the conditional requirement" "$?" "0"
+    assert_dist_none a
+}
+
 # install-dist cannot resolve this (by picking c) as regular install do
 # and it simply report unmet dep here
 testInstallDistMissingDepAlt() {

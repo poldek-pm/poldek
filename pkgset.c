@@ -450,6 +450,33 @@ tn_array *pkgset_search_provdir(struct pkgset *ps, const char *dir)
     return do_search_provdir(ps, NULL, dir);
 }
 
+/* a pndir index loads only the files of its depdirs, the rest on demand */
+int pkgset_path_unlisted(const struct pkgset *ps, const char *path)
+{
+    const char *p = strrchr(path, '/');
+    int len = (p && p > path) ? p - path - 1 : 0;
+    char dir[PATH_MAX];
+
+    n_snprintf(dir, sizeof(dir), "%.*s", len, path + 1);
+
+    for (int i = 0; i < n_array_size(ps->pkgdirs); i++) {
+        struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
+        struct pkg *pkg;
+
+        if ((pkgdir->_ldflags & PKGDIR_LD_FULLFLIST) || n_array_size(pkgdir->pkgs) == 0)
+            continue;
+
+        pkg = n_array_nth(pkgdir->pkgs, 0);
+        if (pkg->load_nodep_fl == NULL)  /* lists loaded whole */
+            continue;
+
+        if (pkgdir->depdirs == NULL || n_array_bsearch(pkgdir->depdirs, dir) == NULL)
+            return 1;
+    }
+
+    return 0;
+}
+
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         const char *value)
 {
