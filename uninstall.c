@@ -56,6 +56,8 @@ static void update_iinf(struct poldek_ts *ts, tn_array *pkgs,
 struct uninstall_ctx;
 static int process_package(int indent, struct uninstall_ctx *uctx,
                            struct pkg *pkg);
+static tn_array *boolreq_providers(struct uninstall_ctx *uctx, struct pkg *pkg,
+                                   const struct capreq *req);
 
 struct uninstall_ctx {
     struct pkgdb       *db;
@@ -187,13 +189,21 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
         tn_array *provs = NULL;
 
         /* only what meets req: the right version, the owners of a path */
-        pkgdb_q_providers(uctx->db, &provs, req, seen, uninst_LDFLAGS);
+        if (booldep_is_boolean_req(req))
+            provs = boolreq_providers(uctx, pkg, req);
+        else
+            pkgdb_q_providers(uctx->db, &provs, req, seen, uninst_LDFLAGS);
         if (provs) {
             if (dbpkgs == NULL)
                 dbpkgs = pkgs_array_new_ex(16, pkg_cmp_recno);
 
             for (j=0; j < n_array_size(provs); j++) {
                 struct pkg *prov = n_array_nth(provs, j);
+
+                /* boolean reqs see the whole rpmdb, pkg itself included */
+                if (n_array_bsearch(seen, prov))
+                    continue;
+
                 n_array_push(dbpkgs, pkg_link(prov));
                 n_array_push(seen, pkg_link(prov));
             }
@@ -241,6 +251,7 @@ struct boolreq_ctx {
     struct uninstall_ctx *uctx;
     struct pkg           *self;         /* owner of the requirement */
     const tn_array       *exclude;      /* db packages not counted */
+    unsigned             ldflags;       /* what to load of the providers */
 };
 
 /* booldep_eval() cost callback: 0 if req is provided by the dependent itself,
@@ -256,7 +267,7 @@ static int boolreq_req_cost(const struct capreq *req, tn_array **providers,
         n_array_push(provs, pkg_link(bc->self));
     }
 
-    pkgdb_q_providers(bc->uctx->db, &provs, req, bc->exclude, 0);
+    pkgdb_q_providers(bc->uctx->db, &provs, req, bc->exclude, bc->ldflags);
 
     /* rpmlib() and the like: met with no package */
     int found = provs != NULL || pm_satisfies(bc->uctx->ts->pmctx, req);
@@ -270,11 +281,43 @@ static int boolreq_req_cost(const struct capreq *req, tn_array **providers,
     return found ? 0 : -1;
 }
 
+/* the installed packages a boolean requirement of pkg comes down to in the
+   rpmdb as it is, NULL if none */
+static tn_array *boolreq_providers(struct uninstall_ctx *uctx, struct pkg *pkg,
+                                   const struct capreq *req)
+{
+    struct boolreq_ctx bc = { uctx, pkg, NULL, uninst_LDFLAGS };
+    struct booldep_eval_ctx ectx = { &bc, boolreq_req_cost };
+    struct booldep *dep;
+    tn_array *conjs, *provs = NULL;
+
+    if ((dep = booldep_parse_capreq(req)) == NULL)
+        return NULL;
+
+    if ((conjs = booldep_eval_providers(dep, &ectx))) {
+        for (int i = 0; i < n_array_size(conjs); i++) {
+            tn_array *cprovs = n_array_nth(conjs, i);
+
+            for (int j = 0; j < n_array_size(cprovs); j++) {
+                struct pkg *prov = n_array_nth(cprovs, j);
+
+                if (provs == NULL)
+                    provs = pkgs_array_new(4);
+                n_array_push(provs, pkg_link(prov));
+            }
+        }
+        n_array_free(conjs);
+    }
+
+    booldep_free(dep);
+    return provs;
+}
+
 /* 1 if dep of pkg is satisfiable without the excluded packages, 0 if not */
 static int boolreq_satisfiable(struct uninstall_ctx *uctx, struct pkg *pkg,
                                struct booldep *dep, const tn_array *exclude)
 {
-    struct boolreq_ctx bc = { uctx, pkg, exclude };
+    struct boolreq_ctx bc = { uctx, pkg, exclude, 0 };
 
     struct booldep_eval_ctx ectx = { &bc, boolreq_req_cost };
     tn_array *reqs = booldep_eval(dep, &ectx);

@@ -525,6 +525,41 @@ testUninstallOrPathOwnerAfterRepoLoad() {
     try_uninstall a "a-1-1"
 }
 
+# --greedy takes along the packages a boolean requirement comes down to, not
+# others with the same name (k keeps sh: rpm does not count the scriptlet's
+# Requires(pre) of an installed package)
+testUninstallGreedyBoolean() {
+    build_installed k 1-1 -r /bin/sh
+    build_installed b 1-1 -p x -p y
+    build_installed unrelated 1-1 -p "'b = 1-1'"
+    build_installed a 1-1 -r "'(x with y)'"
+    try_uninstall "--greedy a" "a-1-1,b-1-1"
+}
+
+testUninstallGreedyBooleanVersion() {
+    build_installed k 1-1 -r /bin/sh
+    build_installed b 1-1
+    build_installed b 2-1
+    build_installed a 1-1 -r "'(b >= 1 with b < 2)'"
+    try_uninstall "--greedy a" "a-1-1,b-1-1"
+}
+
+testUninstallGreedyBooleanPath() {
+    build_installed k 1-1 -r /bin/sh
+    build_installed b 1-1 -f /opt/zzgreedy/tool
+    build_installed a 1-1 -r "'(/opt/zzgreedy/tool or zzmissing)'"
+    try_uninstall "--greedy a" "a-1-1,b-1-1"
+}
+
+# ... unless another package still needs it, through a boolean requirement too
+testUninstallGreedyBooleanShared() {
+    build_installed k 1-1 -r /bin/sh
+    build_installed b 1-1 -p bcap
+    build_installed a 1-1 -r "'(b with bcap)'"
+    build_installed c 1-1 -r "'(b or zzmissing)'"
+    try_uninstall "--greedy a" "a-1-1"
+}
+
 # the message names the package whose removal broke the requirement: q, with
 # a path in Provides:, not a, the provider of the excluded y
 testUninstallMarkedByCulprit() {
