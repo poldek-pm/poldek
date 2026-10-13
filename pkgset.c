@@ -193,6 +193,28 @@ static void index_boolean_req(struct pkgset *ps, const struct capreq *req,
         capreq_idx_add(&ps->req_idx, name, capreq_name_len(leaf), pkg);
     }
     n_array_free(leaves);
+
+    /* and the names in if/unless conditions as !name, as rpmdb does */
+    leaves = booldep_neg_leaves(dep);
+    for (int i=0; i < n_array_size(leaves); i++) {
+        struct capreq *leaf = n_array_nth(leaves, i);
+        int len = capreq_name_len(leaf) + 1;
+        char *name = n_malloc(len + 1);
+
+        n_snprintf(name, len + 1, "!%s", capreq_name(leaf));
+        if (!add) {
+            capreq_idx_remove(&ps->req_idx, name, pkg);
+            free(name);
+            continue;
+        }
+
+        if (ps->_booldep_capnames == NULL)
+            ps->_booldep_capnames = n_array_new(64, free, NULL);
+        n_array_push(ps->_booldep_capnames, name);
+
+        capreq_idx_add(&ps->req_idx, name, len, pkg);
+    }
+    n_array_free(leaves);
     booldep_free(dep);
 }
 

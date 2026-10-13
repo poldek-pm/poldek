@@ -222,6 +222,9 @@ struct orphan {
 int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
                              struct i3pkg *i3pkg);
 
+int i3_process_pkg_cond_orphans(int indent, struct i3ctx *ictx,
+                                struct i3pkg *i3pkg);
+
 int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
                                 struct i3pkg *i3pkg);
 

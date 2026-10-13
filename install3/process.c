@@ -126,6 +126,7 @@ static int do_process_package(int indent, struct i3ctx *ictx,
         }
     }
 
+    i3_process_pkg_cond_orphans(indent, ictx, i3pkg);
     i3_process_pkg_conflicts(indent, ictx, i3pkg);
 
 l_end:

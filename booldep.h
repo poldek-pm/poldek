@@ -28,6 +28,10 @@ struct booldep *booldep_parse_capreq(const struct capreq *req);
 /* flat array of cloned leaf requirements of the expression */
 tn_array *booldep_leaves(const struct booldep *dep);
 
+/* the leaves rpmdb indexes as !name, those of if/unless conditions:
+   installing what one names can break the requirement */
+tn_array *booldep_neg_leaves(const struct booldep *dep);
+
 /* does the expression contain if or unless? */
 int booldep_is_conditional(const struct booldep *dep);
 

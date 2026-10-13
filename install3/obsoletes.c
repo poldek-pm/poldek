@@ -445,6 +445,59 @@ static void push_added_caps(struct i3ctx *ictx, tn_array **caps,
     n_array_free(added);
 }
 
+/* Installed packages with a boolean requirement whose if/unless condition
+   pkg may meet, (b if c) */
+int i3_process_pkg_cond_orphans(int indent, struct i3ctx *ictx,
+                                struct i3pkg *i3pkg)
+{
+    struct pkg *pkg = i3pkg->pkg;
+    struct pkg_cap_iter *it;
+    const struct capreq *cap;
+    tn_array *orphaned, *conds = NULL;
+    int i;
+
+    if (!poldek_ts_issetf(ictx->ts, POLDEK_TS_UPGRADE))
+        return 1;
+
+    tracef(indent, "%s", pkg_id(pkg));
+
+    /* rpmdb indexes condition names, capabilities and paths, as !name */
+    orphaned = pkgs_array_new_ex(16, pkg_cmp_recno);
+    it = pkg_cap_iter_new(pkg);
+    while ((cap = pkg_cap_iter_get(it))) {
+        char name[capreq_name_len(cap) + 2];
+        struct capreq *negcap;
+
+        n_snprintf(name, sizeof(name), "!%s", capreq_name(cap));
+        if (!is_required_name(ictx, name))
+            continue;
+
+        if (conds == NULL)
+            conds = capreq_arr_new(4);
+        n_array_push(conds, capreq_clone(NULL, cap));
+
+        negcap = capreq_new(NULL, name, 0, NULL, NULL, 0, 0);
+        pkgdb_q_what_requires(ictx->ts->db, orphaned, negcap,
+                              iset_packages_by_recno(ictx->unset),
+                              PKG_LDNEVR | PKG_LDREQS, 0);
+        capreq_free(negcap);
+    }
+    pkg_cap_iter_free(it);
+
+    for (i=0; i < n_array_size(orphaned); i++) {
+        struct orphan *o = orphan_new(indent + 3, ictx, n_array_nth(orphaned, i),
+                                      NULL, conds);
+        if (o) {
+            i3_process_orphan(indent, ictx, o);
+            orphan_free(o);
+        }
+    }
+    n_array_free(orphaned);
+    n_array_cfree(&conds);
+
+    return 1;
+}
+
 int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg)
 {
     struct pkg       *pkg = i3pkg->pkg;

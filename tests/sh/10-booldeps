@@ -549,6 +549,23 @@ testUpgradeBreaksBooleanNoFollow() {
     echo "$out" | grep -q 'is required by installed q-1-1' || fail "upgrade of b not refused"
 }
 
+# installing what an installed package's if condition names brings in what
+# the condition makes it require
+testInstallMeetsConditionOfInstalled() {
+    build_installed q 1-1 -r "'(b if c)'"
+    build b
+    build c
+    try_install c "b-1-1,c-1-1"
+}
+
+# ... also when the condition is a path
+testInstallMeetsPathConditionOfInstalled() {
+    build_installed q 1-1 -r "'(b if /opt/zzbool/tool)'"
+    build b
+    build c 1-1 -f /opt/zzbool/tool
+    try_install c "b-1-1,c-1-1"
+}
+
 # a downgrade takes the dependent down too
 testDowngradeBreaksBooleanDowngradesDependent() {
     build_installed x 2-1
