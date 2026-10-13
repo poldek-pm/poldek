@@ -143,6 +143,21 @@ testInstallDistBoolean() {
     assert_dist_db a
 }
 
+# rpm meets an rpmlib() it supports itself, with no package; one it lacks
+# leaves the other alternative
+testInstallDistBooleanRpmlib() {
+    is_rpm_testing_off && return
+
+    build a -r "'(rpmlib(CompressedFileNames) <= 3.0.4-1 or b)'"
+    build b
+    build c -r "'(rpmlib(NoSuchFeatureZz) <= 1 or d)'"
+    build d
+    build sh -p /bin/sh
+
+    try_install "a c" "a,c,d,sh"
+    assert_dist_db a c
+}
+
 # paths in boolean requirements, read from a pndir index
 testInstallDistBooleanPath() {
     is_rpm_testing_off && return

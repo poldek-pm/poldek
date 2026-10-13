@@ -25,6 +25,7 @@
 
 #include "compiler.h"
 #include "capreq.h"
+#include "booldep.h"
 #include "pkg.h"
 #include "pkgset.h"
 #include "pkgmisc.h"
@@ -433,6 +434,98 @@ int pkgmark_verify_package_conflicts(struct pkgmark_set *pms)
     else
         msgn(0, _("No conflicts found"));
 
+    return nerr == 0;
+}
+
+/* pkg provides req: by name or Provides, or a path as a file of its whole list */
+static int marked_provides(const struct pkg *pkg, const struct capreq *req)
+{
+    struct pkgflist_it *it;
+    const char *path;
+    int re = 0;
+
+    if (pkg_match_req(pkg, req, 1))
+        return 1;
+
+    if (!capreq_is_file(req) || (it = pkg_get_flist_it(pkg)) == NULL)
+        return 0;
+
+    while (!re && (path = pkgflist_it_get(it, NULL)) != NULL)
+        re = n_str_eq(path, capreq_name(req));
+
+    pkgflist_it_free(it);
+    return re;
+}
+
+struct marked_ctx {
+    struct pkgset *ps;
+    tn_array      *pkgs;
+};
+
+/* booldep_eval() cost over the marked packages only; what the package
+   manager provides itself (rpmlib()) is met with no package */
+static int marked_req_cost(const struct capreq *req, tn_array **providers,
+                           void *ptr)
+{
+    struct marked_ctx *mc = ptr;
+    tn_array *found = NULL;
+
+    for (int i = 0; i < n_array_size(mc->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(mc->pkgs, i);
+
+        if (!marked_provides(pkg, req))
+            continue;
+
+        if (providers == NULL)
+            return 0;
+
+        if (found == NULL)
+            found = pkgs_array_new(4);
+        n_array_push(found, pkg_link(pkg));
+    }
+
+    if (providers)
+        *providers = found;
+
+    if (found)
+        return 0;
+
+    return pkgset_pm_satisfies(mc->ps, req) ? 0 : -1;
+}
+
+int pkgmark_verify_package_boolreqs(struct pkgmark_set *pms)
+{
+    tn_array *pkgs = pkgmark_get_packages(pms, PKGMARK_ANY);
+    struct marked_ctx mc = { pms->ps, pkgs };
+    struct booldep_eval_ctx ectx = { &mc, marked_req_cost };
+    int nerr = 0;
+
+    for (int i = 0; pkgs && i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+
+        for (int j = 0; pkg->reqs && j < n_array_size(pkg->reqs); j++) {
+            struct capreq *req = n_array_nth(pkg->reqs, j);
+            struct booldep *dep;
+            tn_array *conjs = NULL;
+
+            if (!booldep_is_boolean_req(req))
+                continue;
+
+            if ((dep = booldep_parse_capreq(req))) {
+                conjs = booldep_eval_providers(dep, &ectx);
+                booldep_free(dep);
+            }
+
+            if (conjs == NULL) {
+                logn(LOGERR, _("%s: req %s is not met by the packages to install"),
+                     pkg_id(pkg), capreq_stra(req));
+                nerr++;
+            }
+            n_array_cfree(&conjs);
+        }
+    }
+
+    n_array_cfree(&pkgs);
     return nerr == 0;
 }
 
