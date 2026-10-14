@@ -90,6 +90,12 @@ tn_array *pkgset_get_required_packages_x(int indent, struct pkgset *ps, const st
 EXPORT tn_array *pkgset_get_required_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
 EXPORT tn_array *pkgset_get_requiredby_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
 
+/* a set of installed packages may have partial file lists (the rpmdb
+   cache keeps none): index the owners db knows of the paths pkgs require */
+struct pkgdb;
+EXPORT int pkgset_index_db_path_owners(struct pkgset *ps, struct pkgdb *db,
+                                       const tn_array *pkgs);
+
 /* pkgset-order.c */
 #define PKGORDER_INSTALL     1
 #define PKGORDER_UNINSTALL   2

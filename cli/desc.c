@@ -1034,13 +1034,27 @@ static void show_description(struct cmdctx *cmdctx, struct pkgset *installed,
     }
 }
 
-/* -R and -B of installed packages look among the installed ones */
-static struct pkgset *installed_pkgset(struct poclidek_ctx *cctx)
+/* -R and -B of installed packages look among the installed ones; for -R of
+   pkgs the rpm database names the owners of required paths, as the file
+   lists loaded with installed packages are partial */
+static struct pkgset *installed_pkgset(struct poclidek_ctx *cctx,
+                                       const tn_array *pkgs, int reqpkgs)
 {
-    struct pkgset *ps = pkgset_new(poldek_get_pmctx(cctx->ctx));
+    struct poldek_ctx *ctx = cctx->ctx;
+    struct pkgset *ps = pkgset_new(poldek_get_pmctx(ctx));
 
     n_assert(cctx->pkgs_installed);
     n_array_concat_ex(ps->pkgs, cctx->pkgs_installed, (tn_fn_dup)pkg_link);
+
+    if (reqpkgs) {
+        struct pkgdb *db = pkgdb_open(ctx->pmctx, ctx->ts->rootdir, NULL,
+                                      O_RDONLY, NULL);
+        if (db) {
+            pkgset_index_db_path_owners(ps, db, pkgs);
+            pkgdb_free(db);
+        }
+    }
+
     return ps;
 }
 
@@ -1064,7 +1078,8 @@ static int desc(struct cmdctx *cmdctx)
 
     if ((cmdctx->_flags & (OPT_DESC_REQPKGS | OPT_DESC_REVREQPKGS)) &&
         pwd && strcmp(pwd, POCLIDEK_INSTALLEDDIR) == 0)
-        installed = installed_pkgset(cmdctx->cctx);
+        installed = installed_pkgset(cmdctx->cctx, pkgs,
+                                     cmdctx->_flags & OPT_DESC_REQPKGS);
 
     term_width = poldek_term_get_width() - RMARGIN;
     if (cmdctx->pipe_right)
