@@ -9,7 +9,7 @@
   - fix path traversal detection (trailing `/..`)
   - use `memmove()` for overlapping memory regions
   - fix metadata handling with libxml2 (`XML_PARSE_UNZIP` flag)
-  - improved zstd to gzip conversion for metadata repos
+* Improved zstd to gzip conversion for metadata repos
 * multilib: do not treat uncolored packages (e.g. `-devel`) from different arch families as interchangeable - poldek-nocolor-cmp.patch (https://github.com/pld-linux/poldek/commit/d0226c1cb0de9b8f759d6890562e8ff7bea23ae1)
 * multilib: `install` with a bare package name resolves to the native arch only, instead of pulling in a foreign-arch dependency chain; globs (`install foo*`) and explicit names (`install foo-1.0.0-1.i686`) still match all arches, and a package available only for a foreign arch must be named explicitly - poldek-multilib-bare-name-install.patch (https://github.com/pld-linux/poldek/commit/dcf566fbc923ff4bc085c2d9981dfeda98862bdf)
 * Show config file origin when removing duplicated sources - poldek-dup-sources.patch (https://github.com/pld-linux/poldek/commit/d1adbc7551110e290d82895d4a88bb8b93e975c0)
@@ -20,6 +20,19 @@
 * Fix: a crash in vf_stat on a failed protocol-changing redirect - poldek-vfstat-redirect-crash.patch (https://github.com/pld-linux/poldek/commit/59e3fec55abec6a69632766852c42ac36aec064b)
 * Fix: dead and desynchronized FTP connections are no longer reused from the connection pool - poldek-vcn-pool-reuse.patch (https://github.com/pld-linux/poldek/commit/59e3fec55abec6a69632766852c42ac36aec064b)
 * Fix: an explicit port in a repository URL is kept across redirects and when a proxy is used - poldek-url-keep-port.patch (https://github.com/pld-linux/poldek/commit/59e3fec55abec6a69632766852c42ac36aec064b)
+* Fixed SIGSEGV with --noconf (@arekm #32)
+* Fixed `--help` output so the "Report bugs to ..." line is shown again (@arekm #33)
+* Filter rpm install notices (e.g. `<pkg>.rpm: digests signatures OK`) from the output again (@arekm #33)
+* Fixed 'Q' in the suggested-packages question to abort the transaction (lp#1532694) (@arekm #34)
+* Fixed a crash on a versioned conflict with an installed package absent from all repositories (@arekm #35)
+* Fixed `poldek --help` looping or crashing on a narrow terminal (@arekm #36)
+* Use $COLUMNS/$LINES as a fallback when the terminal size is unknown (@arekm #36)
+* Reconnect silently when a pooled keep-alive connection goes stale (@arekm #37)
+* Avoid SIGPIPE from TLS connections closed without close_notify (@arekm #37)
+* Drop the HTTP keep-alive liveness HEAD probe (@arekm #37)
+* Boolean dependencies: with/without now consider installed packages (@arekm #38)
+* Fix evaluation of OR alternatives and unsatisfiable conjuncts inside with/without (@arekm #38)
+
 
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)
