@@ -153,6 +153,10 @@ int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
 int i3_select_best_pkg(int indent, struct i3ctx *ictx,
                        const struct pkg *marker, tn_array *candidates);
 
+/* the depsolver's pick among pkgs, the packages meeting a requirement of pkg */
+int i3_pick_pkg(int indent, struct i3ctx *ictx, const struct pkg *pkg,
+                tn_array *pkgs, struct pkg **best_pkg);
+
 int i3_find_req(int indent, struct i3ctx *ictx,
                  const struct pkg *pkg, const struct capreq *req,
                  struct pkg **best_pkg, tn_array *candidates);

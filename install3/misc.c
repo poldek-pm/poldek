@@ -521,12 +521,55 @@ static inline int any_is_marked(struct i3ctx *ictx, tn_array *pkgs)
     return 0;
 }
 
+/* The depsolver's pick among pkgs, the packages meeting a requirement of
+   pkg: 1 with *best_pkg NULL if one is marked already, 1 with *best_pkg to
+   install, 0 if none can be; pkgs keeps the candidates left */
+int i3_pick_pkg(int indent, struct i3ctx *ictx, const struct pkg *pkg,
+                tn_array *pkgs, struct pkg **best_pkg)
+{
+    *best_pkg = NULL;
+
+    for (int i = 0; i < n_array_size(pkgs); i++) {
+        struct pkg *p = n_array_nth(pkgs, i);
+
+        /* remove marked for removal items from suspected packages, but do it
+           only when POLDEK_TS_REINSTALL is not set, otherwise removing and
+           installing the same package is possible (when the same package
+           exists in both available and already installed set) */
+        if (!poldek_ts_issetf(ictx->ts, POLDEK_TS_REINSTALL) &&
+            i3_is_marked_for_removal(ictx, p) && !i3_is_marked(ictx, p)) {
+            n_array_remove_nth(pkgs, i--);
+
+        /* remove marked as BLACK from suspected packages, they have broken deps */
+        } else if (pkg_isset_mf(ictx->processed, p, PKGMARK_BLACK)) {
+            trace(indent, "- marked as BLACK %s", pkg_id(p));
+            n_array_remove_nth(pkgs, i--);
+        }
+    }
+
+    if (n_array_size(pkgs) == 0)
+        return 0;
+
+    /* return found and *best_pkg=NULL if any package is already marked */
+    if (!any_is_marked(ictx, pkgs)) {
+        int best_i = do_select_best_pkg(indent, ictx, pkg, pkgs);
+        *best_pkg = n_array_nth(pkgs, best_i);
+
+        if (i3_is_other_version_marked(ictx, *best_pkg, NULL)) {
+            *best_pkg = NULL;
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 int i3_find_req(int indent, struct i3ctx *ictx,
                 const struct pkg *pkg, const struct capreq *req,
                 struct pkg **best_pkg, tn_array *candidates)
 {
-    tn_array *suspkgs = NULL, *tmpkgs;
-    int found = 0, i;
+    tn_array *suspkgs = NULL;
+    int found = 0;
 
     *best_pkg = NULL;
     found = pkgset_find_match_packages(ictx->ps, pkg, req, &suspkgs, 1);//ictx->strict);
@@ -540,58 +583,7 @@ int i3_find_req(int indent, struct i3ctx *ictx,
         goto l_end;
 
     n_assert(n_array_size(suspkgs) > 0);
-
-    /* remove marked for removal items from suspected packages, but do it only
-       when POLDEK_TS_REINSTALL is not set, otherwise removing and installing
-       the same package is possible */
-    if (!poldek_ts_issetf(ictx->ts, POLDEK_TS_REINSTALL)) {
-        tmpkgs = n_array_clone(suspkgs);
-        while (n_array_size(suspkgs)) {
-            struct pkg *suspkg = n_array_shift(suspkgs);
-
-            /* possible when the same package exists in both available
-               and already installed set */
-            if (i3_is_marked_for_removal(ictx, suspkg) && !i3_is_marked(ictx, suspkg)) {
-                pkg_free(suspkg);
-                continue;
-            }
-
-            n_array_push(tmpkgs, suspkg);
-        }
-
-        n_array_free(suspkgs);
-        suspkgs = tmpkgs;
-    }
-
-    //trace(indent, "after removed rmmarked -> %d package(s)",
-    //      n_array_size(suspkgs));
-
-    /* remove marked as BLACK from suspected packages, they have broken deps */
-    for (i = 0; i < n_array_size(suspkgs); i++) {
-	struct pkg *suspkg = n_array_nth(suspkgs, i);
-
-	if (pkg_isset_mf(ictx->processed, suspkg, PKGMARK_BLACK)) {
-	    trace(indent, "- marked as BLACK %s", pkg_id(suspkg));
-	    n_array_remove_nth(suspkgs, i--);
-	}
-    }
-
-    if (n_array_size(suspkgs) == 0) {
-        found = 0;
-        goto l_end;
-    }
-
-    /* return found and *best_pkg=NULL if any package is already marked */
-    if (!any_is_marked(ictx, suspkgs)) {
-        int best_i;
-        best_i = do_select_best_pkg(indent, ictx, pkg, suspkgs);
-        *best_pkg = n_array_nth(suspkgs, best_i);
-
-        if (i3_is_other_version_marked(ictx, *best_pkg, NULL)) {
-            found = 0;
-            *best_pkg = NULL;
-        }
-    }
+    found = i3_pick_pkg(indent, ictx, pkg, suspkgs, best_pkg);
 
 l_end:
 
