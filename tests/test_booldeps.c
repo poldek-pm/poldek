@@ -172,7 +172,7 @@ START_TEST (test_eval) {
         { NULL, NULL, NULL }
     };
 
-    struct booldep_eval_ctx ctx = { NULL, NULL };
+    struct booldep_eval_ctx ctx = { NULL, NULL, NULL };
 
     int i = 0;
     while (cases[i].expr != NULL) {

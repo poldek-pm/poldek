@@ -310,7 +310,7 @@ static int process_boolreq(int indent, tn_array *reqpkgs, struct pkgset *ps,
                            const struct pkg *pkg, struct capreq *req, bool strict)
 {
     struct bool_ctx bc = { ps, pkg, strict };
-    struct booldep_eval_ctx ectx = { &bc, bool_req_cost };
+    struct booldep_eval_ctx ectx = { &bc, bool_req_cost, NULL };
     struct booldep *dep;
     tn_array *conjs = NULL;
     int ok = 1;

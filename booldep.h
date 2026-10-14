@@ -31,9 +31,13 @@ tn_array *booldep_leaves(const struct booldep *dep);
 /* does the expression contain if or unless? */
 int booldep_is_conditional(const struct booldep *dep);
 
+struct pkg;
 struct booldep_eval_ctx {
     void *ctx;
     int (*req_cost)(const struct capreq *req, tn_array **providers, void *ctx);
+    /* cost of a package a with/without comes down to; when NULL, that of
+       its name = evr, which another package can provide */
+    int (*pkg_cost)(const struct pkg *pkg, void *ctx);
 };
 
 tn_array *booldep_eval(struct booldep *dep, const struct booldep_eval_ctx *ctx);

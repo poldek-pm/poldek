@@ -287,7 +287,7 @@ static tn_array *boolreq_providers(struct uninstall_ctx *uctx, struct pkg *pkg,
                                    const struct capreq *req)
 {
     struct boolreq_ctx bc = { uctx, pkg, NULL, uninst_LDFLAGS };
-    struct booldep_eval_ctx ectx = { &bc, boolreq_req_cost };
+    struct booldep_eval_ctx ectx = { &bc, boolreq_req_cost, NULL };
     struct booldep *dep;
     tn_array *conjs, *provs = NULL;
 
@@ -319,7 +319,7 @@ static int boolreq_satisfiable(struct uninstall_ctx *uctx, struct pkg *pkg,
 {
     struct boolreq_ctx bc = { uctx, pkg, exclude, 0 };
 
-    struct booldep_eval_ctx ectx = { &bc, boolreq_req_cost };
+    struct booldep_eval_ctx ectx = { &bc, boolreq_req_cost, NULL };
     tn_array *reqs = booldep_eval(dep, &ectx);
 
     int re = 0;

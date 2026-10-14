@@ -745,6 +745,7 @@ void i3_req_iter_init(struct i3_req_iter *it, int indent, struct i3ctx *ictx,
 
     it->bctx.ctx = ectx;
     it->bctx.req_cost = req_cost_cb;
+    it->bctx.pkg_cost = NULL;
 }
 
 void i3_req_iter_destroy(struct i3_req_iter *it)
