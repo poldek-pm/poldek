@@ -54,6 +54,7 @@ struct pm_module pm_module_pset = {
     NULL,            /* ldpkg */
     pm_pset_db_to_pkgdir, 
     NULL,
+    pm_pset_db_reqnames,
 };
 
     

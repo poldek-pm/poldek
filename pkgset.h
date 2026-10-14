@@ -53,6 +53,9 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
 int pkgset__index_caps(struct pkgset *ps);
 int pkgset__index_reqs(struct pkgset *ps);
 
+/* adds to names the names the requirements of ps are indexed under */
+void pkgset_reqnames(struct pkgset *ps, tn_hash *names);
+
 
 // pkgset-req.c
 #define REQPKG_PREREQ     (1 << 0)

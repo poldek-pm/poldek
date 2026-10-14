@@ -249,6 +249,21 @@ int pkgset__index_caps(struct pkgset *ps)
     return 1;
 }
 
+void pkgset_reqnames(struct pkgset *ps, tn_hash *names)
+{
+    tn_array *keys;
+
+    pkgset__index_reqs(ps);
+    keys = n_oash_keys(ps->req_idx.ht);
+    for (int i = 0; i < n_array_size(keys); i++) {
+        const char *name = n_array_nth(keys, i);
+
+        if (!n_hash_exists(names, name))
+            n_hash_insert(names, name, NULL);
+    }
+    n_array_free(keys);
+}
+
 int pkgset__index_reqs(struct pkgset *ps)
 {
     if (ps->req_idx.na != NULL)

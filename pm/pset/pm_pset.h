@@ -44,6 +44,7 @@ void pm_pset_tx_begin(void *dbh, struct poldek_ts *ts);
 int pm_pset_tx_commit(void *dbh);
 
 int pm_pset_db_it_init(struct pkgdb_it *it, int tag, const char *arg);
+int pm_pset_db_reqnames(void *dbh, tn_hash *names);
 
 int pm_pset_hdr_nevr(void *h, const char **name, int32_t *epoch,
                      const char **ver, const char **rel,

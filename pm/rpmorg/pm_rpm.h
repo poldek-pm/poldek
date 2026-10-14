@@ -84,6 +84,7 @@ void pm_rpm_closedb(struct rpmorg_db *db);
 
 
 int pm_rpm_db_it_init(struct pkgdb_it *it, int tag, const char *arg);
+int pm_rpm_db_reqnames(void *dbh, tn_hash *names);
 int pm_rpm_install_package(struct pkgdb *db, const char *path,
                            const struct poldek_ts *ts);
 

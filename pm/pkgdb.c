@@ -697,6 +697,24 @@ static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
     return n;
 }
 
+tn_hash *pkgdb_reqnames(struct pkgdb *db)
+{
+    const struct pm_module *mod = db->_ctx->mod;
+    tn_hash *names;
+
+    if (mod->db_reqnames == NULL)
+        return NULL;
+
+    names = n_hash_new(1024, NULL);
+    n_hash_ctl(names, TN_HASH_REHASH);
+    if (!mod->db_reqnames(db->dbh, names)) {
+        n_hash_free(names);
+        names = NULL;
+    }
+
+    return names;
+}
+
 int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const struct capreq *cap,
                           const tn_array *exclude, unsigned ldflags,
