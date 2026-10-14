@@ -73,7 +73,6 @@ testRPMdbcache() {
     assertEquals "dirindex changed" "$md5" "$md"
 
     build a "1-1"
-    sleep 0.8 # mtime based cache
 
     try_install a "a-1-1" ""
 
@@ -85,6 +84,25 @@ testRPMdbcache() {
     if [ "$md5" = "$md" ]; then
         fail "$dirindex_path: dirindex not changed ($md5)"
     fi
+}
+
+# rpm changes the database in the second poldek cached it
+testRPMdbcacheSameSecond() {
+    is_rpm_testing_off && return
+
+    # a database mtime ahead of the clock: changed "just now" for any cache
+    # made before it, however long the run takes
+    local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
+    local mtime=$(( $(date +%s) + 3600 ))
+    touch -d @$mtime $dbfiles
+
+    $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
+
+    rpm_build_installed b 1-1
+    touch -d @$mtime $dbfiles  # changed within the same second
+
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-1-1')
+    assertEquals "b-1-1 not listed as installed" "1" "$n"
 }
 
 # e.g. openssl multiple instances

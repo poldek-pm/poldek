@@ -24,7 +24,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <utime.h>
 
 #include <tndb/tndb.h>
 #include <trurl/nassert.h>
@@ -129,9 +128,7 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
     n_stream_close(st);
     vf_lock_release(lock);
 
-    struct utimbuf ut;
-    ut.actime = ut.modtime = pkgdir_mtime(pkgdir);
-    utime(path, &ut);
+    util__set_cache_mtime(path, pkgdir_mtime(pkgdir));
 
     return 1;
 }

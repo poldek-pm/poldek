@@ -570,6 +570,16 @@ int poldek_util_set_mtime(const char *path, time_t t)
     return utime(path, &ut) == 0;
 }
 
+/* mtimes are compared in whole seconds: a cache of a source changed this
+   second (or the previous one, for coarse fs clocks) is stamped outdated */
+int util__set_cache_mtime(const char *path, time_t src_mtime)
+{
+    if (src_mtime + 1 >= time(NULL))
+        src_mtime--;
+
+    return poldek_util_set_mtime(path, src_mtime);
+}
+
 const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
 {
     return poldek_util_expand_vars(dest, size, str, '$', NULL, 0);
