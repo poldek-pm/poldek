@@ -915,6 +915,10 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
     char **val = NULL;     /* for summary, description recoding */
     unsigned doneflag = 0, needflag = 0;
 
+    /* NULL from pkg_uinf(), e.g. for an index made with --mo=nodesc */
+    if (pkgu == NULL)
+        return NULL;
+
     switch (tag) {
         case PKGUINF_LICENSE:
             return pkgu->license;
