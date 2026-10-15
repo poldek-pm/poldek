@@ -91,6 +91,67 @@ testVerifyDepsFail()
     assertEquals "should report 3 dependency errors" "$n" "3"
 }
 
+# a boolean requirement is satisfied by the packages it comes down to
+testVerifyDepsBooleanSuccess()
+{
+    build a -r "'(b or c)'"
+    build b
+    build x -r "'(y with ycap)'"
+    build y -p ycap
+    # s provides y itself, y provides both
+    build s -p y -r "'(y with ycap)'"
+    # o owns the file, e only provides its path
+    build f -r "'(/usr/bin/foo with bar)'"
+    build o -p bar -f /usr/bin/foo
+    build e -p /usr/bin/foo
+    # t meets its own requirement
+    build t -p u -p ucap -r "'(u with ucap)'"
+    build sh -p /bin/sh
+    make_index
+
+    msg "# $POLDEK --verify"
+    $POLDEK --verify >$TMP/verify-log.log
+    assertEquals "poldek fail, but should succeed" "$?" "0"
+    n=$(grep "error: " $TMP/verify-log.log | wc -l)
+    assertEquals "should not report errors" "$n" "0"
+}
+
+# without takes away every provider of its right side, the requiring package too
+testVerifyDepsBooleanFail()
+{
+    build a -p y -r "'(x without y)'"
+    build b -p x -p y
+    # the only z comes with the file, kept in the pndir index
+    build c -r "'(z without /opt/zzbool/tool)'"
+    build d -p z -f /opt/zzbool/tool
+    build sh -p /bin/sh
+    make_index
+
+    msg "# $POLDEK --verify"
+    $POLDEK --verify >$TMP/verify-log.log
+    assertEquals "poldek succeed, but should fail" "$?" "1"
+    n=$(grep "error: a-1-1" $TMP/verify-log.log | grep -c 'x without y')
+    assertEquals "should report a's requirement" "$n" "1"
+    n=$(grep "error: c-1-1" $TMP/verify-log.log | grep -c 'z without /opt/zzbool/tool')
+    assertEquals "should report c's requirement" "$n" "1"
+}
+
+# the provider of a boolean prerequisite goes first
+testVerifyOrderBoolean()
+{
+    build a -rpre "'(b or c)'"
+    build b
+    build sh -p /bin/sh
+    make_index
+
+    msg "# $POLDEK --verify=order"
+    out=$($POLDEK --verify=order)
+    assertEquals "verify=order failed" "$?" "0"
+    na=$(echo "$out" | sed -n 's/^\([0-9]*\)\. a-1-1.*/\1/p')
+    nb=$(echo "$out" | sed -n 's/^\([0-9]*\)\. b-1-1.*/\1/p')
+    assertTrue "b ($nb) should go before a ($na)" "[ \"$nb\" -lt \"$na\" ]"
+}
+
 testVerifyConflictsFail()
 {
     build a -r "foo" -r "bar" -p "foo.so"

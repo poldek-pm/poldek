@@ -28,12 +28,20 @@ struct booldep *booldep_parse_capreq(const struct capreq *req);
 /* flat array of cloned leaf requirements of the expression */
 tn_array *booldep_leaves(const struct booldep *dep);
 
+/* does the expression contain if or unless? */
+int booldep_is_conditional(const struct booldep *dep);
+
 struct booldep_eval_ctx {
     void *ctx;
     int (*req_cost)(const struct capreq *req, tn_array **providers, void *ctx);
 };
 
 tn_array *booldep_eval(struct booldep *dep, const struct booldep_eval_ctx *ctx);
+
+/* like booldep_eval(), but each element is the array of packages a conjunct
+   comes down to (empty if met without one); NULL if a conjunct is unmet */
+tn_array *booldep_eval_providers(struct booldep *dep,
+                                 const struct booldep_eval_ctx *ctx);
 
 
 #ifdef POLDEK_BOOLDEP_INTERNAL

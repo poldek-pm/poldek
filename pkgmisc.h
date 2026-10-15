@@ -144,6 +144,8 @@ EXPORT int pkgmark_log_unsatisfied_dependecies(struct pkgmark_set *pms);
 EXPORT int pkgmark_pkg_drags(struct pkg *pkg, struct pkgmark_set *pms, int deep);
 /* .. and then verify marked set  */
 EXPORT int pkgmark_verify_package_conflicts(struct pkgmark_set *pms);
+/* are the boolean requirements of the marked packages met among them? */
+EXPORT int pkgmark_verify_package_boolreqs(struct pkgmark_set *pms);
 EXPORT int pkgmark_verify_package_order(struct pkgmark_set *pms);
 
 struct pkgset;

@@ -261,3 +261,41 @@ int pkgset_find_match_packages(struct pkgset *ps,
 
     return found;
 }
+
+static void push_provider(tn_array **pkgs, struct pkg *pkg)
+{
+    if (*pkgs == NULL)
+        *pkgs = pkgs_array_new(8);
+
+    for (int i = 0; i < n_array_size(*pkgs); i++)
+        if (n_array_nth(*pkgs, i) == pkg)
+            return;
+
+    n_array_push(*pkgs, pkg_link(pkg));
+}
+
+/* unlike pkgset_find_match_packages(), a self-matching package does not
+   empty the result: with/without operands need every provider */
+tn_array *pkgset_find_providers(struct pkgset *ps, const struct capreq *req,
+                                bool strict)
+{
+    struct pkg **suspkgs, *pkgsbuf[1024];
+    int nsuspkgs = 1024;
+    tn_array *pkgs = NULL;
+
+    if (psreq_lookup(ps, req, &suspkgs, pkgsbuf, &nsuspkgs)) {
+        for (int i = 0; i < nsuspkgs; i++)
+            if (!capreq_has_ver(req) || pkg_match_req(suspkgs[i], req, strict))
+                push_provider(&pkgs, suspkgs[i]);
+    }
+
+    /* psreq_lookup() skips the owners of a path some package provides */
+    if (capreq_is_file(req)) {
+        int n = file_index_lookup(ps->file_idx, capreq_name(req), 0, pkgsbuf, 1024);
+
+        for (int i = 0; i < n; i++)
+            push_provider(&pkgs, pkgsbuf[i]);
+    }
+
+    return pkgs;
+}

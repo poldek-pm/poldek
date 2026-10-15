@@ -351,3 +351,23 @@ tn_array *booldep_leaves(const struct booldep *dep)
     collect_leaves(dep->node, re);
     return re;
 }
+
+static int has_cond(const struct node *node)
+{
+    if (node == NULL || node->type == 0)
+        return 0;
+
+    if (node->type & (OP_IF | OP_UNLESS))
+        return 1;
+
+    for (int i = 0; i < NARY_MAX && node->args[i] != NULL; i++)
+        if (has_cond(node->args[i]))
+            return 1;
+
+    return 0;
+}
+
+int booldep_is_conditional(const struct booldep *dep)
+{
+    return has_cond(dep->node);
+}

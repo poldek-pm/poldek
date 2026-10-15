@@ -341,6 +341,17 @@ testIfWithoutOrInstalled() {
     try_install "a" "a,z"
 }
 
+# the pndir index keeps the files a boolean requirement names
+testWithPathFromIndex() {
+    build a 1-1 -r "'(z with /opt/zzbool/tool)'"
+    build pz 1-1 -p z -f /opt/zzbool/tool
+    build qz 1-1 -p z
+    $POLDEK_NOCONF --st dir -s $REPO --index >/dev/null 2>&1
+
+    POLDEK_INSTALL=$(echo "$POLDEK_INSTALL" | sed 's/--st dir/--st pndir/')
+    try_install "a" "a,pz"
+}
+
 testWithNoLeftProvider() {
     # used to crash: eval_with/eval_without freed an uninitialized right
     # dvalue when the left side had no providers

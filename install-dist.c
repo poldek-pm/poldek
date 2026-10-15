@@ -265,6 +265,11 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
     if (!pkgmark_verify_package_conflicts(ts->pms) && !ignorer)
         nerr++;
 
+    /* rpm runs with --nodeps below: what the boolean requirements came
+       down to is checked against the packages actually going in */
+    if (!ts->getop(ts, POLDEK_OP_NODEPS) && !pkgmark_verify_package_boolreqs(ts->pms))
+        nerr++;
+
     if (nerr) {
         logn(LOGERR, _("Buggy package set"));
         rc = 0;
