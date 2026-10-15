@@ -484,7 +484,7 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
         usedvars = n_array_new(16, free, (tn_fn_cmp)strcmp);
 
     if (*src != varmark) {
-        n = n_snprintf(dest, size, *tl);
+        n = n_snprintf(dest, size, "%s", *tl);
         tl++;
     }
 
@@ -515,7 +515,7 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
         if (v_len + 1 > (int)sizeof(val))
             return src;
 
-        n_snprintf(val, v_len + 1, v);
+        n_snprintf(val, v_len + 1, "%s", v);
         DBGF("var %c{%s}\n", varmark, val);
 
         var = NULL;

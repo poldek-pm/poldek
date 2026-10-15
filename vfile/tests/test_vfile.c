@@ -65,4 +65,15 @@ START_TEST (test_valid_path) {
 END_TEST
 
 
-NTEST_RUNNER("vfile", test_vfile_append, test_valid_path);
+START_TEST (test_url_as_path_percent) {
+    char buf[PATH_MAX];
+
+    vf_url_as_path(buf, sizeof(buf), "http://host/my%20dir/a%20file.rpm");
+    fail_if(strcmp(buf, "http_host.my.20dir/a%20file.rpm") != 0,
+            "got '%s'", buf);
+}
+END_TEST
+
+
+NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
+             test_url_as_path_percent);

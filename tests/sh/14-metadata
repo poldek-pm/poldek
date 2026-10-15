@@ -31,5 +31,19 @@ testLoadZst()
     assertEquals "load failed" "$n" "1"
 }
 
+# the baseurl text around a $variable is used as is, '%' included
+testLoadPercentInBaseurl()
+{
+    local dir="$TMPDIR/meta"
+
+    rm -rf $dir
+    mkdir -p "$dir/repo%20dir/linux"
+    cp -r metadata/repo_02/repodata "$dir/repo%20dir/linux/" || fail "cp failed"
+    printf '[r]\nname=R\nenabled=1\nbaseurl=repo%%20dir/$baseos/\n' > $dir/r.repo
+
+    local n=$($POLDEK -s $dir/r.repo ls | grep fake_bash | wc -l)
+    assertEquals "load failed" "$n" "1"
+}
+
 
 . ./sh/lib/shunit2
