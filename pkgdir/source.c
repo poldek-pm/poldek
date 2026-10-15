@@ -155,7 +155,7 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
 
 const char *source_guess_type(const char *path)
 {
-    char *p;
+    const char *p;
     if ((p = strrchr(path, '.')) && n_str_eq(p, ".repo"))
         return "metadata";
 

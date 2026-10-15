@@ -679,7 +679,8 @@ const char *lc_messages_lang(void)
  */
 static char *cut_country_code (const char *lang)
 {
-    char *c, *p, *q, *newlang;
+    const char *c, *q;
+    char *p, *newlang;
 
     if ((q = strchr(lang, '_')) == NULL)
 	return NULL;

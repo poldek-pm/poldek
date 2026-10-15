@@ -264,11 +264,9 @@ struct pkg *pkg_new_ext(tn_alloc *na,
         }
 
         if (srcfn) { /* non default name, it's child package */
-            char *p = strstr(srcfn, ".src.rpm");
-            if (p)
-                *p = '\0';
+            const char *p = strstr(srcfn, ".src.rpm");
 
-            srcfn_len = strlen(srcfn);
+            srcfn_len = p ? p - srcfn : (int)strlen(srcfn);
             len += srcfn_len + 1;
         }
     }

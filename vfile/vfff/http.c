@@ -586,7 +586,7 @@ static int http_resp_parse(struct http_resp *resp)
     tl++;                       /* skip status line */
 
     while (is_err == 0 && *tl) {
-        char *p, *q, *nam, *val;
+        char *line, *p, *q, *nam, *val;
 
         if (*tl && **tl == '\0') {
             tl++;
@@ -596,14 +596,16 @@ static int http_resp_parse(struct http_resp *resp)
         if (*vfff_verbose > 1)
             vfff_log(">   %s\n", *tl);
 
-        if ((p = strchr(*tl, ':')) == NULL) {
+        /* the lines are this function's own copies (n_str_tokl()), cut in place */
+        line = (char *)*tl;
+        if ((p = strchr(line, ':')) == NULL) {
             is_err = 1;
             break;
         }
 
         *p++ = '\0';
 
-        nam = q = (char*)*tl;
+        nam = q = line;
         while (*q) {
             *q = tolower(*q);
             q++;

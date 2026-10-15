@@ -697,7 +697,7 @@ int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
 }
 
 static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
-                           const char *mask, const char *arch)
+                           char *mask, const char *arch)
 {
     char           *p;
     struct capreq  *cr, *cr_evr;
@@ -739,10 +739,10 @@ static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
 }
 
 static int resolve_mask(struct uninstall_ctx *uctx, struct poldek_ts *ts,
-                        const char *mask)
+                        char *mask)
 {
     char *p, *tmp;
-    const char *n, *v, *r;
+    const char *n, *v, *r, *dot;
     char nmask[256];
     int32_t e = 0;
     int matched = 0;
@@ -775,16 +775,15 @@ static int resolve_mask(struct uninstall_ctx *uctx, struct poldek_ts *ts,
         DBGF("try %s => %s (%s, %s, %s)\n", mask, nmask, n, v, r);
         matched = resolve_package(uctx, ts, nmask, NULL);
 
-        if (!matched && (p = strrchr(r, '.'))) { /* try N-[E:]-V-R.ARCH */
-            *p = '\0';
-            p++;
+        if (!matched && (dot = strrchr(r, '.'))) { /* try N-[E:]-V-R.ARCH */
+            int rlen = dot - r;
 
             if (e)
-                n_snprintf(nmask, sizeof(nmask), "%s#%d:%s-%s", n, e, v, r);
+                n_snprintf(nmask, sizeof(nmask), "%s#%d:%s-%.*s", n, e, v, rlen, r);
             else
-                n_snprintf(nmask, sizeof(nmask), "%s#%s-%s", n, v, r);
-            msgn(2, _("      Trying %s (arch=%s)\n"), nmask, p);
-            matched = resolve_package(uctx, ts, nmask, p);
+                n_snprintf(nmask, sizeof(nmask), "%s#%s-%.*s", n, v, rlen, r);
+            msgn(2, _("      Trying %s (arch=%s)\n"), nmask, dot + 1);
+            matched = resolve_package(uctx, ts, nmask, dot + 1);
         }
     }
 
