@@ -285,5 +285,18 @@ testRequiredPackagesSelfRequirer()
     assertEquals "b should require a" "$?" "0"
 }
 
+# a file shared by two packages is reported wherever the index put it
+testVerifyFileConflictsShared()
+{
+    build a -f /opt/x -f /opt/y
+    build b -f /opt/x
+    make_index
+
+    msg "# $POLDEK --verify=file-conflicts"
+    $POLDEK --verify=file-conflicts >$TMP/verify-log.log
+    n=$(grep -A1 '^Path: /opt/x$' $TMP/verify-log.log | grep ' shr ' | grep -c 'a-1-1.* b-1-1')
+    assertEquals "should report /opt/x shared by a and b" "$n" "1"
+}
+
 
 . ./sh/lib/shunit2

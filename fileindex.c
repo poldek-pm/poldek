@@ -429,6 +429,9 @@ void find_dups(const char *dirname, void *data, void *ms_)
     char path[PATH_MAX];
     struct map_struct *ms = ms_;
 
+    if (!n_array_is_sorted((tn_array *)data)) /* lazy sort, as in findfile() */
+        n_array_sort(data);
+
     prev_ent = n_array_nth(data, 0);
     from = 0;
     ms->nfiles += n_array_size(data);
