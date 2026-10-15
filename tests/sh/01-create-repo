@@ -50,6 +50,20 @@ testCreateFromDir()
     check_repo_content $TMPDIR/tmprepo
 }
 
+# the descriptions (changelogs) are saved next to the index also when the path has a '%'
+testCreateInDirWithPercent()
+{
+    local repo="$TMPDIR/re%20dpo"
+
+    rm -rf $repo
+    mkdir $repo
+    cp $REPO/*.rpm $repo || fail "cp failed"
+
+    $POLDEK_NOCONF --st dir -s $repo --index || fail "mkidx failed"
+    die_if_empty_index "$repo/packages.ndir$COMPR_EXT"
+    check_repo_content $repo
+}
+
 #  b) --st rpmdb -s /foo          =>  rpmdb -> default type
 testCreateFromRpmdb() {
     is_rpm_testing_off && return

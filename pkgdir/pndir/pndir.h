@@ -108,8 +108,8 @@ const char *pndir_db_dscr_idstr(const char *lang,
                                 const char **idstr, const char **langstr);
 
 tn_hash *pndir_db_dscr_h_new(void);
-struct tndb *pndir_db_dscr_h_dbcreat(tn_hash *db_dscr_h, const char *pathtmpl,
-                                     const char *lang);
+struct tndb *pndir_db_dscr_h_dbcreat(tn_hash *db_dscr_h, const char *idxpath,
+                                     const char *tss, const char *lang);
 int pndir_db_dscr_h_insert(tn_hash *db_dscr_h,
                            const char *lang, struct tndb *db);
 
