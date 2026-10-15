@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -73,8 +74,10 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
 
     suffix_len = strlen(suffix);
 
-    if (strlen(pathname) + suffix_len + 1 > size)
+    if (strlen(pathname) + suffix_len + 1 > size) {
+        errno = ENAMETOOLONG;
         return NULL;
+    }
 
     bn = n_basenam(pathname);
     if ((ext = strrchr(bn, '.')) == NULL || strcmp(ext + 1,
@@ -83,7 +86,8 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
 
     } else {
         int len = ext - pathname + 1;
-        n_assert(len + suffix_len + strlen(ext) + 1 < size);
+        /* len - 1 characters before the dot, suffix, ext and the '\0' */
+        n_assert(len + suffix_len + strlen(ext) <= size);
         n_strncpy(dest, pathname, len);
         strcat(dest, suffix);
 
