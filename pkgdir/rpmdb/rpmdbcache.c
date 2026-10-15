@@ -67,6 +67,15 @@ struct pkgdir_module pkgdir_module_rpmdbcache = {
     NULL,
 };
 
+/* a cache's pkgdir path is the rpm database it was made of (load_rpmdbcache()) */
+static struct pkgdb *open_rpmdb(struct pm_ctx *pmctx, const struct pkg *pkg)
+{
+    if (pkg->pkgdir == NULL)
+        return NULL;
+
+    return pkgdb_open(pmctx, "/", pkg->pkgdir->path, O_RDONLY, NULL);
+}
+
 static Header ldhdr_byrecno(const struct pkg *pkg, void *foo)
 {
     struct pm_ctx    *pmctx;
@@ -79,7 +88,7 @@ static Header ldhdr_byrecno(const struct pkg *pkg, void *foo)
     n_assert(pkg->recno > 0);
 
     pmctx = pm_new("rpm");
-    db = pkgdb_open(pmctx, "/", NULL, O_RDONLY, NULL);
+    db = open_rpmdb(pmctx, pkg);
     if (db == NULL)
         goto l_end;
 
@@ -110,7 +119,7 @@ static Header ldhdr_bynevr(const struct pkg *pkg, void *foo)
     foo = foo;
     pmctx = pm_new("rpm");
 
-    db = pkgdb_open(pmctx, "/", NULL, O_RDONLY, NULL);
+    db = open_rpmdb(pmctx, pkg);
     if (db == NULL)
         goto l_end;
 
