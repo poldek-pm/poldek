@@ -91,6 +91,24 @@ testInstallAlreadyInstalled() {
     rpm_state_check "a" ""
 }
 
+# an index made with --mo=nodesc keeps no package info: ls --qf shows (none)
+# for the summary, desc -L no changelog
+testIndexWithoutPackageInfo()
+{
+    is_rpm_testing_off && return
+
+    build a
+    $RAW_POLDEK --st dir -s $REPO --mkidx --mo=nodesc || fail "mkidx failed"
+
+    out=$($POLDEK ls --qf '%{NAME}:%{SUMMARY}\n' a)
+    assertEquals "ls --qf failed ($out)" "$?" "0"
+    echo "$out" | grep -qx 'a:(none)'
+    assertEquals "no a:(none) line ($out)" "$?" "0"
+
+    out=$($POLDEK desc -L a)
+    assertEquals "desc -L failed ($out)" "$?" "0"
+}
+
 testUpgrade()
 {
     is_rpm_testing_off && return
