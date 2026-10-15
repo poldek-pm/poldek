@@ -270,5 +270,27 @@ testClean()
 
 }
 
+# what the cache of installed packages leaves out (descriptions, file lists)
+# comes from the --root database, not from the host's
+testDescInstalledRootFromCache()
+{
+    is_rpm_testing_off && return
+
+    build_installed a -f /usr/bin/zzroot
+    # a cache made within a second of a database change counts as stale;
+    # back-date the database so the cache made below counts as current
+    $SUDO touch -d '-1 hour' $DESTINATION_REPO$($RPM --eval %_dbpath)/* || fail "back-dating the rpm database failed"
+
+    for src in rpmdb rpmdbcache; do
+        out=$($RAW_POLDEK --root $DESTINATION_REPO desc -d -f a)
+        echo "$out" | grep -q "^Loading \[$src\]"
+        assertEquals "installed packages not loaded from $src" "$?" "0"
+        echo "$out" | grep -qE '^Summary: +a$'
+        assertEquals "$src: no summary of a ($out)" "$?" "0"
+        echo "$out" | grep -qE '^/usr/bin: +zzroot$'
+        assertEquals "$src: no files of a ($out)" "$?" "0"
+    done
+}
+
 
 . ./sh/lib/shunit2

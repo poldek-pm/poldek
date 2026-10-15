@@ -142,7 +142,7 @@ struct pkgdir *load_rpmdbcache(const char *cachedir,
         if (lc_lang == NULL)
             lc_lang = "C";
 
-        dir = pkgdir_open_ext(path, NULL, RPMDBCACHE_PDIRTYPE, dbpath,
+        dir = pkgdir_open_ext(path, rpmdb_path, RPMDBCACHE_PDIRTYPE, dbpath,
                               NULL, 0, lc_lang);
 
         if (dir) {
