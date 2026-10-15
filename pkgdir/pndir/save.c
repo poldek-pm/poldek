@@ -94,6 +94,20 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
     return dest;
 }
 
+/* tss: timestamp of a diff index or "" */
+char *pndir_dscr_pathname(char *dest, size_t size, const char *idxpath,
+                          const char *lang, const char *tss)
+{
+    char suffix[128];
+    const char *idstr, *langid;
+
+    pndir_db_dscr_idstr(lang, &idstr, &langid);
+    n_snprintf(suffix, sizeof(suffix), "%s%s%s%s%s", pndir_desc_suffix,
+               *langid ? "." : "", langid, *tss ? "." : "", tss);
+
+    return pndir_mkidx_pathname(dest, size, idxpath, suffix);
+}
+
 static
 int fheader(char *hdr, size_t size, const char *name, struct pkgdir *pkgdir)
 {

@@ -61,6 +61,9 @@ void pndir_init(struct pndir *idx);
 char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
                            const char *suffix);
 
+char *pndir_dscr_pathname(char *dest, size_t size, const char *idxpath,
+                          const char *lang, const char *tss);
+
 int pndir_tsstr(char *tss, int size, time_t ts);
 
 
