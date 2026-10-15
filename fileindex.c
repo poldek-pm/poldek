@@ -861,8 +861,7 @@ int file_index_report_semiorphans(struct pkgset *ps, tn_array *pkgs)
                                 k < mreq->ncandidates - 1 ? "/" : "");
 
             if (mreq->ncandidates > 3)
-                n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
-                                "...", mreq->ncandidates - 3);
+                n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n, "...");
 
             /* hide same suggestions (different paths but same suggested Requires:) */
             if (!n_hash_exists(printed, pkgstr)) {

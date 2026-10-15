@@ -352,7 +352,7 @@ char *prepare_pld_changelog(tn_alloc *na, const char *changelog)
             int n;
 
             if (ent != NULL) {
-                n_snprintf(ent->message, max_MESSAGE, "%s", n_buf_ptr(logmsg));
+                n_snprintf(ent->message, max_MESSAGE, "%s", (char*)n_buf_ptr(logmsg));
                 n_buf_clean(logmsg);
                 n_array_push(entries, ent);
                 ent = NULL;
@@ -391,7 +391,7 @@ char *prepare_pld_changelog(tn_alloc *na, const char *changelog)
     }
 
     if (ent != NULL) {
-        n_snprintf(ent->message, max_MESSAGE, "%s", n_buf_ptr(logmsg));
+        n_snprintf(ent->message, max_MESSAGE, "%s", (char*)n_buf_ptr(logmsg));
         n_array_push(entries, ent);
     }
 
@@ -429,7 +429,7 @@ static tn_array *parse_changelog(tn_alloc *na, tn_array *lines)
             char *ts;
 
             if (ent != NULL) {
-                n_snprintf(ent->message, max_MESSAGE, "%s", n_buf_ptr(logmsg));
+                n_snprintf(ent->message, max_MESSAGE, "%s", (char*)n_buf_ptr(logmsg));
                 n_buf_clean(logmsg);
                 n_array_push(entries, ent);
                 ent = NULL;
@@ -462,7 +462,7 @@ static tn_array *parse_changelog(tn_alloc *na, tn_array *lines)
     }
 
     if (ent != NULL) {
-        n_snprintf(ent->message, max_MESSAGE, "%s", n_buf_ptr(logmsg));
+        n_snprintf(ent->message, max_MESSAGE, "%s", (char*)n_buf_ptr(logmsg));
         n_array_push(entries, ent);
     }
     n_buf_free(logmsg);

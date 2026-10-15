@@ -83,7 +83,7 @@ int poclidek_op_ctx_verify_major_mode(struct poclidek_op_ctx *opctx)
             sp = _(" and ");
 
         n += n_snprintf(&tmp[n], sizeof(tmp) - n, "'--%s'%s",
-                        n_hash_get(opctx->modeh, n_array_nth(majormodes, i)),
+                        (char*)n_hash_get(opctx->modeh, n_array_nth(majormodes, i)),
                         i < n_array_size(majormodes) - 1 ? sp : "");
     }
 

@@ -922,8 +922,8 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
     n_assert(rreq->out_fd > 0);
 
     if ((lseek(rreq->out_fd, rreq->out_fdoff, SEEK_SET)) == (off_t)-1) {
-        vfff_set_err(errno, "%s[%d]: lseek %ld: %m", n_basenam(rreq->uri),
-                     rreq->out_fd, rreq->out_fdoff);
+        vfff_set_err(errno, "%s[%d]: lseek %lld: %m", n_basenam(rreq->uri),
+                     rreq->out_fd, (long long)rreq->out_fdoff);
         goto l_err_end;
     }
 
@@ -939,7 +939,7 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
     make_req_line(req_line, sizeof(req_line), "GET", rreq->uri);
 
     if (rreq->out_fdoff > 0)
-        httpcn_req(cn, req_line, "Range: bytes=%ld-\r\n", rreq->out_fdoff);
+        httpcn_req(cn, req_line, "Range: bytes=%lld-\r\n", (long long)rreq->out_fdoff);
     else
         httpcn_req(cn, req_line, NULL);
 
