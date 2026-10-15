@@ -196,7 +196,7 @@ static int psreq_match_pkgs(const struct pkg *pkg, const struct capreq *req,
         msg(4, "_%s, ", pkg_id(spkg));
         nmatch++;
 
-        if (pkg && spkg != pkg) { /* do not add itself (pkg may be NULL) */
+        if (pkg == NULL || spkg != pkg) { /* do not add itself (pkg may be NULL) */
             matches[n++] = spkg;
 
         } else {
