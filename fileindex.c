@@ -393,7 +393,8 @@ void find_dups(const char *dirname, void *data, void *ms_)
         }
 
         if (i - from > 1) {
-            snprintf(path, sizeof(path), "%s/%s", dirname,
+            /* directories are indexed as "usr/bin", the root one as "/" */
+            snprintf(path, sizeof(path), "%s/%s", *dirname == '/' ? "" : dirname,
                      first->flfile->basename);
             verify_dups(from, i, path, data, ms);
         }
