@@ -329,7 +329,9 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     unsigned   i, j;
     int        ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
     const char *errmsg_notag = _("%s: no %s tag");
-    struct rpmtd_s names, dirs, diridxs, modes, sizes, symlinks;
+    /* empty until read, so that each early exit can free them all */
+    struct rpmtd_s names = {}, dirs = {}, diridxs = {};
+    struct rpmtd_s modes = {}, sizes = {}, symlinks = {};
 
     (void)missing_file_hdrs_err; /* disable -Wunused-but-set-variable */
 
