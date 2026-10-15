@@ -424,36 +424,29 @@ void verify_dups(int from, int to, const char *path, tn_array *fents,
 static
 void find_dups(const char *dirname, void *data, void *ms_)
 {
-    struct file_ent *prev_ent, *ent;
-    int i, ii, from;
+    struct file_ent *first, *ent;
+    int i, from = 0, n = n_array_size(data);
     char path[PATH_MAX];
     struct map_struct *ms = ms_;
 
     if (!n_array_is_sorted((tn_array *)data)) /* lazy sort, as in findfile() */
         n_array_sort(data);
 
-    prev_ent = n_array_nth(data, 0);
-    from = 0;
-    ms->nfiles += n_array_size(data);
-    for (i=1; i < n_array_size(data); i++) {
-        ent = n_array_nth(data, i);
-        ii = i;
-        while (strcmp(prev_ent->flfile->basename, ent->flfile->basename) == 0) {
-            if (ii + 1 == n_array_size(data))
-                break;
-            ii++;
-            ent = n_array_nth(data, ii);
+    ms->nfiles += n;
+    for (i = 1; i <= n; i++) {  /* entries from..i-1 have the same name */
+        first = n_array_nth(data, from);
+        if (i < n) {
+            ent = n_array_nth(data, i);
+            if (strcmp(first->flfile->basename, ent->flfile->basename) == 0)
+                continue;
         }
 
-        if (ii != i) {
+        if (i - from > 1) {
             snprintf(path, sizeof(path), "%s/%s", dirname,
-                     prev_ent->flfile->basename);
-            verify_dups(from, ii, path, data, ms);
+                     first->flfile->basename);
+            verify_dups(from, i, path, data, ms);
         }
-
-        prev_ent = ent;
-        from = ii;
-        i = ii;
+        from = i;
     }
 }
 

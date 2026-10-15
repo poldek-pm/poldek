@@ -298,5 +298,19 @@ testVerifyFileConflictsShared()
     assertEquals "should report /opt/x shared by a and b" "$n" "1"
 }
 
+# each pair is reported, also for the last name of a directory
+testVerifyFileConflictsSharedByThree()
+{
+    build a -f /opt/x
+    build b -f /opt/x
+    build c -f /opt/x
+    make_index
+
+    msg "# $POLDEK --verify=file-conflicts"
+    $POLDEK --verify=file-conflicts >$TMP/verify-log.log
+    n=$(sed -n '/^Path: \/opt\/x$/,/^$/p' $TMP/verify-log.log | grep -c ' shr ')
+    assertEquals "should report 3 pairs sharing /opt/x" "$n" "3"
+}
+
 
 . ./sh/lib/shunit2
