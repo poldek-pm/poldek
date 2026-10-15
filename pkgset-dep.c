@@ -407,6 +407,21 @@ tn_array *pkgset_get_conflicted_packages(int indent, struct pkgset *ps, const st
 }
 
 
+/* Does a capability of pkg satisfy one of spkg's requirements of capname? */
+static bool satisfies_req_of(const struct pkg *pkg, const struct pkg *spkg,
+                             const char *capname)
+{
+    for (int i = 0; spkg->reqs && i < n_array_size(spkg->reqs); i++) {
+        const struct capreq *req = n_array_nth(spkg->reqs, i);
+
+        if (strcmp(capreq_name(req), capname) == 0 &&
+            pkg_match_req(pkg, req, 1 /* strict */))
+            return true;
+    }
+
+    return false;
+}
+
 static
 tn_array *get_reqby(int indent, struct pkgset *ps,
                     const struct pkg *pkg, struct capreq *cap, tn_array *re)
@@ -425,9 +440,8 @@ tn_array *get_reqby(int indent, struct pkgset *ps,
             struct pkg *spkg = suspkgs[i];
             msg_i(4, indent, "sus %s->%s", pkg_id(pkg), pkg_id(spkg));
 
-            if (capreq_has_ver(cap))  /* check version */
-                if (!pkg_match_req(pkg, cap, 1 /* strict */))
-                    continue;
+            if (!satisfies_req_of(pkg, spkg, capname))
+                continue;
 
             /* do not require myself */
             if (spkg == pkg)
