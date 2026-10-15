@@ -312,5 +312,25 @@ testVerifyFileConflictsSharedByThree()
     assertEquals "should report 3 pairs sharing /opt/x" "$n" "3"
 }
 
+# with packages given, only files shared between them are reported
+testVerifyFileConflictsGivenPackages()
+{
+    build a -f /opt/x
+    build b -f /opt/x
+    make_index
+
+    for p in a b; do
+        msg "# $POLDEK --verify=file-conflicts $p"
+        $POLDEK --verify=file-conflicts $p >$TMP/verify-log.log
+        n=$(grep -c '^Path: /opt/x$' $TMP/verify-log.log)
+        assertEquals "$p alone should not report /opt/x" "$n" "0"
+    done
+
+    msg "# $POLDEK --verify=file-conflicts a b"
+    $POLDEK --verify=file-conflicts a b >$TMP/verify-log.log
+    n=$(grep -c '^Path: /opt/x$' $TMP/verify-log.log)
+    assertEquals "a and b should report /opt/x" "$n" "1"
+}
+
 
 . ./sh/lib/shunit2

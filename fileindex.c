@@ -527,7 +527,7 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
             struct file_conflict *cnfl = n_array_nth(conflicts, j);
             if (pkgs) {
                 if (!n_array_bsearch(pkgs, cnfl->e1.pkg) ||
-                    !n_array_bsearch(pkgs, cnfl->e1.pkg))
+                    !n_array_bsearch(pkgs, cnfl->e2.pkg))
                     continue;
             }
             if (pathprinted == 0) {
