@@ -524,3 +524,116 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
 
     return pkgs;
 }
+
+/* the member of ps with dbpkg's name, evr and arch, NULL if none */
+static struct pkg *find_member(struct pkgset *ps, const struct pkg *dbpkg)
+{
+    const char *arch = pkg_arch(dbpkg);
+    struct pkg tmpkg;
+    int i;
+
+    tmpkg.name = dbpkg->name;
+    n_array_sort(ps->pkgs);
+    i = n_array_bsearch_idx_ex(ps->pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
+    if (i < 0)
+        return NULL;
+
+    while (i > 0 && pkg_cmp_name(n_array_nth(ps->pkgs, i - 1), &tmpkg) == 0)
+        i--;
+
+    for (; i < n_array_size(ps->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ps->pkgs, i);
+        const char *a = pkg_arch(pkg);
+
+        if (pkg_cmp_name(pkg, &tmpkg) != 0)
+            break;
+
+        if (pkg_cmp_evr(pkg, dbpkg) == 0 && n_str_eq(a ? a : "", arch ? arch : ""))
+            return pkg;
+    }
+
+    return NULL;
+}
+
+static void index_path(struct file_index *fi, const char *path, struct pkg *pkg)
+{
+    char *p, *dirname, *basename;
+
+    /* the index keeps key pointers: the names live in its allocator */
+    p = fi->na->na_malloc(fi->na, strlen(path) + 1);
+    strcpy(p, *path == '/' ? path + 1 : path);
+
+    n_basedirnam(p, &dirname, &basename);
+    if (dirname == NULL || *dirname == '\0')
+        dirname = "/";
+
+    file_index_add_basename(fi, file_index_add_dirname(fi, dirname),
+                            flfile_new(fi->na, 0, 0, basename, strlen(basename),
+                                       NULL, 0),
+                            pkg);
+}
+
+static int index_db_path_owners(struct pkgset *ps, struct pkgdb *db,
+                                const char *path)
+{
+    struct pkg *known[1024];    /* as many as psreq_lookup() takes */
+    tn_array *dbpkgs = NULL;
+    int nknown, n = 0;
+
+    if (pkgdb_search(db, &dbpkgs, PMTAG_FILE, path, NULL, PKG_LDNEVR) == 0) {
+        n_array_cfree(&dbpkgs);
+        return 0;
+    }
+
+    nknown = file_index_lookup(ps->file_idx, path, 0, known,
+                               sizeof(known) / sizeof(*known));
+    for (int i = 0; i < n_array_size(dbpkgs); i++) {
+        struct pkg *pkg = find_member(ps, n_array_nth(dbpkgs, i));
+        int j;
+
+        if (pkg == NULL)
+            continue;
+
+        for (j = 0; j < nknown; j++)
+            if (known[j] == pkg)
+                break;
+
+        if (j == nknown) {
+            index_path(ps->file_idx, path, pkg);
+            n++;
+        }
+    }
+    n_array_free(dbpkgs);
+
+    return n;
+}
+
+int pkgset_index_db_path_owners(struct pkgset *ps, struct pkgdb *db,
+                                const tn_array *pkgs)
+{
+    tn_array *paths = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
+    int n = 0;
+
+    for (int i = 0; i < n_array_size(pkgs); i++) {
+        const struct pkg *pkg = n_array_nth(pkgs, i);
+
+        if (pkg->reqs == NULL)
+            continue;
+
+        for (int j = 0; j < n_array_size(pkg->reqs); j++) {
+            const struct capreq *req = n_array_nth(pkg->reqs, j);
+
+            if (capreq_is_file(req))
+                n_array_push(paths, (char *)capreq_name(req));
+        }
+    }
+    n_array_sort(paths);
+    n_array_uniq(paths);
+
+    pkgset__index_caps(ps);
+    for (int i = 0; i < n_array_size(paths); i++)
+        n += index_db_path_owners(ps, db, n_array_nth(paths, i));
+
+    n_array_free(paths);
+    return n;
+}

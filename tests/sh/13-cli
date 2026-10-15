@@ -136,6 +136,73 @@ testUninstall()
     rpm_state_check "b" "a,a-libs"
 }
 
+# without repositories desc runs in /installed: -R and -B look among the
+# installed packages
+testDescInstalled()
+{
+    is_rpm_testing_off && return
+
+    build_installed b
+    build_installed a -r b
+    build_installed c -r a
+
+    msg $RAW_POLDEK --root $DESTINATION_REPO desc -R -B a
+    out=$($RAW_POLDEK --root $DESTINATION_REPO desc -R -B a)
+    assertEquals "desc failed" "$?" "0"
+    echo "$out" | grep -qE '^Required\(pkgs\): +sh, b$'
+    assertEquals "a should require b" "$?" "0"
+    echo "$out" | grep -qE '^Required\(by\): +c$'
+    assertEquals "a should be required by c" "$?" "0"
+}
+
+# -R finds the owners of a required file and directory also when the
+# installed packages come from the cache
+testDescInstalledPathsFromCache()
+{
+    is_rpm_testing_off && return
+
+    build_installed f -f /usr/bin/zzf
+    build_installed d -fd /usr/share/zzd/sub
+    build_installed a -r /usr/bin/zzf -r /usr/share/zzd/sub
+    # older than the cache made below, which then counts as current
+    touch -d '-1 hour' $DESTINATION_REPO$($RPM --eval %_dbpath)/*
+
+    for src in rpmdb rpmdbcache; do
+        out=$($RAW_POLDEK --root $DESTINATION_REPO desc -R a)
+        echo "$out" | grep -q "^Loading \[$src\]"
+        assertEquals "installed packages not loaded from $src" "$?" "0"
+
+        req=$(echo "$out" | grep '^Required(pkgs):')
+        for p in d f; do
+            echo "$req" | grep -qE "[ ,]$p(,|$)"
+            assertEquals "$src: a should require $p ($req)" "$?" "0"
+        done
+    done
+}
+
+# and right after an install in the shell, with the installed packages
+# read from the cache before it
+testDescInstalledAfterInstall()
+{
+    is_rpm_testing_off && return
+
+    build_installed f -f /opt/zzf/tool
+    build a -r /opt/zzf/tool
+    index
+    touch -d '-1 hour' $DESTINATION_REPO$($RPM --eval %_dbpath)/*
+    $RAW_POLDEK --root $DESTINATION_REPO --cmd ls >/dev/null  # makes the cache
+
+    out=$(printf 'cd /installed\nls\ncd /all-avail\ninstall --justdb a\ncd /installed\ndesc -R a\nquit\n' |
+          timeout 60 script -qec "$POLDEK --noask --shell" /dev/null |
+          tr -d '\r' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')
+    echo "$out" | grep -q "Loading \[rpmdbcache\]"
+    assertEquals "installed packages not loaded from the cache" "$?" "0"
+
+    req=$(echo "$out" | grep 'Required(pkgs):')
+    echo "$req" | grep -qE "[ ,]f(,|$)"
+    assertEquals "a should require f ($req)" "$?" "0"
+}
+
 testClean()
 {
     is_rpm_testing_off && return

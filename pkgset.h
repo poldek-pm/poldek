@@ -19,6 +19,10 @@
 
 #include "capreqidx.h"
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 struct file_index;
 struct pkgdir;
 
@@ -44,8 +48,8 @@ struct pkgset {
 };
 
 struct pm_ctx;
-struct pkgset *pkgset_new(struct pm_ctx *ctx);
-void pkgset_free(struct pkgset *ps);
+EXPORT struct pkgset *pkgset_new(struct pm_ctx *ctx);
+EXPORT void pkgset_free(struct pkgset *ps);
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
@@ -83,8 +87,14 @@ struct pkg_unreq {
 
 tn_array *pkgset_get_conflicted_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
 tn_array *pkgset_get_required_packages_x(int indent, struct pkgset *ps, const struct pkg *pkg, tn_hash **unreqh);
-tn_array *pkgset_get_required_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
-tn_array *pkgset_get_requiredby_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
+EXPORT tn_array *pkgset_get_required_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
+EXPORT tn_array *pkgset_get_requiredby_packages(int indent, struct pkgset *ps, const struct pkg *pkg);
+
+/* a set of installed packages may have partial file lists (the rpmdb
+   cache keeps none): index the owners db knows of the paths pkgs require */
+struct pkgdb;
+EXPORT int pkgset_index_db_path_owners(struct pkgset *ps, struct pkgdb *db,
+                                       const tn_array *pkgs);
 
 /* pkgset-order.c */
 #define PKGORDER_INSTALL     1

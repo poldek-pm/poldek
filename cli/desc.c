@@ -515,12 +515,32 @@ static void show_reqdirs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 }
 
 
+struct desc_ctx {
+    struct pkgset *installed;
+};
+
+static tn_array *desc_get_required_packages(struct cmdctx *cmdctx, struct pkg *pkg)
+{
+    struct desc_ctx *dctx = cmdctx->_data;
+    if (dctx && dctx->installed)
+        return pkgset_get_required_packages(0, dctx->installed, pkg);
+    return poldek_ts_get_required_packages(cmdctx->ts, pkg);
+}
+
+static tn_array *desc_get_requiredby_packages(struct cmdctx *cmdctx, struct pkg *pkg)
+{
+    struct desc_ctx *dctx = cmdctx->_data;
+    if (dctx && dctx->installed)
+        return pkgset_get_requiredby_packages(0, dctx->installed, pkg);
+    return poldek_ts_get_requiredby_packages(cmdctx->ts, pkg);
+}
+
 static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
     char *colon = ", ";
     int i, ncol = IDENT;
 
-    tn_array *reqpkgs = poldek_ts_get_required_packages(cmdctx->ts, pkg);
+    tn_array *reqpkgs = desc_get_required_packages(cmdctx, pkg);
     if (reqpkgs == NULL)
         return;
 
@@ -567,7 +587,7 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 static
 void show_revreqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
-    tn_array *revreqpkgs = poldek_ts_get_requiredby_packages(cmdctx->ts, pkg);
+    tn_array *revreqpkgs = desc_get_requiredby_packages(cmdctx, pkg);
 
     if (revreqpkgs == NULL)
         return;
@@ -865,7 +885,8 @@ static void show_changelog(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguin
     }
 }
 
-static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int term_width)
+static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg,
+                     unsigned flags, int term_width)
 {
 
     if (flags & OPT_DESC_CAPS)
@@ -892,8 +913,8 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int
 
 
 
-static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguinf *pkgu,
-                             unsigned flags, int term_width)
+static void show_description(struct cmdctx *cmdctx, struct pkg *pkg,
+                             struct pkguinf *pkgu, unsigned flags, int term_width)
 {
     char            fnbuf[PATH_MAX];
     char            unit = 'K';
@@ -1028,9 +1049,35 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkgu
     }
 }
 
+/* -R and -B of installed packages look among the installed ones; for -R of
+   pkgs the rpm database names the owners of required paths, as the file
+   lists loaded with installed packages are partial */
+static struct pkgset *installed_pkgset(struct poclidek_ctx *cctx,
+                                       const tn_array *pkgs, int reqpkgs)
+{
+    struct poldek_ctx *ctx = cctx->ctx;
+    struct pkgset *ps = pkgset_new(poldek_get_pmctx(ctx));
+
+    n_assert(cctx->pkgs_installed);
+    n_array_concat_ex(ps->pkgs, cctx->pkgs_installed, (tn_fn_dup)pkg_link);
+
+    if (reqpkgs) {
+        struct pkgdb *db = pkgdb_open(ctx->pmctx, ctx->ts->rootdir, NULL,
+                                      O_RDONLY, NULL);
+        if (db) {
+            pkgset_index_db_path_owners(ps, db, pkgs);
+            pkgdb_free(db);
+        }
+    }
+
+    return ps;
+}
+
 static int desc(struct cmdctx *cmdctx)
 {
     tn_array               *pkgs = NULL;
+    struct pkgset          *installed = NULL;
+    struct desc_ctx        dctx = { NULL };
     int                    i, err = 0, term_width;
     const char             *pwd;
 
@@ -1044,6 +1091,14 @@ static int desc(struct cmdctx *cmdctx)
 
     if (cmdctx->_flags == 0)
         cmdctx->_flags = OPT_DESC_DESCR;
+
+    if ((cmdctx->_flags & (OPT_DESC_REQPKGS | OPT_DESC_REVREQPKGS)) &&
+        pwd && strcmp(pwd, POCLIDEK_INSTALLEDDIR) == 0)
+        installed = installed_pkgset(cmdctx->cctx, pkgs,
+                                     cmdctx->_flags & OPT_DESC_REQPKGS);
+
+    dctx.installed = installed;
+    cmdctx->_data = &dctx;
 
     term_width = poldek_term_get_width() - RMARGIN;
     if (cmdctx->pipe_right)
@@ -1093,6 +1148,11 @@ static int desc(struct cmdctx *cmdctx)
     }
 
  l_end:
+
+    cmdctx->_data = NULL;
+
+    if (installed)
+        pkgset_free(installed);
 
     n_array_cfree(&pkgs);
 
