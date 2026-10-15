@@ -31,4 +31,20 @@ START_TEST (test_goodbye_cb) {
 }
 END_TEST
 
-NTEST_RUNNER("log", test_goodbye_cb);
+/* the arguments of the die message are formatted into it */
+START_TEST (test_goodbye_cb_args) {
+    struct poldek_ctx *ctx;
+
+    poldeklib_init();
+    ctx = poldek_new(0);
+    fail_unless(poldek_configure(ctx, POLDEK_CONF_GOODBYE_CB, keep_going),
+                "poldek_configure() failed");
+
+    logn(LOGERR | LOGDIE, "%s: %d packages are equal to me", "repo", 42);
+    fail_unless(strstr(goodbye_msg, "repo: 42 packages are equal to me") != NULL,
+                "got '%s'", goodbye_msg);
+    poldek_free(ctx);
+}
+END_TEST
+
+NTEST_RUNNER("log", test_goodbye_cb, test_goodbye_cb_args);

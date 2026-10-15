@@ -178,6 +178,7 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
 
     char buf[1024], tmp_fmt[1024];
     int  buf_len = 0, fmt_len = 0, flags, is_continuation = 0, is_endlined = 0;
+    va_list die_args;
 
     if (pri & LOGERR) {
         last_err_distance = 0;
@@ -258,14 +259,16 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     if (is_continuation)
         pri |= LOGOPT_CONT;
 
+    va_copy(die_args, args);    /* do_log() uses up args */
     do_log(flags, pri, fmt, args);
 
     if (pri & LOGDIE) {
         char msg[1024];
-        n_snprintf(msg, sizeof(msg), fmt, args);
+        n_vsnprintf(msg, sizeof(msg), fmt, die_args);
         if (poldek_log_say_goodbye(msg))
             abort();
     }
+    va_end(die_args);
 }
 
 
