@@ -750,7 +750,7 @@ const char *vf_url_hidepasswd(char *buf, int size, const char *url)
 {
     const char *u, *at, *q = NULL;
     char *p;
-    int i;
+    int i, hostlen;
 
 
     *buf = '\0';
@@ -759,14 +759,16 @@ const char *vf_url_hidepasswd(char *buf, int size, const char *url)
         return url;
 
     u += 3;
+    /* login:password@host[:port], split as vf_parse_url() does */
+    hostlen = strcspn(u, "/");
 
-    if ((at = strrchr(u, '@')) != NULL && (q = strchr(u, ':')) != NULL && q < at) {
+    if ((at = memrchr(u, '@', hostlen)) != NULL &&
+        (q = memchr(u, ':', at - u)) != NULL) {
         i = q - url;
         strncpy(buf, url, size)[size - 1] = '\0';
         n_assert(buf[i] == ':');
-        p = &buf[i + 1];
-        while (*p && *p != '@')
-            *p++ = 'x';
+        for (p = &buf[i + 1]; *p && p < &buf[at - url]; p++)
+            *p = 'x';
 
         url = buf;
     }

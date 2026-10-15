@@ -75,5 +75,24 @@ START_TEST (test_url_as_path_percent) {
 END_TEST
 
 
+/* only the password of login:password@host is masked, as vf_parse_url() splits it */
+START_TEST (test_url_hidepasswd) {
+    const char *urls[][2] = {
+        { "ftp://user:secret@host/dir/", "ftp://user:xxxxxx@host/dir/" },
+        { "ftp://user:p@ss@host/dir/", "ftp://user:xxxx@host/dir/" },
+        { "http://host:8080/r1@x/", "http://host:8080/r1@x/" },
+        { "http://host/a:b@c/", "http://host/a:b@c/" },
+    };
+    char buf[256];
+    unsigned i;
+
+    for (i = 0; i < sizeof(urls) / sizeof(urls[0]); i++) {
+        const char *url = vf_url_hidepasswd(buf, sizeof(buf), urls[i][0]);
+        fail_if(strcmp(url, urls[i][1]) != 0, "%s: got '%s'", urls[i][0], url);
+    }
+}
+END_TEST
+
+
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
-             test_url_as_path_percent);
+             test_url_as_path_percent, test_url_hidepasswd);
