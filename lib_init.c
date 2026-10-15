@@ -1303,7 +1303,8 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                 poldek_say_goodbye = vv;
                 poldek_log_say_goodbye = vv;
             }
-            /* fallthru */ /* FIXME */
+            break;
+
         default:
             rc = poldek_ts_vconfigure(ctx->ts, param, ap);
             break;
