@@ -280,26 +280,30 @@ static int hget(rpmtd td, Header h, int32_t tag) {
     return headerGet(h, tag, td, HEADERGET_MINMEM);
 }
 
-static uint16_t *uint16_at(rpmtd td, int index)
+/* 0 if the tag is not in the header; the callers take a missing tag as empty */
+static int td_at(rpmtd td, int index)
 {
+    if (td->count == 0)
+        return 0;
+
     int i = rpmtdSetIndex(td, index);
     n_assert(i >= 0);            /* ret -1 on error */
-    return rpmtdGetUint16(td);
+    return 1;
+}
+
+static uint16_t *uint16_at(rpmtd td, int index)
+{
+    return td_at(td, index) ? rpmtdGetUint16(td) : NULL;
 }
 
 static uint32_t *uint32_at(rpmtd td, int index)
 {
-    int i = rpmtdSetIndex(td, index);
-    n_assert(i >= 0);            /* ret -1 on error */
-    return rpmtdGetUint32(td);
+    return td_at(td, index) ? rpmtdGetUint32(td) : NULL;
 }
 
 static const char *str_at(rpmtd td, int index)
 {
-    int i = rpmtdSetIndex(td, index);
-    //printf("str_at %d is %d", index, i);
-    n_assert(i >= 0);            /* ret -1 on error */
-    return rpmtdGetString(td);
+    return td_at(td, index) ? rpmtdGetString(td) : NULL;
 }
 
 /* -1 on error  */
