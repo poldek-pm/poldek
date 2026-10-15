@@ -90,6 +90,9 @@ struct pm_module {
                                    const char *dbpath, unsigned pkgdir_ldflags,
                                    tn_hash *kw);
     int (*machine_score)(void *modh, int tag, const char *val);
+
+    /* adds to names the keys of the requirement index, 0 if it can't */
+    int (*db_reqnames)(void *dbh, tn_hash *names);
 };
 
 int pm_module_register(const struct pm_module *mod);

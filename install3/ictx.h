@@ -103,6 +103,9 @@ struct i3ctx {
 
     tn_hash           *multi_obsoleted; /* pkg_id => real obsoleted packages (muli-instances upgrade) */
 
+    tn_hash           *reqnames;    /* keys of the rpmdb requirement index */
+    int                reqnames_loaded;
+
     unsigned           ma_flags;    /* match flags (POLDEK_MA_*) */
     int                abort;       /* abort processing? */
     int                cancelled;   /* the user answered Q, skip the remaining sets too */
@@ -153,6 +156,10 @@ int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
 int i3_select_best_pkg(int indent, struct i3ctx *ictx,
                        const struct pkg *marker, tn_array *candidates);
 
+/* the depsolver's pick among pkgs, the packages meeting a requirement of pkg */
+int i3_pick_pkg(int indent, struct i3ctx *ictx, const struct pkg *pkg,
+                tn_array *pkgs, struct pkg **best_pkg);
+
 int i3_find_req(int indent, struct i3ctx *ictx,
                  const struct pkg *pkg, const struct capreq *req,
                  struct pkg **best_pkg, tn_array *candidates);
@@ -183,6 +190,17 @@ void i3_req_iter_destroy(struct i3_req_iter *it);
 
 const struct i3req *i3_req_iter_get(struct i3_req_iter *it);
 
+/* Does boolean req of installed pkg hold after the transaction, met by the
+   packages that stay or come in, or by rpm itself? Yes if it can't be told. */
+int i3_boolreq_holds(int indent, struct i3ctx *ictx, struct pkg *pkg,
+                     const struct capreq *req);
+
+/* The parts boolean req of installed pkg comes down to that no package staying
+   or coming in meets, each the packages the depsolver would install for it;
+   NULL if a part can't be met */
+tn_array *i3_boolreq_unmet(int indent, struct i3ctx *ictx, struct pkg *pkg,
+                           const struct capreq *req);
+
 /* conflicts.c */
 int i3_resolve_conflict(int indent, struct i3ctx *ictx,
                         struct pkg *pkg, const struct capreq *cnfl,
@@ -203,6 +221,9 @@ struct orphan {
 
 int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
                              struct i3pkg *i3pkg);
+
+int i3_process_pkg_cond_orphans(int indent, struct i3ctx *ictx,
+                                struct i3pkg *i3pkg);
 
 int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
                                 struct i3pkg *i3pkg);

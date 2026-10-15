@@ -352,6 +352,35 @@ tn_array *booldep_leaves(const struct booldep *dep)
     return re;
 }
 
+/* as rpmdb's updateRichDepCB(): an if/unless condition flips the sign, an
+   else gives the whole condition both */
+static void collect_neg_leaves(const struct node *node, int neg, int both,
+                               tn_array *re)
+{
+    if (node == NULL)
+        return;
+
+    if (node->type == 0) {          /* identifier */
+        if ((neg || both) && node->cap)
+            n_array_push(re, capreq_clone(NULL, node->cap));
+        return;
+    }
+
+    for (int i = 0; i < NARY_MAX && node->args[i] != NULL; i++) {
+        if (i == 1 && (node->type & (OP_IF | OP_UNLESS)))
+            collect_neg_leaves(node->args[i], !neg, both || node->args[2] != NULL, re);
+        else
+            collect_neg_leaves(node->args[i], neg, both, re);
+    }
+}
+
+tn_array *booldep_neg_leaves(const struct booldep *dep)
+{
+    tn_array *re = capreq_arr_new(4);
+    collect_neg_leaves(dep->node, 0, 0, re);
+    return re;
+}
+
 static int has_cond(const struct node *node)
 {
     if (node == NULL || node->type == 0)

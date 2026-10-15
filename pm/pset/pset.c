@@ -373,6 +373,14 @@ void pm_pset_db_it_destroy(struct pkgdb_it *it)
 }
 
 
+int pm_pset_db_reqnames(void *dbh, tn_hash *names)
+{
+    struct pm_psetdb *db = dbh;
+
+    pkgset_reqnames(db->ps, names);
+    return 1;
+}
+
 int pm_pset_db_it_init(struct pkgdb_it *it, int tag, const char *arg)
 {
     struct psetdb_it *psit;

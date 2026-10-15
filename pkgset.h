@@ -57,6 +57,9 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
 int pkgset__index_caps(struct pkgset *ps);
 int pkgset__index_reqs(struct pkgset *ps);
 
+/* adds to names the names the requirements of ps are indexed under */
+void pkgset_reqnames(struct pkgset *ps, tn_hash *names);
+
 
 // pkgset-req.c
 #define REQPKG_PREREQ     (1 << 0)
@@ -86,6 +89,11 @@ tn_array *pkgset_find_providers(struct pkgset *ps, const struct capreq *req,
 
 /* can a package own path while its loaded file list does not show it? */
 int pkgset_path_unlisted(const struct pkgset *ps, const char *path);
+
+/* does a boolean dependency name such a path? */
+struct booldep;
+int pkgset_booldep_path_unlisted(const struct pkgset *ps,
+                                 const struct booldep *dep);
 
 struct pkg_unreq {
     bool          mismatch;

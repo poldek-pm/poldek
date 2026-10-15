@@ -521,12 +521,55 @@ static inline int any_is_marked(struct i3ctx *ictx, tn_array *pkgs)
     return 0;
 }
 
+/* The depsolver's pick among pkgs, the packages meeting a requirement of
+   pkg: 1 with *best_pkg NULL if one is marked already, 1 with *best_pkg to
+   install, 0 if none can be; pkgs keeps the candidates left */
+int i3_pick_pkg(int indent, struct i3ctx *ictx, const struct pkg *pkg,
+                tn_array *pkgs, struct pkg **best_pkg)
+{
+    *best_pkg = NULL;
+
+    for (int i = 0; i < n_array_size(pkgs); i++) {
+        struct pkg *p = n_array_nth(pkgs, i);
+
+        /* remove marked for removal items from suspected packages, but do it
+           only when POLDEK_TS_REINSTALL is not set, otherwise removing and
+           installing the same package is possible (when the same package
+           exists in both available and already installed set) */
+        if (!poldek_ts_issetf(ictx->ts, POLDEK_TS_REINSTALL) &&
+            i3_is_marked_for_removal(ictx, p) && !i3_is_marked(ictx, p)) {
+            n_array_remove_nth(pkgs, i--);
+
+        /* remove marked as BLACK from suspected packages, they have broken deps */
+        } else if (pkg_isset_mf(ictx->processed, p, PKGMARK_BLACK)) {
+            trace(indent, "- marked as BLACK %s", pkg_id(p));
+            n_array_remove_nth(pkgs, i--);
+        }
+    }
+
+    if (n_array_size(pkgs) == 0)
+        return 0;
+
+    /* return found and *best_pkg=NULL if any package is already marked */
+    if (!any_is_marked(ictx, pkgs)) {
+        int best_i = do_select_best_pkg(indent, ictx, pkg, pkgs);
+        *best_pkg = n_array_nth(pkgs, best_i);
+
+        if (i3_is_other_version_marked(ictx, *best_pkg, NULL)) {
+            *best_pkg = NULL;
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 int i3_find_req(int indent, struct i3ctx *ictx,
                 const struct pkg *pkg, const struct capreq *req,
                 struct pkg **best_pkg, tn_array *candidates)
 {
-    tn_array *suspkgs = NULL, *tmpkgs;
-    int found = 0, i;
+    tn_array *suspkgs = NULL;
+    int found = 0;
 
     *best_pkg = NULL;
     found = pkgset_find_match_packages(ictx->ps, pkg, req, &suspkgs, 1);//ictx->strict);
@@ -540,58 +583,7 @@ int i3_find_req(int indent, struct i3ctx *ictx,
         goto l_end;
 
     n_assert(n_array_size(suspkgs) > 0);
-
-    /* remove marked for removal items from suspected packages, but do it only
-       when POLDEK_TS_REINSTALL is not set, otherwise removing and installing
-       the same package is possible */
-    if (!poldek_ts_issetf(ictx->ts, POLDEK_TS_REINSTALL)) {
-        tmpkgs = n_array_clone(suspkgs);
-        while (n_array_size(suspkgs)) {
-            struct pkg *suspkg = n_array_shift(suspkgs);
-
-            /* possible when the same package exists in both available
-               and already installed set */
-            if (i3_is_marked_for_removal(ictx, suspkg) && !i3_is_marked(ictx, suspkg)) {
-                pkg_free(suspkg);
-                continue;
-            }
-
-            n_array_push(tmpkgs, suspkg);
-        }
-
-        n_array_free(suspkgs);
-        suspkgs = tmpkgs;
-    }
-
-    //trace(indent, "after removed rmmarked -> %d package(s)",
-    //      n_array_size(suspkgs));
-
-    /* remove marked as BLACK from suspected packages, they have broken deps */
-    for (i = 0; i < n_array_size(suspkgs); i++) {
-	struct pkg *suspkg = n_array_nth(suspkgs, i);
-
-	if (pkg_isset_mf(ictx->processed, suspkg, PKGMARK_BLACK)) {
-	    trace(indent, "- marked as BLACK %s", pkg_id(suspkg));
-	    n_array_remove_nth(suspkgs, i--);
-	}
-    }
-
-    if (n_array_size(suspkgs) == 0) {
-        found = 0;
-        goto l_end;
-    }
-
-    /* return found and *best_pkg=NULL if any package is already marked */
-    if (!any_is_marked(ictx, suspkgs)) {
-        int best_i;
-        best_i = do_select_best_pkg(indent, ictx, pkg, suspkgs);
-        *best_pkg = n_array_nth(suspkgs, best_i);
-
-        if (i3_is_other_version_marked(ictx, *best_pkg, NULL)) {
-            found = 0;
-            *best_pkg = NULL;
-        }
-    }
+    found = i3_pick_pkg(indent, ictx, pkg, suspkgs, best_pkg);
 
 l_end:
 
@@ -706,7 +698,7 @@ int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
     if (providers) {
         pkgset_find_match_packages(ictx->ps, pkg, req, providers, 1);
         pkgdb_q_providers(ictx->ts->db, providers, req,
-                          iset_packages_by_recno(ictx->unset));
+                          iset_packages_by_recno(ictx->unset), 0);
     }
 
     if (iset_provides(ictx->inset, req)) {
@@ -719,9 +711,19 @@ int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
         return 0;
     }
 
-    if (pkgset_find_match_packages(ictx->ps, pkg, req, NULL, 1)) {
-        tracef(indent, "%s %s => aset", pkg_id(pkg), capreq_stra(req));
-        return 1;
+    /* rpmlib() and the like are there with no package to install */
+    if (pkgset_pm_satisfies(ictx->ps, req)) {
+        tracef(indent, "%s %s => pm", pkg_id(pkg), capreq_stra(req));
+        return 0;
+    }
+
+    /* the depsolver's own pick: not a version going away, nor a package
+       another version of which is already marked */
+    struct pkg *tomark = NULL;
+    if (i3_find_req(indent, ictx, pkg, req, &tomark, NULL)) {
+        tracef(indent, "%s %s => %s", pkg_id(pkg), capreq_stra(req),
+               tomark ? "aset" : "iset");
+        return tomark ? 1 : 0;
     }
 
     return -1;
@@ -743,6 +745,7 @@ void i3_req_iter_init(struct i3_req_iter *it, int indent, struct i3ctx *ictx,
 
     it->bctx.ctx = ectx;
     it->bctx.req_cost = req_cost_cb;
+    it->bctx.pkg_cost = NULL;
 }
 
 void i3_req_iter_destroy(struct i3_req_iter *it)
@@ -830,4 +833,199 @@ const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
     it->i3req.req = req;
 
     return &it->i3req;
+}
+
+/* booldep_eval() cost callback for the system the transaction leaves: 0 if
+   a package that stays or comes in meets req, or rpm itself does, else -1 */
+static int present_cost_cb(const struct capreq *req, tn_array **providers,
+                           void *ctxptr)
+{
+    struct eval_ctx *ctx = ctxptr;
+    struct i3ctx *ictx = ctx->ictx;
+    tn_array *avail, *provs = NULL;
+
+    if ((avail = pkgset_find_providers(ictx->ps, req, 1))) {
+        for (int i = 0; i < n_array_size(avail); i++) {
+            struct pkg *p = n_array_nth(avail, i);
+
+            if (!i3_is_marked(ictx, p))
+                continue;
+
+            if (provs == NULL)
+                provs = pkgs_array_new(4);
+            n_array_push(provs, pkg_link(p));
+        }
+        n_array_free(avail);
+    }
+
+    pkgdb_q_providers(ictx->ts->db, &provs, req,
+                      iset_packages_by_recno(ictx->unset), 0);
+
+    int found = provs != NULL || pkgset_pm_satisfies(ictx->ps, req);
+    if (providers && provs) {
+        n_array_sort(provs);
+        *providers = provs;
+    } else {
+        n_array_cfree(&provs);
+    }
+
+    return found ? 0 : -1;
+}
+
+/* the providers present_cost_cb() gives are all there */
+static int present_pkg_cost(const struct pkg *pkg, void *ctxptr)
+{
+    (void)pkg;
+    (void)ctxptr;
+    return 0;
+}
+
+int i3_boolreq_holds(int indent, struct i3ctx *ictx, struct pkg *pkg,
+                     const struct capreq *req)
+{
+    struct eval_ctx ectx = { indent, ictx, pkg };
+    struct booldep_eval_ctx bctx = { &ectx, present_cost_cb, present_pkg_cost };
+    struct booldep *dep;
+    tn_array *conjs;
+
+    if ((dep = booldep_parse_capreq(req)) == NULL) {
+        logn(LOGWARN, "%s: boolean dependency parse error", capreq_stra(req));
+        return 1;               /* left to rpm */
+    }
+
+    /* the new packages' owners of such a path can't be seen: left to rpm */
+    if (pkgset_booldep_path_unlisted(ictx->ps, dep)) {
+        booldep_free(dep);
+        return 1;
+    }
+
+    conjs = booldep_eval_providers(dep, &bctx);
+    booldep_free(dep);
+
+    if (conjs == NULL)
+        return 0;
+
+    n_array_free(conjs);
+    return 1;
+}
+
+struct unmet_ctx {
+    int          indent;
+    struct i3ctx *ictx;
+    struct pkg   *pkg;
+    tn_array     *present;      /* the providers that stay or come in */
+};
+
+/* booldep_eval() cost callback for what to install: 0 if a package that
+   stays or comes in meets req, or rpm itself does, 1 if one the depsolver
+   would install does, else -1; the providers are those packages */
+static int unmet_cost_cb(const struct capreq *req, tn_array **providers,
+                         void *ctxptr)
+{
+    struct unmet_ctx *uc = ctxptr;
+    struct i3ctx *ictx = uc->ictx;
+    tn_array *avail, *provs = NULL;
+    int cost = -1;
+
+    if (pkgset_pm_satisfies(ictx->ps, req))
+        return 0;               /* met with no package */
+
+    if (pkgdb_q_providers(ictx->ts->db, &provs, req,
+                          iset_packages_by_recno(ictx->unset), 0) > 0) {
+        cost = 0;
+        for (int i = 0; i < n_array_size(provs); i++)
+            n_array_push(uc->present, pkg_link(n_array_nth(provs, i)));
+    }
+
+    if ((avail = pkgset_find_providers(ictx->ps, req, 1))) {
+        for (int i = 0; i < n_array_size(avail); i++) {
+            struct pkg *p = n_array_nth(avail, i), *best = NULL;
+
+            if (i3_is_marked(ictx, p)) {
+                cost = 0;
+                n_array_push(uc->present, pkg_link(p));
+
+            } else {        /* would the depsolver pick it? */
+                tn_array *one = pkgs_array_new(1);
+
+                n_array_push(one, pkg_link(p));
+                i3_pick_pkg(uc->indent, ictx, uc->pkg, one, &best);
+                n_array_free(one);
+                if (best == NULL)
+                    continue;
+                if (cost < 0)
+                    cost = 1;
+            }
+
+            if (provs == NULL)
+                provs = pkgs_array_new(4);
+            n_array_push(provs, pkg_link(p));
+        }
+        n_array_free(avail);
+    }
+
+    if (providers && provs) {
+        n_array_sort(provs);
+        *providers = provs;
+    } else {
+        n_array_cfree(&provs);
+    }
+
+    return cost;
+}
+
+static int is_present(const tn_array *present, const struct pkg *pkg)
+{
+    for (int i = 0; i < n_array_size(present); i++)
+        if (n_array_nth(present, i) == pkg)
+            return 1;
+
+    return 0;
+}
+
+static int has_present(const tn_array *present, const tn_array *pkgs)
+{
+    for (int i = 0; i < n_array_size(pkgs); i++)
+        if (is_present(present, n_array_nth(pkgs, i)))
+            return 1;
+
+    return 0;
+}
+
+/* unmet_cost_cb() gives the providers there and those the depsolver
+   would install */
+static int unmet_pkg_cost(const struct pkg *pkg, void *ctxptr)
+{
+    struct unmet_ctx *uc = ctxptr;
+
+    return is_present(uc->present, pkg) ? 0 : 1;
+}
+
+tn_array *i3_boolreq_unmet(int indent, struct i3ctx *ictx, struct pkg *pkg,
+                           const struct capreq *req)
+{
+    struct unmet_ctx uc = { indent, ictx, pkg, NULL };
+    struct booldep_eval_ctx bctx = { &uc, unmet_cost_cb, unmet_pkg_cost };
+    struct booldep *dep;
+    tn_array *conjs, *unmet = NULL;
+
+    if ((dep = booldep_parse_capreq(req)) == NULL)
+        return NULL;
+
+    uc.present = n_array_new(16, (tn_fn_free)pkg_free, NULL);
+    if ((conjs = booldep_eval_providers(dep, &bctx))) {
+        unmet = n_array_new(4, (tn_fn_free)n_array_free, NULL);
+        for (int i = 0; i < n_array_size(conjs); i++) {
+            tn_array *pkgs = n_array_nth(conjs, i);
+
+            /* a part none of whose packages is there needs one installed */
+            if (n_array_size(pkgs) > 0 && !has_present(uc.present, pkgs))
+                n_array_push(unmet, n_ref(pkgs));
+        }
+        n_array_free(conjs);
+    }
+
+    n_array_free(uc.present);
+    booldep_free(dep);
+    return unmet;
 }

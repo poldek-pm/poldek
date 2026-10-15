@@ -52,4 +52,5 @@ struct pm_module pm_module_rpm = {
     pm_rpm_ldpkg,
     pm_rpm_db_to_pkgdir,
     pm_rpm_machine_score,
+    pm_rpm_db_reqnames,
 };

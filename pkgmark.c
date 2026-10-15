@@ -497,7 +497,7 @@ int pkgmark_verify_package_boolreqs(struct pkgmark_set *pms)
 {
     tn_array *pkgs = pkgmark_get_packages(pms, PKGMARK_ANY);
     struct marked_ctx mc = { pms->ps, pkgs };
-    struct booldep_eval_ctx ectx = { &mc, marked_req_cost };
+    struct booldep_eval_ctx ectx = { &mc, marked_req_cost, NULL };
     int nerr = 0;
 
     for (int i = 0; pkgs && i < n_array_size(pkgs); i++) {

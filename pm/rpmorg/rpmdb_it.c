@@ -132,6 +132,33 @@ void pm_rpm_db_it_destroy(struct pkgdb_it *it)
 }
 
 
+int pm_rpm_db_reqnames(void *dbh, tn_hash *names)
+{
+    struct rpmorg_db *db = dbh;
+    rpmdbIndexIterator ii;
+    const void *key;
+    size_t keylen;
+
+#ifdef HAVE_RPMDBINDEXKEYITERATORINIT
+    ii = rpmdbIndexKeyIteratorInit(rpmtsGetRdb(db->ts), RPMDBI_REQUIRENAME);
+#else                           /* rpm < 4.16: reads the package lists too */
+    ii = rpmdbIndexIteratorInit(rpmtsGetRdb(db->ts), RPMDBI_REQUIRENAME);
+#endif
+    if (ii == NULL)
+        return 0;
+
+    while (rpmdbIndexIteratorNext(ii, &key, &keylen) == 0) {
+        char *name = n_strdupl(key, keylen);   /* keys are not terminated */
+
+        if (!n_hash_exists(names, name))
+            n_hash_insert(names, name, NULL);
+        free(name);
+    }
+    rpmdbIndexIteratorFree(ii);
+
+    return 1;
+}
+
 int pm_rpm_db_it_init(struct pkgdb_it *it, int tag, const char *arg)
 {
     struct rpmdb_it *rpmit;

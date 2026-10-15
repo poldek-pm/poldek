@@ -221,6 +221,15 @@ static struct dvalue *eval_unless(struct node *node, const struct booldep_eval_c
 }
 
 
+static int cost_of_pkg(const struct pkg *pkg, const struct capreq *req,
+                       const struct booldep_eval_ctx *ctx)
+{
+    if (ctx->pkg_cost)
+        return ctx->pkg_cost(pkg, ctx->ctx);
+
+    return ctx->req_cost ? ctx->req_cost(req, NULL, ctx->ctx) : 0;
+}
+
 /* the cheapest of pkgs as a "name = evr" requirement, its cost in *best_cost */
 static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *ctx,
                                 int *best_cost)
@@ -229,7 +238,7 @@ static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *c
         struct pkg *pkg = n_array_nth(pkgs, 0);
         struct capreq *req = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver,
                                         pkg->rel, REL_EQ, CAPREQ_BASTARD);
-        *best_cost = ctx->req_cost ? ctx->req_cost(req, NULL, ctx->ctx) : 0;
+        *best_cost = cost_of_pkg(pkg, req, ctx);
         return req;
     }
 
@@ -241,7 +250,7 @@ static struct capreq *take_best(tn_array *pkgs, const struct booldep_eval_ctx *c
         struct capreq *req = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver,
                                         pkg->rel, REL_EQ, CAPREQ_BASTARD);
 
-        int cost = ctx->req_cost(req, NULL, ctx->ctx);
+        int cost = cost_of_pkg(pkg, req, ctx);
 
         tracef(0, "%s cost=%d\n", pkg_id(pkg), cost);
 

@@ -193,6 +193,28 @@ static void index_boolean_req(struct pkgset *ps, const struct capreq *req,
         capreq_idx_add(&ps->req_idx, name, capreq_name_len(leaf), pkg);
     }
     n_array_free(leaves);
+
+    /* and the names in if/unless conditions as !name, as rpmdb does */
+    leaves = booldep_neg_leaves(dep);
+    for (int i=0; i < n_array_size(leaves); i++) {
+        struct capreq *leaf = n_array_nth(leaves, i);
+        int len = capreq_name_len(leaf) + 1;
+        char *name = n_malloc(len + 1);
+
+        n_snprintf(name, len + 1, "!%s", capreq_name(leaf));
+        if (!add) {
+            capreq_idx_remove(&ps->req_idx, name, pkg);
+            free(name);
+            continue;
+        }
+
+        if (ps->_booldep_capnames == NULL)
+            ps->_booldep_capnames = n_array_new(64, free, NULL);
+        n_array_push(ps->_booldep_capnames, name);
+
+        capreq_idx_add(&ps->req_idx, name, len, pkg);
+    }
+    n_array_free(leaves);
     booldep_free(dep);
 }
 
@@ -247,6 +269,21 @@ int pkgset__index_caps(struct pkgset *ps)
 #endif
 
     return 1;
+}
+
+void pkgset_reqnames(struct pkgset *ps, tn_hash *names)
+{
+    tn_array *keys;
+
+    pkgset__index_reqs(ps);
+    keys = n_oash_keys(ps->req_idx.ht);
+    for (int i = 0; i < n_array_size(keys); i++) {
+        const char *name = n_array_nth(keys, i);
+
+        if (!n_hash_exists(names, name))
+            n_hash_insert(names, name, NULL);
+    }
+    n_array_free(keys);
 }
 
 int pkgset__index_reqs(struct pkgset *ps)
@@ -475,6 +512,21 @@ int pkgset_path_unlisted(const struct pkgset *ps, const char *path)
     }
 
     return 0;
+}
+
+int pkgset_booldep_path_unlisted(const struct pkgset *ps,
+                                 const struct booldep *dep)
+{
+    tn_array *leaves = booldep_leaves(dep);
+    int re = 0;
+
+    for (int i = 0; !re && i < n_array_size(leaves); i++) {
+        struct capreq *leaf = n_array_nth(leaves, i);
+        re = capreq_is_file(leaf) && pkgset_path_unlisted(ps, capreq_name(leaf));
+    }
+    n_array_free(leaves);
+
+    return re;
 }
 
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,

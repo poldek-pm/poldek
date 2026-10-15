@@ -110,6 +110,8 @@ static const char *array_str(const tn_array *a)
 {
     static char buf[4096];
     int n = 0;
+
+    *buf = '\0';
     for (int i = 0; i < n_array_size(a); i++) {
         const struct capreq *req = n_array_nth(a, i);
         n += n_snprintf(&buf[n], sizeof(buf) - n, "%s,", capreq_stra(req));
@@ -172,7 +174,7 @@ START_TEST (test_eval) {
         { NULL, NULL, NULL }
     };
 
-    struct booldep_eval_ctx ctx = { NULL, NULL };
+    struct booldep_eval_ctx ctx = { NULL, NULL, NULL };
 
     int i = 0;
     while (cases[i].expr != NULL) {
@@ -200,4 +202,34 @@ START_TEST (test_eval) {
 }
 END_TEST
 
-NTEST_RUNNER("boolean deps", test_parse, test_eval);
+/* the names rpmdb indexes as !name, checked against rpm 6 */
+START_TEST (test_neg_leaves) {
+    struct ecase {
+        const char *expr;
+        const char *expected;
+    } cases[] = {
+        { "(a if b)", "b" },
+        { "(a if b else c)", "b" },
+        { "(a if (b or c))", "b,c" },
+        { "(a if (b if c))", "b" },
+        { "(a if (b if c else d))", "b,c,d" },
+        { "(a with b)", "" },
+        { "(a without b)", "" },
+        { NULL, NULL }
+    };
+
+    int i = 0;
+    while (cases[i].expr != NULL) {
+        const struct ecase *e = &cases[i++];
+        struct booldep *dep = booldep_parse(e->expr);
+        tn_array *re = booldep_neg_leaves(dep);
+
+        expect_str(array_str(re), e->expected);
+
+        n_array_free(re);
+        booldep_free(dep);
+    }
+}
+END_TEST
+
+NTEST_RUNNER("boolean deps", test_parse, test_eval, test_neg_leaves);
