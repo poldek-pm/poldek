@@ -376,6 +376,18 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     dirslen = alloca(sizeof(size_t) * dirs.count);
     fentdirs_items = alloca(sizeof(*fentdirs_items) * dirs.count);
 
+    /* rpm takes a file list with an index out of range as broken, too */
+    for (j=0; j < rpmtdCount(&names); j++) {
+        uint32_t idx = *uint32_at(&diridxs, j);
+
+        if (idx >= rpmtdCount(&dirs)) {
+            logn(LOGERR, "%s: DIRINDEXES entry %u out of range (%u DIRNAMES)",
+                 pkgname, idx, dirs.count);
+            nerr++;
+            goto l_endfunc;
+        }
+    }
+
     /* skip unneded dirnames */
     for (i=0; i < rpmtdCount(&dirs); i++) {
         struct pkgfl_ent *flent;

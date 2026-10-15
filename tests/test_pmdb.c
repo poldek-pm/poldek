@@ -107,8 +107,29 @@ START_TEST (test_ldhdr_long_file_sizes) {
 }
 END_TEST
 
+/* a DIRINDEXES entry that names no directory makes the file list unusable, as for rpm */
+START_TEST (test_ldhdr_dirindex_out_of_range) {
+    const char *basenames[] = { "a", "b" };
+    const char *dirnames[] = { "/opt/" };
+    uint32_t diridxs[] = { 0, 1 };
+    tn_alloc *na = n_alloc_new(4, TN_ALLOC_OBSTACK);
+    Header h = headerNew();
+    tn_tuple *fl = NULL;
+
+    headerPutStringArray(h, RPMTAG_BASENAMES, basenames, 2);
+    headerPutStringArray(h, RPMTAG_DIRNAMES, dirnames, 1);
+    headerPutUint32(h, RPMTAG_DIRINDEXES, diridxs, 2);
+
+    fail_unless(pm_rpm_ldhdr_fl(na, &fl, h, PKGFL_ALL, "bad") == -1);
+    fail_unless(fl == NULL);
+
+    headerFree(h);
+    n_alloc_free(na);
+}
+END_TEST
+
 NTEST_RUNNER("PM database", test_system_rpmdb, test_custom_rpmdb,
-             test_ldhdr_long_file_sizes);
+             test_ldhdr_long_file_sizes, test_ldhdr_dirindex_out_of_range);
 #else
 NTEST_RUNNER("PM database", test_system_rpmdb, test_custom_rpmdb);
 #endif
