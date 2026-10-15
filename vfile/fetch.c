@@ -766,9 +766,9 @@ const char *vf_url_hidepasswd(char *buf, int size, const char *url)
         (q = memchr(u, ':', at - u)) != NULL) {
         i = q - url;
         strncpy(buf, url, size)[size - 1] = '\0';
-        n_assert(buf[i] == ':');
-        for (p = &buf[i + 1]; *p && p < &buf[at - url]; p++)
-            *p = 'x';
+        if (i + 1 < size)       /* else the copy ends before the password */
+            for (p = &buf[i + 1]; *p && p < &buf[at - url]; p++)
+                *p = 'x';
 
         url = buf;
     }

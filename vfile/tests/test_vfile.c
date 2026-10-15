@@ -93,6 +93,23 @@ START_TEST (test_url_hidepasswd) {
 }
 END_TEST
 
+/* a URL longer than the buffer is cut, and what is left of the password is masked */
+START_TEST (test_url_hidepasswd_short_buffer) {
+    const char *urls[][2] = {
+        { "http://u:secretpassword@host/", "http://u:xxxxxx" },
+        { "http://login-of-twenty:pw@host/", "http://login-of" },
+    };
+    char buf[16];
+    unsigned i;
+
+    for (i = 0; i < sizeof(urls) / sizeof(urls[0]); i++) {
+        const char *url = vf_url_hidepasswd(buf, sizeof(buf), urls[i][0]);
+        fail_if(strcmp(url, urls[i][1]) != 0, "%s: got '%s'", urls[i][0], url);
+    }
+}
+END_TEST
+
 
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
-             test_url_as_path_percent, test_url_hidepasswd);
+             test_url_as_path_percent, test_url_hidepasswd,
+             test_url_hidepasswd_short_buffer);
