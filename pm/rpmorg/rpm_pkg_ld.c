@@ -395,7 +395,9 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     dirslen = alloca(sizeof(size_t) * dirs.count);
     fentdirs_items = alloca(sizeof(*fentdirs_items) * dirs.count);
 
-    /* rpm takes a file list with an index out of range as broken, too */
+    /* files per directory; rpm takes a file list with an index out of
+       range as broken, too */
+    memset(fentdirs_items, 0, sizeof(*fentdirs_items) * dirs.count);
     for (j=0; j < rpmtdCount(&names); j++) {
         uint32_t idx = *uint32_at(&diridxs, j);
 
@@ -405,6 +407,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
             nerr++;
             goto l_endfunc;
         }
+        fentdirs_items[idx]++;
     }
 
     /* skip unneded dirnames */
@@ -414,7 +417,6 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
 
         dirslen[i] = strlen(dir);
 
-        fentdirs_items[i] = 0;
         if (!valid_fname(dir, 0, pkgname)) {
     	    skipdirs[i] = NULL;
     	    fentdirs[i] = NULL;
@@ -441,9 +443,6 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
         }
 
         skipdirs[i] = dir;
-        for (j=0; j < rpmtdCount(&names); j++)
-            if (*uint32_at(&diridxs, j) == i)
-                fentdirs_items[i]++;
 
         /* XXX dangerous cast to char* */
         flent = pkgfl_ent_new(na, (char *)dir, dirslen[i], fentdirs_items[i]);
