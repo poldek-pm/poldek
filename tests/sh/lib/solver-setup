@@ -197,7 +197,8 @@ try_uninstall_package() {
         $POLDEK_UNINSTALL $cmd --test
     fi
 
-    typeset out=$($POLDEK_UNINSTALL $cmd --parsable-tr-summary | grep -E "^%[DR]")
+    typeset out
+    out=$($POLDEK_UNINSTALL $cmd --parsable-tr-summary | grep -E "^%[DR]")
     [ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
 
     if [ -n "$expected" ]; then

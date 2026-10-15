@@ -283,7 +283,8 @@ testConflictWithInstalledNotAvailable() {
     build_installed b -p "'cap = 1'"
     build a -c "'cap < 2'"
 
-    typeset out=$($POLDEK_INSTALL -uv --test a 2>&1)
+    typeset out
+    out=$($POLDEK_INSTALL -uv --test a 2>&1)
     typeset rc=$?
 
     if [ "$rc" -ne 1 ]; then
@@ -826,7 +827,8 @@ testUpgradeMultipleInstalledGiveUp() {
 
     is_verbose_mode && $POLDEK_INSTALL -uvt a
 
-    typeset out=$($POLDEK_INSTALL -uvt a)
+    typeset out;
+    out=$($POLDEK_INSTALL -uvt a)
     #[ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
     echo $out | grep -q 'error' || fail "unexpected success (missing 'error')"
     echo $out | grep 'error' | grep -q 'give up' || fail "unexpected success (missing 'give up')"

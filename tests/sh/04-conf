@@ -43,7 +43,8 @@ testHelpNarrowTerminal()
         return 0
     fi
 
-    typeset out=$(timeout 10 script -qec "stty cols 20; $POLDEK --help" /dev/null </dev/null 2>&1)
+    typeset out
+    out=$(timeout 10 script -qec "stty cols 20; $POLDEK --help" /dev/null </dev/null 2>&1)
     typeset rc=$?
     if [ "$rc" -ne 0 ]; then
         echo "$out" >&2
