@@ -425,8 +425,9 @@ static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
     pkguinf_free(pkgu);
 }
 
-static void snprintf_c(int color, char *buf, size_t size,
-                       const char *fmt, ...)
+static __attribute__((format(printf,4,5)))
+void snprintf_c(int color, char *buf, size_t size,
+                const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);

@@ -44,7 +44,8 @@ tn_array *cmd_pipe_xargs(struct cmd_pipe *p, int pctx);
 
 int cmd_pipe_writeout_fd(struct cmd_pipe *p, int fd);
 
-int cmd_pipe_printf(struct cmd_pipe *p, const char *fmt, ...);
+int cmd_pipe_printf(struct cmd_pipe *p, const char *fmt, ...)
+   __attribute__((format(printf,2,3)));
 int cmd_pipe_vprintf(struct cmd_pipe *p, const char *fmt, va_list args);
 
 #endif

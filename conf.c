@@ -260,7 +260,7 @@ static const char *expand_macros(char *dest, int size, const char *str,
     }
 
     if (*str != '%') {
-        n = n_snprintf(dest, size, *tl);
+        n = n_snprintf(dest, size, "%s", *tl);
         tl++;
     }
 
@@ -294,7 +294,7 @@ static const char *expand_macros(char *dest, int size, const char *str,
         if (v_len + 1 > (int)sizeof(val))
             return str;
 
-        n_snprintf(val, v_len + 1, v);
+        n_snprintf(val, v_len + 1, "%s", v);
         DBGF("var (%s)\n", val);
 
         if ((var = poldek_conf_get(ht, val, NULL)) == NULL) {

@@ -144,7 +144,7 @@ int mk_auth(char *auth, int size, const char *login, const char *passwd)
     return vhttp_misc_base64(auth, size, buf);
 }
 
-static
+static __attribute__((format(printf,3,4)))
 int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
 {
     char     req[4096];

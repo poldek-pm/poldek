@@ -577,7 +577,7 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
         }
 
         if (i + 1 < n_array_size(reqpkgs))
-            ncol += cmdctx_printf(cmdctx, colon);
+            ncol += cmdctx_printf(cmdctx, "%s", colon);
     }
 
     cmdctx_printf(cmdctx, "\n");

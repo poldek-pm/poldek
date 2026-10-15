@@ -97,7 +97,8 @@ static int do_ftp_cmd(int sock, char *fmt, va_list args)
 }
 
 
-static int vftpcn_cmd(struct vcn *cn, char *fmt, ...)
+static __attribute__((format(printf,2,3)))
+int vftpcn_cmd(struct vcn *cn, char *fmt, ...)
 {
     va_list  args;
     int rc;
@@ -569,7 +570,7 @@ static int vftpcn_pasv(struct vcn *cn)
         req_code = 229;
     }
 
-    if (!vftpcn_cmd(cn, cmd))
+    if (!vftpcn_cmd(cn, "%s", cmd))
         return 0;
 
     if (!vftpcn_resp(cn))       /* no response at all; readresp() set the cause */

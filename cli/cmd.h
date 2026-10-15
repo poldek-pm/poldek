@@ -23,6 +23,11 @@
 # define EXPORT extern
 #endif
 
+#ifndef __GNUC__
+#  undef __attribute__
+#  define __attribute__(x) /*nothing*/
+#endif
+
 struct poldek_ctx;
 struct poldek_ts;
 struct pkg;
@@ -50,8 +55,10 @@ struct cmdctx {
 #define cmdctx_is_piped(cmdctx) cmdctx->pipe_right != NULL
 
 EXPORT int cmdctx_addtoresult(struct cmdctx *cmdctx, struct pkg *pkg);
-EXPORT int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...);
-EXPORT int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...);
+EXPORT int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...)
+   __attribute__((format(printf,2,3)));
+EXPORT int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...)
+   __attribute__((format(printf,3,4)));
 
 /* poclidek_cmd */
 #define COMMAND_NOARGS       (1 << 0) /* cmd don't accept arguments */

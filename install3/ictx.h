@@ -47,7 +47,8 @@ struct poldek_iinf;
 struct i3ctx;
 
 void i3_error(struct i3ctx *ictx, struct pkg *pkg,
-              unsigned errcode, const char *fmt, ...);
+              unsigned errcode, const char *fmt, ...)
+   __attribute__((format(printf,4,5)));
 void i3_forget_error(struct i3ctx *ictx, const struct pkg *pkg);
 int i3_get_nerrors(struct i3ctx *ictx, unsigned errcodeclass);
 void i3_log_errors(struct i3ctx *ictx);
