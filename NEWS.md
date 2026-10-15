@@ -32,7 +32,16 @@
 * Drop the HTTP keep-alive liveness HEAD probe (@arekm #37)
 * Boolean dependencies: with/without now consider installed packages (@arekm #38)
 * Fix evaluation of OR alternatives and unsatisfiable conjuncts inside with/without (@arekm #38)
-
+* Suggested packages: the 'r' key repeats the current round of suggested-package questions instead of skipping them (@arekm #39)
+* Refreshing a package index no longer keeps a broken partially-built index or prints stale package descriptions afterwards (@arekm #40)
+* Required-packages listing (`desc -R`) no longer changes its result depending on the order packages were queried in (@arekm #42)
+* `desc -R` / `desc -B` while in `/installed` now searches only installed packages (including file owners of required paths), not the available ones (@arekm #43)
+* `desc -B` shows only packages that actually need the version being described, instead of every package sharing its name (@arekm #44)
+* Boolean (`and`/`or`/`with`/`without`) dependencies are re-evaluated when installing/upgrading, including against installed packages and unlisted paths, so upgrades no longer break such requirements silently (@arekm #45, #47)
+* `uninstall --greedy` removes only the packages that really satisfy the dependency, following versioned and file requirements as well as boolean ones, and follows what a removed package actually needs (@arekm #41, #46)
+* Upgrading or downgrading a package (and `upgrade-dist`) keeps installed packages that depend on boolean conditions or newly added/removed capabilities from breaking or being dropped unnecessarily (@arekm #47)
+* Reading the installed database cache under `--root` now shows summaries and file lists, and no longer leaks memory when a package record is gone (@arekm #48)
+* `ls --qf` and `desc -L` no longer crash on packages whose metadata is unavailable (e.g. indexes built with `--mo=nodesc`) (@arekm #49)
 
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)
