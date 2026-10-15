@@ -123,8 +123,8 @@ testUpgrade()
     n=$($POLDEK ls -u | grep -E '^(a|a-libs)' | wc -l)
     assertEquals "expected 2 packages to be upgradeable, got $n" "$n" "2"
 
-    msg $POLDEK upgrade -v a~
-    $POLDEK upgrade -v a~
+    msg $POLDEK install -F -v a~
+    $POLDEK install -F -v a~
 
     #$RPM -ev a --justdb
     #$RPM -ev a-libs --justdb
