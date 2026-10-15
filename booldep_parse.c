@@ -19,6 +19,7 @@
 
 #include "capreq.h"
 #include "log.h"
+#include "misc.h"
 
 #define POLDEK_BOOLDEP_INTERNAL
 #include "booldep.h"
@@ -291,4 +292,62 @@ void booldep_free(struct booldep *dep)
 {
     node_free(dep->node);
     n_cfree(&dep);
+}
+
+int booldep_is_boolean_req(const struct capreq *req)
+{
+    const char *name = capreq_name(req);
+
+    if (capreq_is_boolean(req))
+        return 1;
+
+    if (poldek__is_in_testing_mode())
+        return *name == '_' && *(name + 1) == '_';
+
+    return 0;
+}
+
+struct booldep *booldep_parse_capreq(const struct capreq *req)
+{
+    const char *expr = capreq_name(req);
+
+    /* tests encode expressions as __b_or_c to sneak them through backends
+       with no rich deps support */
+    if (poldek__is_in_testing_mode() && *expr == '_') {
+        char *s;
+
+        /* memleak in testing mode */
+        n_strdupapl(expr + 2, capreq_name_len(req) - 2, &s);
+        expr = s;
+        while (*s) {
+            if (*s == '_')
+                *s = ' ';
+            s++;
+        }
+        DBGF_F("%s => %s\n", capreq_name(req), expr);
+    }
+
+    return booldep_parse(expr);
+}
+
+static void collect_leaves(const struct node *node, tn_array *re)
+{
+    if (node == NULL)
+        return;
+
+    if (node->type == 0) {          /* identifier */
+        if (node->cap)
+            n_array_push(re, capreq_clone(NULL, node->cap));
+        return;
+    }
+
+    for (int i = 0; i < NARY_MAX && node->args[i] != NULL; i++)
+        collect_leaves(node->args[i], re);
+}
+
+tn_array *booldep_leaves(const struct booldep *dep)
+{
+    tn_array *re = capreq_arr_new(4);
+    collect_leaves(dep->node, re);
+    return re;
 }

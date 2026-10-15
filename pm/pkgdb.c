@@ -453,6 +453,36 @@ static int db_match(struct pkgdb *db, enum pkgdb_it_tag tag,
 }
 
 
+int pkgdb_q_providers(struct pkgdb *db, tn_array **providers,
+                      const struct capreq *req, const tn_array *exclude)
+{
+    int is_file = capreq_is_file(req), n = 0;
+    tn_array *dbpkgs = NULL;
+
+    pkgdb_search(db, &dbpkgs, PMTAG_CAP, capreq_name(req), exclude, PKG_LDCAPS);
+    if (is_file)
+        pkgdb_search(db, &dbpkgs, PMTAG_FILE, capreq_name(req), exclude,
+                     PKG_LDCAPS | PKG_LDFL_WHOLE);
+
+    if (dbpkgs == NULL)
+        return 0;
+
+    for (int i = 0; i < n_array_size(dbpkgs); i++) {
+        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
+
+        if (!pkg_satisfies_req(dbpkg, req, 1) &&
+            !(is_file && pkg_caps_match_req(dbpkg, req, 0)))
+            continue;
+
+        if (*providers == NULL)
+            *providers = pkgs_array_new(4);
+        n_array_push(*providers, pkg_link(dbpkg));
+        n++;
+    }
+    n_array_free(dbpkgs);
+    return n;
+}
+
 int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, unsigned ma_flags,
                     const tn_array *exclude)
 {

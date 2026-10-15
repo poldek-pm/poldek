@@ -35,6 +35,7 @@ setUp() {
     if [ "$INSTALL_MODE" = "dir" ]; then
         RAW_POLDEK="$POLDEK_NOCONF"
         POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --dt dir --destination $DESTINATION_REPO"
+        POLDEK_UNINSTALL="$RAW_POLDEK --dt dir --destination $DESTINATION_REPO"
     elif [ "$INSTALL_MODE" = "rpm" ]; then
         rpm_up
     else
@@ -390,6 +391,182 @@ testWithOr() {
     build p 1-1 -p "foo" -p "baz"
     build q 1-1 -p "bar"
     try_install "a" "a,p"
+}
+
+# uninstall side: erase must cascade over packages whose boolean requirement
+# stops being satisfiable, and leave the rest alone
+
+try_uninstall() {
+    if [ "$INSTALL_MODE" = "rpm" ]; then
+        rpm_uninstall "$@"
+    else
+        try_uninstall_package "dir" "-ev --test" "$@"
+    fi
+}
+
+# usage: rpm_uninstall <package> <expected removed NVRs>
+# rpm itself rejects an erase that leaves a dependency broken
+rpm_uninstall() {
+    is_rpm_testing_off && return
+
+    typeset package="$1"
+    typeset removed=$(echo $2 | sed 's/,/ /g')
+    typeset installed=$($RPM -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}\n')
+
+    $RAW_POLDEK --root $DESTINATION_REPO --justdb -ev $package
+    assertEquals "erase failed" "$?" "0"
+
+    for i in $installed; do
+        if echo " $removed " | grep -q " $i "; then
+            if $RPM --quiet -q $i; then fail "$i: package expected to be removed"; fi
+        else
+            if ! $RPM --quiet -q $i; then fail "$i: package expected to be kept"; fi
+        fi
+    done
+}
+
+testUninstallWith() {
+    build_installed a 1-1
+    build_installed b 1-1 -r "'(a >= 1 with a < 2)'"
+    try_uninstall a "a-1-1,b-1-1"
+}
+
+# b goes because of its boolean requirement, and takes c, which requires b
+testUninstallCascade() {
+    build_installed a 1-1
+    build_installed b 1-1 -r "'(a >= 1 with a < 2)'"
+    build_installed c 1-1 -r "'(b >= 1 with b < 2)'"
+    try_uninstall a "a-1-1,b-1-1,c-1-1"
+}
+
+testUninstallOrAlternativePresent() {
+    build_installed a 1-1
+    build_installed c 1-1
+    build_installed b 1-1 -r "'(a or c)'"
+    try_uninstall a "a-1-1"
+}
+
+# what the package manager provides itself keeps an alternative alive
+testUninstallOrPackageManager() {
+    build_installed a 1-1
+    build_installed b 1-1 -r "'(rpmlib(CompressedFileNames) <= 3.0.4-1 or a)'"
+    try_uninstall a "a-1-1"
+}
+
+testUninstallOrLastProvider() {
+    build_installed a 1-1
+    build_installed b 1-1 -r "'(a or c)'"
+    try_uninstall a "a-1-1,b-1-1"
+}
+
+testUninstallAnd() {
+    build_installed a 1-1
+    build_installed c 1-1
+    build_installed b 1-1 -r "'(a and c)'"
+    try_uninstall a "a-1-1,b-1-1"
+}
+
+testUninstallPreBroken() {
+    # rpm refuses to install b with its requirement unsatisfiable
+    [ "$INSTALL_MODE" != "dir" ] && return 0
+    build_installed a 1-1 -p x
+    build_installed c 1-1 -p y
+    build_installed b 1-1 -r "'(x with y)'"
+    try_uninstall a "a-1-1"
+}
+
+# c provides x as well as y, so after a goes nothing provides x without y
+testUninstallWithout() {
+    build_installed a 1-1 -p x
+    build_installed c 1-1 -p x -p y
+    build_installed b 1-1 -r "'(x without y)'"
+    try_uninstall a "a-1-1,b-1-1"
+}
+
+# both alternatives go in one erase
+testUninstallOrBothRemoved() {
+    build_installed a 1-1
+    build_installed c 1-1
+    build_installed b 1-1 -r "'(a or c)'"
+    try_uninstall "a c" "a-1-1,c-1-1,b-1-1"
+}
+
+# a path counts as provided by a Provides: of it, not only by owning the file
+testUninstallOrPathProvided() {
+    build_installed p 1-1 -p /usr/bin/zzx
+    build_installed q 1-1 -f /usr/bin/zzx
+    build_installed d 1-1 -r "'(/usr/bin/zzx or zzc)'"
+    try_uninstall q "q-1-1"
+}
+
+# the remaining owner of a path counts whatever file lists the session loaded
+testUninstallOrPathOwnerAfterRepoLoad() {
+    build_installed a 1-1
+    build_installed c 1-1 -f /opt/zzrev/file
+    build_installed b 1-1 -r "'(a or /opt/zzrev/file)'"
+    build zzother 1-1
+
+    local dest="--dt dir --destination $DESTINATION_REPO"
+    [ "$INSTALL_MODE" = "rpm" ] && dest="--root $DESTINATION_REPO"
+    local out=$($RAW_POLDEK --st dir -s $REPO $dest --noask --cmd "ls; uninstall --test a" 2>&1)
+    echo "$out" | grep -q 'marks b-1-1' && fail "b marked although c still owns the path"
+
+    try_uninstall a "a-1-1"
+}
+
+# the message names the package whose removal broke the requirement: q, with
+# a path in Provides:, not a, the provider of the excluded y
+testUninstallMarkedByCulprit() {
+    build_installed a 1-1 -p y
+    build_installed q 1-1 -p /usr/bin/zzvirtual
+    build_installed b 1-1 -r "'(/usr/bin/zzvirtual without y)'"
+
+    local dest="--dt dir --destination $DESTINATION_REPO"
+    [ "$INSTALL_MODE" = "rpm" ] && dest="--root $DESTINATION_REPO"
+    local out=$($RAW_POLDEK $dest --noask -ev --test a q 2>&1)
+    echo "$out" | grep -q 'q-1-1.* marks b-1-1' || fail "b not marked by q: $out"
+
+    try_uninstall "a q" "a-1-1,q-1-1,b-1-1"
+}
+
+testUninstallAndWith() {
+    # an unsatisfiable with-conjunct makes the whole and unsatisfiable
+    build_installed a 1-1
+    build_installed w 1-1 -p x -p y
+    build_installed b 1-1 -r "'(a and (x with y))'"
+    try_uninstall w "w-1-1,b-1-1"
+}
+
+testUninstallOrUnionInWith() {
+    # or inside with must union providers (set semantics), not pick a branch
+    build_installed w 1-1 -p x -p y
+    build_installed p 1-1 -p x -p z
+    build_installed q 1-1 -p y
+    build_installed b 1-1 -r "'(x with (y or z))'"
+    try_uninstall w "w-1-1"
+}
+
+testUninstallIfCondition() {
+    # removing a plain if-condition only weakens the requirement
+    build_installed a 1-1
+    build_installed c 1-1
+    build_installed b 1-1 -r "'(a if c)'"
+    try_uninstall c "c-1-1"
+}
+
+testUninstallIfElseSatisfied() {
+    build_installed a 1-1
+    build_installed c 1-1
+    build_installed d 1-1
+    build_installed b 1-1 -r "'(a if c else d)'"
+    try_uninstall c "c-1-1"
+}
+
+testUninstallIfElseBroken() {
+    build_installed a 1-1
+    build_installed c 1-1
+    build_installed b 1-1 -r "'(a if c else d)'"
+    try_uninstall c "c-1-1,b-1-1"
 }
 
 . ./sh/lib/shunit2

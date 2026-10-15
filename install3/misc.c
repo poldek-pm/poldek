@@ -694,39 +694,6 @@ struct eval_ctx {
     struct pkg   *pkg;
 };
 
-/* installed packages providing req, except those being removed */
-static void add_installed_providers(struct i3ctx *ictx, const struct capreq *req,
-                                    tn_array **providers)
-{
-    const tn_array *exclude = iset_packages_by_recno(ictx->unset);
-    int is_file = capreq_is_file(req);
-    tn_array *dbpkgs = NULL;
-
-    pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_CAP, capreq_name(req), exclude,
-                 PKG_LDCAPS);
-
-    /* a path is provided by a Provides: of it or by owning the file */
-    if (is_file)
-        pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_FILE, capreq_name(req), exclude,
-                     PKG_LDCAPS | PKG_LDFL_WHOLE);
-
-    if (dbpkgs == NULL)
-        return;
-
-    for (int i = 0; i < n_array_size(dbpkgs); i++) {
-        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
-
-        if (!pkg_satisfies_req(dbpkg, req, 1) &&
-            !(is_file && pkg_caps_match_req(dbpkg, req, 0)))
-            continue;
-
-        if (*providers == NULL)
-            *providers = pkgs_array_new(4);
-        n_array_push(*providers, pkg_link(dbpkg));
-    }
-    n_array_free(dbpkgs);
-}
-
 static
 int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
 {
@@ -738,7 +705,8 @@ int req_cost_cb(const struct capreq *req, tn_array **providers, void *ctxptr)
     /* with/without intersect the providers: installed ones count too */
     if (providers) {
         pkgset_find_match_packages(ictx->ps, pkg, req, providers, 1);
-        add_installed_providers(ictx, req, providers);
+        pkgdb_q_providers(ictx->ts->db, providers, req,
+                          iset_packages_by_recno(ictx->unset));
     }
 
     if (iset_provides(ictx->inset, req)) {
@@ -791,22 +759,7 @@ tn_array *eval_boolreq(const struct capreq *req,
 {
     const char *expr = req->name;
 
-    /* to be able to test booldeps without booldeps support (rpm5) */
-    if (poldek__is_in_testing_mode() && *expr == '_') {
-        char *s;
-
-        /* memleak in testing mode */
-        n_strdupapl(expr + 2, req->namelen - 2, &s);
-        expr = s;
-        while (*s) {
-            if (*s == '_')
-                *s = ' ';
-            s++;
-        }
-        DBGF_F("%s => %s\n", req->name, expr);
-    }
-
-    struct booldep *dep = booldep_parse(expr);
+    struct booldep *dep = booldep_parse_capreq(req);
     if (!dep) {
         logn(LOGERR, "%s: boolean dependency parse error", expr);
         return NULL;
@@ -839,19 +792,6 @@ tn_array *eval_boolreq(const struct capreq *req,
     return reqs;
 }
 
-inline static int req_is_boolean(const struct capreq *req)
-{
-    if (capreq_is_boolean(req))
-        return 1;
-
-    if (poldek__is_in_testing_mode()) {
-        if (*req->name == '_' && *(req->name + 1) == '_')
-            return 1;
-    }
-
-    return 0;
-}
-
 const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
 {
     const struct capreq *req;
@@ -868,7 +808,7 @@ const struct i3req *i3_req_iter_get(struct i3_req_iter *it)
     }
 
     req = pkg_req_iter_get(it->it);
-    if (req && req_is_boolean(req)) {
+    if (req && booldep_is_boolean_req(req)) {
         n_array_cfree(&it->breqs); /* free if any */
         it->breqs = eval_boolreq(req, &it->bctx);
         if (it->breqs) {

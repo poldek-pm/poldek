@@ -37,6 +37,10 @@ struct pkgset {
 
     tn_hash            *_req_cache;
     tn_hash            *_reqpkgs_cache;
+
+    /* names of boolean reqs' constituents put into req_idx; the index
+       keeps key pointers, so they must live as long as the pkgset */
+    tn_array           *_booldep_capnames; /* char* [] */
 };
 
 struct pm_ctx;

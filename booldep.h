@@ -17,6 +17,17 @@ struct booldep *booldep_parse(const char *expr);
 void booldep_free(struct booldep *dep);
 
 struct capreq;
+
+/* is req a boolean (rich) dependency? (recognizes the testing-mode
+   __op_encoded form too) */
+int booldep_is_boolean_req(const struct capreq *req);
+
+/* parse a boolean capreq's expression (handles the testing-mode form) */
+struct booldep *booldep_parse_capreq(const struct capreq *req);
+
+/* flat array of cloned leaf requirements of the expression */
+tn_array *booldep_leaves(const struct booldep *dep);
+
 struct booldep_eval_ctx {
     void *ctx;
     int (*req_cost)(const struct capreq *req, tn_array **providers, void *ctx);
