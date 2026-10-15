@@ -93,12 +93,10 @@ static Header ldhdr_byrecno(const struct pkg *pkg, void *foo)
         goto l_end;
 
     pkgdb_it_init(db, &it, PMTAG_RECNO, (const char*)&pkg->recno);
-
-    if ((dbrec = pkgdb_it_get(&it)) == NULL)
-        goto l_end;
+    dbrec = pkgdb_it_get(&it);
 
     // rpm's error: rpmdb_it_get_count(&it) with RECNO is always 0
-    if (dbrec->hdr)
+    if (dbrec && dbrec->hdr)
         h = pm_rpmhdr_link(dbrec->hdr);
 
     pkgdb_it_destroy(&it);
