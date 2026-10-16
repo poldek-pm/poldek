@@ -17,8 +17,10 @@
 #include <stdbool.h>
 #include <trurl/narray.h>
 
+#include "compiler.h"
 #include "pkg.h"
 #include "pkgcmp.h"
+#include "pkgmisc.h"
 
 static
 int do_pkg_cmp_uniq_name_evr(const struct pkg *p1, struct pkg *p2)
