@@ -317,6 +317,18 @@ static const char *str_at(rpmtd td, int index)
     return td_at(td, index) ? rpmtdGetString(td) : NULL;
 }
 
+/* a tag may be absent, but one that is there needs an entry for each file, as for rpm */
+static int file_tag_count_ok(rpmtd td, rpmtd names, const char *tagname,
+                             const char *pkgname)
+{
+    if (td->count == 0 || td->count == names->count)
+        return 1;
+
+    logn(LOGERR, "%s: size of %s (%u) != size of BASENAMES (%u)",
+         pkgname, tagname, td->count, names->count);
+    return 0;
+}
+
 /* -1 on error  */
 int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
                     Header h, int which, const char *pkgname)
@@ -370,6 +382,13 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     }
 
     hget(&symlinks, h, RPMTAG_FILELINKTOS);
+
+    if (!file_tag_count_ok(&modes, &names, "FILEMODES", pkgname) ||
+        !file_tag_count_ok(&sizes, &names, "FILESIZES", pkgname) ||
+        !file_tag_count_ok(&symlinks, &names, "FILELINKTOS", pkgname)) {
+        nerr++;
+        goto l_endfunc;
+    }
 
     skipdirs = alloca(sizeof(*skipdirs) * dirs.count);
     fentdirs = alloca(sizeof(*fentdirs) * dirs.count);
