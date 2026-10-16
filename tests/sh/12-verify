@@ -332,5 +332,18 @@ testVerifyFileConflictsGivenPackages()
     assertEquals "a and b should report /opt/x" "$n" "1"
 }
 
+# every file a pair of packages has in conflict is reported, not only the first one
+testVerifyFileConflictsDifferingFiles()
+{
+    build a -f /opt/x -f /opt/y
+    build b -fd /opt/x -fd /opt/y
+    make_index
+
+    msg "# $POLDEK -Omultilib=no --verify=file-conflicts"
+    $POLDEK -Omultilib=no --verify=file-conflicts >$TMP/verify-log.log
+    n=$(grep -A1 -E '^Path: /opt/(x|y)$' $TMP/verify-log.log | grep -c ' cnfl .*a-1-1.*b-1-1')
+    assertEquals "should report /opt/x and /opt/y" "$n" "2"
+}
+
 
 . ./sh/lib/shunit2
