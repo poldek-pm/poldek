@@ -15,6 +15,7 @@
 
 #include <stdarg.h>
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -58,7 +59,7 @@ char *util__abs_path(/*const */char *path);
 void packages_display_summary(int verbose_l, const char *prefix, tn_array *pkgs,
                               int parseable);
 
-int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
+int snprintf_size(char *buf, int bufsize, uint64_t nbytes,
                   int ndigits, int longunit);
 
 tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang);

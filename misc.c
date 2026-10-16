@@ -609,7 +609,7 @@ char *util__abs_path(/* const */ char *path)
 }
 
 
-int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
+int snprintf_size(char *buf, int bufsize, uint64_t nbytes,
                   int ndigits, int longunit)
 {
     char unit[3], fmt[32];
