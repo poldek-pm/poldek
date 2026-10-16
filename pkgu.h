@@ -50,12 +50,6 @@ EXPORT tn_array *pkguinf_langs(struct pkguinf *pkgu);
 
 #ifndef SWIG
 
-EXPORT int pkguinf_store_rpmhdr(struct pkguinf *pkgu, tn_buf *nbuf);
-EXPORT int pkguinf_store_rpmhdr_st(struct pkguinf *pkgu, tn_stream *st);
-EXPORT int pkguinf_skip_rpmhdr(tn_stream *st);
-EXPORT struct pkguinf *pkguinf_restore_rpmhdr_st(tn_alloc *na,
-                                          tn_stream *st, off_t offset);
-
 EXPORT struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr, tn_array *loadlangs);
 
 EXPORT tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,

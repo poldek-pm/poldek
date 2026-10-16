@@ -70,8 +70,6 @@ EXPORT struct source *source_new_pathspec(const char *type, const char *pathspec
 EXPORT struct source *source_new_htcnf(const tn_hash *htcnf);
 
 #ifndef SWIG
-/* sets type to v0.18.x default */
-EXPORT struct source *source_new_v0_18(const char *pathspec, const char *pkg_prefix);
 EXPORT struct source *source_clone(const struct source *src);
 #endif
 EXPORT void source_free(struct source *src);
