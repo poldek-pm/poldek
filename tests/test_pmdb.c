@@ -60,14 +60,14 @@ END_TEST
 
 #ifdef HAVE_RPMORG              /* tests the header loader of the rpm.org module */
 /* rpm stores LONGFILESIZES instead of FILESIZES in a v6 package and for a file
-   of 4 GiB or more */
+   of 4 GiB or more; poldek keeps sizes in 32 bits, so 5 GiB becomes UINT32_MAX */
 START_TEST (test_ldhdr_long_file_sizes) {
     const char *basenames[] = { "small", "big" };
     const char *dirnames[] = { "/opt/" };
     const char *links[] = { "", "" };
     uint32_t diridxs[] = { 0, 0 };
     uint16_t modes[] = { S_IFREG | 0644, S_IFREG | 0644 };
-    uint64_t sizes[] = { 1, 5368709120ULL };
+    uint64_t sizes[] = { 1, 5368709120ULL }, size = 5368709121ULL;
     tn_alloc *na = n_alloc_new(4, TN_ALLOC_OBSTACK);
     Header h = headerNew();
     struct pkgfl_ent *ent;
@@ -85,13 +85,21 @@ START_TEST (test_ldhdr_long_file_sizes) {
     headerPutUint16(h, RPMTAG_FILEMODES, modes, 2);
     headerPutUint64(h, RPMTAG_LONGFILESIZES, sizes, 2);
     headerPutStringArray(h, RPMTAG_FILELINKTOS, links, 2);
+    headerPutUint64(h, RPMTAG_LONGSIZE, &size, 1);
 
     pkg = pm_rpm_ldhdr(na, h, "big-1-1.noarch.rpm", 0, PKG_LDWHOLE);
     fail_if(pkg == NULL);
     fail_if(pkg->fl == NULL || n_tuple_size(pkg->fl) != 1);
 
+    fail_unless(pkg->size == UINT32_MAX, "size %u", pkg->size);
+
     ent = n_tuple_nth(pkg->fl, 0);
     fail_unless(ent->items == 2, "%d files", ent->items);
+    for (int i = 0; i < ent->items; i++) {
+        struct flfile *f = ent->files[i];
+        uint32_t expected = strcmp(f->basename, "big") == 0 ? UINT32_MAX : 1;
+        fail_unless(f->size == expected, "%s: size %u", f->basename, f->size);
+    }
 
     pkg_free(pkg);
     headerFree(h);
