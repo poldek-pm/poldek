@@ -362,6 +362,12 @@ static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
     if (src->pkg_prefix)
         poldek_conf_add_to_section(sect, "prefix", src->pkg_prefix);
 
+    if (src->flags & PKGSOURCE_PRI) {
+        char pri[16];
+        n_snprintf(pri, sizeof(pri), "%d", src->pri);
+        poldek_conf_add_to_section(sect, "pri", pri);
+    }
+
     if (src->flags & PKGSOURCE_NOAUTO)
         poldek_conf_add_to_section(sect, "auto", "no");
 
@@ -371,11 +377,12 @@ static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
     if (src->flags & PKGSOURCE_NOAUTOUP)
         poldek_conf_add_to_section(sect, "autoup", "no");
 
-    if (src->flags & PKGSOURCE_VRFY_SIGN)
+    /* [source] has no gpg and pgp, "signed" stands for them */
+    if (src->flags & (PKGSOURCE_VRFY_SIGN | PKGSOURCE_VRFY_GPG | PKGSOURCE_VRFY_PGP))
         poldek_conf_add_to_section(sect, "signed", "yes");
 
     if (src->flags & PKGSOURCE_COMPR)
-        poldek_conf_add_to_section(sect, "compr", "yes");
+        poldek_conf_add_to_section(sect, "compr", src->compr);
 
     if (src->dscr)
         poldek_conf_add_to_section(sect, "lang", src->dscr);
