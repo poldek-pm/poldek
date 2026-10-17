@@ -273,6 +273,25 @@ time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
     return st.st_mtime;
 }
 
+/* rpm 5 has no digest of the database: the file's inode, mtime in
+   nanoseconds and size */
+char *pm_rpm_dbstamp(void *pm_rpm, const char *dbpath)
+{
+    char path[PATH_MAX], buf[128];
+    struct stat st;
+
+    pm_rpm = pm_rpm;
+
+    snprintf(path, sizeof(path), "%s/%s", dbpath, "Packages");
+    if (stat(path, &st) != 0)
+        return NULL;
+
+    n_snprintf(buf, sizeof(buf), "%llu %lld.%09ld %lld",
+               (unsigned long long)st.st_ino, (long long)st.st_mtim.tv_sec,
+               (long)st.st_mtim.tv_nsec, (long long)st.st_size);
+    return n_strdup(buf);
+}
+
 void pm_rpm_closedb(rpmdb db)
 {
     DBGF("DB %p\n", db);

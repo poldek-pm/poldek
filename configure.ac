@@ -381,6 +381,8 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $DBLIB $LIBS"],
 
 AC_CHECK_FUNCS(rpmlog vrpmlog rpmCheckSig rpmVerifySignature)
 AC_CHECK_FUNCS(rpmdbIndexKeyIteratorInit)
+dnl a digest of the database contents, see pm_rpm_dbstamp()
+AC_CHECK_FUNCS(rpmdbCookie)
 
 dnl rpm 4.2?
 AC_CHECK_FUNCS(rpmtsColor, AC_DEFINE([HAVE_RPM_4_2],1,[]))
