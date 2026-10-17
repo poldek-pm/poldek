@@ -264,12 +264,15 @@ int load_dir(struct pkgdir *pkgdir,
         if (pkg == NULL) {  /* not exists in previous index */
             tn_array *langs;
 
-            nnew++;
             n_assert(h);        /* loaded in previous if block */
             msgn(3, _("%s: loading header..."), n_basenam(path));
             pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size, PKG_LDWHOLE);
-            n_assert(pkg);
+            if (pkg == NULL) {  /* the error is logged */
+                pm_rpmhdr_free(h);
+                continue;
+            }
 
+            nnew++;
             pkg->load_pkguinf = load_pkguinf;
 
             if ((langs = pm_rpmhdr_langs(h))) {
