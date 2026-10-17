@@ -105,6 +105,74 @@ testRPMdbcacheSameSecond() {
     assertEquals "b-1-1 not listed as installed" "1" "$n"
 }
 
+# another program changes the database while poldek runs, in the second
+# poldek read it in; with the database an hour old, poldek exits long after
+testRPMdbcacheChangedWhileRunning() {
+    is_rpm_testing_off && return
+    rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
+
+    local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
+    local mtime=$(( $(date +%s) - 3600 ))
+    touch -d @$mtime $dbfiles
+
+    mkdir -p $DESTINATION_REPO/RPMS/
+    rm -f $DESTINATION_REPO/RPMS/*.rpm
+    build_package $DESTINATION_REPO/RPMS/ b 1-1
+    local change="$TMPDIR/08-rpm-change.sh"
+    echo "$RPM -i --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm && touch -d @$mtime.5 $dbfiles" > $change
+
+    printf 'cd /installed\nls\n!sh %s\nquit\n' "$change" |
+        timeout 60 script -qec "$RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null >/dev/null
+    $RPM --quiet -q b || fail "b: rpm installation failed"
+
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-1-1')
+    assertEquals "b-1-1 not listed as installed" "1" "$n"
+}
+
+# another program installs a package during a shell session that read the
+# installed packages from the cache, then the session installs one
+testRPMdbcacheOwnInstallAfterChange() {
+    is_rpm_testing_off && return
+    rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
+
+    build c 1-1
+    $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
+
+    mkdir -p $DESTINATION_REPO/RPMS/
+    rm -f $DESTINATION_REPO/RPMS/*.rpm
+    build_package $DESTINATION_REPO/RPMS/ b 1-1
+    local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
+    local change="$TMPDIR/08-rpm-change.sh" age="$TMPDIR/08-rpm-age.sh"
+    echo "$RPM -i --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm" > $change
+    echo "touch -d '-1 hour' $dbfiles" > $age  # as if the session went on long
+
+    printf 'cd /installed\nls\n!sh %s\ncd /all-avail\ninstall --justdb c\n!sh %s\nquit\n' \
+           "$change" "$age" |
+        timeout 60 script -qec "$RAW_POLDEK --st dir -s $REPO --root $DESTINATION_REPO --shell" /dev/null >/dev/null
+    $RPM --quiet -q b c || fail "b, c: installation failed"
+
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -cE '^(b|c)-1-1')
+    assertEquals "b-1-1 and c-1-1 not listed as installed" "2" "$n"
+}
+
+# rpm --rebuilddb renumbers the database records, so an upgraded package can
+# get the record number of the version it replaced
+testRPMdbcacheRebuilddb() {
+    is_rpm_testing_off && return
+    rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
+
+    rpm_build_installed b 1-1
+    $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
+
+    rm -f $DESTINATION_REPO/RPMS/*.rpm
+    build_package $DESTINATION_REPO/RPMS/ b 2-1
+    $RPM -U --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm
+    $RPM --rebuilddb
+
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-2-1')
+    assertEquals "b-2-1 not listed as installed" "1" "$n"
+}
+
 # e.g. openssl multiple instances
 testUpgradeMultipleInstalled() {
     is_rpm_testing_off && return
