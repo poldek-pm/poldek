@@ -84,7 +84,7 @@ int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
             if (!S_ISLNK(mode))
                 cmprc = 1;
             else {
-                register char *l1;
+                register const char *l1;
 
                 l1 = strchr(f1->basename, '\0') + 1;
                 n_assert(slinkto);
@@ -119,7 +119,7 @@ int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict)
             if (!S_ISLNK(f2->mode))
                 cmprc = 1;
             else {
-                register char *l1, *l2;
+                register const char *l1, *l2;
 
                 l1 = strchr(f1->basename, '\0') + 1;
                 l2 = strchr(f2->basename, '\0') + 1;
@@ -149,7 +149,7 @@ int flfile_cmp(const struct flfile *f1, const struct flfile *f2)
         cmprc = f1->mode - f2->mode;
 
     if (cmprc == 0 && S_ISLNK(f1->mode)) {
-        register char *l1, *l2;
+        register const char *l1, *l2;
 
         l1 = strchr(f1->basename, '\0') + 1;
         l2 = strchr(f2->basename, '\0') + 1;
