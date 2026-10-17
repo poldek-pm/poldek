@@ -49,18 +49,10 @@ const char source_TYPE_GROUP[] = "group";
 const char *poldek_conf_PKGDIR_DEFAULT_TYPE = "pndir";
 const char *poldek_conf_PKGDIR_DEFAULT_COMPR = COMPR_GZ;
 
-struct subopt {
-    char      *name;
-    unsigned  flag;              /* MUST BE non-zero */
-    char      *val;
-    int       isdefault;         /* is default value */
-};
-
 struct src_option {
     char      *name;
     int       len;
     unsigned  flag;
-    struct subopt *subopts;
 };
 
 #define PKGSRC_OPTION_SUBOPT  (1 << 15)
@@ -68,43 +60,24 @@ struct src_option {
 #define PKGSRC_OPTION_OPTMASK (PKGSRC_OPTION_SUBOPT | PKGSRC_OPTION_STRING)
 
 static struct src_option source_options[] = {
-    { "noauto",   0, PKGSOURCE_NOAUTO,      NULL},
-    { "noautoup", 0, PKGSOURCE_NOAUTOUP,    NULL},
-    { "gpg",      0, PKGSOURCE_VRFY_GPG,    NULL},
-    { "pgp",      0, PKGSOURCE_VRFY_PGP,    NULL},
-    { "sign",     0, PKGSOURCE_VRFY_SIGN,   NULL},
+    { "noauto",   0, PKGSOURCE_NOAUTO },
+    { "noautoup", 0, PKGSOURCE_NOAUTOUP },
+    { "gpg",      0, PKGSOURCE_VRFY_GPG },
+    { "pgp",      0, PKGSOURCE_VRFY_PGP },
+    { "sign",     0, PKGSOURCE_VRFY_SIGN },
     { "type",     0, PKGSOURCE_TYPE |
-                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
+                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT },
     { "lang",     0, PKGSOURCE_DSCR |
-                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
+                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT },
     { "group",    0, PKGSOURCE_GROUP |
-                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
-    { "pri",      0, PKGSOURCE_PRI | PKGSRC_OPTION_SUBOPT, NULL},
+                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT },
+    { "pri",      0, PKGSOURCE_PRI | PKGSRC_OPTION_SUBOPT },
     { "compr",    0, PKGSOURCE_COMPR |
-                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
-    {  NULL,      0, 0, NULL },
+                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT },
+    {  NULL,      0, 0 },
 };
 
 static char *source_set(char **member, const char *value);
-
-#if 0
-static unsigned find_subopt(const char *optstr, struct subopt *subopts)
-{
-    int i;
-    unsigned flag = 0;
-
-    i = 0;
-    while (subopts[i].name) {
-        if (strcmp(subopts[i].name, optstr) == 0) {
-            flag = subopts[i].flag;
-            break;
-        }
-        i++;
-    }
-
-    return flag;
-}
-#endif
 
 static
 unsigned get_subopt(struct source *src, struct src_option *opt,
@@ -873,27 +846,6 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
                 n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
                                             "%s", opt->name);
                 n += n_snprintf(&str[n], size - n, "=%s,", src->compr);
-            }
-
-        } else {
-            int j = 0;
-
-            while (opt->subopts[j].name != NULL) {
-                struct subopt *subopt = &opt->subopts[j++];
-
-                if (subopt->isdefault)
-                    continue;
-
-                if (src->subopt_flags & subopt->flag) {
-                    n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n],
-                                                size - n, "%s", opt->name);
-
-                    n += n_snprintf(&str[n], size - n, "=%s,", subopt->name);
-
-                    //n += n_snprintf(&str[n], size - n, "%s=%s,", opt->name,
-                    //                subopt->name);
-                    break;
-                }
             }
         }
     }
