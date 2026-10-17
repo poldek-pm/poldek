@@ -644,7 +644,7 @@ static void show_cnfls(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
                 if (capreq_is_obsl(cr))
                     continue;
                 n++;
-                ncol += cmdctx_printf(cmdctx, capreq_snprintf_s(cr));
+                ncol += cmdctx_printf(cmdctx, "%s", capreq_snprintf_s(cr));
                 if (n < n_array_size(pkg->cnfls) - nobsls)
                     ncol += cmdctx_printf(cmdctx, ", ");
 

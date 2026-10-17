@@ -56,7 +56,8 @@ struct pndir_paths {
     char  path[PATH_MAX];
     char  path_md[PATH_MAX];
     char  path_dscr[PATH_MAX];
-    char  fmt_dscr[PATH_MAX];
+    char  dscr_idxpath[PATH_MAX];
+    char  dscr_tss[32];
     char  path_diff_toc[PATH_MAX];
 };
 
@@ -92,6 +93,20 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
     }
 
     return dest;
+}
+
+/* tss: timestamp of a diff index or "" */
+char *pndir_dscr_pathname(char *dest, size_t size, const char *idxpath,
+                          const char *lang, const char *tss)
+{
+    char suffix[128];
+    const char *idstr, *langid;
+
+    pndir_db_dscr_idstr(lang, &idstr, &langid);
+    n_snprintf(suffix, sizeof(suffix), "%s%s%s%s%s", pndir_desc_suffix,
+               *langid ? "." : "", langid, *tss ? "." : "", tss);
+
+    return pndir_mkidx_pathname(dest, size, idxpath, suffix);
 }
 
 static
@@ -518,7 +533,7 @@ static
 int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
 {
     char             suffix[64] = "", dscr_suffix[64] = "";
-    char             dscr_suffix_fmt[128] = "", tmp[PATH_MAX];
+    char             tmp[PATH_MAX];
     int              psize;
 
     memset(paths, 0, sizeof(*paths));
@@ -528,9 +543,6 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
 
     if ((pkgdir->flags & PKGDIR_DIFF) == 0) {
         snprintf(dscr_suffix, sizeof(dscr_suffix), "%s",
-                 pndir_desc_suffix);
-
-        snprintf(dscr_suffix_fmt, sizeof(dscr_suffix_fmt), "%s%%s%%s",
                  pndir_desc_suffix);
 
         snprintf(paths->path, psize, "%s", path);
@@ -543,9 +555,7 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
         snprintf(suffix, sizeof(suffix), ".%s", tsstr);
         snprintf(dscr_suffix, sizeof(dscr_suffix), "%s.%s",
                  pndir_desc_suffix, tsstr);
-
-        snprintf(dscr_suffix_fmt, sizeof(dscr_suffix_fmt), "%s%%s%%s.%s",
-                 pndir_desc_suffix, tsstr);
+        snprintf(paths->dscr_tss, sizeof(paths->dscr_tss), "%s", tsstr);
 
         snprintf(temp, sizeof(temp), "%s", path);
 
@@ -568,13 +578,13 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
     }
 
     pndir_mkidx_pathname(paths->path_dscr, psize, path, dscr_suffix);
-    pndir_mkidx_pathname(paths->fmt_dscr, psize, path, dscr_suffix_fmt);
+    snprintf(paths->dscr_idxpath, psize, "%s", path);
 #if ENABLE_TRACE
     printf("\nPATHS\n");
     printf("path_main  %s\n", paths->path_main);
     printf("path       %s\n", paths->path);
     printf("path_dscr  %s\n", paths->path_dscr);
-    printf("path_dscrf %s\n", paths->fmt_dscr);
+    printf("dscr_idx   %s %s\n", paths->dscr_idxpath, paths->dscr_tss);
     printf("path_toc   %s\n\n", paths->path_diff_toc);
 #endif
     return 1;
@@ -584,7 +594,7 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
 static
 int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, tn_hash *langstosave_h,
                        tn_hash *db_dscr_h, const char *key, int klen,
-                       tn_buf *nbuf, const char *pathtmpl)
+                       tn_buf *nbuf, const struct pndir_paths *paths)
 {
 
     tn_array *langs = pkguinf_langs(pkgu);
@@ -603,7 +613,8 @@ int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, tn_hash *langstosave_h,
         }
         DBGF("Saving %s translation\n", lang);
 
-        if ((db = pndir_db_dscr_h_dbcreat(db_dscr_h, pathtmpl, lang)) == NULL)
+        if ((db = pndir_db_dscr_h_dbcreat(db_dscr_h, paths->dscr_idxpath,
+                                          paths->dscr_tss, lang)) == NULL)
             return 0;
 
         n_buf_clean(nbuf);
@@ -730,7 +741,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
             int v;
 
             v = pndir_save_pkginfo(i, pkgu, langstosave_h, db_dscr_h, key, klen,
-                                   nbuf, paths.fmt_dscr);
+                                   nbuf, &paths);
             pkguinf_free(pkgu);
             if (!v) {
                 nerr++;

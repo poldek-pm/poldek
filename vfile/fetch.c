@@ -645,7 +645,7 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
     }
 
     bufp = &buf[n];
-    n += n_snprintf(&buf[n], size - n, p);
+    n += n_snprintf(&buf[n], size - n, "%s", p);
 
     if (isdir)
         sl = strchr(buf, '\0');

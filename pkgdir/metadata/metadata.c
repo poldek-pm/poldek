@@ -235,7 +235,7 @@ static const char *expand_macros(char *dest, int size, const char *str,
     }
 
     if (*str != '$') {
-        n = n_snprintf(dest, size, *tl);
+        n = n_snprintf(dest, size, "%s", *tl);
         tl++;
     }
 
@@ -267,7 +267,7 @@ static const char *expand_macros(char *dest, int size, const char *str,
         if (v_len + 1 > (int)sizeof(val))
             return str;
 
-        n_snprintf(val, v_len + 1, v);
+        n_snprintf(val, v_len + 1, "%s", v);
         DBGF("var (%s)\n", val);
 
         if ((var = n_hash_get(values, val)) == NULL) {
@@ -480,7 +480,7 @@ static struct vfile *zstd2gz(struct vfile *vf)
     int clen = strlen(cachedir);
 
     if (strncmp(vfile_localpath(vf), cachedir, clen) == 0) { /* under cachedir? */
-        n_snprintf(gzpath, sizeof(gzpath), vfile_localpath(vf));
+        n_snprintf(gzpath, sizeof(gzpath), "%s", vfile_localpath(vf));
 
     } else {
         char *p, localdir[PATH_MAX];

@@ -61,6 +61,9 @@ void pndir_init(struct pndir *idx);
 char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
                            const char *suffix);
 
+char *pndir_dscr_pathname(char *dest, size_t size, const char *idxpath,
+                          const char *lang, const char *tss);
+
 int pndir_tsstr(char *tss, int size, time_t ts);
 
 
@@ -105,8 +108,8 @@ const char *pndir_db_dscr_idstr(const char *lang,
                                 const char **idstr, const char **langstr);
 
 tn_hash *pndir_db_dscr_h_new(void);
-struct tndb *pndir_db_dscr_h_dbcreat(tn_hash *db_dscr_h, const char *pathtmpl,
-                                     const char *lang);
+struct tndb *pndir_db_dscr_h_dbcreat(tn_hash *db_dscr_h, const char *idxpath,
+                                     const char *tss, const char *lang);
 int pndir_db_dscr_h_insert(tn_hash *db_dscr_h,
                            const char *lang, struct tndb *db);
 

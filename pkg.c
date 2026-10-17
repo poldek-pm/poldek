@@ -1300,7 +1300,7 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
 
 
     if (pkg->fn) {
-        n_snprintf(buf, size, pkg->fn);
+        n_snprintf(buf, size, "%s", pkg->fn);
         return buf;
     }
 
