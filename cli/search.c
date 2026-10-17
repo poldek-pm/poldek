@@ -413,7 +413,7 @@ static int fl_match(tn_tuple *fl, struct pattern *pt)
         dn = flent->dirname;
         if (*dn == '/') {
             n_assert(*(dn + 1) == '\0');
-            n = n_snprintf(path, sizeof(path), dn);
+            n = n_snprintf(path, sizeof(path), "%s", dn);
 
         } else {
             n = n_snprintf(path, sizeof(path), "/%s/", dn);

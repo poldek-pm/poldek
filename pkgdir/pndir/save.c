@@ -233,11 +233,11 @@ void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir, unsigned flags,
                  n_buf_ptr(nbuf), n_buf_size(nbuf) - 1); /* eat last ':' */
 
 
-    n = n_snprintf(buf, sizeof(buf), "%lu", pkgdir->ts);
+    n = n_snprintf(buf, sizeof(buf), "%lu", (unsigned long)pkgdir->ts);
     tndb_put(db, pndir_tag_ts, strlen(pndir_tag_ts), buf, n);
 
     if (pkgdir->flags & PKGDIR_DIFF) {
-        n = n_snprintf(buf, sizeof(buf), "%lu", pkgdir->orig_ts);
+        n = n_snprintf(buf, sizeof(buf), "%lu", (unsigned long)pkgdir->orig_ts);
         tndb_put(db, pndir_tag_ts_orig, strlen(pndir_tag_ts_orig), buf, n);
 
         if (pkgdir->removed_pkgs && n_array_size(pkgdir->removed_pkgs)) {
@@ -521,8 +521,8 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir,
     idx = pkgdir->mod_data;
     n_assert(idx && idx->md_orig);
     n_stream_printf(vf->vf_tnstream, "%s %lu %s %lu\n",
-                    n_basenam(paths->path), pkgdir->ts,
-                    idx->md_orig, pkgdir->orig_ts);
+                    n_basenam(paths->path), (unsigned long)pkgdir->ts,
+                    idx->md_orig, (unsigned long)pkgdir->orig_ts);
     vfile_close(vf);
 
     if (pkgdir->pkgs && n_array_size(pkgdir->pkgs))

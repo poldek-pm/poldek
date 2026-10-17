@@ -248,7 +248,7 @@ static char *setup_default_cachedir(void)
         if ((pw = getpwuid(getuid())) && pw->pw_name && *pw->pw_name)
             n_snprintf(suffix, sizeof(suffix), "%s", pw->pw_name);
         else
-            n_snprintf(suffix, sizeof(suffix), "%.4ld", getuid());
+            n_snprintf(suffix, sizeof(suffix), "%.4ld", (long)getuid());
 
         n_snprintf(path, sizeof(path), "%s/%s-%s", dir, dn, suffix);
         if (!util__isdir(path))
@@ -1005,6 +1005,6 @@ void timethis_end(int verbose_level, void *tvp, const char *prefix)
     verbose_level = 1;
 #endif
 
-    msgn(verbose_level, "time [%s] %ld.%06ld\n", prefix, tv.tv_sec, tv.tv_usec);
+    msgn(verbose_level, "time [%s] %ld.%06ld\n", prefix, (long)tv.tv_sec, (long)tv.tv_usec);
     free(tvp);
 }

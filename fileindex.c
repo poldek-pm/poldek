@@ -478,7 +478,7 @@ void file_conflict_print(struct file_conflict *cnfl)
 
     //n_assert(cnfl->flags & (FILE_CONFLICT_ADDED_RIGTH | FILE_CONFLICT_ADDED_LEFT));
 
-    msg(0, " %-5s %s(%c m%o s%d) %c-%c %s(%c m%o s%d)\n", prefix,
+    msg(0, " %-5s %s(%c m%o s%u) %c-%c %s(%c m%o s%u)\n", prefix,
         pkg_snprintf_s(cnfl->e1.pkg),
         S_ISDIR(cnfl->e1.flfile->mode) ? 'D' : 'F',
         cnfl->e1.flfile->mode, cnfl->e1.flfile->size,
@@ -861,8 +861,7 @@ int file_index_report_semiorphans(struct pkgset *ps, tn_array *pkgs)
                                 k < mreq->ncandidates - 1 ? "/" : "");
 
             if (mreq->ncandidates > 3)
-                n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
-                                "...", mreq->ncandidates - 3);
+                n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n, "...");
 
             /* hide same suggestions (different paths but same suggested Requires:) */
             if (!n_hash_exists(printed, pkgstr)) {

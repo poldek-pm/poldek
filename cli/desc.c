@@ -577,7 +577,7 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
         }
 
         if (i + 1 < n_array_size(reqpkgs))
-            ncol += cmdctx_printf(cmdctx, colon);
+            ncol += cmdctx_printf(cmdctx, "%s", colon);
     }
 
     cmdctx_printf(cmdctx, "\n");
@@ -751,12 +751,12 @@ static void list_files_long(struct cmdctx *cmdctx, tn_tuple *fl, int mode_octal)
                               f->basename + strlen(f->basename) + 1);
 
             if (mode_octal) {
-                cmdctx_printf(cmdctx, "%6o%10d\t%s\n", f->mode, f->size, buf);
+                cmdctx_printf(cmdctx, "%6o%10u\t%s\n", f->mode, f->size, buf);
 
             } else {
                 char s[12];
                 mode_t_to_str(s, sizeof(s), f->mode);
-                cmdctx_printf(cmdctx, "%10s%10d\t%s\n", s, f->size, buf);
+                cmdctx_printf(cmdctx, "%10s%10u\t%s\n", s, f->size, buf);
             }
         }
     }
@@ -1004,7 +1004,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg,
     }
 
     cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Size:");
-    cmdctx_printf(cmdctx, "%.1f %cB (%d B)\n", pkgsize, unit, pkg->size);
+    cmdctx_printf(cmdctx, "%.1f %cB (%u B)\n", pkgsize, unit, pkg->size);
 
     unit = 'K';
     if (pkg->fsize > 0) {
@@ -1014,7 +1014,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg,
             unit = 'M';
         }
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Package size:");
-        cmdctx_printf(cmdctx, "%.1f %cB (%d B)\n", pkgsize, unit, pkg->fsize);
+        cmdctx_printf(cmdctx, "%.1f %cB (%u B)\n", pkgsize, unit, pkg->fsize);
     }
 
     if (pkg_pkgdirpath(pkg)) {

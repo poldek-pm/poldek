@@ -158,7 +158,8 @@ static void p_dupnull(int fdno, unsigned p_open_flags)
     }
 }
 #endif
-static void st_seterr(struct vopen3_st *st, const char *fmt, ...)
+static __attribute__((format(printf,2,3)))
+void st_seterr(struct vopen3_st *st, const char *fmt, ...)
 {
     va_list args;
     char   errmsg[1024];

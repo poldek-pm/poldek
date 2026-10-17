@@ -301,7 +301,7 @@ char *dent_dirpath(char *path, int size, const struct pkg_dent *dent, const char
 
     int n = 1;
     while (n_array_size(stack))
-        n += n_snprintf(&path[n], size - n, "%s/", n_array_shift(stack));
+        n += n_snprintf(&path[n], size - n, "%s/", (char*)n_array_shift(stack));
 
     if (n > 1)
         path[n - 1] = '\0';     /* eat last '/' */
@@ -349,7 +349,7 @@ char *poclidek_dent_dirpath(char *path, int size, const struct pkg_dent *dent)
     path[1] = '\0';
     n = 1;
     while (n_array_size(stack))
-        n += n_snprintf(&path[n], size - n, "%s/", n_array_shift(stack));
+        n += n_snprintf(&path[n], size - n, "%s/", (char*)n_array_shift(stack));
 
     if (n > 1)
         path[n - 1] = '\0';     /* eat last '/' */
