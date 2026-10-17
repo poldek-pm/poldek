@@ -70,6 +70,20 @@ testListSourcesColumns()
     fi
 }
 
+testListSourcesCompr()
+{
+    echo "
+[source]
+name = zst
+type = pndir
+path = /nonexistent/repo/
+compr = zst
+" > $TMPDIR/compr.conf
+
+    out=$($POLDEK --conf $TMPDIR/compr.conf -l 2>&1) || fail "-l failed with exit $?: $out"
+    echo "$out" | grep -qF 'compr=zst' || fail "compr=zst not listed: $out"
+}
+
 testConfAsRoot()
 {
     if command -v ldd >/dev/null; then
