@@ -39,3 +39,6 @@ clean-local:
 	ld -e _start -o $@ $<
 	strip $@
 	rm -f $<
+
+# a source's flags hold only its options
+check_PROGRAMS += test_source_flags

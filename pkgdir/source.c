@@ -527,7 +527,7 @@ struct source *source_new_pathspec(const char *type, const char *pathspec,
                 if (opt->flag & PKGSRC_OPTION_SUBOPT) {
                     if (strncmp(*t, opt->name, opt->len) == 0) {
                         if (get_subopt(src, opt, *t, name))
-                            src->flags |= opt->flag;
+                            src->flags |= opt->flag & ~PKGSRC_OPTION_OPTMASK;
                         break;
                     }
 
