@@ -61,7 +61,7 @@ unsigned pkg_get_verify_signflags(struct pkg *pkg)
 void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
                             const char *destdir, int is_destdir_custom)
 {
-    long bytesget = 0, bytesdownload = 0, bytesused = 0;
+    uint64_t bytesget = 0, bytesdownload = 0, bytesused = 0;
     int i;
 
     n_assert(is_destdir_custom == 0); /* not implemented */

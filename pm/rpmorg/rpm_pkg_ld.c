@@ -280,26 +280,41 @@ static int hget(rpmtd td, Header h, int32_t tag) {
     return headerGet(h, tag, td, HEADERGET_MINMEM);
 }
 
-static uint16_t *uint16_at(rpmtd td, int index)
+/* 0 if the tag is not in the header; the callers take a missing tag as empty */
+static int td_at(rpmtd td, int index)
 {
+    if (td->count == 0)
+        return 0;
+
     int i = rpmtdSetIndex(td, index);
     n_assert(i >= 0);            /* ret -1 on error */
-    return rpmtdGetUint16(td);
+    return 1;
+}
+
+static uint16_t *uint16_at(rpmtd td, int index)
+{
+    return td_at(td, index) ? rpmtdGetUint16(td) : NULL;
 }
 
 static uint32_t *uint32_at(rpmtd td, int index)
 {
-    int i = rpmtdSetIndex(td, index);
-    n_assert(i >= 0);            /* ret -1 on error */
-    return rpmtdGetUint32(td);
+    return td_at(td, index) ? rpmtdGetUint32(td) : NULL;
+}
+
+static uint64_t *uint64_at(rpmtd td, int index)
+{
+    return td_at(td, index) ? rpmtdGetUint64(td) : NULL;
+}
+
+/* poldek keeps sizes in 32 bits; a larger one becomes the largest it holds */
+static uint32_t size32(uint64_t size)
+{
+    return size > UINT32_MAX ? UINT32_MAX : size;
 }
 
 static const char *str_at(rpmtd td, int index)
 {
-    int i = rpmtdSetIndex(td, index);
-    //printf("str_at %d is %d", index, i);
-    n_assert(i >= 0);            /* ret -1 on error */
-    return rpmtdGetString(td);
+    return td_at(td, index) ? rpmtdGetString(td) : NULL;
 }
 
 /* -1 on error  */
@@ -345,7 +360,8 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
         missing_file_hdrs_err = 1;
     }
 
-    if (!hget(&sizes, h, RPMTAG_FILESIZES)) {
+    /* with HEADERGET_EXT rpm falls back to FILESIZES */
+    if (!headerGet(h, RPMTAG_LONGFILESIZES, &sizes, HEADERGET_MINMEM | HEADERGET_EXT)) {
         if (poldek_VERBOSE > 1)
             logn(LOGWARN, errmsg_notag, pkgname, "FILESIZES");
         missing_file_hdrs_err = 2;
@@ -432,9 +448,9 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     	}
 
         const char *symlink = str_at(&symlinks, i);
-        uint32_t *size = uint32_at(&sizes, i);
+        uint64_t *size = uint64_at(&sizes, i);
 
-        flfile = flfile_new(na, size ? *size : 0,
+        flfile = flfile_new(na, size ? size32(*size) : 0,
                             mode ? *mode : 0,
                             name, len,
                             symlink,
@@ -497,7 +513,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
 {
     struct pkg *pkg;
     uint32_t   epoch, size, btime, itime;
-    uint32_t   *psize = NULL, *pbtime = NULL, *pitime = NULL;
+    uint32_t   *pbtime = NULL, *pitime = NULL;
     const char *name = NULL, *version = NULL, *release = NULL, *arch = NULL;
     char       osbuf[128], *os = osbuf;
     char       srcrpmbuf[128], *srcrpm = srcrpmbuf;
@@ -518,8 +534,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
             logn(LOGWARN, _("%s: missing OS tag"), fname);
     }
 
-    if (pm_rpmhdr_get_int(h, RPMTAG_SIZE, &size))
-        psize = &size;
+    size = size32(headerGetNumber(h, RPMTAG_LONGSIZE)); /* falls back to SIZE */
 
     if (pm_rpmhdr_get_int(h, RPMTAG_BUILDTIME, &btime))
         pbtime = &btime;
@@ -531,7 +546,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
         srcrpm = NULL;
 
     pkg = pkg_new_ext(na, name, epoch ? epoch : 0, version, release, arch, os,
-                      fname, srcrpm, psize ? *psize : 0, fsize,
+                      fname, srcrpm, size, fsize,
                       pbtime ? *pbtime : 0);
 
     if (pkg == NULL)
