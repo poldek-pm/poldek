@@ -317,6 +317,18 @@ static const char *str_at(rpmtd td, int index)
     return td_at(td, index) ? rpmtdGetString(td) : NULL;
 }
 
+/* a tag may be absent, but one that is there needs an entry for each file, as for rpm */
+static int file_tag_count_ok(rpmtd td, rpmtd names, const char *tagname,
+                             const char *pkgname)
+{
+    if (td->count == 0 || td->count == names->count)
+        return 1;
+
+    logn(LOGERR, "%s: size of %s (%u) != size of BASENAMES (%u)",
+         pkgname, tagname, td->count, names->count);
+    return 0;
+}
+
 /* -1 on error  */
 int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
                     Header h, int which, const char *pkgname)
@@ -329,7 +341,9 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     unsigned   i, j;
     int        ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
     const char *errmsg_notag = _("%s: no %s tag");
-    struct rpmtd_s names, dirs, diridxs, modes, sizes, symlinks;
+    /* empty until read, so that each early exit can free them all */
+    struct rpmtd_s names = {}, dirs = {}, diridxs = {};
+    struct rpmtd_s modes = {}, sizes = {}, symlinks = {};
 
     (void)missing_file_hdrs_err; /* disable -Wunused-but-set-variable */
 
@@ -369,10 +383,32 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
 
     hget(&symlinks, h, RPMTAG_FILELINKTOS);
 
+    if (!file_tag_count_ok(&modes, &names, "FILEMODES", pkgname) ||
+        !file_tag_count_ok(&sizes, &names, "FILESIZES", pkgname) ||
+        !file_tag_count_ok(&symlinks, &names, "FILELINKTOS", pkgname)) {
+        nerr++;
+        goto l_endfunc;
+    }
+
     skipdirs = alloca(sizeof(*skipdirs) * dirs.count);
     fentdirs = alloca(sizeof(*fentdirs) * dirs.count);
     dirslen = alloca(sizeof(size_t) * dirs.count);
     fentdirs_items = alloca(sizeof(*fentdirs_items) * dirs.count);
+
+    /* files per directory; rpm takes a file list with an index out of
+       range as broken, too */
+    memset(fentdirs_items, 0, sizeof(*fentdirs_items) * dirs.count);
+    for (j=0; j < rpmtdCount(&names); j++) {
+        uint32_t idx = *uint32_at(&diridxs, j);
+
+        if (idx >= rpmtdCount(&dirs)) {
+            logn(LOGERR, "%s: DIRINDEXES entry %u out of range (%u DIRNAMES)",
+                 pkgname, idx, dirs.count);
+            nerr++;
+            goto l_endfunc;
+        }
+        fentdirs_items[idx]++;
+    }
 
     /* skip unneded dirnames */
     for (i=0; i < rpmtdCount(&dirs); i++) {
@@ -381,7 +417,6 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
 
         dirslen[i] = strlen(dir);
 
-        fentdirs_items[i] = 0;
         if (!valid_fname(dir, 0, pkgname)) {
     	    skipdirs[i] = NULL;
     	    fentdirs[i] = NULL;
@@ -408,9 +443,6 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
         }
 
         skipdirs[i] = dir;
-        for (j=0; j < rpmtdCount(&names); j++)
-            if (*uint32_at(&diridxs, j) == i)
-                fentdirs_items[i]++;
 
         /* XXX dangerous cast to char* */
         flent = pkgfl_ent_new(na, (char *)dir, dirslen[i], fentdirs_items[i]);
