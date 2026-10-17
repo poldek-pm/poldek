@@ -223,7 +223,10 @@ struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
 
     }
 
-    pndir_dscr_pathname(tmpath, sizeof(tmpath), idxpath, lang, tss);
+    if (pndir_dscr_pathname(tmpath, sizeof(tmpath), idxpath, lang, tss) == NULL) {
+        logn(LOGERR, "%s: %m", vf_url_slim_s(idxpath, 0));
+        return NULL;
+    }
     DBGF("mk %s\n", tmpath);
 
     msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));

@@ -75,5 +75,41 @@ START_TEST (test_url_as_path_percent) {
 END_TEST
 
 
+/* only the password of login:password@host is masked, as vf_parse_url() splits it */
+START_TEST (test_url_hidepasswd) {
+    const char *urls[][2] = {
+        { "ftp://user:secret@host/dir/", "ftp://user:xxxxxx@host/dir/" },
+        { "ftp://user:p@ss@host/dir/", "ftp://user:xxxx@host/dir/" },
+        { "http://host:8080/r1@x/", "http://host:8080/r1@x/" },
+        { "http://host/a:b@c/", "http://host/a:b@c/" },
+    };
+    char buf[256];
+    unsigned i;
+
+    for (i = 0; i < sizeof(urls) / sizeof(urls[0]); i++) {
+        const char *url = vf_url_hidepasswd(buf, sizeof(buf), urls[i][0]);
+        fail_if(strcmp(url, urls[i][1]) != 0, "%s: got '%s'", urls[i][0], url);
+    }
+}
+END_TEST
+
+/* a URL longer than the buffer is cut, and what is left of the password is masked */
+START_TEST (test_url_hidepasswd_short_buffer) {
+    const char *urls[][2] = {
+        { "http://u:secretpassword@host/", "http://u:xxxxxx" },
+        { "http://login-of-twenty:pw@host/", "http://login-of" },
+    };
+    char buf[16];
+    unsigned i;
+
+    for (i = 0; i < sizeof(urls) / sizeof(urls[0]); i++) {
+        const char *url = vf_url_hidepasswd(buf, sizeof(buf), urls[i][0]);
+        fail_if(strcmp(url, urls[i][1]) != 0, "%s: got '%s'", urls[i][0], url);
+    }
+}
+END_TEST
+
+
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
-             test_url_as_path_percent);
+             test_url_as_path_percent, test_url_hidepasswd,
+             test_url_hidepasswd_short_buffer);

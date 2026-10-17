@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -55,7 +56,6 @@ struct pndir_paths {
     char  path_main[PATH_MAX];
     char  path[PATH_MAX];
     char  path_md[PATH_MAX];
-    char  path_dscr[PATH_MAX];
     char  dscr_idxpath[PATH_MAX];
     char  dscr_tss[32];
     char  path_diff_toc[PATH_MAX];
@@ -73,8 +73,10 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
 
     suffix_len = strlen(suffix);
 
-    if (strlen(pathname) + suffix_len + 1 > size)
+    if (strlen(pathname) + suffix_len + 1 > size) {
+        errno = ENAMETOOLONG;
         return NULL;
+    }
 
     bn = n_basenam(pathname);
     if ((ext = strrchr(bn, '.')) == NULL || strcmp(ext + 1,
@@ -83,7 +85,8 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
 
     } else {
         int len = ext - pathname + 1;
-        n_assert(len + suffix_len + strlen(ext) + 1 < size);
+        /* len - 1 characters before the dot, suffix, ext and the '\0' */
+        n_assert(len + suffix_len + strlen(ext) <= size);
         n_strncpy(dest, pathname, len);
         strcat(dest, suffix);
 
@@ -532,7 +535,7 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir,
 static
 int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
 {
-    char             suffix[64] = "", dscr_suffix[64] = "";
+    char             suffix[64] = "";
     char             tmp[PATH_MAX];
     int              psize;
 
@@ -542,9 +545,6 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
     snprintf(paths->path_main, psize, "%s", path);
 
     if ((pkgdir->flags & PKGDIR_DIFF) == 0) {
-        snprintf(dscr_suffix, sizeof(dscr_suffix), "%s",
-                 pndir_desc_suffix);
-
         snprintf(paths->path, psize, "%s", path);
 
     } else {
@@ -553,8 +553,6 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
         pndir_tsstr(tsstr, sizeof(tsstr), pkgdir->orig_ts);
 
         snprintf(suffix, sizeof(suffix), ".%s", tsstr);
-        snprintf(dscr_suffix, sizeof(dscr_suffix), "%s.%s",
-                 pndir_desc_suffix, tsstr);
         snprintf(paths->dscr_tss, sizeof(paths->dscr_tss), "%s", tsstr);
 
         snprintf(temp, sizeof(temp), "%s", path);
@@ -577,13 +575,11 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
         path = tmp;
     }
 
-    pndir_mkidx_pathname(paths->path_dscr, psize, path, dscr_suffix);
     snprintf(paths->dscr_idxpath, psize, "%s", path);
 #if ENABLE_TRACE
     printf("\nPATHS\n");
     printf("path_main  %s\n", paths->path_main);
     printf("path       %s\n", paths->path);
-    printf("path_dscr  %s\n", paths->path_dscr);
     printf("dscr_idx   %s %s\n", paths->dscr_idxpath, paths->dscr_tss);
     printf("path_toc   %s\n\n", paths->path_diff_toc);
 #endif

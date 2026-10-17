@@ -102,7 +102,10 @@ struct tndb *do_db_dscr_get(tn_hash *db_dscr_h, const char *idxpath,
         return NULL;
 
     n_assert(idxpath);
-    pndir_dscr_pathname(path, sizeof(path), idxpath, lang, tss);
+    if (pndir_dscr_pathname(path, sizeof(path), idxpath, lang, tss) == NULL) {
+        logn(LOGERR, "%s: %m", idxpath);
+        return NULL;
+    }
     db = do_db_dscr_open(path);
     if (db == NULL)
         return NULL;

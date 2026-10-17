@@ -68,6 +68,13 @@ struct pkgdir_module pkgdir_module_dir = {
     NULL
 };
 
+/* mtime and size are 32-bit, as struct pkg keeps them */
+static void mtime_key(char *key, size_t size, const char *fn, uint32_t mtime,
+                      uint32_t fsize)
+{
+    n_snprintf(key, size, "%s-%u-%u", fn, mtime, fsize);
+}
+
 static tn_hash *build_mtime_index(tn_array *pkgs)
 {
     tn_hash *ht;
@@ -80,8 +87,8 @@ static tn_hash *build_mtime_index(tn_array *pkgs)
         char key[2048];
 
         if (pkg->fmtime && pkg->fsize) {
-            n_snprintf(key, sizeof(key), "%s-%d-%d", pkg_filename_s(pkg),
-                       pkg->fmtime, pkg->fsize);
+            mtime_key(key, sizeof(key), pkg_filename_s(pkg), pkg->fmtime,
+                      pkg->fsize);
             n_hash_insert(ht, key, pkg);
         }
     }
@@ -99,7 +106,7 @@ struct pkg *search_in_mtime_index(tn_hash *mtime_index, const char *fn,
 {
     char key[2048];
 
-    n_snprintf(key, sizeof(key), "%s-%d-%d", fn, st->st_mtime, st->st_size);
+    mtime_key(key, sizeof(key), fn, st->st_mtime, st->st_size);
     return n_hash_get(mtime_index, key);
 }
 
