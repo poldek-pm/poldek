@@ -304,24 +304,30 @@ char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size)
     return path;
 }
 
-time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
+/* stat() of the file that holds the database in dbpath */
+static int dbfile_stat(const char *dbpath, struct stat *st)
 {
     const char *file = "Packages";
     char path[PATH_MAX];
-    struct stat st;
-
-    pm_rpm = pm_rpm;
 
     char *backend = rpmExpand("%{_db_backend}", NULL);
     if (backend != NULL && strncmp(backend, "sqlite", 6) == 0) {
         file = "rpmdb.sqlite";
     }
-    snprintf(path, sizeof(path), "%s/%s", dbpath, file);
-
-    if (stat(path, &st) != 0)
-        return 0;
-
     free(backend);
+
+    snprintf(path, sizeof(path), "%s/%s", dbpath, file);
+    return stat(path, st);
+}
+
+time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
+{
+    struct stat st;
+
+    pm_rpm = pm_rpm;
+
+    if (dbfile_stat(dbpath, &st) != 0)
+        return 0;
 
     return st.st_mtime;
 }
