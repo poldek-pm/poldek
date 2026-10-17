@@ -139,7 +139,6 @@ struct poclidek_ctx {
 
 
     struct pkgdir       *dbpkgdir;   /* db packages */
-    time_t              ts_dbpkgdir; /* timestamp */
 
     unsigned            _flags;
 

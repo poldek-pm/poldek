@@ -12,6 +12,7 @@ static const char pndir_tag_depdirs[] = "%__h_depdirs";
 static const char pndir_tag_langs[] = "%__h_langs";
 static const char pndir_tag_ts[] = "%__h_ts";
 static const char pndir_tag_ts_orig[] = "%__h_ts_orig";
+static const char pndir_tag_dbstamp[] = "%__h_dbstamp";
 static const char pndir_tag_opt[] = "%__h_opt";
 static const char pndir_tag_removed[] = "%__h_removed";
 static const char pndir_tag_pkgroups[] = "%__h_groups";

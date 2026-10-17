@@ -29,6 +29,7 @@ struct pm_module pm_module_pset = {
 
     NULL, 
     NULL,
+    NULL,                       /* dbstamp */
     NULL,
     
     pm_pset_opendb,

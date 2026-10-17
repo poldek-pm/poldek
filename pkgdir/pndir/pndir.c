@@ -496,6 +496,10 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                 goto l_end;
             }
 
+        } else if (hdr_eq(key, pndir_tag_dbstamp)) {
+            n_cfree(&pkgdir->dbstamp);
+            pkgdir->dbstamp = n_strdupl(val, vlen);
+
         } else if (hdr_eq(key, pndir_tag_removed)) {
             n_assert(pkgdir->removed_pkgs == NULL);
             pkgdir->removed_pkgs = parse_removed(val);

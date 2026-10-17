@@ -558,6 +558,7 @@ void pkgdir_free(struct pkgdir *pkgdir)
     n_cfree(&pkgdir->idxpath);
     n_cfree(&pkgdir->compr);
     n_cfree(&pkgdir->orig_idxpath);
+    n_cfree(&pkgdir->dbstamp);
 
     if (pkgdir->depdirs) {
         n_array_free(pkgdir->depdirs);

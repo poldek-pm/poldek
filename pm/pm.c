@@ -109,6 +109,13 @@ time_t pm_dbmtime(struct pm_ctx *ctx, const char *path)
     return 0;
 }
 
+char *pm_dbstamp(struct pm_ctx *ctx, const char *path)
+{
+    if (ctx->mod->dbstamp)
+        return ctx->mod->dbstamp(ctx->modh, path);
+    return NULL;
+}
+
 char *pm_dbpath(struct pm_ctx *ctx, char *path, size_t size)
 {
     if (ctx->mod->dbpath)

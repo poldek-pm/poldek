@@ -43,6 +43,5 @@ static int reload(struct cmdctx *cmdctx)
     int rc;
 
     rc = poclidek_load_packages(cmdctx->cctx, ldflags);
-    cmdctx->cctx->ts_dbpkgdir = time(0); /* touch */
     return rc;
 }

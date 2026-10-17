@@ -41,6 +41,7 @@ struct pm_module {
 
     char *(*dbpath)(void *modh, char *path, size_t size);
     time_t (*dbmtime)(void *modh, const char *path);
+    char *(*dbstamp)(void *modh, const char *path);
     int (*dbdepdirs)(void *modh, const char *rootdir, const char *dbpath,
                      tn_array *depdirs);
 

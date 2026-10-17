@@ -304,26 +304,64 @@ char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size)
     return path;
 }
 
-time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
+/* stat() of the file that holds the database in dbpath */
+static int dbfile_stat(const char *dbpath, struct stat *st)
 {
     const char *file = "Packages";
     char path[PATH_MAX];
-    struct stat st;
-
-    pm_rpm = pm_rpm;
 
     char *backend = rpmExpand("%{_db_backend}", NULL);
     if (backend != NULL && strncmp(backend, "sqlite", 6) == 0) {
         file = "rpmdb.sqlite";
     }
-    snprintf(path, sizeof(path), "%s/%s", dbpath, file);
-
-    if (stat(path, &st) != 0)
-        return 0;
-
     free(backend);
 
+    snprintf(path, sizeof(path), "%s/%s", dbpath, file);
+    return stat(path, st);
+}
+
+time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
+{
+    struct stat st;
+
+    pm_rpm = pm_rpm;
+
+    if (dbfile_stat(dbpath, &st) != 0)
+        return 0;
+
     return st.st_mtime;
+}
+
+/* the database file's inode, mtime in ns and size, plus rpm's digest of
+   its contents: --rebuilddb after an upgrade can repeat an old digest */
+char *pm_rpm_dbstamp(void *pm_rpm, const char *dbpath)
+{
+    struct stat st;
+    char buf[256], *cookie = NULL;
+
+    if (dbfile_stat(dbpath, &st) != 0) /* no database */
+        return NULL;
+
+#ifdef HAVE_RPMDBCOOKIE
+    struct rpmorg_db *db = pm_rpm_opendb(pm_rpm, NULL, "/", dbpath,
+                                         O_RDONLY, NULL);
+    if (db == NULL)
+        return NULL;
+
+    cookie = rpmdbCookie(db->db);
+    pm_rpm_closedb(db);
+    if (cookie == NULL)
+        return NULL;
+#else
+    pm_rpm = pm_rpm;
+#endif
+
+    n_snprintf(buf, sizeof(buf), "%llu %lld.%09ld %lld %s",
+               (unsigned long long)st.st_ino, (long long)st.st_mtim.tv_sec,
+               (long)st.st_mtim.tv_nsec, (long long)st.st_size,
+               cookie ? cookie : "-");
+    free(cookie);
+    return n_strdup(buf);
 }
 
 struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,

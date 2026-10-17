@@ -111,6 +111,7 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req);
 
 char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size);
 time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbfull_path);
+char *pm_rpm_dbstamp(void *pm_rpm, const char *dbfull_path);
 int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath,
                      tn_array *depdirs);
 
