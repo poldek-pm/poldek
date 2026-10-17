@@ -285,5 +285,65 @@ testRequiredPackagesSelfRequirer()
     assertEquals "b should require a" "$?" "0"
 }
 
+# a file shared by two packages is reported wherever the index put it
+testVerifyFileConflictsShared()
+{
+    build a -f /opt/x -f /opt/y
+    build b -f /opt/x
+    make_index
+
+    msg "# $POLDEK --verify=file-conflicts"
+    $POLDEK --verify=file-conflicts >$TMP/verify-log.log
+    n=$(grep -A1 '^Path: /opt/x$' $TMP/verify-log.log | grep ' shr ' | grep -c 'a-1-1.* b-1-1')
+    assertEquals "should report /opt/x shared by a and b" "$n" "1"
+}
+
+# each pair is reported, also for the last name of a directory
+testVerifyFileConflictsSharedByThree()
+{
+    build a -f /opt/x
+    build b -f /opt/x
+    build c -f /opt/x
+    make_index
+
+    msg "# $POLDEK --verify=file-conflicts"
+    $POLDEK --verify=file-conflicts >$TMP/verify-log.log
+    n=$(sed -n '/^Path: \/opt\/x$/,/^$/p' $TMP/verify-log.log | grep -c ' shr ')
+    assertEquals "should report 3 pairs sharing /opt/x" "$n" "3"
+}
+
+# with packages given, only files shared between them are reported
+testVerifyFileConflictsGivenPackages()
+{
+    build a -f /opt/x
+    build b -f /opt/x
+    make_index
+
+    for p in a b; do
+        msg "# $POLDEK --verify=file-conflicts $p"
+        $POLDEK --verify=file-conflicts $p >$TMP/verify-log.log
+        n=$(grep -c '^Path: /opt/x$' $TMP/verify-log.log)
+        assertEquals "$p alone should not report /opt/x" "$n" "0"
+    done
+
+    msg "# $POLDEK --verify=file-conflicts a b"
+    $POLDEK --verify=file-conflicts a b >$TMP/verify-log.log
+    n=$(grep -c '^Path: /opt/x$' $TMP/verify-log.log)
+    assertEquals "a and b should report /opt/x" "$n" "1"
+}
+
+# every file a pair of packages has in conflict is reported, not only the first one
+testVerifyFileConflictsDifferingFiles()
+{
+    build a -f /opt/x -f /opt/y
+    build b -fd /opt/x -fd /opt/y
+    make_index
+
+    msg "# $POLDEK -Omultilib=no --verify=file-conflicts"
+    $POLDEK -Omultilib=no --verify=file-conflicts >$TMP/verify-log.log
+    n=$(grep -A1 -E '^Path: /opt/(x|y)$' $TMP/verify-log.log | grep -c ' cnfl .*a-1-1.*b-1-1')
+    assertEquals "should report /opt/x and /opt/y" "$n" "2"
+}
+
 
 . ./sh/lib/shunit2
