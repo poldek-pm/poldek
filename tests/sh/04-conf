@@ -98,6 +98,8 @@ source = pgp,pgp /nonexistent/repo2/
         echo "$out" | grep -E '^gpg ' | grep -qF "$o" || fail "gpg: $o not listed: $out"
     done
     echo "$out" | grep -E '^pgp ' | grep -qF sign || fail "pgp: sign not listed: $out"
+}
+
 # same option given on the command line, in the "name,opt path" syntax
 testListSourcesComprFromCommandLine()
 {
