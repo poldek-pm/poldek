@@ -27,7 +27,7 @@ jobs:
     - name: make check-sh
       run: make CFLAGS="-O0" check-sh
     - name: save sh tests log
-      if: always()
+      if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: sh-tests.log
