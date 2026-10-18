@@ -16,8 +16,16 @@ done
 # without nm there is nothing to compare against and the test would pass vacuously
 command -v nm >/dev/null || { echo "nm: not found, skipped"; exit 77; }
 
-tmp=${TMPDIR:-/tmp}/poldek-exports.$$
-trap 'rm -f $tmp.*' EXIT
+tmpdir=${TMPDIR:-/tmp}
+if command -v mktemp >/dev/null; then
+    # a name of our own: $$ alone collides when two test runs share a $TMPDIR
+    tmpdir=$(mktemp -d "$tmpdir/polkdek-exports.XXXXXX") || exit 77
+else
+    tmpdir="$tmpdir/polkdek-exports.$$"
+    mkdir "$tmpdir" || exit 77
+fi
+trap 'rm -rf "$tmpdir"' EXIT
+tmp=$tmpdir/list
 
 # EXPORT declarations of functions (name followed by '(') and of variables
 # (name followed by '[' or ';')

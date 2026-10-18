@@ -121,7 +121,7 @@ echo "Summary(de): de $name" >> $SPEC
 echo "Group: System" >> $SPEC
 echo "License: foo" >> $SPEC
 #echo "BuildArch: $arch" >> $SPEC
-echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
+echo "BuildRoot: $TMPDIR/%{name}-%{version}-root-%(id -u -n)-$$" >> $SPEC
 [ -n "$provides" ] &&  echo "Provides: $provides" >> $SPEC
 [ -n "$requires" ] && echo "Requires: $requires" >> $SPEC
 [ -n "$suggests" ] && echo "Suggests: $suggests" >> $SPEC

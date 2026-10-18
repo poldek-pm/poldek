@@ -29,19 +29,25 @@ END_TEST
 
 
 START_TEST (test_custom_rpmdb) {
-    //char buf[PATH_MAX], tmp[PATH_MAX];
     struct pm_ctx *pmctx;
     struct pkgdb *db;
     struct capreq *req;
+    char tmpl[PATH_MAX], path[PATH_MAX], dbpath[PATH_MAX], cmd[PATH_MAX + 16];
 
     pmmodule_init();
 
     pmctx = pm_new("rpm");
     fail_if(pmctx == NULL);
 
-    system("rm -rf /tmp/poldek-unit-tests/");
-    const char *path = "/tmp/poldek-unit-tests/bar/baz";
-    const char *dbpath = "/tmp/poldek-unit-tests/bar/baz" "/var/lib/rpm";
+    /* a directory of our own: a fixed path collides between two test runs and
+       ignores a $TMPDIR that is not /tmp */
+    const char *tmpdir = getenv_path("TMPDIR");
+    n_snprintf(tmpl, sizeof(tmpl), "%s/poldek-unit-tests-XXXXXX",
+               tmpdir ? tmpdir : "/tmp");
+    fail_if(mkdtemp(tmpl) == NULL, "cannot make a temporary directory");
+
+    n_snprintf(path, sizeof(path), "%s/bar/baz", tmpl);
+    n_snprintf(dbpath, sizeof(dbpath), "%s/var/lib/rpm", path);
 
     db = pkgdb_open(pmctx, path, NULL, O_RDONLY, NULL);
     fail_if(db != NULL);
@@ -55,6 +61,9 @@ START_TEST (test_custom_rpmdb) {
     fail_if(pkgdb_match_req(db, req, 1, NULL));
 
     pkgdb_close(db);
+
+    n_snprintf(cmd, sizeof(cmd), "rm -rf '%s'", tmpl);
+    fail_if(system(cmd) != 0, "cannot remove the temporary directory");
 }
 END_TEST
 
