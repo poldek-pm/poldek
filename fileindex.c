@@ -42,8 +42,6 @@ struct file_ent {
 
 #define FILE_CONFLICT_CNFL (1 << 0)
 #define FILE_CONFLICT_SHRD (1 << 1)
-#define FILE_CONFLICT_ADDED_LEFT  (1 << 4)
-#define FILE_CONFLICT_ADDED_RIGTH (1 << 5)
 
 struct file_conflict {
     int flags;
@@ -321,35 +319,6 @@ void file_index_setup(struct file_index *fi)
 }
 
 
-static int register_file_conflict(struct pkg *pkg1, struct pkg *pkg2,
-                                  int *added1, int *added2)
-{
-    char c1 = '\0', c2 = '\0';
-
-    if (pkg1->cnfls == NULL)
-        pkg1->cnfls = capreq_arr_new(0);
-
-    if (pkg2->cnfls == NULL)
-        pkg2->cnfls = capreq_arr_new(0);
-
-    if (pkg_add_pkgcnfl(pkg1, pkg2, 1))
-        c1 = '>';
-
-    if (pkg_add_pkgcnfl(pkg2, pkg1, 1))
-        c2 = '<';
-#if 0
-    if ((c1 || c2) && verbose > 0) {
-        char buf[256];
-        pkg_snprintf(buf, sizeof(buf), pkg1);
-        msgn(1, _("add cnfl: %s %c-%c %s"), buf, c2 ? :' ', c1 ? :' ',
-            pkg_snprintf_s(pkg2));
-    }
-#endif
-    *added1 = c1;
-    *added2 = c2;
-    return (c1 || c2);
-}
-
 static
 void process_dup(const char *path,
                  struct file_ent *ent1, struct file_ent *ent2,
@@ -367,34 +336,16 @@ void process_dup(const char *path,
 
         add_file_conflict(ms->cnflh, cnfl);
 
-    } else {
-        int rc, added1 = 0, added2 = 0;
-        DBGF("add conflict between %s and %s based on %s\n",
-             pkg_id(ent1->pkg), pkg_id(ent2->pkg), path);
+    } else if (!poldek_conf_MULTILIB) {
+        /* rpm lets files of other colors share a path; the index has no colors */
+        cnfl = file_conflict_new(path, FILE_CONFLICT_CNFL);
 
-        /* do not add conflicts in multilib mode, file colors are used (seems to) */
-        if (poldek_conf_MULTILIB)
-            rc = 1;
-        else
-            rc = register_file_conflict(ent1->pkg, ent2->pkg, &added1, &added2);
+        cnfl->e1.flfile = flfile_clone(ent1->flfile);
+        cnfl->e1.pkg = pkg_link(ent1->pkg);
+        cnfl->e2.flfile = flfile_clone(ent2->flfile);
+        cnfl->e2.pkg = pkg_link(ent2->pkg);
 
-        if (rc && (added1 || added2)) {
-            cnfl = file_conflict_new(path, FILE_CONFLICT_CNFL);
-
-            cnfl->e1.flfile = flfile_clone(ent1->flfile);
-            cnfl->e1.pkg = pkg_link(ent1->pkg);
-            cnfl->e2.flfile = flfile_clone(ent2->flfile);
-            cnfl->e2.pkg = pkg_link(ent2->pkg);
-
-            if (added1)
-                cnfl->flags |= FILE_CONFLICT_ADDED_LEFT;
-
-            if (added2)
-                cnfl->flags |= FILE_CONFLICT_ADDED_RIGTH;
-            n_assert(cnfl->flags & (FILE_CONFLICT_ADDED_RIGTH | FILE_CONFLICT_ADDED_LEFT));
-
-            add_file_conflict(ms->cnflh, cnfl);
-        }
+        add_file_conflict(ms->cnflh, cnfl);
     }
 }
 
@@ -424,33 +375,30 @@ void verify_dups(int from, int to, const char *path, tn_array *fents,
 static
 void find_dups(const char *dirname, void *data, void *ms_)
 {
-    struct file_ent *prev_ent, *ent;
-    int i, ii, from;
+    struct file_ent *first, *ent;
+    int i, from = 0, n = n_array_size(data);
     char path[PATH_MAX];
     struct map_struct *ms = ms_;
 
-    prev_ent = n_array_nth(data, 0);
-    from = 0;
-    ms->nfiles += n_array_size(data);
-    for (i=1; i < n_array_size(data); i++) {
-        ent = n_array_nth(data, i);
-        ii = i;
-        while (strcmp(prev_ent->flfile->basename, ent->flfile->basename) == 0) {
-            if (ii + 1 == n_array_size(data))
-                break;
-            ii++;
-            ent = n_array_nth(data, ii);
+    if (!n_array_is_sorted((tn_array *)data)) /* lazy sort, as in findfile() */
+        n_array_sort(data);
+
+    ms->nfiles += n;
+    for (i = 1; i <= n; i++) {  /* entries from..i-1 have the same name */
+        first = n_array_nth(data, from);
+        if (i < n) {
+            ent = n_array_nth(data, i);
+            if (strcmp(first->flfile->basename, ent->flfile->basename) == 0)
+                continue;
         }
 
-        if (ii != i) {
-            snprintf(path, sizeof(path), "%s/%s", dirname,
-                     prev_ent->flfile->basename);
-            verify_dups(from, ii, path, data, ms);
+        if (i - from > 1) {
+            /* directories are indexed as "usr/bin", the root one as "/" */
+            snprintf(path, sizeof(path), "%s/%s", *dirname == '/' ? "" : dirname,
+                     first->flfile->basename);
+            verify_dups(from, i, path, data, ms);
         }
-
-        prev_ent = ent;
-        from = ii;
-        i = ii;
+        from = i;
     }
 }
 
@@ -482,8 +430,8 @@ void file_conflict_print(struct file_conflict *cnfl)
         pkg_snprintf_s(cnfl->e1.pkg),
         S_ISDIR(cnfl->e1.flfile->mode) ? 'D' : 'F',
         cnfl->e1.flfile->mode, cnfl->e1.flfile->size,
-        (cnfl->flags & FILE_CONFLICT_ADDED_LEFT) ? '<' : ' ',
-        (cnfl->flags & FILE_CONFLICT_ADDED_RIGTH) ? '>' : ' ',
+        (cnfl->flags & FILE_CONFLICT_CNFL) ? '<' : ' ',
+        (cnfl->flags & FILE_CONFLICT_CNFL) ? '>' : ' ',
         pkg_snprintf_s0(cnfl->e2.pkg),
         S_ISDIR(cnfl->e2.flfile->mode) ? 'D' : 'F',
         cnfl->e2.flfile->mode, cnfl->e2.flfile->size);
@@ -531,7 +479,7 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
             struct file_conflict *cnfl = n_array_nth(conflicts, j);
             if (pkgs) {
                 if (!n_array_bsearch(pkgs, cnfl->e1.pkg) ||
-                    !n_array_bsearch(pkgs, cnfl->e1.pkg))
+                    !n_array_bsearch(pkgs, cnfl->e2.pkg))
                     continue;
             }
             if (pathprinted == 0) {
