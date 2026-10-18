@@ -37,7 +37,6 @@ EXPORT const char source_TYPE_GROUP[]; /* "group" */
 #define PKGSOURCE_NODESC     (1 << 12)
 #define PKGSOURCE_AUTOUPA    (1 << 13) /* do --upa if --up said "desynchronized"
                                           index */
-#define PKGSOURCE_ISGROUP    (1 << 15) /* an alias for one or more sources */
 
 struct source {
     unsigned  flags;
