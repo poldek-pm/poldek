@@ -868,6 +868,13 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
                 n += n_snprintf(&str[n], size - n, "=%s,", src->dscr);
             }
 
+        } else if ((opt->flag & PKGSOURCE_COMPR)) {
+            if (src->compr) {
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", opt->name);
+                n += n_snprintf(&str[n], size - n, "=%s,", src->compr);
+            }
+
         } else {
             int j = 0;
 
