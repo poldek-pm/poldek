@@ -16,7 +16,7 @@ AM_CFLAGS = @AM_CFLAGS@
 
 POD2MAN   = @POD2MAN@
 
-libVERINFO         = 4:0:0
+libVERINFO         = 4:1:0
 lib_LTLIBRARIES    = libpoldek.la
 # unit tests link the objects directly: -fvisibility=hidden keeps the
 # internals they exercise out of libpoldek.so
