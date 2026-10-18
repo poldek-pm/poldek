@@ -236,6 +236,10 @@ void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir, unsigned flags,
     n = n_snprintf(buf, sizeof(buf), "%lu", (unsigned long)pkgdir->ts);
     tndb_put(db, pndir_tag_ts, strlen(pndir_tag_ts), buf, n);
 
+    if (pkgdir->dbstamp)
+        tndb_put(db, pndir_tag_dbstamp, strlen(pndir_tag_dbstamp),
+                 pkgdir->dbstamp, strlen(pkgdir->dbstamp));
+
     if (pkgdir->flags & PKGDIR_DIFF) {
         n = n_snprintf(buf, sizeof(buf), "%lu", (unsigned long)pkgdir->orig_ts);
         tndb_put(db, pndir_tag_ts_orig, strlen(pndir_tag_ts_orig), buf, n);

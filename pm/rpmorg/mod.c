@@ -26,6 +26,7 @@ struct pm_module pm_module_rpm = {
     pm_rpm_satisfies,
     pm_rpm_dbpath,
     pm_rpm_dbmtime,
+    pm_rpm_dbstamp,
     NULL,                       /* pm_rpm_dbdepdirs */
 
     (void *(*)(void *, void *, const char *, const char *, mode_t, tn_hash *))pm_rpm_opendb,

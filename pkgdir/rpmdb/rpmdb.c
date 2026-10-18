@@ -260,6 +260,10 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     pkgdir->ts = pm_dbmtime(pmctx, pkgdir->idxpath);
 
+    /* taken before reading, so a change made meanwhile shows later */
+    n_cfree(&pkgdir->dbstamp);
+    pkgdir->dbstamp = pm_dbstamp(pmctx, pkgdir->idxpath);
+
     DBGF("prev_dir %p\n", pkgdir->prev_pkgdir);
 
     if (!load_db_packages(pkgdir->mod_data, pkgdir, "/", ldflags))

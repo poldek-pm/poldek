@@ -943,7 +943,7 @@ int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
 void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
 {
-    int i, n = 0;
+    int i;
     struct pkg_dent *ent = NULL;
 
     if (cctx->rootdir)
@@ -956,7 +956,6 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
         if (ent)
             pkg_dent_remove_pkg(ent, pkg);
 
-        n++;
         DBGF("- %s\n", pkg_id(pkg));
     }
 
@@ -976,9 +975,5 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
         if (ent)
             pkg_dent_add_pkg(cctx, ent, pkg);
         DBGF("+ %s\n", pkg_id(pkg));
-        n++;
     }
-
-    if (n)
-        cctx->ts_dbpkgdir = time(0);
 }

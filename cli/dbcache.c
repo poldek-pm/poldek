@@ -26,6 +26,7 @@
 #include <sys/errno.h>
 #include <signal.h>
 #include <time.h>
+#include <unistd.h>
 #include <argp.h>
 
 #include <trurl/trurl.h>
@@ -62,18 +63,7 @@ int poclidek__load_installed(struct poclidek_ctx *cctx, int reload)
 
     cctx->pkgs_installed = pkgdir->pkgs; /* "weak" ref */
     cctx->dbpkgdir = pkgdir;
-    cctx->ts_dbpkgdir = pkgdir->ts;
     return 1;
-}
-
-static time_t mtime(const char *pathname)
-{
-    struct stat st;
-    //printf("stat %s %d\n", pathname, stat(pathname, &st));
-    if (stat(pathname, &st) != 0)
-        return 0;
-
-    return st.st_mtime;
 }
 
 static
@@ -122,28 +112,32 @@ char *mkrpmdb_path(char *path, size_t size, const char *root, const char *dbpath
 static
 struct pkgdir *load_rpmdbcache(const char *cachedir,
                                const char *dbpath,
-                               const char *rpmdb_path, time_t rpmdb_mtime,
+                               const char *rpmdb_path, const char *dbstamp,
                                unsigned ldflags)
 {
     struct pkgdir    *dir = NULL;
     const char       *lc_lang;
     char             path[PATH_MAX];
 
-    n_assert(rpmdb_mtime > 0);
-
     if (mkdbcache_path(path, sizeof(path), cachedir, rpmdb_path) == NULL)
         return NULL;
 
-    time_t mtime = poldek_util_mtime(path);
-    DBGF("dbcache mtime=%lu, %s\n", (unsigned long) mtime, path);
-
-    if (mtime >= rpmdb_mtime) {
+    if (access(path, R_OK) == 0) {
         lc_lang = poldek_util_lc_lang("LC_MESSAGES");
         if (lc_lang == NULL)
             lc_lang = "C";
 
         dir = pkgdir_open_ext(path, rpmdb_path, RPMDBCACHE_PDIRTYPE, dbpath,
                               NULL, 0, lc_lang);
+
+        DBGF("dbcache stamp=%s, db stamp=%s, %s\n", dir ? dir->dbstamp : NULL,
+             dbstamp, path);
+
+        /* made from another state of the database, or by an older poldek */
+        if (dir && (dir->dbstamp == NULL || n_str_ne(dir->dbstamp, dbstamp))) {
+            pkgdir_free(dir);
+            dir = NULL;
+        }
 
         if (dir) {
             /* rpmdbcache use symlinked rpmdb's dirindex,
@@ -224,11 +218,12 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
 
     //MEMINF("%s", "before rpmdbload\n");
     if (!reload) {              /* use cache */
-        time_t mtime_rpmdb = pm_dbmtime(pmctx, rpmdb_path);
-        if (mtime_rpmdb > 0) {
+        char *dbstamp = pm_dbstamp(pmctx, rpmdb_path);
+        if (dbstamp) {
             dir = load_rpmdbcache(ts->cachedir, dbpath,
-                                  rpmdb_path, mtime_rpmdb,
+                                  rpmdb_path, dbstamp,
                                   ldflags);
+            free(dbstamp);
         }
     }
 
@@ -260,45 +255,30 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
 int poclidek_save_installedcache(struct poclidek_ctx *cctx,
                                  struct pkgdir *pkgdir)
 {
-    time_t       mtime_rpmdb, mtime_dbcache;
-    char         rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
+    char         dbcache_path[PATH_MAX], *dbstamp;
     const char   *path;
     struct poldek_ts *ts = cctx->ctx->ts; /* for short */
+    int          changed;
 
-    if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
+    /* not read from a database, or read from the cache */
+    if (pkgdir->dbstamp == NULL || pkgdir_is_type(pkgdir, RPMDBCACHE_PDIRTYPE))
         return 1;
 
-    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
-                     ts->rootdir, dbpath) == NULL)
+    /* changed since it was read, by poldek's own transaction too */
+    dbstamp = pm_dbstamp(cctx->ctx->pmctx, pkgdir->idxpath);
+    changed = dbstamp == NULL || n_str_ne(dbstamp, pkgdir->dbstamp);
+    free(dbstamp);
+    if (changed)
         return 1;
 
-    mtime_rpmdb = pm_dbmtime(cctx->ctx->pmctx, rpmdb_path);
-    if (mtime_rpmdb > cctx->ts_dbpkgdir) /* db changed outside poldek */
-        return 1;
-
-    if (pkgdir_is_type(pkgdir, RPMDBCACHE_PDIRTYPE))
-        path = pkgdir->idxpath;
-    else
-        path = mkdbcache_path(dbcache_path, sizeof(dbcache_path),
-                              ts->cachedir, pkgdir->idxpath);
-
+    path = mkdbcache_path(dbcache_path, sizeof(dbcache_path),
+                          ts->cachedir, pkgdir->idxpath);
     if (path == NULL)
         return 0;
 
-    if (mtime_rpmdb <= cctx->ts_dbpkgdir) { /* not touched, check cache */
-        mtime_dbcache = mtime(path);
-        if (mtime_dbcache && mtime_dbcache >= cctx->ts_dbpkgdir)
-            return 1;
-    }
-
-    DBGF("path = %s, %s, %ld, %ld, %ld\n", path, pkgdir->idxpath,
-         (unsigned long)mtime_rpmdb,
-         (unsigned long)pkgdir->ts,
-         (unsigned long)mtime_dbcache);
+    DBGF("path = %s, %s, %s\n", path, pkgdir->idxpath, pkgdir->dbstamp);
     n_assert(*path != '\0');
     n_assert(strlen(path) > 10);
-    DBGF("%s %s, %ld %ld\n", ts->cachedir, path,
-         (unsigned long)mtime_rpmdb, (unsigned long)cctx->ts_dbpkgdir);
 
     return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                           PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |

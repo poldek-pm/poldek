@@ -44,6 +44,9 @@ EXPORT const char *pm_get_name(struct pm_ctx *ctx);
 
 EXPORT char *pm_dbpath(struct pm_ctx *ctx, char *path, size_t size);
 EXPORT time_t pm_dbmtime(struct pm_ctx *ctx, const char *path);
+/* malloc()ed string that identifies the state of the database at path,
+   NULL if there is none or the module cannot tell */
+EXPORT char *pm_dbstamp(struct pm_ctx *ctx, const char *path);
 
 EXPORT int pm_pminstall(struct pkgdb *db, const tn_array *pkgs,
                  const tn_array *pkgs_toremove, struct poldek_ts *ts);

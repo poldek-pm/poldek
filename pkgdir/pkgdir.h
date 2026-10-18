@@ -80,6 +80,9 @@ struct pkgdir {
 
     const struct pkgdir_module  *mod;
     void                        *mod_data;
+
+    char                *dbstamp;   /* pm_dbstamp() of the rpm database
+                                       the packages were read from */
 };
 
 #define pkgdir_pr_path(pkgdir) \
