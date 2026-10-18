@@ -375,7 +375,7 @@ static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
         poldek_conf_add_to_section(sect, "signed", "yes");
 
     if (src->flags & PKGSOURCE_COMPR)
-        poldek_conf_add_to_section(sect, "compr", "yes");
+        poldek_conf_add_to_section(sect, "compr", src->compr ? src->compr : "yes");
 
     if (src->dscr)
         poldek_conf_add_to_section(sect, "lang", src->dscr);
