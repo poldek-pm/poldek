@@ -13,6 +13,7 @@
 #include <trurl/nstr.h>
 #include <trurl/n_snprintf.h>
 
+#include "compiler.h"
 #include "conf.h"
 #include "misc.h"
 #include "log.h"
