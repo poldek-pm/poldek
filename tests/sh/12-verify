@@ -345,5 +345,22 @@ testVerifyFileConflictsDifferingFiles()
     assertEquals "should report /opt/x and /opt/y" "$n" "2"
 }
 
+# a file in the root directory is printed as /name, not as //name
+testVerifyFileConflictsTopLevelPath()
+{
+    build a -f /top -f /top2
+    build b -f /top -f /top2
+    make_index
+
+    msg "# $POLDEK --verify=file-conflicts"
+    $POLDEK --verify=file-conflicts >$TMP/verify-log.log
+    n=$(grep -c '^Path: /top$' $TMP/verify-log.log)
+    assertEquals "should report /top" "$n" "1"
+    n=$(grep -c '^Path: /top2$' $TMP/verify-log.log)
+    assertEquals "should report /top2" "$n" "1"
+    n=$(grep -c '^Path: //' $TMP/verify-log.log)
+    assertEquals "no path with two slashes" "$n" "0"
+}
+
 
 . ./sh/lib/shunit2
