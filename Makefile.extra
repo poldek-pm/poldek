@@ -1,5 +1,8 @@
 PROJ_DIR=$(shell pwd)
 
+github-local-ci:
+	gh act -j build
+
 update-modules:
 	git submodule update --init --remote
 
