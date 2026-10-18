@@ -161,12 +161,12 @@ START_TEST (test_pkg_match) {
             *gt_evr_e = '\0';
 
             if (e > 0) {
-                n_snprintf(lt_evr_e, sizeof(lt_evr_e), "%d:%d.0-0.1", e - 1, v, r);
-                n_snprintf(gt_evr_e, sizeof(gt_evr_e), "%d:%d.0-10", e - 1, v, r);
+                n_snprintf(lt_evr_e, sizeof(lt_evr_e), "%d:%d.0-0.1", e - 1, v);
+                n_snprintf(gt_evr_e, sizeof(gt_evr_e), "%d:%d.0-10", e - 1, v);
             }
 
-            n_snprintf(lt_evr_v, sizeof(lt_evr_v), "%d:%d.0-0.1", e, v, r);
-            n_snprintf(gt_evr_v, sizeof(gt_evr_v), "%d:%d.2-1", e, v, r);
+            n_snprintf(lt_evr_v, sizeof(lt_evr_v), "%d:%d.0-0.1", e, v);
+            n_snprintf(gt_evr_v, sizeof(gt_evr_v), "%d:%d.2-1", e, v);
 
             for (r=1; r < 3; r++) {
                 char evr[128];

@@ -45,7 +45,7 @@ START_TEST (test_var) {
     const char *s;
     tn_hash *vars;
 
-    n_snprintf(buf, sizeof(buf), "%{1}%{2}");
+    n_snprintf(buf, sizeof(buf), "%%{1}%%{2}");
 
     vars = n_hash_new(16, NULL);
     n_hash_insert(vars, "1", "pol");
