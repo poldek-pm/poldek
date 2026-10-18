@@ -61,8 +61,6 @@ EXPORT int pkgfl_ent_cmp(const void *a, const void *b);
 #define PKGFL_DEPDIRS     1
 #define PKGFL_NOTDEPDIRS  2
 
-EXPORT tn_tuple *pkgfl_array_store_order(tn_tuple *fl);
-
 struct pkg;
 
 /* legacy */
