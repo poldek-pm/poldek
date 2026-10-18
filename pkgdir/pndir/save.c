@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -55,8 +56,8 @@ struct pndir_paths {
     char  path_main[PATH_MAX];
     char  path[PATH_MAX];
     char  path_md[PATH_MAX];
-    char  path_dscr[PATH_MAX];
-    char  fmt_dscr[PATH_MAX];
+    char  dscr_idxpath[PATH_MAX];
+    char  dscr_tss[32];
     char  path_diff_toc[PATH_MAX];
 };
 
@@ -72,8 +73,10 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
 
     suffix_len = strlen(suffix);
 
-    if (strlen(pathname) + suffix_len + 1 > size)
+    if (strlen(pathname) + suffix_len + 1 > size) {
+        errno = ENAMETOOLONG;
         return NULL;
+    }
 
     bn = n_basenam(pathname);
     if ((ext = strrchr(bn, '.')) == NULL || strcmp(ext + 1,
@@ -82,7 +85,8 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
 
     } else {
         int len = ext - pathname + 1;
-        n_assert(len + suffix_len + strlen(ext) + 1 < size);
+        /* len - 1 characters before the dot, suffix, ext and the '\0' */
+        n_assert(len + suffix_len + strlen(ext) <= size);
         n_strncpy(dest, pathname, len);
         strcat(dest, suffix);
 
@@ -92,6 +96,20 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
     }
 
     return dest;
+}
+
+/* tss: timestamp of a diff index or "" */
+char *pndir_dscr_pathname(char *dest, size_t size, const char *idxpath,
+                          const char *lang, const char *tss)
+{
+    char suffix[128];
+    const char *idstr, *langid;
+
+    pndir_db_dscr_idstr(lang, &idstr, &langid);
+    n_snprintf(suffix, sizeof(suffix), "%s%s%s%s%s", pndir_desc_suffix,
+               *langid ? "." : "", langid, *tss ? "." : "", tss);
+
+    return pndir_mkidx_pathname(dest, size, idxpath, suffix);
 }
 
 static
@@ -215,11 +233,11 @@ void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir, unsigned flags,
                  n_buf_ptr(nbuf), n_buf_size(nbuf) - 1); /* eat last ':' */
 
 
-    n = n_snprintf(buf, sizeof(buf), "%lu", pkgdir->ts);
+    n = n_snprintf(buf, sizeof(buf), "%lu", (unsigned long)pkgdir->ts);
     tndb_put(db, pndir_tag_ts, strlen(pndir_tag_ts), buf, n);
 
     if (pkgdir->flags & PKGDIR_DIFF) {
-        n = n_snprintf(buf, sizeof(buf), "%lu", pkgdir->orig_ts);
+        n = n_snprintf(buf, sizeof(buf), "%lu", (unsigned long)pkgdir->orig_ts);
         tndb_put(db, pndir_tag_ts_orig, strlen(pndir_tag_ts_orig), buf, n);
 
         if (pkgdir->removed_pkgs && n_array_size(pkgdir->removed_pkgs)) {
@@ -503,8 +521,8 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir,
     idx = pkgdir->mod_data;
     n_assert(idx && idx->md_orig);
     n_stream_printf(vf->vf_tnstream, "%s %lu %s %lu\n",
-                    n_basenam(paths->path), pkgdir->ts,
-                    idx->md_orig, pkgdir->orig_ts);
+                    n_basenam(paths->path), (unsigned long)pkgdir->ts,
+                    idx->md_orig, (unsigned long)pkgdir->orig_ts);
     vfile_close(vf);
 
     if (pkgdir->pkgs && n_array_size(pkgdir->pkgs))
@@ -517,8 +535,8 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir,
 static
 int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
 {
-    char             suffix[64] = "", dscr_suffix[64] = "";
-    char             dscr_suffix_fmt[128] = "", tmp[PATH_MAX];
+    char             suffix[64] = "";
+    char             tmp[PATH_MAX];
     int              psize;
 
     memset(paths, 0, sizeof(*paths));
@@ -527,12 +545,6 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
     snprintf(paths->path_main, psize, "%s", path);
 
     if ((pkgdir->flags & PKGDIR_DIFF) == 0) {
-        snprintf(dscr_suffix, sizeof(dscr_suffix), "%s",
-                 pndir_desc_suffix);
-
-        snprintf(dscr_suffix_fmt, sizeof(dscr_suffix_fmt), "%s%%s%%s",
-                 pndir_desc_suffix);
-
         snprintf(paths->path, psize, "%s", path);
 
     } else {
@@ -541,11 +553,7 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
         pndir_tsstr(tsstr, sizeof(tsstr), pkgdir->orig_ts);
 
         snprintf(suffix, sizeof(suffix), ".%s", tsstr);
-        snprintf(dscr_suffix, sizeof(dscr_suffix), "%s.%s",
-                 pndir_desc_suffix, tsstr);
-
-        snprintf(dscr_suffix_fmt, sizeof(dscr_suffix_fmt), "%s%%s%%s.%s",
-                 pndir_desc_suffix, tsstr);
+        snprintf(paths->dscr_tss, sizeof(paths->dscr_tss), "%s", tsstr);
 
         snprintf(temp, sizeof(temp), "%s", path);
 
@@ -567,14 +575,12 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
         path = tmp;
     }
 
-    pndir_mkidx_pathname(paths->path_dscr, psize, path, dscr_suffix);
-    pndir_mkidx_pathname(paths->fmt_dscr, psize, path, dscr_suffix_fmt);
+    snprintf(paths->dscr_idxpath, psize, "%s", path);
 #if ENABLE_TRACE
     printf("\nPATHS\n");
     printf("path_main  %s\n", paths->path_main);
     printf("path       %s\n", paths->path);
-    printf("path_dscr  %s\n", paths->path_dscr);
-    printf("path_dscrf %s\n", paths->fmt_dscr);
+    printf("dscr_idx   %s %s\n", paths->dscr_idxpath, paths->dscr_tss);
     printf("path_toc   %s\n\n", paths->path_diff_toc);
 #endif
     return 1;
@@ -584,7 +590,7 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
 static
 int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, tn_hash *langstosave_h,
                        tn_hash *db_dscr_h, const char *key, int klen,
-                       tn_buf *nbuf, const char *pathtmpl)
+                       tn_buf *nbuf, const struct pndir_paths *paths)
 {
 
     tn_array *langs = pkguinf_langs(pkgu);
@@ -603,7 +609,8 @@ int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, tn_hash *langstosave_h,
         }
         DBGF("Saving %s translation\n", lang);
 
-        if ((db = pndir_db_dscr_h_dbcreat(db_dscr_h, pathtmpl, lang)) == NULL)
+        if ((db = pndir_db_dscr_h_dbcreat(db_dscr_h, paths->dscr_idxpath,
+                                          paths->dscr_tss, lang)) == NULL)
             return 0;
 
         n_buf_clean(nbuf);
@@ -730,7 +737,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
             int v;
 
             v = pndir_save_pkginfo(i, pkgu, langstosave_h, db_dscr_h, key, klen,
-                                   nbuf, paths.fmt_dscr);
+                                   nbuf, &paths);
             pkguinf_free(pkgu);
             if (!v) {
                 nerr++;

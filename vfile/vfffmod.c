@@ -228,7 +228,8 @@ struct do_fn {
     int (*fn)(struct vcn *, struct vfff_req *);
 };
 
-static void set_err(struct vf_request *req, int err_no, const char *fmt, ...)
+static __attribute__((format(printf,3,4)))
+void set_err(struct vf_request *req, int err_no, const char *fmt, ...)
 {
     va_list args;
 

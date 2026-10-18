@@ -618,6 +618,7 @@ static
 int url_to_path(char *buf, int size, const char *url, int isdir)
 {
     char *sl, *p, *bufp, url_buf[PATH_MAX];
+    const char *src;
     int n;
 
     *buf = '\0';
@@ -625,15 +626,15 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
 
     url = vf_url_hidepasswd(url_buf, sizeof(url_buf), url);
 
-    if ((p = strstr(url, "://")) == NULL) {
+    if ((src = strstr(url, "://")) == NULL) {
         n = 0;
-        p = (char*)url;
+        src = url;
 
-        if (*p == '/')          /* skip leading '/' ('_' in local path) */
-            p++;
+        if (*src == '/')        /* skip leading '/' ('_' in local path) */
+            src++;
 
     } else {
-        int nn = p - url;
+        int nn = src - url;
 
         if (size <= nn)
             return 0;
@@ -641,11 +642,11 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
         strncpy(buf, url, nn)[nn] = '\0';
         n = strlen(buf);
         n += n_snprintf(&buf[n], size - n, "_");
-        p += 3;
+        src += 3;
     }
 
     bufp = &buf[n];
-    n += n_snprintf(&buf[n], size - n, p);
+    n += n_snprintf(&buf[n], size - n, "%s", src);
 
     if (isdir)
         sl = strchr(buf, '\0');
@@ -681,7 +682,7 @@ int vf_url_as_path(char *buf, size_t size, const char *url)
 
 char *vf_url_proto(char *proto, int size, const char *url)
 {
-    char *p;
+    const char *p;
 
     n_assert(size > 2);
     *proto = '\0';
@@ -705,7 +706,7 @@ char *vf_url_proto(char *proto, int size, const char *url)
 
 int vf_url_type(const char *url)
 {
-    char *p;
+    const char *p;
 
     if (*url == '/')
         return VFURL_PATH;
@@ -747,8 +748,9 @@ int vf_url_type(const char *url)
 
 const char *vf_url_hidepasswd(char *buf, int size, const char *url)
 {
-    char *p, *u, *q = NULL;
-    int i;
+    const char *u, *at, *q = NULL;
+    char *p;
+    int i, hostlen;
 
 
     *buf = '\0';
@@ -757,14 +759,16 @@ const char *vf_url_hidepasswd(char *buf, int size, const char *url)
         return url;
 
     u += 3;
+    /* login:password@host[:port], split as vf_parse_url() does */
+    hostlen = strcspn(u, "/");
 
-    if ((p = strrchr(u, '@')) != NULL && (q = strchr(u, ':')) != NULL && q < p) {
+    if ((at = memrchr(u, '@', hostlen)) != NULL &&
+        (q = memchr(u, ':', at - u)) != NULL) {
         i = q - url;
         strncpy(buf, url, size)[size - 1] = '\0';
-        n_assert(buf[i] == ':');
-        p = &buf[i + 1];
-        while (*p && *p != '@')
-            *p++ = 'x';
+        if (i + 1 < size)       /* else the copy ends before the password */
+            for (p = &buf[i + 1]; *p && p < &buf[at - url]; p++)
+                *p = 'x';
 
         url = buf;
     }

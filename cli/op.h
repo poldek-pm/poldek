@@ -58,7 +58,6 @@ EXPORT struct poclidek_opgroup poclidek_opgroup_install;
 EXPORT struct poclidek_opgroup poclidek_opgroup_packages;
 EXPORT struct poclidek_opgroup poclidek_opgroup_uninstall;
 EXPORT struct poclidek_opgroup poclidek_opgroup_makeidx;
-EXPORT struct poclidek_opgroup poclidek_opgroup_split;
 EXPORT struct poclidek_opgroup poclidek_opgroup_verify;
 
 EXPORT struct poclidek_opgroup_rt *poclidek_opgroup_rt_new(struct poldek_ts *ts,

@@ -151,7 +151,7 @@ int make_idxpath(char *dpath, int size, const char *type,
                  const char *path, const char *fn, const char *ext)
 {
     int n;
-    char *endp;
+    const char *endp;
 
     n_assert(*path);
     endp = strrchr(path, '\0') - 1;
@@ -833,8 +833,7 @@ static void is_depdir_req(const struct capreq *req, tn_array *depdirs)
     }
 
     if (capreq_is_file(req)) {
-        const char *reqname;
-        char *p;
+        const char *reqname, *p;
         int reqlen;
 
         reqname = capreq_name(req);

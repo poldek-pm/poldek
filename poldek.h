@@ -26,7 +26,6 @@
 /* constans  */
 EXPORT const char poldek_BUG_MAILADDR[];
 EXPORT const char poldek_VERSION_BANNER[];
-EXPORT const char poldek_BANNER[];
 
 EXPORT int poldeklib_init(void);
 EXPORT void poldeklib_destroy(void);
@@ -75,9 +74,6 @@ EXPORT int poldek_setup(struct poldek_ctx *ctx);
 EXPORT int poldek_load_sources(struct poldek_ctx *ctx);
 
 EXPORT tn_array *poldek_load_stubs(struct poldek_ctx *ctx);
-
-/* need to be called manually if POLDEK_CONF_LAZY_DEPPROCESS is set */
-EXPORT int poldek_setup_pkgset_deps(struct poldek_ctx *ctx);
 
 EXPORT int poldek_is_interactive_on(const struct poldek_ctx *ctx);
 

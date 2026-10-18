@@ -26,6 +26,18 @@ START_TEST (test_env) {
 }
 END_TEST
 
+START_TEST (test_env_percent) {
+    char tmp[PATH_MAX];
+    const char *s;
+
+    /* the text around a variable is copied as is, '%' included */
+    setenv("ENV1", "pol", 1);
+    s = poldek_util_expand_env_vars(tmp, sizeof(tmp), "/srv/my%20dir/$ENV1%20d");
+    fail_if(s == NULL || n_str_ne(s, "/srv/my%20dir/pol%20d"),
+            "expand_env_vars() failed: %s", s ? s : "NULL");
+}
+END_TEST
+
 
 
 START_TEST (test_var) {
@@ -58,4 +70,4 @@ START_TEST (test_var) {
 }
 END_TEST
 
-NTEST_RUNNER("env", test_env, test_var);
+NTEST_RUNNER("env", test_env, test_env_percent, test_var);

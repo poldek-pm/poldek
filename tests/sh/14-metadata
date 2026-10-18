@@ -24,10 +24,45 @@ testLoad()
     assertEquals "load failed" "$n" "1"
 }
 
+# sizes of 4 GiB and more become the largest size poldek keeps, as from rpm headers
+testLoadLargeSizes()
+{
+    local dir="$TMPDIR/meta-large"
+    local primary old new n
+
+    rm -rf $dir
+    mkdir -p $dir/repo
+    cp -r metadata/repo_02/repodata $dir/repo/ || fail "cp failed"
+    primary=$(ls $dir/repo/repodata/*-primary.xml.gz)
+    old=$(sha256sum < $primary | cut -d' ' -f1)
+    zcat $primary | sed 's/package="2237" installed="0"/package="5368709120" installed="5368709120"/' | gzip -n > $dir/primary.gz
+    mv $dir/primary.gz $primary
+    new=$(sha256sum < $primary | cut -d' ' -f1)
+    sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
+    printf '[r]\nname=R\nenabled=1\nbaseurl=repo\n' > $dir/r.repo
+
+    n=$($POLDEK -s $dir/r.repo desc fake_bash | grep -E '^(Size|Package size): +4096.0 MB' | wc -l)
+    assertEquals "sizes should be 4096.0 MB" "$n" "2"
+}
+
 testLoadZst()
 {
     msg $POLDEK -s ../metadata/02zst.repo ls
     local n=$($POLDEK -s metadata/02zst.repo ls | grep fake_bash | wc -l)
+    assertEquals "load failed" "$n" "1"
+}
+
+# the baseurl text around a $variable is used as is, '%' included
+testLoadPercentInBaseurl()
+{
+    local dir="$TMPDIR/meta"
+
+    rm -rf $dir
+    mkdir -p "$dir/repo%20dir/linux"
+    cp -r metadata/repo_02/repodata "$dir/repo%20dir/linux/" || fail "cp failed"
+    printf '[r]\nname=R\nenabled=1\nbaseurl=repo%%20dir/$baseos/\n' > $dir/r.repo
+
+    local n=$($POLDEK -s $dir/r.repo ls | grep fake_bash | wc -l)
     assertEquals "load failed" "$n" "1"
 }
 

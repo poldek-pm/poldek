@@ -98,6 +98,20 @@ source = pgp,pgp /nonexistent/repo2/
         echo "$out" | grep -E '^gpg ' | grep -qF "$o" || fail "gpg: $o not listed: $out"
     done
     echo "$out" | grep -E '^pgp ' | grep -qF sign || fail "pgp: sign not listed: $out"
+# same option given on the command line, in the "name,opt path" syntax
+testListSourcesComprFromCommandLine()
+{
+    out=$($POLDEK --noconf -s "zst,compr=zst /nonexistent/repo/" --st dir -l 2>&1) || fail "-l with -s failed with exit $?: $out"
+    echo "$out" | grep -qF 'compr=zst' || fail "compr=zst from -s not listed: $out"
+}
+
+# a legacy "source = name,opt path" line keeps the value, not just the fact
+testListSourcesComprLegacyLine()
+{
+    printf '%s\n' "[global]" "source = zst,compr=zst /nonexistent/repo/" > $TMPDIR/compr-legacy.conf
+
+    out=$($POLDEK --conf $TMPDIR/compr-legacy.conf -l 2>&1) || fail "-l failed with exit $?: $out"
+    echo "$out" | grep -qF 'compr=zst' || fail "compr=zst from a legacy source line not listed: $out"
 }
 
 testConfAsRoot()

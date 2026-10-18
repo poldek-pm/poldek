@@ -3,9 +3,12 @@ LDADD = $(top_builddir)/libpoldek_core.la @CHECK_LIBS@
 
 check_PROGRAMS = test_match test_env test_pmdb test_op test_config \
 		 test_store test_cmp test_booldeps test_getenv_path \
-		 test_ignore_merge
+		 test_ignore_merge test_log test_pndir
 
 TESTS = $(check_PROGRAMS)
+
+# pndir.h includes its siblings by name
+test_pndir_CPPFLAGS = -I$(top_srcdir)/pkgdir
 
 EXTRA_DIST = test.h poldek_test_conf.conf sh run-sh-tests.sh
 
@@ -15,6 +18,10 @@ check-sh:
 
 check-sh-no-loop:
 	@MAX_LOOP=3 ./run-sh-tests.sh
+
+# shared libraries export everything their headers declare EXPORT
+TESTS += exports.sh
+EXTRA_DIST += exports.sh
 
 # called by test_config
 poldek_test_conf.conf: $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml

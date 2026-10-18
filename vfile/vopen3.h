@@ -63,9 +63,6 @@ EXPORT void vopen3_set_grabfn(struct vopen3_st *st, int (*func)(const char *, vo
                        void *arg);
 EXPORT void vopen3_destroy(struct vopen3_st *st);
 
-EXPORT int vopen3_st_infd(struct vopen3_st *st);
-EXPORT int vopen3_st_outfd(struct vopen3_st *st);
-
 
 EXPORT int vopen3_exec(struct vopen3_st *st, unsigned flags);
 

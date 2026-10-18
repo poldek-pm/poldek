@@ -73,6 +73,21 @@ testInstallNoConfig()
     assertEquals "install failed" "$?" "0"
 }
 
+testInstallPercentInFileName()
+{
+    is_rpm_testing_off && return
+
+    build a
+    # as saved from a URL with an encoded space; "%20d" must not be read as a conversion
+    mv $REPO/a-1-1.noarch.rpm "$REPO/a-1-1%20dev.noarch.rpm" || fail "renaming the package failed"
+    index
+
+    msg $POLDEK install -v a
+    $POLDEK install -v a
+    assertEquals "install failed" "$?" "0"
+    rpm_state_check "a" ""
+}
+
 # https://github.com/poldek-pm/poldek/issues/27
 testInstallAlreadyInstalled() {
     is_rpm_testing_off && return

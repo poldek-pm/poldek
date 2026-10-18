@@ -248,7 +248,7 @@ static char *setup_default_cachedir(void)
         if ((pw = getpwuid(getuid())) && pw->pw_name && *pw->pw_name)
             n_snprintf(suffix, sizeof(suffix), "%s", pw->pw_name);
         else
-            n_snprintf(suffix, sizeof(suffix), "%.4ld", getuid());
+            n_snprintf(suffix, sizeof(suffix), "%.4ld", (long)getuid());
 
         n_snprintf(path, sizeof(path), "%s/%s-%s", dir, dn, suffix);
         if (!util__isdir(path))
@@ -484,7 +484,7 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
         usedvars = n_array_new(16, free, (tn_fn_cmp)strcmp);
 
     if (*src != varmark) {
-        n = n_snprintf(dest, size, *tl);
+        n = n_snprintf(dest, size, "%s", *tl);
         tl++;
     }
 
@@ -515,7 +515,7 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
         if (v_len + 1 > (int)sizeof(val))
             return src;
 
-        n_snprintf(val, v_len + 1, v);
+        n_snprintf(val, v_len + 1, "%s", v);
         DBGF("var %c{%s}\n", varmark, val);
 
         var = NULL;
@@ -609,7 +609,7 @@ char *util__abs_path(/* const */ char *path)
 }
 
 
-int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
+int snprintf_size(char *buf, int bufsize, uint64_t nbytes,
                   int ndigits, int longunit)
 {
     char unit[3], fmt[32];
@@ -679,7 +679,8 @@ const char *lc_messages_lang(void)
  */
 static char *cut_country_code (const char *lang)
 {
-    char *c, *p, *q, *newlang;
+    const char *c, *q;
+    char *p, *newlang;
 
     if ((q = strchr(lang, '_')) == NULL)
 	return NULL;
@@ -1004,6 +1005,6 @@ void timethis_end(int verbose_level, void *tvp, const char *prefix)
     verbose_level = 1;
 #endif
 
-    msgn(verbose_level, "time [%s] %ld.%06ld\n", prefix, tv.tv_sec, tv.tv_usec);
+    msgn(verbose_level, "time [%s] %ld.%06ld\n", prefix, (long)tv.tv_sec, (long)tv.tv_usec);
     free(tvp);
 }

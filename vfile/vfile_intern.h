@@ -35,7 +35,8 @@ int vf_fetcha_ext(tn_array *urls, const char *destdir);
 #define VFILE_LOG_TTY   (1 << 8)
 #endif
 
-void vf_log(int pri, const char *fmt, ...);
+void vf_log(int pri, const char *fmt, ...)
+   __attribute__((format(printf,2,3)));
 void vf_vlog(int pri, const char *fmt, va_list ap);
 
 #define vf_logerr(fmt, args...) \
@@ -59,7 +60,7 @@ struct vfile_configuration {
     tn_array   *noproxy;
     int        *verbose;
     char       *anon_passwd;
-    void       (*log)(unsigned flags, const char *fmt, ...);
+    void       (*log)(int pri, const char *fmt, va_list ap);
     int        (*sigint_reached)(int reset);
     int        (*term_width)(void);
     struct vf_progress *bar;

@@ -19,7 +19,7 @@ jobs:
     - name: git safe dir
       run: git config --global --add safe.directory $(pwd)
     - name: autogen
-      run: ./autogen.sh
+      run: ./autogen.sh --enable-strict
     - name: make
       run: make CFLAGS="-O0"
     - name: make check

@@ -97,7 +97,8 @@ static int do_ftp_cmd(int sock, char *fmt, va_list args)
 }
 
 
-static int vftpcn_cmd(struct vcn *cn, char *fmt, ...)
+static __attribute__((format(printf,2,3)))
+int vftpcn_cmd(struct vcn *cn, char *fmt, ...)
 {
     va_list  args;
     int rc;
@@ -569,7 +570,7 @@ static int vftpcn_pasv(struct vcn *cn)
         req_code = 229;
     }
 
-    if (!vftpcn_cmd(cn, cmd))
+    if (!vftpcn_cmd(cn, "%s", cmd))
         return 0;
 
     if (!vftpcn_resp(cn))       /* no response at all; readresp() set the cause */
@@ -704,7 +705,7 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
     vfff_errno = 0;
 
     if ((lseek(req->out_fd, req->out_fdoff, SEEK_SET)) == (off_t)-1) {
-        vfff_set_err(errno, "%s: lseek %ld: %m", req->uri, req->out_fdoff);
+        vfff_set_err(errno, "%s: lseek %lld: %m", req->uri, (long long)req->out_fdoff);
         goto l_err;
     }
 
@@ -729,7 +730,7 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
     if (req->out_fdoff < 0)
         req->out_fdoff = 0;
 
-    if (!vftpcn_cmd(cn, "REST %ld", req->out_fdoff))
+    if (!vftpcn_cmd(cn, "REST %lld", (long long)req->out_fdoff))
         goto l_err;
 
     if (!vftpcn_resp(cn))

@@ -458,7 +458,8 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     struct vfile vf, *rvf = NULL;
     int opened, urltype;
     char buf[PATH_MAX];
-    char *tmpdir, *p = NULL, *tmpath = NULL;
+    char *tmpdir, *tmpath = NULL;
+    const char *p = NULL;
     const char *rpath, *opath;
     enum vf_fetchrc ftrc;
     int len;

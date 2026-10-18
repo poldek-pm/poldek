@@ -205,6 +205,20 @@ static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node,
     return arr;
 }
 
+/* poldek keeps sizes in 32 bits; a larger one becomes the largest it holds */
+static uint32_t load_size(xmlNode *node, const char *attr)
+{
+    char *v = (char *) xmlGetProp(node, (const xmlChar *) attr);
+    unsigned long long size = 0;
+
+    if (v) {
+        size = strtoull(v, NULL, 10);
+        xmlFree(v);
+    }
+
+    return size > UINT32_MAX ? UINT32_MAX : size;
+}
+
 static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
                                 xmlNode *node)
 {
@@ -248,17 +262,8 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
             x_xmlFree(e);
 
         } else if (x_node_eq(node, "size")) {
-            char *v;
-
-            if ((v = (char *) xmlGetProp(node, (const xmlChar *) "package"))) {
-                sscanf(v, "%d", &pkg.fsize);
-                xmlFree(v);
-            }
-
-            if ((v = (char *) xmlGetProp(node, (const xmlChar *) "installed"))) {
-                sscanf(v, "%d", &pkg.size);
-                xmlFree(v);
-            }
+            pkg.fsize = load_size(node, "package");
+            pkg.size = load_size(node, "installed");
 
         } else if (x_node_eq(node, "time")) {
             char *v;

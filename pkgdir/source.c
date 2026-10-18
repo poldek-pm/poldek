@@ -155,7 +155,7 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
 
 const char *source_guess_type(const char *path)
 {
-    char *p;
+    const char *p;
     if ((p = strrchr(path, '.')) && n_str_eq(p, ".repo"))
         return "metadata";
 
@@ -638,7 +638,7 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
         tn_array *arr = poldek_conf_get_multi(htcnf, "sources");
         n_array_sort(arr);
         for (i=0; i<n_array_size(arr); i++)
-            nt += n_snprintf(&tmp[nt], sizeof(tmp) - nt, "%s%s", n_array_nth(arr, i),
+            nt += n_snprintf(&tmp[nt], sizeof(tmp) - nt, "%s%s", (char*)n_array_nth(arr, i),
                              i < n_array_size(arr) - 1 ? ", " : "");
         n_array_free(arr);
         n_strdupap((char*)tmp, &p);

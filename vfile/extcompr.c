@@ -152,16 +152,17 @@ int vf_do_compr(struct uncompr *uncompr, const char *param,
 
 int vf_decompressable(const char *path, char *dest, int size) 
 {
+    const char *ext;
     char *p;
     int i;
 
-    if ((p = strrchr(path, '.')) == NULL)
+    if ((ext = strrchr(path, '.')) == NULL)
         return 0;
     
-    p++;
+    ext++;
     i = 0; 
     while (uncompr_tab[i].type > 0) {
-        if (strcmp(p, uncompr_tab[i].ext) == 0) {
+        if (strcmp(ext, uncompr_tab[i].ext) == 0) {
             if (dest) {
                 snprintf(dest, size, "%s", path);
                 p = strrchr(dest, '.');
@@ -181,7 +182,7 @@ int vf_decompressable(const char *path, char *dest, int size)
 int vf_extdecompress(const char *path, const char *destpath) 
 {
     struct uncompr *uncompr;
-    char *p;
+    const char *p;
     int i;
     
     

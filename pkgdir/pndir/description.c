@@ -84,18 +84,16 @@ const char *pndir_db_dscr_idstr(const char *lang,
 
 
 static
-struct tndb *do_db_dscr_get(tn_hash *db_dscr_h, const char *pathtmpl,
-                            const char *lang, int open)
+struct tndb *do_db_dscr_get(tn_hash *db_dscr_h, const char *idxpath,
+                            const char *tss, const char *lang, int open)
 {
-    char path[PATH_MAX], *dot = ".";
+    char path[PATH_MAX];
     const char *idstr, *langstr;
     struct tndb *db;
 
     DBGF("lang %s\n", lang);
 
     pndir_db_dscr_idstr(lang, &idstr, &langstr);
-    if (*langstr == '\0')
-        dot = "";
 
     if ((db = n_hash_get(db_dscr_h, idstr)) != NULL)
         return db;
@@ -103,8 +101,11 @@ struct tndb *do_db_dscr_get(tn_hash *db_dscr_h, const char *pathtmpl,
     if (open == 0)
         return NULL;
 
-    n_assert(pathtmpl);
-    snprintf(path, sizeof(path), pathtmpl, dot, langstr);
+    n_assert(idxpath);
+    if (pndir_dscr_pathname(path, sizeof(path), idxpath, lang, tss) == NULL) {
+        logn(LOGERR, "%s: %m", idxpath);
+        return NULL;
+    }
     db = do_db_dscr_open(path);
     if (db == NULL)
         return NULL;
@@ -113,10 +114,10 @@ struct tndb *do_db_dscr_get(tn_hash *db_dscr_h, const char *pathtmpl,
     return db;
 }
 
-struct tndb *pndir_db_dscr_h_dbcreat(tn_hash *db_dscr_h, const char *pathtmpl,
-                                     const char *lang)
+struct tndb *pndir_db_dscr_h_dbcreat(tn_hash *db_dscr_h, const char *idxpath,
+                                     const char *tss, const char *lang)
 {
-    return do_db_dscr_get(db_dscr_h, pathtmpl, lang, 1);
+    return do_db_dscr_get(db_dscr_h, idxpath, tss, lang, 1);
 }
 
 
@@ -131,7 +132,7 @@ int pndir_db_dscr_h_insert(tn_hash *db_dscr_h,
 
 struct tndb *pndir_db_dscr_h_get(tn_hash *db_dscr_h, const char *lang)
 {
-    return do_db_dscr_get(db_dscr_h, NULL, lang, 0);
+    return do_db_dscr_get(db_dscr_h, NULL, NULL, lang, 0);
 }
 
 

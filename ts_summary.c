@@ -13,6 +13,7 @@
 #include <trurl/nstr.h>
 #include <trurl/n_snprintf.h>
 
+#include "compiler.h"
 #include "conf.h"
 #include "misc.h"
 #include "log.h"
@@ -321,7 +322,7 @@ void colored_summary(struct poldek_ts *ts, const tn_array *ipkgs,
 void poldek__ts_display_summary(struct poldek_ts *ts)
 {
     int ninst = 0, ndep = 0, nrm = 0, npkgs = 0, parseable = 0;
-    long int sinsts = 0, sdeps = 0, srems = 0, sdiff = 0;
+    int64_t sinsts = 0, sdeps = 0, srems = 0, sdiff = 0;
     tn_array *ipkgs, *idepkgs, *rmpkgs, *pkgs;
     char ms[1024], *to, *prefix;
     int i, n;
@@ -421,7 +422,7 @@ void poldek__ts_display_summary(struct poldek_ts *ts)
 
     if (sdiff != 0) {
         char size[64];
-        snprintf_size(size, sizeof(size), labs(sdiff), 1, 1);
+        snprintf_size(size, sizeof(size), llabs(sdiff), 1, 1);
 
         if (sdiff > 0)
            msgn(1, _("This operation will use %s of disk space."), size);

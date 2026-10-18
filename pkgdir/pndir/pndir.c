@@ -199,12 +199,8 @@ static
 struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
                           time_t ts, const char *lang)
 {
-    char        buf[128], tmpath[PATH_MAX], tss[32];
-    const char  *suffix;
+    char        tmpath[PATH_MAX], tss[32];
     char        *idxpath;
-    const char  *dbid, *langid;
-
-    pndir_db_dscr_idstr(lang, &dbid, &langid);
 
     idxpath = idx->idxpath;
     *tss = '\0';
@@ -227,22 +223,11 @@ struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
 
     }
 
-    suffix = pndir_desc_suffix;
-    if (*langid == '\0') {
-        if (*tss) {
-            snprintf(buf, sizeof(buf), "%s.%s", pndir_desc_suffix, tss);
-            suffix = buf;
-        }
-
-
-    } else {
-        snprintf(buf, sizeof(buf), "%s.%s%s%s", pndir_desc_suffix, langid,
-                 *tss ? "." : "", *tss ? tss : "");
-        suffix = buf;
+    if (pndir_dscr_pathname(tmpath, sizeof(tmpath), idxpath, lang, tss) == NULL) {
+        logn(LOGERR, "%s: %m", vf_url_slim_s(idxpath, 0));
+        return NULL;
     }
-
-    DBGF("mk %s, %s\n", idxpath, suffix);
-    pndir_mkidx_pathname(tmpath, sizeof(tmpath), idxpath, suffix);
+    DBGF("mk %s\n", tmpath);
 
     msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
     return do_dbopen(tmpath, vfmode, vf, idx->srcnam);
