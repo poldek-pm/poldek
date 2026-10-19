@@ -148,6 +148,8 @@ if [ -n "$dirs" -o -n "$files" ]; then
 fi
 
 if [ -n "$files" ]; then
+    # -f takes files only, a directory must be passed as -fd; mixing them up
+    # (e.g. "-f /bin -f /bin/x") makes mkdir -p fail, which is the intent
     for f in $files; do
         dn=$(dirname $f)
         echo "mkdir -p \$RPM_BUILD_ROOT/$dn" >> $SPEC
@@ -168,28 +170,19 @@ fi
 
 
 echo -e "%files\n%defattr(644,root,root,755)" >> $SPEC
-if [ -n "$dirs" ]; then
-    for dn in $dirs; do
-        echo "%dir $dn" >> $SPEC
-    done
-fi
 
-if [ -n "$files" ]; then
-    # make all dirnames owned by package
-    dirs=""
-    for i in $files; do
-        dn=$(dirname $f)
-        dirs="$dirs:$dn"
-    done
-    dirs=$(echo $dirs | perl -pe 's|:|\n|g' | sort -u | perl -pe 's|\n| |g')
-    for f in $dirs; do
-        echo "%dir $dn" >> $SPEC
-    done
+# own explicit -fd dirs and the dirs of all -f files (including /, cf. FHS owns it);
+# a path may be listed only once, rpmbuild rejects the spec with "File listed twice"
+fdirs=$( { for dn in $dirs; do echo "$dn"; done
+           for f in $files; do dirname "$f"; done; } | sort -u)
+for dn in $fdirs; do
+    echo "%dir $dn" >> $SPEC
+done
 
-    for f in $files; do
-        echo "%attr(755,root,root) $f" >> $SPEC # must be executuable to get color from rpm
-    done
-fi
+ffiles=$(for f in $files; do echo "$f"; done | sort -u | grep -vxF "$fdirs")
+for f in $ffiles; do
+    echo "%attr(755,root,root) $f" >> $SPEC # must be executuable to get color from rpm
+done
 
 echo -e "%clean\nrm -rf \$RPM_BUILD_ROOT" >> $SPEC
 
