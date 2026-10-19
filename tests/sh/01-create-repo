@@ -19,8 +19,8 @@ Case_b="--st type -s /foo         =>  type -> default type"
 #Case_d="-s /foo --mt dtype        =>  dir  -> dtype" # irrelevant, as pndir is only creatable format
 #Case_e="-s /foo --mt dtype,dtype2 =>  dir  -> dtype" # irrelevant, as pndir is only creatable format
 Case_f="-n foo                    =>  dir (or original type) -> foo's type"
-Case_g="-s /foo --mkidx=/tmp/bar.gz"
-Case_h="-n foo --mkidx=/tmp/bar.gz"
+Case_g="-s /foo --mkidx=<path>    =>  index written outside the repo"
+Case_h="-n foo --mkidx=<path>     =>  the same, with an explicit index name"
 
 
 testCreateDefaultType()
@@ -119,7 +119,7 @@ testCreateByName()
     die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
 }
 
-#  g) -s /foo --mkidx=/tmp/bar$COMPR_EXT
+#  g) -s /foo --mkidx=<path>
 testNonDefaultName()
 {
     msgn "$Case_g"
@@ -153,7 +153,7 @@ testNonDefaultName()
     die_if_empty_index "$TMPDIR/packages.foo.ndir$COMPR_EXT"
 }
 
-#  h) -n foo --mkidx=/tmp/bar$COMPR_EXT
+#  h) -n foo --mkidx=<path>
 testCreateFromRemoteRepos()
 {
     msgn "$Case_h"
