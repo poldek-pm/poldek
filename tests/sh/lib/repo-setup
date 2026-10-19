@@ -6,6 +6,7 @@ is_root() {
 
 SUDO=
 SUDO_INFO_LOGGED=
+USERNS_INFO_LOGGED= # set by sh/lib/setup when the tests run in a user namespace
 
 sudo_up() {
     [ -n "$SUDO" ] && return
@@ -22,7 +23,12 @@ sudo_up() {
     SUDO="sudo"
 }
 
-# rpm --root DIR and poldek --install-dist=DIR calls chroot(), so we need to be a root/ have sudo for such tests
+# rpm --root DIR and poldek --install-dist=DIR call chroot(), so we need to be a root/ have sudo
+# for such tests.
+#
+# sh/lib/setup re-runs the test inside a user namespace, where we are uid 0 without being root
+# on the host. $SUDO therefore stays empty, but the check below looks at $(id -u), so these
+# tests do run -- and report so when verbose.
 is_rpm_testing_off() {
     sudo_up
 
@@ -31,6 +37,11 @@ is_rpm_testing_off() {
         fail # to count skipping tests
         endSkipping
         return 0
+    fi
+
+    if [ -z "$SUDO" -a -n "${POLDEK_TEST_USERNS:-}" -a -z "$USERNS_INFO_LOGGED" ]; then
+        msgn "rpm tests run without root (user namespace, uid $(id -u))"
+        USERNS_INFO_LOGGED=1
     fi
 
     return 1

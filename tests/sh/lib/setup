@@ -48,6 +48,51 @@ unset POLDEK_TESTING_PRELOAD_CONF
 unset POLDEK_TESTING_WITH_SUGGESTS
 
 
+# rpm's --root (and thus poldek's rpm and install-dist code) calls chroot(), which needs
+# CAP_SYS_CHROOT. Rather than requiring root/sudo, re-run inside a user namespace where
+# the caller is mapped to uid 0.
+#
+#   TEST_USERNS=auto      (default) use the namespace when possible
+#   TEST_USERNS=0|off     opt out; the rpm tests then use sudo, or get skipped
+#   TEST_USERNS=required  fail instead of silently skipping the rpm tests
+user_ns_failed() {
+    [ "${TEST_USERNS:-auto}" = "required" ] || return 0
+    echo "## $1" >&2
+    exit 1
+}
+
+user_ns_up() {
+    [ -n "$POLDEK_TEST_USERNS" ] && return 0   # already re-exec'd, or opted out
+    [ "$(id -u)" = "0" ] && return 0          # real root, nothing to do
+
+    case "${TEST_USERNS:-auto}" in
+        0|off|no)
+            POLDEK_TEST_USERNS=opt-out
+            export POLDEK_TEST_USERNS
+            return 0 ;;
+        required)
+            ;;
+    esac
+
+    if ! command -v unshare >/dev/null 2>&1; then
+        user_ns_failed "TEST_USERNS=required, but unshare is not installed"
+        return 0
+    fi
+    if ! unshare -Urm true >/dev/null 2>&1; then
+        user_ns_failed "TEST_USERNS=required, but unshare -Urm failed (userns disabled?)"
+        return 0
+    fi
+
+    POLDEK_TEST_USERNS=1
+    export POLDEK_TEST_USERNS
+    force_msg "## no root/sudo: re-running under a user namespace (unshare -Urm)"
+    # called as `user_ns_up "$0" "$@"`, so $@ here is the full argv of the test script
+    # -- a function has its own positional parameters, the caller's are not visible
+    exec unshare -Urm sh "$@"
+}
+user_ns_up "$0" "$@"
+
+
 MAXLOOP=60
 VERBOSE=""
 RUNTEST_ONLY=
