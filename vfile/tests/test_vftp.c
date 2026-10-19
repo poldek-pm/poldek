@@ -110,6 +110,23 @@ START_TEST(test_ftp_get_small)
 }
 END_TEST
 
+/* the fetched file gets the MDTM the server gives, whatever the local zone */
+START_TEST(test_ftp_keeps_server_mtime)
+{
+    char dest[PATH_MAX];
+    struct stat st;
+
+    fail_if(ftp_port == 0);
+    use_zone_with_dst();
+
+    fail_if(fetch_ftp(TEST_FILE_SMALL) == 0);
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    fail_if(stat(dest, &st) != 0);
+    ck_assert_int_eq(st.st_mtime, server_mtime(TEST_FILE_SMALL));
+}
+END_TEST
+
 /* server drops the control connection while poldek waits for the PASV reply;
    used to segfault on vfff_set_err() with the unread response as format */
 START_TEST(test_ftp_pasv_control_drop)
@@ -227,6 +244,7 @@ static Suite *vftp_suite(void)
     TCase *tc = tcase_create("net");
     tcase_add_checked_fixture(tc, net_setup, net_teardown);
     tcase_add_test(tc, test_ftp_get_small);
+    tcase_add_test(tc, test_ftp_keeps_server_mtime);
     tcase_add_test(tc, test_ftp_pasv_control_drop);
     tcase_add_test(tc, test_ftp_pasv_no_digits);
     tcase_add_test(tc, test_ftp_reuse_after_aborted_transfer);

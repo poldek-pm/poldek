@@ -171,6 +171,26 @@ START_TEST(test_http_get_small)
 }
 END_TEST
 
+/* the fetched file gets the server's Last-Modified, whatever the local zone */
+START_TEST(test_http_keeps_server_mtime)
+{
+    char url[512], dest[PATH_MAX];
+    struct stat st;
+
+    fail_if(http_port == 0);
+    use_zone_with_dst();
+
+    snprintf(url, sizeof(url), "http://%s:%d/file/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    fail_if(stat(dest, &st) != 0);
+    ck_assert_int_eq(st.st_mtime, server_mtime(TEST_FILE_SMALL));
+}
+END_TEST
+
 START_TEST(test_http_get_binary)
 {
     char url[512], dest[PATH_MAX];
@@ -643,6 +663,7 @@ static Suite *vhttp_suite(void)
     TCase *tc_http = tcase_create("http");
     tcase_add_checked_fixture(tc_http, http_setup, http_teardown);
     tcase_add_test(tc_http, test_http_get_small);
+    tcase_add_test(tc_http, test_http_keeps_server_mtime);
     tcase_add_test(tc_http, test_http_get_binary);
     tcase_add_test(tc_http, test_http_404);
     tcase_add_test(tc_http, test_http_redirect_302);
