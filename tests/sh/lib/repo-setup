@@ -34,9 +34,9 @@ sudo_up() {
 is_rpm_testing_off() {
     sudo_up
 
-    if [ -z "$SUDO" -a $(id -u) = "0" ]; then
-        # run without root via a userns -- say so when verbose
-        if [ "${POLDEK_TEST_USERNS:-}" = "1" -a -z "$USERNS_INFO_LOGGED" ]; then
+    if [ -n "$SUDO" ] || [ $(id -u) = "0" ]; then
+        # run as root, without root via a userns, or with (passwordless) sudo
+        if [ -z "$SUDO" -a "${POLDEK_TEST_USERNS:-}" = "1" -a -z "$USERNS_INFO_LOGGED" ]; then
             force_msg "## rpm tests run without root (user namespace, uid $(id -u))"
             USERNS_INFO_LOGGED=1
         fi
