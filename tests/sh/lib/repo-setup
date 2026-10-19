@@ -7,6 +7,8 @@ is_root() {
 SUDO=
 SUDO_INFO_LOGGED=
 USERNS_INFO_LOGGED= # set by sh/lib/setup when the tests run in a user namespace
+RPM_TESTING_OFF_LOGGED=
+RPM_TESTING_OFF_COUNTED= # test that a skip was already counted for (10-booldeps helpers)
 
 sudo_up() {
     [ -n "$SUDO" ] && return
@@ -23,28 +25,55 @@ sudo_up() {
     SUDO="sudo"
 }
 
-# rpm --root DIR and poldek --install-dist=DIR call chroot(), so we need to be a root/ have sudo
-# for such tests.
+# rpm --root DIR and poldek --install-dist=DIR call chroot(), so we need to be a root/ have
+# sudo for such tests.
 #
-# sh/lib/setup re-runs the test inside a user namespace, where we are uid 0 without being root
-# on the host. $SUDO therefore stays empty, but the check below looks at $(id -u), so these
-# tests do run -- and report so when verbose.
+# sh/lib/setup re-runs the test inside a user namespace, where we are uid 0 without being
+# root on the host. $SUDO then stays empty, but the test below looks at $(id -u), so these
+# tests do run -- and say so when verbose.
 is_rpm_testing_off() {
     sudo_up
 
-    if [ -z "$SUDO" -a $(id -u) != "0" ]; then
-        startSkipping
-        fail # to count skipping tests
-        endSkipping
+    if [ -z "$SUDO" -a $(id -u) = "0" ]; then
+        # run without root via a userns -- say so when verbose
+        if [ "${POLDEK_TEST_USERNS:-}" = "1" -a -z "$USERNS_INFO_LOGGED" ]; then
+            force_msg "## rpm tests run without root (user namespace, uid $(id -u))"
+            USERNS_INFO_LOGGED=1
+        fi
+        return 1
+    fi
+
+    if [ -z "$RPM_TESTING_OFF_LOGGED" ]; then
+        force_msg "## rpm tests NOT run (need root, passwordless sudo, or unshare -Urm)"
+        RPM_TESTING_OFF_LOGGED=1
+    fi
+
+    return 0
+}
+
+# for test bodies: records one skipped test, which is what the report counts
+skip_if_rpm_testing_off() {
+    is_rpm_testing_off || return 1
+
+    startSkipping
+    fail # to count skipping tests
+    endSkipping
+    return 0
+}
+
+# for helpers that run more than once per test -- shunit2 counts every fail() as one skipped
+# test, so count only the first call of a given test. shunit2 exports SU_FUNC and rewrites
+# it for every test it runs. Mark the test only when we really skip, or a helper called
+# twice would skip the second call with rpm available.
+skip_rpm_testing_off_once() {
+    is_rpm_testing_off || return 1
+
+    if [ -n "$SU_FUNC" ] && [ "$RPM_TESTING_OFF_COUNTED" = "$SU_FUNC" ]; then
         return 0
     fi
 
-    if [ -z "$SUDO" -a -n "${POLDEK_TEST_USERNS:-}" -a -z "$USERNS_INFO_LOGGED" ]; then
-        msgn "rpm tests run without root (user namespace, uid $(id -u))"
-        USERNS_INFO_LOGGED=1
-    fi
-
-    return 1
+    RPM_TESTING_OFF_COUNTED="$SU_FUNC"
+    skip_if_rpm_testing_off
 }
 
 repo_up() {

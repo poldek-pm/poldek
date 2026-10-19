@@ -98,7 +98,7 @@ try_install() {
 }
 
 testInstallDist() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "foo" -r "bar"
     build b -p "foo" -p "bar" -r "baz"
@@ -126,7 +126,7 @@ assert_dist_none() {
 
 # boolean requirements come down to the packages they need
 testInstallDistBoolean() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "'(b or c)'" -r "'(y with ycap)'" -r "'(x with xcap)'" -p "'zzp = 1-1'"
     build b
@@ -146,7 +146,7 @@ testInstallDistBoolean() {
 # rpm meets an rpmlib() it supports itself, with no package; one it lacks
 # leaves the other alternative
 testInstallDistBooleanRpmlib() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "'(rpmlib(CompressedFileNames) <= 3.0.4-1 or b)'"
     build b
@@ -160,7 +160,7 @@ testInstallDistBooleanRpmlib() {
 
 # paths in boolean requirements, read from a pndir index
 testInstallDistBooleanPath() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "'(x without /opt/zzbool/tool)'" -r "'(z with /opt/zzbool/tool2)'"
     build px -p x -f /opt/zzbool/tool
@@ -179,7 +179,7 @@ testInstallDistBooleanPath() {
 # an index made without a's requirement keeps no /opt/zzbool files, so
 # who owns /opt/zzbool/tool can't be told and the requirement is reported
 testInstallDistBooleanPathUnlisted() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build px -p x -f /opt/zzbool/tool
     build sh -p /bin/sh
@@ -194,7 +194,7 @@ testInstallDistBooleanPathUnlisted() {
 # whether b or d is needed depends on c, which install-dist may not install,
 # so the requirement is reported instead of resolved
 testInstallDistBooleanConditional() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "'(b if c else d)'"
     build b
@@ -211,7 +211,7 @@ testInstallDistBooleanConditional() {
 # install-dist cannot resolve this (by picking c) as regular install do
 # and it simply report unmet dep here
 testInstallDistMissingDepAlt() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "foo" -r "bar"
     build b -p "foo" -p "bar" -r "baz"
@@ -228,7 +228,7 @@ testInstallDistMissingDepAlt() {
 }
 
 testInstallDistDepError() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "b"
     build b -r "c"
@@ -245,7 +245,7 @@ testInstallDistDepError() {
 }
 
 testInstallDistDepErrorNoDeps() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "b"
     build b -r "c"
@@ -261,7 +261,7 @@ testInstallDistDepErrorNoDeps() {
 # install-dist cannot resolve this conflict (by picking c) as regular install do
 # and it simply report conflict here
 testInstallDistConflictError() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "foo" -r "bar"
     build b -p "foo" -p "bar" -c "a"
@@ -277,7 +277,7 @@ testInstallDistConflictError() {
 }
 
 testInstallDistConflictErrorForce() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -r "foo" -r "bar"
     build b -p "foo" -p "bar" -c "a"

@@ -15,8 +15,15 @@ INSTALL_MODE=${INSTALL_MODE:-"dir"}
 #    [ -n "$REPO" ] && rm -f $REPO/*.*
 #}
 
+# The helpers below call us several times per test, and each fail() is counted as one
+# skipped test by shunit2. Count only the first call of a given test -- shunit2 exports
+# SU_FUNC and rewrites it for every test it runs.
 is_rpm_mode_and_rpm_testing_off() {
-    [ "$INSTALL_MODE" = "rpm" ] && is_rpm_testing_off
+    [ "$INSTALL_MODE" = "rpm" ] || return 1
+    is_rpm_testing_off || return 1
+
+    skip_rpm_testing_off_once
+    return 0
 }
 
 setUp() {
@@ -592,7 +599,10 @@ try_uninstall() {
 # usage: rpm_uninstall <package> <expected removed NVRs>
 # rpm itself rejects an erase that leaves a dependency broken
 rpm_uninstall() {
-    is_rpm_testing_off && return
+    if is_rpm_testing_off; then
+        skip_rpm_testing_off_once   # the only guard this test may have
+        return
+    fi
 
     typeset package="$1"
     typeset removed=$(echo $2 | sed 's/,/ /g')

@@ -49,7 +49,7 @@ testNoop() {
 
 testInstall()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a
     index
@@ -62,7 +62,7 @@ testInstall()
 
 testInstallNoConfig()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a
     index
@@ -75,7 +75,7 @@ testInstallNoConfig()
 
 testInstallPercentInFileName()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a
     # as saved from a URL with an encoded space; "%20d" must not be read as a conversion
@@ -90,7 +90,7 @@ testInstallPercentInFileName()
 
 # https://github.com/poldek-pm/poldek/issues/27
 testInstallAlreadyInstalled() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     msgn "Preparing repositories..."
     build_installed b
@@ -110,7 +110,7 @@ testInstallAlreadyInstalled() {
 # for the summary, desc -L no changelog
 testIndexWithoutPackageInfo()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a
     $RAW_POLDEK --st dir -s $REPO --mkidx --mo=nodesc || fail "mkidx failed"
@@ -126,7 +126,7 @@ testIndexWithoutPackageInfo()
 
 testUpgrade()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a -v 2
     build a-libs -v 2
@@ -152,7 +152,7 @@ testUpgrade()
 # not any requirer of its name
 testDescRequiredByVersion()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build x 1-1
     build x 2-1
@@ -181,7 +181,7 @@ testDescRequiredByVersion()
 
 testUninstall()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build a
     index
@@ -204,7 +204,7 @@ testUninstall()
 # installed packages
 testDescInstalled()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build_installed b
     build_installed a -r b
@@ -223,7 +223,7 @@ testDescInstalled()
 # installed packages come from the cache
 testDescInstalledPathsFromCache()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build_installed f -f /usr/bin/zzf
     build_installed d -fd /usr/share/zzd/sub
@@ -248,7 +248,7 @@ testDescInstalledPathsFromCache()
 # read from the cache before it
 testDescInstalledAfterInstall()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build_installed f -f /opt/zzf/tool
     build a -r /opt/zzf/tool
@@ -269,7 +269,7 @@ testDescInstalledAfterInstall()
 
 testClean()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     typeset n=$(find $CACHEDIR | wc -l)
     assertEquals "$CACHEDIR should be empty" "$n" "1"
@@ -307,7 +307,7 @@ testClean()
 # comes from the --root database, not from the host's
 testDescInstalledRootFromCache()
 {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build_installed a -f /usr/bin/zzroot
     # a cache made within a second of a database change counts as stale;

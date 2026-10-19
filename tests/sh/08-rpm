@@ -36,7 +36,7 @@ try_install() {
 }
 
 testRPMdbcache() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     build foo
 
@@ -88,7 +88,7 @@ testRPMdbcache() {
 
 # rpm changes the database in the second poldek cached it
 testRPMdbcacheSameSecond() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     # a database mtime ahead of the clock: changed "just now" for any cache
     # made before it, however long the run takes
@@ -108,7 +108,7 @@ testRPMdbcacheSameSecond() {
 # another program changes the database while poldek runs, in the second
 # poldek read it in; with the database an hour old, poldek exits long after
 testRPMdbcacheChangedWhileRunning() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
     rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
 
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
@@ -132,7 +132,7 @@ testRPMdbcacheChangedWhileRunning() {
 # another program installs a package during a shell session that read the
 # installed packages from the cache, then the session installs one
 testRPMdbcacheOwnInstallAfterChange() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
     rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
 
     build c 1-1
@@ -158,7 +158,7 @@ testRPMdbcacheOwnInstallAfterChange() {
 # rpm --rebuilddb renumbers the database records, so an upgraded package can
 # get the record number of the version it replaced
 testRPMdbcacheRebuilddb() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
     rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
 
     rpm_build_installed b 1-1
@@ -175,7 +175,7 @@ testRPMdbcacheRebuilddb() {
 
 # e.g. openssl multiple instances
 testUpgradeMultipleInstalled() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
     msgn "Preparing repositories..."
     build_installed a 1-1
     build_installed a 2-1
@@ -186,7 +186,7 @@ testUpgradeMultipleInstalled() {
 }
 
 testUpgradeMultipleInstalledWithDeps() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
     msgn "Preparing repositories..."
     build_installed a 0.9.8c-1
     build_installed a 1.0.0o-1
@@ -207,7 +207,7 @@ testUpgradeMultipleInstalledWithDeps() {
 
 # poldek's rpmlog() hides rpm's notices such as "<file>: digests OK"
 testInstallRpmNoticesFiltered() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
     build a 1-1
 
     typeset out=$($POLDEK_INSTALL -uv a 2>&1)
@@ -217,7 +217,7 @@ testInstallRpmNoticesFiltered() {
 
 # not implemented yet
 xtestUpgradeMultipleInstalledIndir() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
     msgn "Preparing repositories..."
     build_installed a 1.0-1
     build_installed a 1.1-1
@@ -231,7 +231,7 @@ xtestUpgradeMultipleInstalledIndir() {
 
 # wip: want to keep old kernel(s) but install new one
 xtestKeepUpgrade() {
-    is_rpm_testing_off && return
+    skip_if_rpm_testing_off && return
 
     msgn "Preparing repositories..."
     local prefix="kernel"
