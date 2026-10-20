@@ -305,6 +305,7 @@ static time_t parse_datetime(const char *str)
     int n;
     char c;
 
+    memset(&tm, 0, sizeof(tm));
     n = sscanf(str, "%d%c%d%c%d %d:%d:%d", &tm.tm_year, &c, &tm.tm_mon, &c,
                &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
     if (n != 8)
@@ -313,7 +314,8 @@ static time_t parse_datetime(const char *str)
     tm.tm_mon -= 1;
     tm.tm_year -= 1900;
 
-    if ((ts = mktime(&tm)) == -1)
+    /* the times poldek prints for changelog entries, as CVS logged them, are UTC */
+    if ((ts = timegm(&tm)) == -1)
         ts = 0;
 
     return ts;
@@ -484,11 +486,13 @@ static tn_array *get_parsed_changelog(struct pkguinf *inf, time_t since)
 
     if (since) {
         tn_array *tmp = n_array_clone(entries);
+        /* entries carry their date only: those after since's day */
+        time_t since_day_end = (since / 86400 + 1) * 86400;
         int i;
 
         for (i=0; i<n_array_size(entries); i++) {
             struct changelog_ent *ent = n_array_nth(entries, i);
-            if (ent->ts > since)
+            if (ent->ts >= since_day_end)
                 n_array_push(tmp, ent);
         }
         n_array_free(entries);
