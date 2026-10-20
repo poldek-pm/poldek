@@ -450,6 +450,11 @@ int vfff_transfer_file(struct vcn *cn, struct vfff_req *vreq, long total_size)
             vfff_errno = errno = EIO;
 
         vfff_set_err(errno, "%m");
+
+    } else if (total_size > 0 && amount < total_size) {
+        /* the server closed the connection before the whole file came */
+        vfff_set_err(EIO, "%s: %s", vreq->uri, _("unexpected EOF"));
+        is_err = 1;
     }
 
     if (vreq->progress_fn)

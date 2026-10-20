@@ -69,6 +69,12 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._serve_keepalive_then_reset(path[len("/keepalive-reset/"):])
             return
 
+        # the whole file's Content-Length, half of its body, then the
+        # connection is closed: /cut/<filename>
+        if path.startswith("/cut/"):
+            self._serve_cut(path[len("/cut/"):])
+            return
+
         # File serving: /file/<filename>
         if path.startswith("/file/"):
             self._serve_file(path[6:])
@@ -236,6 +242,15 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.connection.close()
         except OSError:
             pass
+        self.close_connection = True
+
+    def _serve_cut(self, filename):
+        """A download that ends early: the client is promised the whole file"""
+        filepath = os.path.join(self.server.data_dir, os.path.basename(filename))
+        with open(filepath, 'rb') as f:
+            content = f.read()
+        self.wfile.write(b"HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n"
+                         % len(content) + content[:len(content) // 2])
         self.close_connection = True
 
     def _handle_redirect(self, redirect_spec):
