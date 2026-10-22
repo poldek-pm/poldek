@@ -117,4 +117,31 @@ testCachedIndexFailsVerification()
     check_cached_index_cut_to half
 }
 
+# cut the cached digest, change the repository and load it again
+check_cached_md_cut_to() {
+    rm -rf $CACHEDIR/*
+    mkidx
+    up
+
+    md=$(find $CACHEDIR -name packages.ndir.md)
+    [ -f "$md" ] || fail "no cached digest"
+    n=$(ls_count)
+    [ "$n" -gt 2 ] || fail "too few packages in the repository"
+
+    size=$1
+    sleep 1
+    head -c $size "$md" > "$md.tmp" && mv "$md.tmp" "$md"
+
+    sleep 1
+    remove_package_from_repo
+    mkidx
+    assertEquals "packages after the cached digest was cut" "$(($n - 1))" "$(ls_count)"
+}
+
+testCachedMdFailsToOpen()
+{
+    # 20 bytes do not hold a digest
+    check_cached_md_cut_to 20
+}
+
 . ./sh/lib/shunit2

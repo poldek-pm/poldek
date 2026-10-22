@@ -283,7 +283,8 @@ int pndir_open(struct pndir *idx, struct pkgdir *pkgdir, int vfmode, unsigned fl
     pndir_init(idx);
 
     if ((flags & PKGDIR_OPEN_DIFF) == 0) {
-        if ((idx->dg = pndir_digest_new(pkgdir->idxpath, vfmode, pkgdir->name)) == NULL)
+        if ((idx->dg = pndir_digest_new(pkgdir->idxpath, vfmode,
+                                        pkgdir->name, refetch)) == NULL)
             return 0;
 
         if (*idx->dg->compr) {

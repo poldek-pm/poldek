@@ -45,12 +45,13 @@ static int pndir_digest_read(struct pndir_digest *pdg, struct vfile *vfmd);
 
 
 struct pndir_digest *pndir_digest_new(const char *path, int vfmode,
-                                      const char *srcnam)
+                                      const char *srcnam, int *refetch)
 {
     struct pndir_digest  *pdg;
     struct vfile        *vf = NULL;
     char                mdpath[PATH_MAX];
 
+    *refetch = 0;
     if (path != NULL) {
         const char *ext = pndir_digest_ext;
 
@@ -67,6 +68,8 @@ struct pndir_digest *pndir_digest_new(const char *path, int vfmode,
 
     if (vf) {
         if (!pndir_digest_read(pdg, NULL)) {
+            if (vf->vf_flags & VF_FRMCACHE)
+                *refetch = 1;
             pndir_digest_free(pdg);
             pdg = NULL;
         }

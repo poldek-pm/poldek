@@ -72,8 +72,10 @@ extern const char *pndir_digest_ext;
 int pndir_mkdigest_path(char *path, int size, const char *pathname,
                         const char *ext);
 
+/* *refetch is set if a cached digest was opened but cannot be read, so the
+   caller may fetch the digest and index again without using the cache. */
 struct pndir_digest *pndir_digest_new(const char *path, int vfmode,
-                                      const char *srcnam);
+                                      const char *srcnam, int *refetch);
 void pndir_digest_free(struct pndir_digest *pdg);
 
 void pndir_digest_init(struct pndir_digest *pdg);
