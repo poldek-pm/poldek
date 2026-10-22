@@ -94,6 +94,8 @@ static void http_setup(void)
 {
     static int verbose = 0;
 
+    save_tz();
+
     if (getenv("VERBOSE"))
         verbose = 2;
 
@@ -141,6 +143,8 @@ static void http_teardown(void)
     /* Restore the SIGPIPE disposition the harness had before this test */
     sigaction(SIGPIPE, &sigpipe_old, NULL);
 
+    restore_tz();
+
     /* Cleanup temp directory */
     /* Note: vf_fetch deletes files, but we clean up the dir */
     rmdir(tmpdir);
@@ -176,6 +180,7 @@ START_TEST(test_http_keeps_server_mtime)
 {
     char url[512], dest[PATH_MAX];
     struct stat st;
+    time_t expected;
 
     fail_if(http_port == 0);
     use_zone_with_dst();
@@ -187,7 +192,9 @@ START_TEST(test_http_keeps_server_mtime)
     if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
         ck_abort_msg("path truncated");
     fail_if(stat(dest, &st) != 0);
-    ck_assert_int_eq(st.st_mtime, server_mtime(TEST_FILE_SMALL));
+    expected = server_mtime(TEST_FILE_SMALL);
+    ck_assert_msg(st.st_mtime == expected,
+                  "mtime %ld != server %ld", (long)st.st_mtime, (long)expected);
 }
 END_TEST
 
