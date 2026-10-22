@@ -257,7 +257,10 @@ onemoretime:
         case 'Q': a = -1; ac = 'q'; break;
         case '\n': a = hint; ac = hint ? 'y':'n'; break;
         default:
+            a = 0;
+            ac = 'n';
             n_assert(0);
+            break;
     }
     msg_ask("_ %c\n", ac);
 
