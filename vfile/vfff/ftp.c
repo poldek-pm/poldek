@@ -637,6 +637,8 @@ static time_t vftpcn_mtime(struct vcn *cn, const char *path)
     struct tm  tm;
     time_t     ts = -1;
 
+    memset(&tm, 0, sizeof(tm));
+
     if ((cn->flags & VCN_SUPPORTS_MDTM) == 0)
         return 0;
 
@@ -673,7 +675,7 @@ static time_t vftpcn_mtime(struct vcn *cn, const char *path)
 
         tm.tm_year -= 1900;
         tm.tm_mon -=  1;
-        ts = mktime(&tm);
+        ts = timegm(&tm);       /* MDTM is UTC (RFC 3659) */
         /* We can't do much if time can't be represented */
         if (ts < 0)
             return 0;

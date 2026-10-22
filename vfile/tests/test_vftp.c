@@ -30,6 +30,8 @@ static void net_setup(void)
 {
     static int verbose = 0;
 
+    save_tz();
+
     if (getenv("VERBOSE"))
         verbose = 2;
 
@@ -59,6 +61,8 @@ static void net_teardown(void)
     DIR *dir;
     struct dirent *ent;
     char path[PATH_MAX];
+
+    restore_tz();
 
     /* successful fetches leave the file and its lock behind */
     if ((dir = opendir(tmpdir)) != NULL) {
@@ -107,6 +111,26 @@ START_TEST(test_ftp_get_small)
 
     fail_if(fetch_ftp(TEST_FILE_SMALL) == 0);
     fail_if(!have_file(TEST_FILE_SMALL));
+}
+END_TEST
+
+/* the fetched file gets the MDTM the server gives, whatever the local zone */
+START_TEST(test_ftp_keeps_server_mtime)
+{
+    char dest[PATH_MAX];
+    struct stat st;
+    time_t expected;
+
+    fail_if(ftp_port == 0);
+    use_zone_with_dst();
+
+    fail_if(fetch_ftp(TEST_FILE_SMALL) == 0);
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    fail_if(stat(dest, &st) != 0);
+    expected = server_mtime(TEST_FILE_SMALL);
+    ck_assert_msg(st.st_mtime == expected,
+                  "mtime %ld != server %ld", (long)st.st_mtime, (long)expected);
 }
 END_TEST
 
@@ -227,6 +251,7 @@ static Suite *vftp_suite(void)
     TCase *tc = tcase_create("net");
     tcase_add_checked_fixture(tc, net_setup, net_teardown);
     tcase_add_test(tc, test_ftp_get_small);
+    tcase_add_test(tc, test_ftp_keeps_server_mtime);
     tcase_add_test(tc, test_ftp_pasv_control_drop);
     tcase_add_test(tc, test_ftp_pasv_no_digits);
     tcase_add_test(tc, test_ftp_reuse_after_aborted_transfer);

@@ -94,6 +94,8 @@ static void http_setup(void)
 {
     static int verbose = 0;
 
+    save_tz();
+
     if (getenv("VERBOSE"))
         verbose = 2;
 
@@ -141,6 +143,8 @@ static void http_teardown(void)
     /* Restore the SIGPIPE disposition the harness had before this test */
     sigaction(SIGPIPE, &sigpipe_old, NULL);
 
+    restore_tz();
+
     /* Cleanup temp directory */
     /* Note: vf_fetch deletes files, but we clean up the dir */
     rmdir(tmpdir);
@@ -168,6 +172,29 @@ START_TEST(test_http_get_small)
 
     /* Verify content */
     fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
+}
+END_TEST
+
+/* the fetched file gets the server's Last-Modified, whatever the local zone */
+START_TEST(test_http_keeps_server_mtime)
+{
+    char url[512], dest[PATH_MAX];
+    struct stat st;
+    time_t expected;
+
+    fail_if(http_port == 0);
+    use_zone_with_dst();
+
+    snprintf(url, sizeof(url), "http://%s:%d/file/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    fail_if(stat(dest, &st) != 0);
+    expected = server_mtime(TEST_FILE_SMALL);
+    ck_assert_msg(st.st_mtime == expected,
+                  "mtime %ld != server %ld", (long)st.st_mtime, (long)expected);
 }
 END_TEST
 
@@ -660,6 +687,7 @@ static Suite *vhttp_suite(void)
     TCase *tc_http = tcase_create("http");
     tcase_add_checked_fixture(tc_http, http_setup, http_teardown);
     tcase_add_test(tc_http, test_http_get_small);
+    tcase_add_test(tc_http, test_http_keeps_server_mtime);
     tcase_add_test(tc_http, test_http_get_binary);
     tcase_add_test(tc_http, test_http_404);
     tcase_add_test(tc_http, test_http_redirect_302);

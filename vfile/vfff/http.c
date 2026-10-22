@@ -773,6 +773,8 @@ static time_t parse_date(const char *dt)
     time_t ts = -1;
     int is_ok = 1;
 
+    memset(&tm, 0, sizeof(tm));
+
     /* Sun, 06 Nov 1994 08:49:37 GMT  (RFC 822, updated by RFC 1123) */
     if (sscanf(dt, "%16[a-zA-Z], %d %16[a-zA-Z] %d %d:%d:%d GMT",
                weekday, &tm.tm_mday, month, &tm.tm_year,
@@ -798,7 +800,7 @@ static time_t parse_date(const char *dt)
         tm.tm_mon = decode_month(month);
         if (tm.tm_mon >= 0 && tm.tm_wday >= 0) {
             tm.tm_year -= 1900;
-            ts = mktime(&tm);
+            ts = timegm(&tm);   /* HTTP dates are GMT */
         }
     }
 
