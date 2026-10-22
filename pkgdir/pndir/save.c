@@ -574,8 +574,9 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
         snprintf(tmp, psize, "%s/%s/%s", dn, pndir_packages_incdir,
                  n_basenam(path));
 
-        pndir_mkidx_pathname(paths->path_diff_toc, psize, tmp,
-                             pndir_difftoc_suffix);
+        if (pndir_mkidx_pathname(paths->path_diff_toc, psize, tmp,
+                                 pndir_difftoc_suffix) == NULL)
+            return 0;
         path = tmp;
     }
 
@@ -667,7 +668,13 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     DBGF("Saving %s ts=%ld (%s)\n", pathname, pkgdir->ts, strtime_(pkgdir->ts));
 
     n_assert(pathname);
-    mk_paths(&paths, pathname, pkgdir);
+    if (!mk_paths(&paths, pathname, pkgdir)) {
+        int err = errno ? errno : EINVAL;
+
+        logn(LOGERR, "cannot create index paths: %m");
+        errno = err;
+        return 0;
+    }
 
     DBGF("path %s, flags %d\n", paths.path, flags);
     msgn_tty(1, _("Writing %s..."), t_url_slim(paths.path, 12));
