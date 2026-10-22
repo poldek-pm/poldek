@@ -162,8 +162,8 @@ void pndir_init(struct pndir *idx)
     idx->db_dscr_h = NULL;
 }
 
-/* *refetch: the file came from the cache and is broken, the caller may fetch
-   it again */
+/* Open and verify the database.  *refetch is set if the file came from the
+   cache and is broken, so the caller may fetch it again. */
 static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
                               const char *srcnam, int *refetch)
 {
@@ -309,8 +309,8 @@ int pndir_open(struct pndir *idx, struct pkgdir *pkgdir, int vfmode, unsigned fl
 }
 
 static
-int pndir_open_verify(struct pndir *idx, struct pkgdir *pkgdir,
-                      int vfmode, unsigned flags)
+int pndir_open_retry(struct pndir *idx, struct pkgdir *pkgdir,
+                     int vfmode, unsigned flags)
 {
     int refetch;
 
@@ -318,7 +318,7 @@ int pndir_open_verify(struct pndir *idx, struct pkgdir *pkgdir,
         return 1;
 
     if (refetch)                /* the index and its digest, together */
-        return pndir_open_verify(idx, pkgdir, refetch_vfmode(vfmode), flags);
+        return pndir_open_retry(idx, pkgdir, refetch_vfmode(vfmode), flags);
 
     return 0;
 }
@@ -397,16 +397,10 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         vfmode |= VFM_CACHE;
 
     DBGF("%s [%s]\n", pkgdir->idxpath, pkgdir->name);
-    if (!pndir_open_verify(&idx, pkgdir, vfmode, flags))
+    if (!pndir_open_retry(&idx, pkgdir, vfmode, flags))
         return 0;
 
     nerr = 0;
-
-    if (!tndb_verify(idx.db)) {
-        logn(LOGERR, "%s: data digest mismatch, broken file", vf_url_slim_s(idx._vf->vf_path, 0));
-        nerr++;
-        goto l_end;
-    }
 
     if (!tndb_it_start(idx.db, &it)) {
         nerr++;
