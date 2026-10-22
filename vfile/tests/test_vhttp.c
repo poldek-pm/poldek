@@ -434,6 +434,23 @@ START_TEST(test_http_keepalive_reset)
 }
 END_TEST
 
+/* the server closes the connection half way through the promised body */
+START_TEST(test_http_cut_body_fails)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/cut/" TEST_FILE_BINARY,
+             server_host, http_port);
+
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0,
+            "a download cut short was taken for complete");
+    fail_if(have_file(TEST_FILE_BINARY),
+            "incomplete download left in the cache");
+}
+END_TEST
+
 START_TEST(test_http_auth_success)
 {
     char url[512];
@@ -655,6 +672,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_proxy_keepalive_reuse);
     tcase_add_test(tc_http, test_http_keepalive_dropped);
     tcase_add_test(tc_http, test_http_keepalive_reset);
+    tcase_add_test(tc_http, test_http_cut_body_fails);
     suite_add_tcase(s, tc_http);
 
     /* HTTPS tests */
