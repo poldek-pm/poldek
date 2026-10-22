@@ -362,7 +362,7 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     n_hash_free(path_index);
     n_alloc_free(na);
     tndb_close(db);
-    poldek_util_set_mtime(path, pkgdir_mtime(pkgdir));
+    util__set_cache_mtime(path, pkgdir_mtime(pkgdir));
 
     vf_lock_release(lock);
 
@@ -869,7 +869,7 @@ void pkgdir__dirindex_update(struct pkgdir *pkgdir)
         pkgdir__dirindex_close(index);
         /* set mtime to dirindex created by previous
            poldek versions */
-        poldek_util_set_mtime(path, idx_mtime);
+        util__set_cache_mtime(path, idx_mtime);
     }
 
  l_end:

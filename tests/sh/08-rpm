@@ -86,6 +86,41 @@ testRPMdbcache() {
     fi
 }
 
+# the dirindex is stamped with the database mtime; if it is made in the
+# same second as a later database change, it must not be considered current
+testRPMdbcacheDirindexSameSecond() {
+    skip_if_rpm_testing_off && return
+    rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
+
+    build a
+
+    local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
+    local mtime=$(( $(date +%s) + 3600 ))
+    touch -d @$mtime $dbfiles
+
+    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO \
+        --root $DESTINATION_REPO --cmd ls -u >/dev/null
+
+    local rpmdb_cachedirname="$(echo $DESTINATION_REPO | sed -e 's|^/||' -e 's|/|.|g').var.lib.rpm"
+    local dirindex_path="$CACHEDIR/$rpmdb_cachedirname/dirindex.rpmdb.tndb"
+    [ -f "$dirindex_path" ] || fail "missing dirindex $dirindex_path"
+
+    assertEquals "dirindex mtime" "$((mtime - 1))" "$(stat -c %Y "$dirindex_path")"
+    local md5=$(md5sum "$dirindex_path" | cut -f1 -d' ')
+
+    try_install a "a-1-1" ""
+    touch -d @$mtime $dbfiles
+
+    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO \
+        --root $DESTINATION_REPO --cmd ls -u >/dev/null
+
+    local md=$(md5sum "$dirindex_path" | cut -f1 -d' ')
+    if [ "$md5" = "$md" ]; then
+        fail "$dirindex_path: dirindex not updated"
+    fi
+    assertEquals "dirindex mtime after update" "$((mtime - 1))" "$(stat -c %Y "$dirindex_path")"
+}
+
 # rpm changes the database in the second poldek cached it
 testRPMdbcacheSameSecond() {
     skip_if_rpm_testing_off && return
