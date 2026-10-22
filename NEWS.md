@@ -61,6 +61,10 @@
   - the database is now recognized by its inode, modification time in nanoseconds, size and, where rpm provides it, a digest of its contents
   - the first run after an upgrade rebuilds that cache; later runs are unaffected
 * Public headers now match what the libraries really provide: two functions declared there were missing, and declarations of functions and flags that no library defines are gone (@arekm #58, #59, #62)
+* A broken cached repo index are fetched again instead of leaving the repository without packages (@arekm #65)
+* An HTTP download cut short is reported as an error, and its incomplete file is no longer left in the cache (@arekm #66)
+* Files downloaded over HTTP or FTP are stored with the server's modification time regardless of the local time zone (@arekm #67)
+* `desc -L` and `ls -S` no longer show the installed package's own changelog entries as new, so only fixes made after its build day are listed (@arekm #68)
 
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped (#27)
