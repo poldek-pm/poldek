@@ -1,0 +1,120 @@
+#!/bin/sh
+# A cached index that cannot be used is fetched again together with its
+# digest, whether it fails to open or to verify, so later updates apply.
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/compr-setup
+
+mkidx() {
+    $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+}
+
+up() {
+    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+}
+
+ls_count() {
+    # without the stub index poldek loads the index itself
+    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test --cmd ls |
+        grep -cP '^\w+-\d+-\d+\.\w+$'
+}
+
+desc_sh() {
+    # descriptions are loaded lazily, only by desc
+    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
+        --cmd "desc -L sh" 2>&1
+}
+
+# cut the cached index to $1 bytes ("half": half of it), change the
+# repository, load, change it once more and update
+check_cached_index_cut_to() {
+    rm -rf $CACHEDIR/*
+    mkidx
+    up
+    index=$(find $CACHEDIR -name packages.ndir$COMPR_EXT)
+    [ -f "$index" ] || fail "no cached index"
+    n=$(ls_count)
+    [ "$n" -gt 2 ] || fail "too few packages in the repository"
+
+    size=$1
+    [ "$size" = "half" ] && size=$(($(stat -c %s $index) / 2))
+    sleep 1     # tndb trusts the .md5 next to a file with the same mtime second
+    head -c $size $index > $index.tmp && mv $index.tmp $index
+
+    sleep 1
+    remove_package_from_repo
+    mkidx
+    assertEquals "packages after the cached index was cut" "$(($n - 1))" "$(ls_count)"
+
+    sleep 1
+    remove_package_from_repo
+    mkidx
+    up
+    assertEquals "packages after the next update" "$(($n - 2))" "$(ls_count)"
+}
+
+# cut the cached descriptions to $1 bytes ("half": half of it), change the
+# repository, load a description, and check that desc still works
+check_cached_dscr_cut_to() {
+    rm -rf $CACHEDIR/*
+    mkidx
+    up
+
+    out=$(desc_sh)
+    echo "$out" | grep -q 'sh package changelog entry' ||
+        fail "no description before the cached file was cut"
+
+    remove_package_from_repo
+    mkidx
+    up
+
+    out=$(desc_sh)
+    echo "$out" | grep -q 'sh package changelog entry' ||
+        fail "no description after the repository changed"
+
+    size=$1
+    found=0
+    sleep 1     # tndb trusts the .md5 next to a file with the same mtime second
+    for dscr in $(find $CACHEDIR -name 'packages.ndir.dscr*' ! -name '*.md5'); do
+        [ -f "$dscr" ] || continue
+        found=1
+        cut=$size
+        [ "$cut" = "half" ] && cut=$(($(stat -c %s $dscr) / 2))
+        head -c $cut $dscr > $dscr.tmp && mv $dscr.tmp $dscr
+    done
+    [ "$found" = 1 ] || fail "no cached descriptions"
+
+    sleep 1
+    out=$(desc_sh)
+    echo "$out" | grep -q 'sh package changelog entry' ||
+        fail "descriptions after the cached file was cut to $size bytes"
+}
+
+testCachedDscrFailsToOpen()
+{
+    # 20 bytes do not even hold the database header
+    check_cached_dscr_cut_to 20
+}
+
+testCachedDscrFailsVerification()
+{
+    # half of the file opens, its digest no longer matches
+    check_cached_dscr_cut_to half
+}
+
+testCachedIndexFailsToOpen()
+{
+    # 20 bytes do not even hold the database header
+    check_cached_index_cut_to 20
+}
+
+testCachedIndexFailsVerification()
+{
+    # half of the file opens, its digest no longer matches
+    check_cached_index_cut_to half
+}
+
+. ./sh/lib/shunit2

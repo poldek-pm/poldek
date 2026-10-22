@@ -162,13 +162,16 @@ void pndir_init(struct pndir *idx)
     idx->db_dscr_h = NULL;
 }
 
+/* Open and verify the database.  *refetch is set if the file came from the
+   cache and is broken, so the caller may fetch it again. */
 static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
-                              const char *srcnam)
+                              const char *srcnam, int *refetch)
 {
     struct vfile *vf_;
     struct tndb  *db;
     int fd;
 
+    *refetch = 0;
     if (vf)
         *vf = NULL;
 
@@ -181,23 +184,36 @@ static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
         return NULL;
     }
 
-    if ((db = tndb_dopen(fd, vfile_localpath(vf_))) == NULL) {
+    if ((db = tndb_dopen(fd, vfile_localpath(vf_))) == NULL || !tndb_verify(db)) {
+        logn(LOGERR, "%s: broken file", vf_url_slim_s(vf_->vf_path, 0));
+        if (vf_->vf_flags & VF_FRMCACHE) { /* not fully downloaded? */
+            n_assert(vfmode & VFM_CACHE);
+            *refetch = 1;
+        }
+        if (db)
+            tndb_close(db);
         vfile_close(vf_);
-
-    } else {
-        if (vf)
-            *vf = vf_;
-        else
-            vfile_close(vf_);
+        return NULL;
     }
 
+    if (vf)
+        *vf = vf_;
+    else
+        vfile_close(vf_);
+
     return db;
+}
+
+/* the mode to fetch a broken cached file again */
+static int refetch_vfmode(int vfmode)
+{
+    return (vfmode & ~VFM_CACHE) | VFM_NODEL;
 }
 
 
 static
 struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
-                          time_t ts, const char *lang)
+                          time_t ts, const char *lang, int *refetch)
 {
     char        tmpath[PATH_MAX], tss[32];
     char        *idxpath;
@@ -223,6 +239,7 @@ struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
 
     }
 
+    *refetch = 0;
     if (pndir_dscr_pathname(tmpath, sizeof(tmpath), idxpath, lang, tss) == NULL) {
         logn(LOGERR, "%s: %m", vf_url_slim_s(idxpath, 0));
         return NULL;
@@ -230,7 +247,7 @@ struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
     DBGF("mk %s\n", tmpath);
 
     msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
-    return do_dbopen(tmpath, vfmode, vf, idx->srcnam);
+    return do_dbopen(tmpath, vfmode, vf, idx->srcnam, refetch);
 }
 
 
@@ -239,6 +256,7 @@ int open_dscr(struct pndir *idx, int vfmode, time_t ts, const char *lang)
 {
     struct tndb  *db = NULL;
     struct vfile *vf = NULL;
+    int          refetch;
 
     if (idx->db_dscr_h == NULL)
         idx->db_dscr_h = pndir_db_dscr_h_new();
@@ -246,36 +264,22 @@ int open_dscr(struct pndir *idx, int vfmode, time_t ts, const char *lang)
     if (pndir_db_dscr_h_get(idx->db_dscr_h, lang))
         return 1;
 
-    if ((db = do_open_dscr(idx, vfmode, &vf, ts, lang)) == NULL)
+    if ((db = do_open_dscr(idx, vfmode, &vf, ts, lang, &refetch)) == NULL) {
+        if (refetch)
+            return open_dscr(idx, refetch_vfmode(vfmode), ts, lang);
         return 0;
-
-    if (tndb_verify(db)) {
-        pndir_db_dscr_h_insert(idx->db_dscr_h, lang, db);
-
-    } else {
-        logn(LOGERR, "%s: broken file", vf_url_slim_s(tndb_path(db), 0));
-
-        if (vf->vf_flags & VF_FRMCACHE) { /* not fully downloaded? */
-            n_assert(vfmode & VFM_CACHE);
-            vfmode &= ~VFM_CACHE;
-            vfmode |= VFM_NODEL;
-
-            tndb_close(db);
-            vfile_close(vf);
-
-            return open_dscr(idx, vfmode, ts, lang);
-        }
-        tndb_close(db);
     }
 
-    if (vf)
-        vfile_close(vf);
+    pndir_db_dscr_h_insert(idx->db_dscr_h, lang, db);
+    vfile_close(vf);
     return pndir_db_dscr_h_get(idx->db_dscr_h, lang) != NULL;
 }
 
 static
-int pndir_open(struct pndir *idx, struct pkgdir *pkgdir, int vfmode, unsigned flags)
+int pndir_open(struct pndir *idx, struct pkgdir *pkgdir, int vfmode, unsigned flags,
+               int *refetch)
 {
+    *refetch = 0;
     pndir_init(idx);
 
     if ((flags & PKGDIR_OPEN_DIFF) == 0) {
@@ -291,7 +295,7 @@ int pndir_open(struct pndir *idx, struct pkgdir *pkgdir, int vfmode, unsigned fl
     if (pkgdir->name)
         idx->srcnam = n_strdup(pkgdir->name);
 
-    idx->db = do_dbopen(pkgdir->idxpath, vfmode, &idx->_vf, idx->srcnam);
+    idx->db = do_dbopen(pkgdir->idxpath, vfmode, &idx->_vf, idx->srcnam, refetch);
     if (idx->db == NULL)
         goto l_err;
 
@@ -305,31 +309,18 @@ int pndir_open(struct pndir *idx, struct pkgdir *pkgdir, int vfmode, unsigned fl
 }
 
 static
-int pndir_open_verify(struct pndir *idx, struct pkgdir *pkgdir,
-                      int vfmode, unsigned flags)
+int pndir_open_retry(struct pndir *idx, struct pkgdir *pkgdir,
+                     int vfmode, unsigned flags)
 {
-    int rc;
+    int refetch;
 
-    if (!pndir_open(idx, pkgdir, vfmode, flags))
-        return 0;
+    if (pndir_open(idx, pkgdir, vfmode, flags, &refetch))
+        return 1;
 
-    rc = 1;
-    if (!tndb_verify(idx->db)) {
-        logn(LOGERR, "%s: broken file", vf_url_slim_s(idx->_vf->vf_path, 0));
-        rc = 0;
+    if (refetch)                /* the index and its digest, together */
+        return pndir_open_retry(idx, pkgdir, refetch_vfmode(vfmode), flags);
 
-        if (idx->_vf->vf_flags & VF_FRMCACHE) { /* not fully downloaded? */
-            n_assert(vfmode & VFM_CACHE);
-            vfmode &= ~VFM_CACHE;
-            vfmode |= VFM_NODEL;
-            pndir_close(idx);
-
-            return pndir_open_verify(idx, pkgdir, vfmode, flags);
-        }
-
-        pndir_close(idx);
-    }
-    return rc;
+    return 0;
 }
 
 static
@@ -406,16 +397,10 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         vfmode |= VFM_CACHE;
 
     DBGF("%s [%s]\n", pkgdir->idxpath, pkgdir->name);
-    if (!pndir_open_verify(&idx, pkgdir, vfmode, flags))
+    if (!pndir_open_retry(&idx, pkgdir, vfmode, flags))
         return 0;
 
     nerr = 0;
-
-    if (!tndb_verify(idx.db)) {
-        logn(LOGERR, "%s: data digest mismatch, broken file", vf_url_slim_s(idx._vf->vf_path, 0));
-        nerr++;
-        goto l_end;
-    }
 
     if (!tndb_it_start(idx.db, &it)) {
         nerr++;
