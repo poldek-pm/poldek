@@ -24,6 +24,7 @@ obsoletes=
 conflicts=
 files=
 dirs=
+changelog=
 arch="noarch"
 sourcedir="rpm"
 rpmdir="repo"
@@ -31,7 +32,7 @@ rpmdir="repo"
 COMMAND="$0 $@"
 
 usage_and_exit() {
-    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-a ARCH] [-p PROVIDES] [-r REQUIRES] [-s SUGGESTS] [-f file] "
+    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-a ARCH] [-p PROVIDES] [-r REQUIRES] [-s SUGGESTS] [-f file] [-l 'DATE|ENTRY'] "
     exit 1
 }
 
@@ -72,6 +73,10 @@ while test $# -gt 0 ; do
 
         -fd)
             shift; dirs="$dirs ${1} "; shift ;;
+
+        -l)                     # a changelog entry above the default ones, newest first
+            shift; changelog="$changelog${1}
+"; shift ;;
 
 	-a)
 	    shift; arch="${1}"; shift;;
@@ -187,13 +192,17 @@ done
 echo -e "%clean\nrm -rf \$RPM_BUILD_ROOT" >> $SPEC
 
 echo "%changelog" >> $SPEC
+printf "%s" "$changelog" | while IFS='|' read -r date entry; do
+    echo -e "* $date Foo <foo@example.com>\n- $entry\n" >> $SPEC
+done
 echo -e "* Fri Apr 24 2020 Foo <foo@example.com>\n- $name package changelog entry\n" >> $SPEC
 echo -e "* Thu Apr 23 2020 Foo <foo@example.com>\n- $name package changelog second entry\n" >> $SPEC
 echo -e "* Wed Apr 22 2020 Foo <foo@example.com>\n- $name package changelog third entry\n" >> $SPEC
 
 [ ! -d "$rpmdir" ] && rpmdir="$TMPDIR"
 
-rpmbuild --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC
+# the build time is SOURCE_DATE_EPOCH when the caller sets it
+rpmbuild --define 'use_source_date_epoch_as_buildtime 1' --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC
 ec=$?
 # rpmorg stores packages in $arch subdir
 if [ -d "$rpmdir/$arch" ]; then
