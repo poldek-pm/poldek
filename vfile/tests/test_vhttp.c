@@ -446,6 +446,8 @@ START_TEST(test_http_cut_body_fails)
 
     fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0,
             "a download cut short was taken for complete");
+    fail_if(have_file(TEST_FILE_BINARY),
+            "incomplete download left in the cache");
 }
 END_TEST
 
