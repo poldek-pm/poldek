@@ -43,7 +43,12 @@ EXPORT const char *pkguinf_get(const struct pkguinf *pkgu, int tag);
 EXPORT int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
                 const char *lang);
 
+/* changelog entries carry only a date, stored at noon UTC.  SINCE is a
+   build timestamp: return entries whose UTC day is after SINCE's UTC day,
+   not entries newer than SINCE by exact time.  SINCE == 0 returns the
+   whole changelog. */
 EXPORT const char *pkguinf_get_changelog(struct pkguinf *inf, time_t since);
+
 EXPORT int pkguinf_changelog_with_security_fixes(struct pkguinf *inf, time_t since);
 
 EXPORT tn_array *pkguinf_langs(struct pkguinf *pkgu);
@@ -60,4 +65,3 @@ EXPORT int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char 
 #endif /* ndef SWIG */
 
 #endif
-        

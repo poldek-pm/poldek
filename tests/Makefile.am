@@ -3,7 +3,7 @@ LDADD = $(top_builddir)/libpoldek_core.la @CHECK_LIBS@
 
 check_PROGRAMS = test_match test_env test_pmdb test_op test_config \
 		 test_store test_cmp test_booldeps test_getenv_path \
-		 test_ignore_merge test_log test_pndir
+		 test_ignore_merge test_log test_pndir test_pkgu
 
 TESTS = $(check_PROGRAMS)
 

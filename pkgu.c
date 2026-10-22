@@ -298,7 +298,7 @@ int changelog_ent_cmp(struct changelog_ent *e1, struct changelog_ent *e2)
     return e1->ts - e2->ts;
 }
 
-static time_t parse_datetime(const char *str)
+time_t pkgu__parse_datetime(const char *str)
 {
     struct tm tm;
     time_t ts = 0;
@@ -374,7 +374,7 @@ char *prepare_pld_changelog(tn_alloc *na, const char *changelog)
             }
 
             if (rev && tstr) {
-                ts = parse_datetime(tstr);
+                ts = pkgu__parse_datetime(tstr);
                 if (ts == 0)
                     continue;
             }
@@ -455,7 +455,7 @@ static tn_array *parse_changelog(tn_alloc *na, tn_array *lines)
                     ts++;
 
                 if (ts)
-                    ent->ts = parse_datetime(ts);
+                    ent->ts = pkgu__parse_datetime(ts);
             }
             continue;
         }
