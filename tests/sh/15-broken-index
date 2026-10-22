@@ -21,6 +21,13 @@ ls_count() {
         grep -cP '^\w+-\d+-\d+\.\w+$'
 }
 
+desc_sh() {
+    # descriptions are loaded lazily, only by desc
+    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
+        --cmd "desc -L sh" 2>&1
+}
+
 # cut the cached index to $1 bytes ("half": half of it), change the
 # repository, load, change it once more and update
 check_cached_index_cut_to() {
@@ -47,6 +54,55 @@ check_cached_index_cut_to() {
     mkidx
     up
     assertEquals "packages after the next update" "$(($n - 2))" "$(ls_count)"
+}
+
+# cut the cached descriptions to $1 bytes ("half": half of it), change the
+# repository, load a description, and check that desc still works
+check_cached_dscr_cut_to() {
+    rm -rf $CACHEDIR/*
+    mkidx
+    up
+
+    out=$(desc_sh)
+    echo "$out" | grep -q 'sh package changelog entry' ||
+        fail "no description before the cached file was cut"
+
+    remove_package_from_repo
+    mkidx
+    up
+
+    out=$(desc_sh)
+    echo "$out" | grep -q 'sh package changelog entry' ||
+        fail "no description after the repository changed"
+
+    size=$1
+    found=0
+    sleep 1     # tndb trusts the .md5 next to a file with the same mtime second
+    for dscr in $(find $CACHEDIR -name 'packages.ndir.dscr*' ! -name '*.md5'); do
+        [ -f "$dscr" ] || continue
+        found=1
+        cut=$size
+        [ "$cut" = "half" ] && cut=$(($(stat -c %s $dscr) / 2))
+        head -c $cut $dscr > $dscr.tmp && mv $dscr.tmp $dscr
+    done
+    [ "$found" = 1 ] || fail "no cached descriptions"
+
+    sleep 1
+    out=$(desc_sh)
+    echo "$out" | grep -q 'sh package changelog entry' ||
+        fail "descriptions after the cached file was cut to $size bytes"
+}
+
+testCachedDscrFailsToOpen()
+{
+    # 20 bytes do not even hold the database header
+    check_cached_dscr_cut_to 20
+}
+
+testCachedDscrFailsVerification()
+{
+    # half of the file opens, its digest no longer matches
+    check_cached_dscr_cut_to half
 }
 
 testCachedIndexFailsToOpen()
