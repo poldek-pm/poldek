@@ -31,6 +31,10 @@ rpm_up() {
     RPM="$SUDO rpm --root $DESTINATION_REPO"
     $RPM --initdb
 
+    # every test starts with a clean cache; otherwise a dirindex left by
+    # an earlier test can make mtime assertions depend on test order
+    [ -n "$CACHEDIR" ] && $SUDO rm -rf "$CACHEDIR"/*
+
     local use_sudo="n"
     [ -n "$SUDO" ] && use_sudo=y
     RAW_POLDEK="$POLDEK_NOCONF -Ouse_sudo=${use_sudo} -Odependency_solver=$DEPENDENCY_SOLVER -Oupgrade_multiple_instances=y --noask"

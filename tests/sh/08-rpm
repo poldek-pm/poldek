@@ -338,26 +338,29 @@ EOF
 # same second as a later database change, it must not be considered current
 testRPMdbcacheDirindexSameSecond() {
     skip_if_rpm_testing_off && return
-    rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
+
+    local rpmdb_cachedirname="$(echo $DESTINATION_REPO | sed -e 's|^/||' -e 's|/|.|g').var.lib.rpm"
 
     build a
 
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
     local mtime=$(( $(date +%s) + 3600 ))
-    touch -d @$mtime $dbfiles
+    $SUDO touch -d @$mtime $dbfiles || fail "cannot touch rpmdb files"
 
     $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO \
         --root $DESTINATION_REPO --cmd ls -u >/dev/null
 
-    local rpmdb_cachedirname="$(echo $DESTINATION_REPO | sed -e 's|^/||' -e 's|/|.|g').var.lib.rpm"
     local dirindex_path="$CACHEDIR/$rpmdb_cachedirname/dirindex.rpmdb.tndb"
     [ -f "$dirindex_path" ] || fail "missing dirindex $dirindex_path"
 
-    assertEquals "dirindex mtime" "$((mtime - 1))" "$(stat -c %Y "$dirindex_path")"
+    local mtime_1="$((mtime - 1))"
+    local mtime_di=$(stat -c %Y "$dirindex_path")
+
+    assertEquals "dirindex mtime differ ($mtime_1 != $mtime_di)" "$mtime_1" "$mtime_di"
     local md5=$(md5sum "$dirindex_path" | cut -f1 -d' ')
 
     try_install a "a-1-1" ""
-    touch -d @$mtime $dbfiles
+    $SUDO touch -d @$mtime $dbfiles || fail "cannot touch rpmdb files"
 
     $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO \
         --root $DESTINATION_REPO --cmd ls -u >/dev/null
@@ -377,12 +380,12 @@ testRPMdbcacheSameSecond() {
     # made before it, however long the run takes
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
     local mtime=$(( $(date +%s) + 3600 ))
-    touch -d @$mtime $dbfiles
+    $SUDO touch -d @$mtime $dbfiles
 
     $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
 
     rpm_build_installed b 1-1
-    touch -d @$mtime $dbfiles  # changed within the same second
+    $SUDO touch -d @$mtime $dbfiles  # changed within the same second
 
     local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-1-1')
     assertEquals "b-1-1 not listed as installed" "1" "$n"
@@ -392,17 +395,16 @@ testRPMdbcacheSameSecond() {
 # poldek read it in; with the database an hour old, poldek exits long after
 testRPMdbcacheChangedWhileRunning() {
     skip_if_rpm_testing_off && return
-    rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
 
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
     local mtime=$(( $(date +%s) - 3600 ))
-    touch -d @$mtime $dbfiles
+    $SUDO touch -d @$mtime $dbfiles
 
     mkdir -p $DESTINATION_REPO/RPMS/
     rm -f $DESTINATION_REPO/RPMS/*.rpm
     build_package $DESTINATION_REPO/RPMS/ b 1-1
     local change="$TMPDIR/08-rpm-change.sh"
-    echo "$RPM -i --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm && touch -d @$mtime.5 $dbfiles" > $change
+    echo "$RPM -i --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm && $SUDO touch -d @$mtime.5 $dbfiles" > $change
 
     printf 'cd /installed\nls\n!sh %s\nquit\n' "$change" |
         timeout 60 script -qec "$RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null >/dev/null
@@ -416,7 +418,6 @@ testRPMdbcacheChangedWhileRunning() {
 # installed packages from the cache, then the session installs one
 testRPMdbcacheOwnInstallAfterChange() {
     skip_if_rpm_testing_off && return
-    rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
 
     build c 1-1
     $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
@@ -427,7 +428,7 @@ testRPMdbcacheOwnInstallAfterChange() {
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
     local change="$TMPDIR/08-rpm-change.sh" age="$TMPDIR/08-rpm-age.sh"
     echo "$RPM -i --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm" > $change
-    echo "touch -d '-1 hour' $dbfiles" > $age  # as if the session went on long
+    echo "$SUDO touch -d '-1 hour' $dbfiles" > $age  # as if the session went on long
 
     printf 'cd /installed\nls\n!sh %s\ncd /all-avail\ninstall --justdb c\n!sh %s\nquit\n' \
            "$change" "$age" |
@@ -442,7 +443,6 @@ testRPMdbcacheOwnInstallAfterChange() {
 # get the record number of the version it replaced
 testRPMdbcacheRebuilddb() {
     skip_if_rpm_testing_off && return
-    rm -rf $CACHEDIR/*rpmdbcache*  # left by the tests above for the same --root
 
     rpm_build_installed b 1-1
     $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
