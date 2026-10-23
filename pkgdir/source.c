@@ -188,6 +188,7 @@ struct source *source_clone(const struct source *src)
     cp_str_ifnotnull(&nsrc->lc_lang, src->lc_lang);
     cp_str_ifnotnull(&nsrc->original_type, src->original_type);
     cp_str_ifnotnull(&nsrc->config_origin, src->config_origin);
+    cp_str_ifnotnull(&nsrc->signkey, src->signkey);
 
     n_array_free(nsrc->exclude_path);
     nsrc->exclude_path = n_ref(src->exclude_path);
@@ -217,6 +218,7 @@ void source_free(struct source *src)
     n_cfree(&src->lc_lang);
     n_cfree(&src->original_type);
     n_cfree(&src->config_origin);
+    n_cfree(&src->signkey);
 
     if (src->exclude_path)
         n_array_free(src->exclude_path);
@@ -626,6 +628,13 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
     vs = poldek_conf_get(htcnf, "prefix", NULL);
 
     src = source_new_pathspec(NULL, spec, vs);
+    if (src == NULL)
+        return NULL;
+
+    if ((vs = poldek_conf_get(htcnf, "signkey", NULL))) {
+        src->signkey = n_strdup(vs);
+        src->flags |= PKGSOURCE_SIGNKEY;
+    }
 
     vs = poldek_conf_get(htcnf, "original type", NULL);
     if (vs && src->type && n_str_eq(src->type, vs)) {

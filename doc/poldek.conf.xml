@@ -626,6 +626,16 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
+  <option name="signkey" type="string" default="no">
+    <description>
+    URL to public PGP/GPG packages signing key. At install time it is
+    imported to rpm's keyring if it is not already present; interactive
+    installations ask for confirmation first. Packages from the source
+    are verified against this key, not against arbitrary keys trusted by
+    the global rpm keyring.
+    </description>
+  </option>
+
   <option name="hold" type="string" list="yes" default="kernel*" multiple="yes">
     <description>
     Have the same meaning as [ global ] parameter. Example:

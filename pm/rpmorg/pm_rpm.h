@@ -72,6 +72,29 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 #include <rpm/rpmcli.h>
 
 int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags);
+int pm_rpm_verify_signature_ts(void *pm_rpm, const struct poldek_ts *ts,
+                               const char *path, unsigned flags);
+
+struct signkey;
+
+int pm_rpm_verify_signature_keyring(void *pm_rpm, const struct poldek_ts *ts,
+                                    const struct signkey *sk, const char *path,
+                                    unsigned flags);
+
+enum signkey_import_status {
+    SIGNKEY_IMPORT_NOT_ATTEMPTED = 0,
+    SIGNKEY_IMPORTED,
+    SIGNKEY_ALREADY_PRESENT,
+    SIGNKEY_IMPORT_DECLINED,
+    SIGNKEY_IMPORT_FAILED,
+};
+
+struct signkey *pm_rpm_signkey_load(const char *signkey_url);
+void pm_rpm_signkey_free(struct signkey *sk);
+rpmKeyring pm_rpm_signkey_keyring(const struct signkey *sk);
+int pm_rpm_signkey_import(struct pm_rpm *pm, const struct poldek_ts *ts,
+                          struct signkey *sk);
+int pm_rpm_signkey_import_status(const struct signkey *sk);
 
 struct rpmorg_db {
     rpmts ts;
@@ -162,5 +185,7 @@ int pm_rpm_vercmp(const char *one, const char *two);
 
 
 void pm_rpm_setup_commands(struct pm_rpm *pm);
+int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty,
+                   int verbose_level);
 
 #endif
