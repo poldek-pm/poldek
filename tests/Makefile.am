@@ -3,7 +3,7 @@ LDADD = $(top_builddir)/libpoldek_core.la @CHECK_LIBS@
 
 check_PROGRAMS = test_match test_env test_pmdb test_op test_config \
 		 test_store test_cmp test_booldeps test_getenv_path \
-		 test_ignore_merge test_log test_pndir test_pkgu
+		 test_ignore_merge test_log test_pndir test_pkgu test_sigint
 
 TESTS = $(check_PROGRAMS)
 
@@ -12,11 +12,16 @@ test_pndir_CPPFLAGS = -I$(top_srcdir)/pkgdir
 
 EXTRA_DIST = test.h poldek_test_conf.conf sh run-sh-tests.sh
 
+# preloaded by sh/17-interrupt
+check_LTLIBRARIES = sigint_at_init.la
+sigint_at_init_la_SOURCES = sigint_at_init.c
+sigint_at_init_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
+
 .PHONY: check-sh
-check-sh:
+check-sh: $(check_LTLIBRARIES)
 	@./run-sh-tests.sh
 
-check-sh-no-loop:
+check-sh-no-loop: $(check_LTLIBRARIES)
 	@MAX_LOOP=3 ./run-sh-tests.sh
 
 # shared libraries export everything their headers declare EXPORT

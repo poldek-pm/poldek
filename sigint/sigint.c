@@ -27,6 +27,7 @@ static void (*orig_sighandler)(int) = NULL;
 static void (*sigint_reached_cb)(void) = NULL;
 static int cnt = 0;
 static volatile sig_atomic_t enabled = 1;
+static int depth = 0;           /* sigint_init() calls not undone yet */
 
 static void sigint_handler(int sig) 
 {
@@ -80,22 +81,31 @@ void sigint_reset(void)
 
 void sigint_init(void)
 {
+    if (depth++ > 0)            /* already set up, e.g. by the shell */
+        return;
+
+    /* before the handler, which reads it; never freed, as
+       sigint_emit() may come after sigint_destroy() */
+    if (cb_stack == NULL)
+        cb_stack = n_array_new(4, NULL, NULL);
+
     orig_sighandler = NULL;
     interrupted = 0;
     cnt = 0;
     orig_sighandler = signal(SIGINT, sigint_handler);
     if (orig_sighandler == SIG_IGN)     /* started with ^C ignored: keep it so */
         signal(SIGINT, SIG_IGN);
-    cb_stack = n_array_new(4, NULL, NULL);
 }
 
 void sigint_destroy(void)
 {
+    if (depth == 0 || --depth > 0)
+        return;
+
     if (orig_sighandler)
         signal(SIGINT, orig_sighandler);
     else
         signal(SIGINT, SIG_DFL);
-    
 }
 
 void sigint_push(void (*cb)(void)) 

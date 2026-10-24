@@ -22,6 +22,7 @@
 #include <trurl/trurl.h>
 
 #include "compiler.h"
+#include "sigint/sigint.h"
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
@@ -275,8 +276,10 @@ static int uninstall(struct cmdctx *cmdctx)
         ts_flags |= POLDEK_TS_TRACK;
 
     poldek_ts_set_type(ts, POLDEK_TS_TYPE_UNINSTALL, "uninstall");
+    sigint_init();      /* on ^C finish the current step and stop, as in the shell */
     if (!poldek_ts_run(ts, ts_flags))
         err++;
+    sigint_destroy();
 
     if (ts_flags)
         poclidek_apply_iinf(cmdctx->cctx, ts);
@@ -293,6 +296,8 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
     if (poldek_ts_get_type(rt->ts) != POLDEK_TS_UNINSTALL)
         return OPGROUP_RC_NIL;
 
+    sigint_init();      /* on ^C finish the current step and stop, as in the shell */
     rc = poldek_ts_run(rt->ts, 0);
+    sigint_destroy();
     return rc ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
 }

@@ -593,7 +593,9 @@ static int install(struct cmdctx *cmdctx)
 
     is_test = ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0);
 
+    sigint_init();      /* on ^C finish the current step and stop, as in the shell */
     rc = poldek_ts_run(ts, is_test ? 0 : POLDEK_TS_TRACK);
+    sigint_destroy();
 
     if (rc == 0 && !sigint_reached())
         msgn(1, _("There were errors"));
@@ -621,6 +623,8 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
         }
     }
 
+    sigint_init();      /* on ^C finish the current step and stop, as in the shell */
     rc = poldek_ts_run(rt->ts, 0);
+    sigint_destroy();
     return rc ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
 }
