@@ -54,6 +54,7 @@
 #include "poldek_intern.h"
 #include "misc.h"
 #include "pm_rpm.h"
+#include "pm_hooks.h"
 
 #ifdef HAVE_OPENPTY
 
@@ -454,6 +455,9 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     n_assert(nargs > nopts);
     argv[nargs] = NULL;
 
+    if (!poldek__ts_hooks_pre(ts, cmd == pm->sudo ? pm->sudo : NULL))
+        return 0;
+
     if (poldek_VERBOSE) {
         char buf[8192], *p;
         p = buf;
@@ -560,6 +564,9 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 
     n_assert(nargs > nopts);
     argv[nargs] = NULL;
+
+    if (!poldek__ts_hooks_pre(ts, cmd == pm->sudo ? pm->sudo : NULL))
+        return 0;
 
     if (poldek_VERBOSE > 0) {
         char buf[8192], *p;

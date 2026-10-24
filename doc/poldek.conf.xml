@@ -257,6 +257,22 @@ and [filename]*-source.conf[/filename], file getters are declared in
     </description>
   </option>
 
+  <option name="hooks dir" type="string" multiple="no">
+    <description>
+    Directory with pre-install.d and post-install.d subdirectories of hooks,
+    for example for etckeeper. Once per installation, upgrade or removal, the
+    hooks in pre-install.d run before the first rpm run and the ones in
+    post-install.d after the last one. A failing pre-install hook stops the
+    operation. A hook is an executable file whose name does not start with
+    '.' nor end with '~', ',v', '.rpmsave', '.rpmnew' or '.rpmorig', and hooks
+    run in the order of their names. Hooks do not run for rpm test runs nor
+    with a root directory other than /. Example:
+    [screen]
+ hooks dir = /etc/poldek
+    [/screen]
+    </description>
+  </option>
+
   <option name="summary style" type="string" default="color" multiple="no">
     <description>
     Transaction summary style, can be 'old' (pre 0.4.0 version) or 'color' - coloured and compact.
