@@ -13,3 +13,4 @@ test_vhttp
 test_vopen3
 test_valid_path
 test_vftp
+test_p_open
