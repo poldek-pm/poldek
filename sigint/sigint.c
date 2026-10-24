@@ -84,6 +84,8 @@ void sigint_init(void)
     interrupted = 0;
     cnt = 0;
     orig_sighandler = signal(SIGINT, sigint_handler);
+    if (orig_sighandler == SIG_IGN)     /* started with ^C ignored: keep it so */
+        signal(SIGINT, SIG_IGN);
     cb_stack = n_array_new(4, NULL, NULL);
 }
 
