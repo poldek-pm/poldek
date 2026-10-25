@@ -507,7 +507,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 
     } else if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
         if (!pm->sudo) {
-            logn(LOGWARN, _("%s: command not found"), "sudo");
+            logn(LOGERR, _("%s: command not found"), "sudo");
             return 0;
         }
         cmd = pm->sudo;
