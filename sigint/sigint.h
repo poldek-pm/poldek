@@ -17,6 +17,7 @@
 #  define EXPORT extern
 #endif
 
+/* calls nest: only the outermost pair sets up and restores the handler */
 EXPORT void sigint_init(void);
 EXPORT void sigint_destroy(void);
 EXPORT void sigint_reset(void);
