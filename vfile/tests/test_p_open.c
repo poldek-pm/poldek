@@ -28,7 +28,9 @@ START_TEST(test_pty_output_ends_with_command)
     int master, slave, saved_stdout;
     FILE *stream;
 
-    /* p_open() uses a pty only when its own stdout is a terminal */
+    /* p_open() uses a pty only when its own stdout is a terminal, so feed
+       it a pty slave as stdout; otherwise P_OPEN_OUTPTYS falls back to a
+       plain pipe and the bug is not exercised. */
     fail_unless(openpty(&master, &slave, NULL, NULL, NULL) == 0, "openpty: %m");
     saved_stdout = dup(STDOUT_FILENO);
     dup2(slave, STDOUT_FILENO);
