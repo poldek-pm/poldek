@@ -2209,6 +2209,12 @@ msgstr "Uruchamianie%s..."
 msgid "%s: %s signature not found"
 msgstr "%s: %s nie znaleziono podpisu"
 
+#: pm_hooks.c:191
+msgid "pre-install hook failed, no packages were changed"
+msgstr ""
+"skrypt z pre-install.d zakoñczy³ siê b³êdem, ¿aden pakiet nie zosta³ "
+"zmieniony"
+
 #: poldek_term.c:195
 msgid "$TERM undefined"
 msgstr "niezdefiniowana zmienna $TERM"

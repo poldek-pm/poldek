@@ -883,7 +883,8 @@ int poldek__is_in_testing_mode(void)
     return poldek_TESTING_MODE == 1;
 }
 
-static void process_output(struct p_open_st *st, int verbose_level)
+void poldek__relay_output(struct p_open_st *st, int verbose_level,
+                          const char *logprefix)
 {
     int endl = 1, nlines = 0;
 
@@ -923,7 +924,7 @@ static void process_output(struct p_open_st *st, int verbose_level)
 
             msg_tty(verbose_level, fmt, buf);
 
-            /* logged to file? -> prefix lines with 'rpm: ' */
+            /* logged to file? -> prefix lines with the command name */
             for (i=0; i < n; i++) {
                 int c = buf[i];
 
@@ -938,7 +939,7 @@ static void process_output(struct p_open_st *st, int verbose_level)
                     //if (nlines)
                     //    msg_f(0, "_\n");
                     nlines++;
-                    msg_f(0, "cp: %c", c);
+                    msg_f(0, "%s: %c", logprefix, c);
                     continue;
                 }
                 msg_f(0, "_%c", c);
@@ -972,7 +973,7 @@ int poldek_util_copy_file(const char *src, const char *dst)
         }
     }
 
-    process_output(&pst, 1);
+    poldek__relay_output(&pst, 1, "cp");
     if ((ec = p_close(&pst) != 0))
         logn(LOGERR, "cp %s: %s", src, pst.errmsg ? pst.errmsg : "copying failed");
 

@@ -162,6 +162,9 @@ struct poldek_ts {
                                     by ts->setop(POLDEK_OP_GREEDY, v)
                                   */
 
+    unsigned           _hooks;       /* state of the pre/post-install hooks */
+    const char         *_hooks_sudo; /* how the pre-install hooks were run */
+
 };
 #endif
 EXPORT struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags);
