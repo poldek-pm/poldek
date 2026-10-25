@@ -144,6 +144,16 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         return NULL;
     }
 
+    /* before fork(), so that a NULL return means nothing was started */
+    if ((pst->stream = fdopen(pp[0], "r")) == NULL) {
+        snprintf(errmsg, sizeof(errmsg), "fdopen: %m");
+        pst->errmsg = n_strdup(errmsg);
+        close(pp[0]);
+        close(pp[1]);
+        return NULL;
+    }
+    setvbuf(pst->stream, NULL, _IONBF, 0);
+
     if ((pid = fork()) == 0) {
         p_dupnull(STDIN_FILENO, flags);
         close(pp[0]);
@@ -158,20 +168,15 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     } else if (pid < 0) {
         snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
         pst->errmsg = n_strdup(errmsg);
+        fclose(pst->stream);
+        pst->stream = NULL;
+        close(pp[1]);
 
     } else {
         close(pp[1]);
         pst->fd = pp[0];
-        if ((pst->stream = fdopen(pp[0], "r"))) {
-            setvbuf(pst->stream, NULL, _IONBF, 0);
-            pst->pid = pid;
-            pst->cmd = n_strdup(cmd);
-        }
-    }
-
-    if (pst->stream == NULL) {
-        close(pp[0]);
-        close(pp[1]);
+        pst->pid = pid;
+        pst->cmd = n_strdup(cmd);
     }
 
     return pst->stream;
@@ -239,20 +244,12 @@ int p_close(struct p_open_st *pst)
 
 
 #ifdef HAVE_OPENPTY
-pid_t forkptys(int *master, struct termios *tios, struct winsize *wsize,
-	       char *errmsg, int errmsg_size)
+pid_t forkptys(int master, int slave)
 {
-    int slave;
     pid_t pid;
 
-
-    if (openpty(master, &slave, NULL, tios, wsize) != 0) {
-	snprintf(errmsg, errmsg_size, "openpty: %m");
-        return -1;
-    }
-
     if ((pid = fork()) == 0) {
-        close(*master);
+        close(master);
         dup2(slave, STDOUT_FILENO);
         dup2(slave, STDERR_FILENO);
         if (slave > STDERR_FILENO)
@@ -262,9 +259,6 @@ pid_t forkptys(int *master, struct termios *tios, struct winsize *wsize,
 
     /* the master sees the end of output only when nobody holds the slave open */
     close(slave);
-    if (pid < 0)
-        close(*master);
-
     return pid;
 }
 
@@ -274,7 +268,7 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 {
     struct termios  termios;
     struct winsize  winsize;
-    int             fd;
+    int             fd, slave;
     pid_t           pid;
     char            errmsg[1024];
 
@@ -302,23 +296,35 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         return NULL;
     }
 
-    *errmsg = '\0';
-    if ((pid = forkptys(&fd, &termios, &winsize,
-                        errmsg, sizeof(errmsg))) == 0) {
+    if (openpty(&fd, &slave, NULL, &termios, &winsize) != 0) {
+        snprintf(errmsg, sizeof(errmsg), "openpty: %m");
+        pst->errmsg = n_strdup(errmsg);
+        return NULL;
+    }
+
+    /* before fork(): after a NULL, callers may retry without a pty */
+    if ((pst->stream = fdopen(fd, "r")) == NULL) {
+        snprintf(errmsg, sizeof(errmsg), "fdopen: %m");
+        pst->errmsg = n_strdup(errmsg);
+        close(fd);
+        close(slave);
+        return NULL;
+    }
+    setvbuf(pst->stream, NULL, _IONBF, 0);
+
+    if ((pid = forkptys(fd, slave)) == 0) {
         p_dupnull(STDIN_FILENO, flags);
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
 
     } else if (pid < 0) {
-	if (*errmsg == '\0')
-	    snprintf(errmsg, sizeof(errmsg), "forkptys %s: %m", cmd);
+        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
         pst->errmsg = n_strdup(errmsg);
-
+        fclose(pst->stream);
+        pst->stream = NULL;
 
     } else {
         pst->fd = fd;
-        pst->stream = fdopen(fd, "r");
-        setvbuf(pst->stream, NULL, _IONBF, 0);
         pst->pid = pid;
         pst->cmd = n_strdup(cmd);
     }
