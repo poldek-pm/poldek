@@ -975,7 +975,8 @@ int poldek_util_copy_file(const char *src, const char *dst)
 
     poldek__relay_output(&pst, 1, "cp");
     if ((ec = p_close(&pst) != 0))
-        logn(LOGERR, "cp %s: %s", src, pst.errmsg ? pst.errmsg : "copying failed");
+        logn(LOGERR, "%s: cannot copy to %s: %s", n_basenam(src), dst,
+             pst.errmsg ? pst.errmsg : "cp failed");
 
     p_st_destroy(&pst);
     return ec == 0;
