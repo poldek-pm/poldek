@@ -4,7 +4,7 @@ DIST_SUBDIRS = $(SUBDIRS)
 AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-LIBVERSION = 0:1:0
+LIBVERSION = 1:0:0
 lib_LTLIBRARIES     = libvfile.la
 libvfile_la_LDFLAGS = -version-info $(LIBVERSION)
 
