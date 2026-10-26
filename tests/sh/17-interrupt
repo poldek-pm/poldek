@@ -3,9 +3,9 @@
 # ^C during an install or a removal on the command line lets the rpm run in
 # progress finish, skips what is left and ends poldek with an error when
 # something was skipped, as the shell does, rather than killing poldek.
-# A ^C before the first rpm run stops upgrade-dist and removals with an
-# error, and rpm does not run. Started with SIGINT ignored, poldek keeps
-# ignoring it.
+# A ^C before the first rpm run stops an install, upgrade-dist and removals
+# with an error, and rpm does not run. Started with SIGINT ignored, poldek
+# keeps ignoring it.
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
@@ -92,6 +92,16 @@ testInterruptLetsRemovalFinish()
     rc=$?
     assertEquals "exit code $rc" "0" "$rc"
     assertEquals "rpm runs" "1" "$(wc -l < $RUNS)"
+}
+
+testInterruptBeforeRpmStopsInstall()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+
+    out=$(poldek_interrupted_before_rpm -u a)
+    assertStoppedBeforeRpm "$?" "$out"
 }
 
 testInterruptBeforeRpmStopsUpgradeDist()

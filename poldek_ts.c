@@ -1063,6 +1063,11 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
     }
 
     rc = ts_run->run(ts);
+
+    /* ^C stops a run at many points; say so once, for all of them */
+    if (rc == 0 && sigint_reached())
+        logn(LOGNOTICE, _("Interrupted"));
+
     poldek__ts_hooks_post(ts);  /* also after a failed or cancelled run */
     return rc;
 }

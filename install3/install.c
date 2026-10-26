@@ -408,7 +408,6 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
             continue;
 
         if (sigint_reached()) {
-            logn(LOGNOTICE, _("Interrupted"));
             nerr++;
             goto l_end;
         }
