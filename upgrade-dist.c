@@ -167,10 +167,8 @@ int do_poldek_ts_upgrade_dist(struct poldek_ts *ts)
     pkgdb_it_destroy(&it);
     n_hash_free(marked_h);
 
-    if (sigint_reached()) {
-        logn(LOGNOTICE, _("Interrupted"));
+    if (sigint_reached())
         return 0;
-    }
 
     if (nmarked == 0) {
         msgn(1, _("Nothing to do"));

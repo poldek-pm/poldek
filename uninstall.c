@@ -860,10 +860,8 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts)
     }
     pkgdb_close(ts->db); /* release db as soon as possible */
 
-    if (sigint_reached()) {     /* the dependencies are resolved only in part */
-        logn(LOGNOTICE, _("Interrupted"));
+    if (sigint_reached())       /* the dependencies are resolved only in part */
         nerr++;
-    }
 
     if (nerr || pkgs == NULL)
         goto l_end;

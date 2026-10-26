@@ -190,7 +190,6 @@ static int do_install_dist(struct poldek_ts *ts)
             continue;
 
         if (sigint_reached()) {
-            logn(LOGNOTICE, _("Interrupted"));
             nerr++;
             break;
         }
