@@ -1141,9 +1141,6 @@ static void init_internal(void)
     n_malloc_set_failhook(poldek_malloc_fault_hook);
 }
 
-/* need rpm_machine_score for testing */
-void *__testing_mode_pmctx_rpm = NULL;
-
 static
 void poldek_destroy(struct poldek_ctx *ctx)
 {
@@ -1171,11 +1168,6 @@ void poldek_destroy(struct poldek_ctx *ctx)
 
     if (ctx->pmctx)
         pm_free(ctx->pmctx);
-
-    if (__testing_mode_pmctx_rpm) {
-        pm_free(__testing_mode_pmctx_rpm);
-        __testing_mode_pmctx_rpm = NULL;
-    }
 }
 
 void poldek_free(struct poldek_ctx *ctx)
@@ -1646,17 +1638,12 @@ static int setup_pm(struct poldek_ctx *ctx)
         }
 
     } else if (strcmp(pm, "pset") == 0) {
-        if (poldek__is_in_testing_mode()) /* need rpm_machine_score for testing */
-            __testing_mode_pmctx_rpm = pm_new("rpm");
-
         n_array_sort_ex(ctx->dest_sources, (tn_fn_cmp)source_cmp_no);
         if (n_array_size(ctx->dest_sources) == 0) {
             logn(LOGERR, "%s: missing destination source", pm);
 
-        } else {
+        } else if ((ctx->pmctx = pm_new(pm))) {
             int i;
-
-            ctx->pmctx = pm_new(pm);
 
             for (i=0; i < n_array_size(ctx->dest_sources); i++) {
                 struct source *dest = n_array_nth(ctx->dest_sources, i);

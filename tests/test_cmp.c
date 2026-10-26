@@ -1,6 +1,8 @@
 #include "test.h"
 #include <sys/utsname.h>
 
+#include "poldek.h"
+#include "pkgdir/source.h"
 #include "pkgcmp.h"
 #include "pkg_ver_cmp.h"
 
@@ -313,7 +315,32 @@ START_TEST (test_kind_of_uncolored) {
 }
 END_TEST
 
+/* a --destination context keeps rpm configured while other contexts come
+   and go */
+START_TEST (test_arch_score_with_destination_ctx) {
+    struct utsname un;
+    if (!arch_testable(&un))
+        return;
+
+    poldeklib_init();
+    struct poldek_ctx *ctx = poldek_new(0);
+    poldek_configure(ctx, POLDEK_CONF_DESTINATION,
+                     source_new_pathspec(NULL, "destination", NULL));
+    poldek_configure(ctx, POLDEK_CONF_PM, "pset");
+    fail_unless(poldek_setup(ctx), "--destination setup failed");
+    fail_unless(pm_architecture_score(un.machine) > 0,
+                "%s: no score with --destination", un.machine);
+
+    poldek_free(poldek_new(0));
+    fail_unless(pm_architecture_score(un.machine) > 0,
+                "%s: no score after another context was freed", un.machine);
+
+    poldek_free(ctx);
+    poldeklib_destroy();
+}
+END_TEST
+
 NTEST_RUNNER("cmp", test_arch_cmp, test_multi_arch_cmp, test_arch_sort,
              test_colored_like_colored, test_colored_like_uncolored_same_arch,
              test_colored_like_uncolored_other_arch, test_colored_like_no_multilib,
-             test_kind_of_uncolored);
+             test_kind_of_uncolored, test_arch_score_with_destination_ctx);

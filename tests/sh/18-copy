@@ -53,4 +53,29 @@ testDestinationCopyFails() {
     assertTrue "a failed copy ended with exit code 0" "[ $rc -ne 0 ]"
 }
 
+# of two packages that differ only in arch, the one for this machine is
+# copied; it comes from the first source, and without rpm's scores the
+# arch poldek sees last would win
+testDestinationPrefersMachineArch() {
+    local arch=$(uname -m) foreign=$ORIGREPO/foreign out
+
+    mkdir -p $foreign || fail "mkdir failed"
+    build_package $REPO b 1-1 -a $arch -f /b.$arch
+    build_package $foreign b 1-1 -a xtensa -f /b.xtensa
+    # outside test mode, so nothing test-only can set rpm up instead
+    out=$(env -u POLDEK_TESTING $POLDEK_INSTALL --st dir -s $foreign -i b 2>&1)
+    assertEquals "install failed: $out" "0" "$?"
+    assertTrue "b for $arch not copied: $out" "[ -f $DESTINATION_REPO/b-1-1.$arch.rpm ]"
+    assertFalse "b for xtensa copied" "[ -e $DESTINATION_REPO/b-1-1.xtensa.rpm ]"
+}
+
+testDestinationWithoutRpmConfig() {
+    local out rc
+
+    out=$(RPM_CONFIGDIR=$ORIGREPO/no-rpm-config $POLDEK_INSTALL -i a 2>&1)
+    rc=$?
+    assertTrue "exit code 0 without rpm configuration: $out" "[ $rc -ne 0 ]"
+    assertFalse "a copied" "[ -e $DESTINATION_REPO/a-1-1.noarch.rpm ]"
+}
+
 . ./sh/lib/shunit2
