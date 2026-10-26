@@ -112,9 +112,9 @@ static int do_cachedir_clean(const char *dirpath)
 
 	if (lstat(path, &st) == 0) {
             if (S_ISDIR(st.st_mode)) {
-		do_cachedir_clean(path);
+		nerr += do_cachedir_clean(path) != 0;
 	    } else {
-		nerr += unlink(path);
+		nerr += unlink(path) != 0;
 	    }
 	}
     }
@@ -126,7 +126,7 @@ static int do_cachedir_clean(const char *dirpath)
 
     // do not remove cache directory, only its subdirs
     if (n_str_ne(dirpath, vfile_cachedir())) {
-	nerr += rmdir(dirpath);
+	nerr += rmdir(dirpath) != 0;
     }
 
     return nerr;
