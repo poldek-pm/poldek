@@ -967,15 +967,15 @@ int poldek_util_copy_file(const char *src, const char *dst)
     argv[n++] = NULL;
 
     if (p_open(&pst, p_open_flags, "/bin/cp", argv) == NULL) {
-        if (pst.errmsg) {
-            logn(LOGERR, "%s", pst.errmsg);
-            p_st_destroy(&pst);
-        }
+        logn(LOGERR, "%s: cannot copy to %s: %s", n_basenam(src), dst, pst.errmsg);
+        p_st_destroy(&pst);
+        return 0;
     }
 
     poldek__relay_output(&pst, 1, "cp");
     if ((ec = p_close(&pst) != 0))
-        logn(LOGERR, "cp %s: %s", src, pst.errmsg ? pst.errmsg : "copying failed");
+        logn(LOGERR, "%s: cannot copy to %s: %s", n_basenam(src), dst,
+             pst.errmsg ? pst.errmsg : "cp failed");
 
     p_st_destroy(&pst);
     return ec == 0;

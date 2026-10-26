@@ -200,6 +200,36 @@ testUninstall()
     rpm_state_check "b" "a,a-libs"
 }
 
+# "use sudo" is for ordinary users: root removes packages with rpm itself,
+# as it installs them
+testUninstallAsRootWithoutSudo()
+{
+    skip_if_rpm_testing_off && return
+    if ! is_root; then          # the tests use sudo as an ordinary user
+        startSkipping
+        fail
+        endSkipping
+        return
+    fi
+
+    build a
+    index
+
+    build_installed a
+    build_installed b
+
+    # a sudo that refuses, so removing through it fails
+    local sudo="$TMPDIR/sudo" sudo_log="$TMPDIR/sudo.log"
+    printf '#!/bin/sh\necho "$*" >> %s\nexit 1\n' "$sudo_log" > $sudo
+    chmod 755 $sudo
+    rm -f $sudo_log
+
+    $POLDEK -Ouse_sudo=y -Osudo_command=$sudo uninstall -y a
+
+    assertFalse "sudo was run: $(cat $sudo_log 2>/dev/null)" "[ -s $sudo_log ]"
+    rpm_state_check "b" "a"
+}
+
 # without repositories desc runs in /installed: -R and -B look among the
 # installed packages
 testDescInstalled()

@@ -32,18 +32,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#if HAVE_OPENPTY
-# if HAVE_PTY_H
-#  include <pty.h>
-# elif HAVE_LIBUTIL_H           /* FreeBSD */
-#  include <libutil.h>
-# elif HAVE_UTIL_H
-#  include <util.h>
-# endif
-# include <termios.h>
-#endif /* HAVE_OPENPTY */
-
-
 #ifdef HAVE_SYS_FILIO_H
 # include <sys/filio.h>     /* for FIONBIO (FreeBSD) */
 #endif
@@ -531,85 +519,3 @@ void vopen3_process(struct vopen3_st *st, int verbose_level)
     DBGF("END %d\n", vopen3_st_isrunning(head_st));
     return;
 }
-
-
-
-#ifdef HAVE_OPENPTY
-pid_t forkptysxx(int *master, struct termios *tios, struct winsize *wsize,
-               char *errmsg, int errmsg_size)
-{
-    int slave;
-    pid_t pid;
-
-
-    if (openpty(master, &slave, NULL, tios, wsize) != 0) {
-        snprintf(errmsg, errmsg_size, "openpty: %m");
-        return -1;
-    }
-
-    if ((pid = fork()) == 0) {
-        close(*master);
-        dup2(slave, STDOUT_FILENO);
-        dup2(slave, STDERR_FILENO);
-        return 0;
-    }
-
-    return pid;
-}
-
-#if 0
-static
-FILE *pty_open(struct vopen3_st *st, unsigned flags, const char *cmd,
-               char *const argv[])
-{
-    struct termios  termios;
-    struct winsize  winsize;
-    int             fd;
-    pid_t           pid;
-    char            errmsg[512];
-
-    if (!isatty(STDOUT_FILENO))
-        return pp_open(st, flags, cmd, argv);
-
-    st->stream = NULL;
-
-    if (tcgetattr(STDOUT_FILENO, &termios) != 0) {
-        st_seterr(st, "tcgetattr(1): %m");
-        return NULL;
-    }
-
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &winsize) != 0) {
-        st_seterr(st, "ioctl(1, TIOCGWINSZ): %m");
-        return NULL;
-    }
-
-    if (access(cmd, R_OK | X_OK) != 0) {
-        st_seterr(st, _("%s: no such file"), cmd);
-        return NULL;
-    }
-
-    *errmsg = '\0';
-    if ((pid = forkptys(&fd, &termios, &winsize,
-                        errmsg, sizeof(errmsg))) == 0) {
-        p_dupnull(STDIN_FILENO, flags);
-        execv(cmd, argv);
-        exit(EXIT_FAILURE);
-
-    } else if (pid < 0) {
-        if (*errmsg == '\0')
-            st_seterr(st, "fork %s: %m", cmd);
-
-    } else {
-        st->fd = fd;
-        st->stream = fdopen(fd, "r");
-        setvbuf(st->stream, NULL, _IONBF, 0);
-        st->pid = pid;
-        st->cmd = n_strdup(cmd);
-    }
-
-    return st->stream;
-}
-#endif
-
-
-#endif /* HAVE_OPENPTY */

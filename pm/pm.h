@@ -91,6 +91,7 @@ EXPORT void pkgdb_close(struct pkgdb *db);
 EXPORT void pkgdb_free(struct pkgdb *db);
 
 EXPORT int pkgdb_tx_begin(struct pkgdb *db, struct poldek_ts *ts);
+/* 0 when the changes could not be committed, e.g. copying to a --destination */
 EXPORT int pkgdb_tx_commit(struct pkgdb *db);
 
 struct poldek_ts;
