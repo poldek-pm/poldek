@@ -38,6 +38,7 @@
 #include "log.h"
 #include "i18n.h"
 #include "fileindex.h"
+#include "pm_hooks.h"
 
 extern int poldek_conf_PROMOTE_EPOCH;
 extern int poldek_conf_MULTILIB;
@@ -1037,7 +1038,7 @@ static int ts_run_verify(struct poldek_ts *ts)
 int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
 {
     struct ts_run *ts_run = NULL;
-    int i = 0;
+    int i = 0, rc;
 
     poldek_ts_setf(ts, flags);
     n_assert(ts->type);
@@ -1061,5 +1062,7 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
             return 0;
     }
 
-    return ts_run->run(ts);
+    rc = ts_run->run(ts);
+    poldek__ts_hooks_post(ts);  /* also after a failed or cancelled run */
+    return rc;
 }

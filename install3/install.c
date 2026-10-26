@@ -18,6 +18,7 @@
 #include "pkgdir/pkgdir.h"
 #include "ictx.h"
 #include "iset.h"
+#include "pm_hooks.h"
 
 static int verify_held_packages(struct i3ctx *ictx)
 {
@@ -406,8 +407,11 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
         if (!pkg_is_marked_i(ts->pms, pkg))
             continue;
 
-        if (sigint_reached())
+        if (sigint_reached()) {
+            logn(LOGNOTICE, _("Interrupted"));
+            nerr++;
             goto l_end;
+        }
 
         if (ts->getop(ts, POLDEK_OP_PARTICLE)) {
             if (n > 1) {
@@ -432,7 +436,7 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
             if (!install_packages(&ictx))
                 nerr++;
 
-            if (ictx.cancelled)
+            if (ictx.cancelled || poldek__ts_hooks_failed(ts))
                 break;
 
             ts_reset(ictx.ts);

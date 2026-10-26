@@ -255,8 +255,15 @@ pid_t forkptys(int *master, struct termios *tios, struct winsize *wsize,
         close(*master);
         dup2(slave, STDOUT_FILENO);
         dup2(slave, STDERR_FILENO);
+        if (slave > STDERR_FILENO)
+            close(slave);
         return 0;
     }
+
+    /* the master sees the end of output only when nobody holds the slave open */
+    close(slave);
+    if (pid < 0)
+        close(*master);
 
     return pid;
 }

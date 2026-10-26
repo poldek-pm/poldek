@@ -2,9 +2,9 @@ CPPFLAGS = @CPPFLAGS@ @CHECK_CFLAGS@
 LDADD = @CHECK_LIBS@ $(top_builddir)/vfile/libvfile.la
 
 check_PROGRAMS = test_vfile test_vopen3 test_vhttp test_valid_path \
-		 test_vftp
+		 test_vftp test_p_open
 
-TESTS = test_vfile test_vopen3 test_valid_path
+TESTS = test_vfile test_vopen3 test_valid_path test_p_open
 EXTRA_DIST = test.h http_server.py run_http_tests.sh \
 	      ftp_server.py run_ftp_tests.sh
 

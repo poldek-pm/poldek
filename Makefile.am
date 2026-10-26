@@ -32,6 +32,7 @@ libpoldek_core_la_SOURCES = \
 	  poldek_term.c poldek_term.h	\
 	  minfo.c			\
 	  misc.c misc.h			\
+	  pm_hooks.c pm_hooks.h		\
 	  pkgmisc.c pkgmisc.h		\
 	  depdirs.c depdirs.h   	\
 	  pkg.c pkgiter.c pkg.h		\

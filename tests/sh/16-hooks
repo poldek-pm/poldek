@@ -1,0 +1,195 @@
+#!/bin/sh
+
+# The hooks in <hooks dir>/pre-install.d run once before the first rpm run
+# of an operation and the ones in post-install.d once after the last one,
+# however many package sets the operation installs. A failing pre-install
+# hook stops the operation; a failing post-install one is only reported.
+# Hooks do not run for rpm test runs, nor with a root other than /.
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/rpm-setup
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+
+setUp() {
+    is_rpm_testing_off && return
+
+    rpm_up
+
+    HOOKS="$TMPDIR/hooks"
+    HOOKS_LOG="$TMPDIR/hooks.log"
+    rm -rf $HOOKS $HOOKS_LOG
+    mkdir -p $HOOKS/pre-install.d $HOOKS/post-install.d
+    hook pre-install.d log pre
+    hook post-install.d log post
+
+    # logs its runs instead of installing, so poldek may work on /
+    FAKE_RPM="$TMPDIR/fake-rpm"
+    printf '#!/bin/sh\necho rpm >> %s\n' "$HOOKS_LOG" > $FAKE_RPM
+    chmod 755 $FAKE_RPM
+
+    POLDEK_ON_ROOT="$RAW_POLDEK --pmcmd $FAKE_RPM --st dir -s $REPO --root /"
+    POLDEK_HOOKS="$POLDEK_ON_ROOT -Ohooks_dir=$HOOKS"
+}
+
+# hook <subdir> <name> <word to log> [exit code]
+hook() {
+    printf '#!/bin/sh\necho %s >> %s\nexit %s\n' "$3" "$HOOKS_LOG" "${4:-0}" > $HOOKS/$1/$2
+    chmod 755 $HOOKS/$1/$2
+}
+
+build() {
+    build_package $REPO $@
+}
+
+# what ran, in order, on one line
+runs() {
+    [ -f $HOOKS_LOG ] && tr '\n' ' ' < $HOOKS_LOG | sed 's/ $//'
+}
+
+# assertRuns <what should have run, in order>
+assertRuns() {
+    assertEquals "ran: '$(runs)'" "$1" "$(runs)"
+}
+
+testHooksRunOncePerOperation()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    build hookb
+    build hookc
+
+    # three packages with no dependencies between them are three sets
+    $POLDEK_HOOKS -uv hooka hookb hookc
+    assertEquals "install failed" "0" "$?"
+    assertRuns "pre rpm rpm rpm post"
+}
+
+testFailingPreHookStopsOperation()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    build hookb
+    hook pre-install.d log pre 1
+
+    $POLDEK_HOOKS -uv hooka hookb
+    rc=$?
+    assertTrue "install expected to fail" "[ $rc -ne 0 ]"
+    assertRuns "pre"
+}
+
+testFailingPostHookIsOnlyReported()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    hook post-install.d log post 1
+
+    out=$(LC_ALL=C $POLDEK_HOOKS -uv hooka 2>&1)
+    assertEquals "install failed" "0" "$?"
+    assertRuns "pre rpm post"
+    echo "$out" | grep -q "post-install.d/log exited with 1"
+    assertEquals "failing post-install hook not reported: $out" "0" "$?"
+}
+
+testHooksRunInNameOrderSkippingBackupsAndDotFiles()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    rm -f $HOOKS/pre-install.d/log
+    hook pre-install.d 20-b b
+    hook pre-install.d 10-a a
+    hook pre-install.d 30-c.sh c
+    hook pre-install.d x.rpmnew rpmnew
+    hook pre-install.d x~ backup
+    hook pre-install.d .hidden hidden
+    hook pre-install.d README readme
+    chmod 644 $HOOKS/pre-install.d/README
+
+    $POLDEK_HOOKS -uv hooka
+    assertEquals "install failed" "0" "$?"
+    assertRuns "a b c rpm post"
+}
+
+testMissingPreInstallDirMeansNoPreHooks()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    rm -rf $HOOKS/pre-install.d
+
+    $POLDEK_HOOKS -uv hooka
+    assertEquals "install failed" "0" "$?"
+    assertRuns "rpm post"
+}
+
+testUnreadablePreInstallDirStopsOperation()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    rm -rf $HOOKS/pre-install.d
+    touch $HOOKS/pre-install.d
+
+    $POLDEK_HOOKS -uv hooka
+    rc=$?
+    assertTrue "install expected to fail" "[ $rc -ne 0 ]"
+    assertRuns ""
+}
+
+testMissingHooksDirIsReported()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+
+    out=$($POLDEK_ON_ROOT -Ohooks_dir=$TMPDIR/no-hooks -uv hooka 2>&1)
+    assertEquals "install failed" "0" "$?"
+    assertRuns "rpm"
+    echo "$out" | grep -q "$TMPDIR/no-hooks"
+    assertEquals "missing hooks dir not reported: $out" "0" "$?"
+}
+
+testNoHooksWithoutHooksDir()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+
+    $POLDEK_ON_ROOT -uv hooka
+    assertEquals "install failed" "0" "$?"
+    assertRuns "rpm"
+}
+
+testNoHooksInRpmTestRun()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+
+    $POLDEK_HOOKS -uv -tt hooka
+    assertEquals "test run failed" "0" "$?"
+    assertRuns "rpm"
+}
+
+testNoHooksWithAnotherRoot()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    # provide /bin/sh auto requirement
+    rpm_build_installed sh -p /bin/sh
+
+    $POLDEK_INSTALL -Ohooks_dir=$HOOKS -uv hooka
+    assertEquals "install failed" "0" "$?"
+    assertRuns ""
+    rpm_state_check "hooka" ""
+}
+
+. ./sh/lib/shunit2

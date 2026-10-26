@@ -1,0 +1,142 @@
+#!/bin/sh
+
+# ^C during an install or a removal on the command line lets the rpm run in
+# progress finish, skips what is left and ends poldek with an error when
+# something was skipped, as the shell does, rather than killing poldek.
+# A ^C before the first rpm run stops upgrade-dist and removals with an
+# error, and rpm does not run. Started with SIGINT ignored, poldek keeps
+# ignoring it.
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/rpm-setup
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+
+setUp() {
+    is_rpm_testing_off && return
+
+    rpm_up
+    # provide /bin/sh auto requirement
+    rpm_build_installed sh -p /bin/sh
+
+    RUNS="$TMPDIR/rpm-runs"
+    rm -f $RUNS
+
+    # stands for a ^C typed while rpm runs: it logs its run, sends SIGINT
+    # to poldek and finishes
+    FAKE_RPM="$TMPDIR/fake-rpm"
+    printf '#!/bin/sh\necho rpm "$@" >> %s\nkill -INT $PPID\n' "$RUNS" > $FAKE_RPM
+    chmod 755 $FAKE_RPM
+
+    SIGINT_AT_INIT="$PWD/.libs/sigint_at_init.so"
+}
+
+# with_sigint DEFAULT|IGNORE <command>: run it with SIGINT so set, whatever
+# the tests themselves inherited (a background job ignores it)
+with_sigint() {
+    sig=$1; shift
+    perl -e '$SIG{INT} = shift; exec @ARGV or die "$ARGV[0]: $!\n"' $sig "$@"
+}
+
+# the fake rpm needs no root, and sudo would not pass its SIGINT on to poldek
+poldek_with_sigint() {
+    sig=$1; shift
+    with_sigint $sig $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $FAKE_RPM "$@"
+}
+
+# poldek_interrupted_before_rpm <args>: poldek gets SIGINT right after it
+# sets up its ^C handler, as from a ^C typed before the operation gets to rpm
+poldek_interrupted_before_rpm() {
+    with_sigint DEFAULT env LC_ALL=C LD_PRELOAD=$SIGINT_AT_INIT \
+                $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $FAKE_RPM "$@" 2>&1
+}
+
+# assertStoppedBeforeRpm <exit code> <output>
+assertStoppedBeforeRpm() {
+    assertEquals "exit code $1" "1" "$1"
+    assertEquals "no SIGINT from $SIGINT_AT_INIT: $2" "1" \
+                 "$(echo "$2" | grep -c '^sigint_at_init: SIGINT')"
+    assertEquals "not reported: $2" "1" "$(echo "$2" | grep -c Interrupted)"
+    assertEquals "rpm runs" "0" "$(cat $RUNS 2>/dev/null | wc -l)"
+}
+
+build() {
+    build_package $REPO $@
+}
+
+testInterruptSkipsRemainingSets()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    build c
+
+    # three packages with no dependencies between them are three sets
+    poldek_with_sigint DEFAULT -uv a b c
+    rc=$?
+    assertEquals "exit code $rc" "1" "$rc"
+    assertEquals "rpm runs" "1" "$(wc -l < $RUNS)"
+}
+
+testInterruptLetsRemovalFinish()
+{
+    skip_if_rpm_testing_off && return
+
+    rpm_build_installed a
+
+    poldek_with_sigint DEFAULT uninstall a
+    rc=$?
+    assertEquals "exit code $rc" "0" "$rc"
+    assertEquals "rpm runs" "1" "$(wc -l < $RUNS)"
+}
+
+testInterruptBeforeRpmStopsUpgradeDist()
+{
+    skip_if_rpm_testing_off && return
+
+    rpm_build_installed a 1-1
+    build a 2-1
+
+    poldek_with_sigint DEFAULT --upgrade-dist
+    assertEquals "a not upgraded without ^C" "1" "$(grep -c 'a-2-1' $RUNS)"
+    rm -f $RUNS
+
+    out=$(poldek_interrupted_before_rpm --upgrade-dist)
+    assertStoppedBeforeRpm "$?" "$out"
+}
+
+testInterruptBeforeRpmStopsRemoval()
+{
+    skip_if_rpm_testing_off && return
+
+    rpm_build_installed a
+    rpm_build_installed b -r a
+
+    # b requires a, so removing a takes b too
+    poldek_with_sigint DEFAULT -e a
+    assertEquals "b not removed with a without ^C" "1" "$(grep -c 'b-1-1' $RUNS)"
+    rm -f $RUNS
+
+    out=$(poldek_interrupted_before_rpm -e a)
+    assertStoppedBeforeRpm "$?" "$out"
+}
+
+testIgnoredInterruptStaysIgnored()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    build c
+
+    poldek_with_sigint IGNORE -uv a b c
+    rc=$?
+    assertEquals "exit code $rc" "0" "$rc"
+    assertEquals "rpm runs" "3" "$(wc -l < $RUNS)"
+}
+
+. ./sh/lib/shunit2
