@@ -1,5 +1,4 @@
 ## 0.46 (TBD)
-
 ### Features
 * New `signkey` per-source config option and `--nosignature` install option for per-source GPG signature verification; `signkey` automatically enables signature verification unless `signed = no` is set (rpm.org backend)
 * Public headers now match what the libraries really provide: two functions declared there were missing, and declarations of functions and flags that no library defines are gone (@arekm #58, #59, #62)

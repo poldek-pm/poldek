@@ -72,6 +72,7 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_PARSABLETS       (OPT_GID + 37)
 #define OPT_INST_MKDIR            (OPT_GID + 38)
 #define OPT_INST_CAPLOOKUP        (OPT_GID + 39)
+#define OPT_INST_NOSIGNATURE      (OPT_GID + 40)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -101,6 +102,9 @@ N_("Install packages ignoring broken dependencies, conflicts, etc"), OPT_GID },
 
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), OPT_GID },
+
+{"nosignature", OPT_INST_NOSIGNATURE, 0, 0,
+ N_("Don't verify package signatures"), OPT_GID },
 
 {"mercy", OPT_MERCY, 0, 0, N_("Treat requirements with EVR as satisfied by "
                               "unversioned capabilities (old RPM behaviour)"), OPT_GID},
@@ -393,6 +397,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_NODEPS:
             ts->setop(ts, POLDEK_OP_NODEPS, 1);
+            break;
+
+        case OPT_INST_NOSIGNATURE:
+            ts->setop(ts, POLDEK_OP_NOSIGNATURE, 1);
             break;
 
         case OPT_INST_NOASK:

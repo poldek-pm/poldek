@@ -10,6 +10,7 @@ libpm_rpm_la_SOURCES =			\
 	rpmdb_it.c			\
 	install.c			\
 	signature.c			\
+	signkey.c			\
 	misc.c				\
 	rpm.c				\
 	pm_rpm.h			\

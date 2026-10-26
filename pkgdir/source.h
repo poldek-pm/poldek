@@ -37,6 +37,7 @@ EXPORT const char source_TYPE_GROUP[]; /* "group" */
 #define PKGSOURCE_NODESC     (1 << 12)
 #define PKGSOURCE_AUTOUPA    (1 << 13) /* do --upa if --up said "desynchronized"
                                           index */
+#define PKGSOURCE_SIGNKEY    (1 << 14) /* signkey URL set */
 
 struct source {
     unsigned  flags;
@@ -58,6 +59,9 @@ struct source {
     unsigned  subopt_flags;
     int       _refcnt;
     char      *group;
+    char      *signkey;         /* URL of the GPG key that packages from this
+                                 source are signed with; to be imported
+                                 to rpm's keyring */
 };
 
 EXPORT struct source *source_malloc(void);

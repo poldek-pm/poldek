@@ -125,7 +125,8 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     return 1;
 }
 
-static int do_verify_signature(const char *path, unsigned flags)
+static int do_verify_signature(const char *path, const char *rootdir,
+                               rpmKeyring keyring, unsigned flags)
 {
     unsigned                  presented_signs = 0;
     struct rpmQVKArguments_s  qva; /* poor RPM API... */
@@ -173,6 +174,13 @@ static int do_verify_signature(const char *path, unsigned flags)
 
     if (fdt != NULL && Ferror(fdt) == 0) {
         ts = rpmtsCreate();
+        if (rootdir && *rootdir)
+            rpmtsSetRootDir(ts, rootdir);
+        if (keyring && rpmtsSetKeyring(ts, keyring) != 0) {
+            rpmtsFree(ts);
+            Fclose(fdt);
+            return 0;
+        }
         rpmtsSetVfyFlags(ts, vfyflags);
 	if ((flags & (PKGVERIFY_PGP | PKGVERIFY_GPG)) == 0) {
 	    int vfylevel = rpmtsVfyLevel(ts);
@@ -193,29 +201,55 @@ static int do_verify_signature(const char *path, unsigned flags)
     return rc == 0;
 }
 
-static
-int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
-{
-    (void)pm_rpm;
-    if (access(path, R_OK) != 0) {
-        logn(LOGERR, "%s: verify signature failed: %m", path);
-        return 0;
-    }
-
-    return do_verify_signature(path, flags);
-}
-
 extern int pm_rpm_verbose;
-int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
+
+static int verify_signature(void *pm_rpm, const char *rootdir,
+                            rpmKeyring keyring, const char *path,
+                            unsigned flags)
 {
     int v, rv = pm_rpm_verbose, rc;
 
+    (void)pm_rpm;
     pm_rpm_verbose = 1;
     v = poldek_set_verbose(pm_rpm_verbose);
 
-    rc = do_pm_rpm_verify_signature(pm_rpm, path, flags);
+    if (access(path, R_OK) != 0) {
+        logn(LOGERR, "%s: verify signature failed: %m", path);
+        rc = 0;
+    } else {
+        rc = do_verify_signature(path, rootdir, keyring, flags);
+    }
 
     pm_rpm_verbose = rv;
     poldek_set_verbose(v);
     return rc;
+}
+
+/*
+  pm_rpm_verify_signature() has no transaction context and therefore uses
+  the default rpmdb.  During an install into --root the package must be
+  verified against the target root's rpmdb/keyring, so pass ts->rootdir
+  down to rpmtsSetRootDir().
+*/
+int pm_rpm_verify_signature_ts(void *pm_rpm, const struct poldek_ts *ts,
+                               const char *path, unsigned flags)
+{
+    n_assert(ts);
+    return verify_signature(pm_rpm, ts->rootdir, NULL, path, flags);
+}
+
+int pm_rpm_verify_signature_keyring(void *pm_rpm, const struct poldek_ts *ts,
+                                    const struct signkey *sk, const char *path,
+                                    unsigned flags)
+{
+    n_assert(ts);
+    n_assert(sk);
+    return verify_signature(pm_rpm, ts->rootdir,
+                            pm_rpm_signkey_keyring(sk),
+                            path, flags);
+}
+
+int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
+{
+    return verify_signature(pm_rpm, NULL, NULL, path, flags);
 }

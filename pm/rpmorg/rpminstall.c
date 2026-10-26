@@ -279,10 +279,79 @@ static int colors_eq(const struct pkg *pkg, const char *path)
 }
 
 
+static tn_hash *import_signkeys(struct pm_rpm *pm,
+                                const struct poldek_ts *ts,
+                                const tn_array *pkgs)
+{
+    tn_hash *signkeys = n_hash_new(4, (tn_fn_free)pm_rpm_signkey_free);
+    int i;
+
+    if (ts->getop(ts, POLDEK_OP_NOSIGNATURE))
+        return signkeys;
+
+    for (i = 0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        struct source *src = pkg->pkgdir ? pkg->pkgdir->src : NULL;
+        struct signkey *sk;
+        unsigned vrfyflags;
+
+        if (src == NULL || src->signkey == NULL ||
+            (src->flags & PKGSOURCE_SIGNKEY) == 0)
+            continue;
+
+        vrfyflags = pkg_get_verify_signflags(pkg);
+        if (vrfyflags == 0)
+            continue;
+
+        if (n_hash_exists(signkeys, src->signkey))
+            continue;
+
+        sk = pm_rpm_signkey_load(src->signkey);
+        if (sk == NULL) {
+            logn(LOGERR, _("%s: cannot use the source's signing key"),
+                 src->signkey);
+            n_hash_free(signkeys);
+            return NULL;
+        }
+
+        pm_rpm_signkey_import(pm, ts, sk);
+        n_hash_insert(signkeys, src->signkey, sk);
+    }
+
+    return signkeys;
+}
+
+static int signkeys_import_failed(const tn_hash *signkeys)
+{
+    tn_hash_it it;
+    const char *url;
+    struct signkey *sk;
+    int failed = 0;
+
+    n_hash_it_init(&it, (tn_hash *)signkeys);
+    while ((sk = n_hash_it_get(&it, &url)) != NULL) {
+        int status = pm_rpm_signkey_import_status(sk);
+
+        if (status == SIGNKEY_IMPORT_DECLINED) {
+            logn(LOGERR,
+                 _("%s: signing key import was declined; installation aborted"),
+                 vf_url_slim_s(url, 0));
+            failed = 1;
+        } else if (status != SIGNKEY_IMPORTED &&
+                   status != SIGNKEY_ALREADY_PRESENT) {
+            logn(LOGERR,
+                 _("%s: signing key was not imported into the rpm keyring; "
+                   "installation aborted"), vf_url_slim_s(url, 0));
+            failed = 1;
+        }
+    }
+    return failed;
+}
+
 /* rpm, or "sudo rpm" for an ordinary user with "use sudo" (rpm --test
    needs no root); NULL when that sudo is missing */
-static char *rpm_command(struct pm_rpm *pm, struct poldek_ts *ts,
-                         char **argv, int *nargs)
+char *pm_rpm_command(struct pm_rpm *pm, struct poldek_ts *ts,
+                     char **argv, int *nargs)
 {
     if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0 &&
         !ts->getop(ts, POLDEK_OP_RPMTEST)) {
@@ -306,7 +375,8 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     struct pm_rpm *pm = db->_ctx->modh;
     char **argv;
     char *cmd;
-    int i, nargs, nopts = 0, ec, nsignerr = 0, ncolorerr = 0;
+    tn_hash *signkeys = NULL;
+    int i, nargs, nopts = 0, ec, nsignerr = 0, ncolorerr = 0, nisoerr = 0;
     int nverbose = poldek_VERBOSE;
 
     pkgs_toremove = pkgs_toremove;
@@ -317,14 +387,21 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         return 0;
     }
 
+    signkeys = import_signkeys(pm, ts, pkgs);
+    if (signkeys == NULL)
+        return 0;
+
     DBGF("rpm = %s\n", pm->rpm);
     nargs = 128 + n_array_size(pkgs);
     argv = alloca((nargs + 1) * sizeof(*argv));
     argv[nargs] = NULL;
     nargs = 0;
 
-    if ((cmd = rpm_command(pm, ts, argv, &nargs)) == NULL)
+    if ((cmd = pm_rpm_command(pm, ts, argv, &nargs)) == NULL)
         return 0;
+
+    if (ts->getop(ts, POLDEK_OP_NOSIGNATURE))
+        argv[nargs++] = "--nosignature";
 
     if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
                          POLDEK_TS_DOWNGRADE))
@@ -395,7 +472,6 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         for (i=0; i < n_array_size(ts->rpmopts); i++)
             argv[nargs++] = n_array_nth(ts->rpmopts, i);
 
-
     nsignerr = 0;
     nopts = nargs;
     for (i=0; i < n_array_size(pkgs); i++) {
@@ -419,8 +495,25 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
                              buf, n_basenam(name));
         }
 
-        if ((vrfyflags = pkg_get_verify_signflags(pkg))) {
-            if (!pm_rpm_verify_signature(pm, path, vrfyflags)) {
+        vrfyflags = pkg_get_verify_signflags(pkg);
+        if (ts->getop(ts, POLDEK_OP_NOSIGNATURE))
+            vrfyflags &= ~(PKGVERIFY_GPG | PKGVERIFY_PGP);
+
+        if (vrfyflags) {
+            struct source *src = pkg->pkgdir ? pkg->pkgdir->src : NULL;
+
+            if (src && src->signkey && (src->flags & PKGSOURCE_SIGNKEY)) {
+                struct signkey *sk = n_hash_get(signkeys, src->signkey);
+
+                n_assert(sk != NULL); /* setup builds one per signkey */
+                if (!pm_rpm_verify_signature_keyring(pm, ts, sk,
+                                                     path, vrfyflags)) {
+                    logn(LOGERR,
+                         _("%s: package is not signed by the source's key"),
+                         pkg_snprintf_s(pkg));
+                    nisoerr++;
+                }
+            } else if (!pm_rpm_verify_signature_ts(pm, ts, path, vrfyflags)) {
                 logn(LOGERR, _("%s: signature verification failed"),
                      pkg_snprintf_s(pkg));
                 nsignerr++;
@@ -436,6 +529,9 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         argv[nargs++] = s;
     }
 
+
+    if (nisoerr || signkeys_import_failed(signkeys))
+        goto l_err_end;
 
     if (!ts->getop(ts, POLDEK_OP_RPMTEST) && (nsignerr || ncolorerr)) {
         int can_ask = poldek_ts_is_interactive_on(ts);
@@ -479,9 +575,11 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     }
 
     ec = pm_rpm_execrpm(cmd, argv, 1, 1);
+    n_hash_free(signkeys);
     return ec == 0;
 
  l_err_end:
+    n_hash_free(signkeys);
     return 0;
 }
 
@@ -505,7 +603,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 
     nargs = 0;
 
-    if ((cmd = rpm_command(pm, ts, argv, &nargs)) == NULL)
+    if ((cmd = pm_rpm_command(pm, ts, argv, &nargs)) == NULL)
         return 0;
 
     argv[nargs++] = "--erase";

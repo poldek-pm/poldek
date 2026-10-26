@@ -86,6 +86,418 @@ testRPMdbcache() {
     fi
 }
 
+signkey_test_prepare() {
+    local keydir="$TMPDIR/signkey-test"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    export GNUPGHOME="$keydir/gnupg"
+    export XDG_RUNTIME_DIR="$keydir/run"
+
+    rm -rf "$keydir"
+    mkdir -p "$GNUPGHOME" "$XDG_RUNTIME_DIR"
+    chmod 700 "$GNUPGHOME" "$XDG_RUNTIME_DIR"
+    gpgconf --launch gpg-agent
+
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Poldek test key <test@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 ||
+        fail "gpg key generation failed (see $gpglog)"
+
+    gpg --armor --export 'Poldek test key' > "$keydir/key.asc" 2>>"$gpglog"
+
+    build_package "$REPO" poldek-signkey-test 1-1 \
+        -f /usr/share/poldek-signkey-test/README
+
+    local fp=$(gpg --list-keys --with-colons 2>>"$gpglog" |
+                 awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $fp" \
+        "$REPO/poldek-signkey-test-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "rpmsign failed (see $gpglog)"
+
+    SIGNKEY_TEST_KEY="$keydir/key.asc"
+}
+
+# signkey: a key already present in the target rpmdb must not be imported
+# again, even in a fresh poldek process
+testRPMsignkeyAlreadyPresent() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local pkg="$REPO/poldek-signkey-test-1-1.noarch.rpm"
+    local conf="$TMPDIR/signkey.conf"
+    local calls="$TMPDIR/rpm-calls.log"
+    local wrapper="$TMPDIR/rpm-wrapper"
+
+    [ -f "$key" ] || fail "missing test key: $key"
+    [ -f "$pkg" ] || fail "missing signed test package: $pkg"
+
+    $RPM --import "$key"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+EOF
+
+    : > "$calls"
+    cat > "$wrapper" <<EOF
+#!/bin/sh
+echo "\$@" >> "$calls"
+exec "$(command -v rpm)" "\$@"
+EOF
+    chmod +x "$wrapper"
+
+    local out
+    if ! out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --pmcmd "$wrapper" --justdb --nodeps --noask -q \
+        --install poldek-signkey-test 2>&1); then
+        echo "$out"
+        fail "install of signed test package failed"
+    fi
+
+    if grep -q -- '--import' "$calls"; then
+        fail "signing key imported although it was already in rpmdb"
+    fi
+}
+
+# signkey: an absent key is fetched/imported before package verification
+testRPMsignkeyImport() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local conf="$TMPDIR/signkey.conf"
+    local calls="$TMPDIR/rpm-calls.log"
+    local wrapper="$TMPDIR/rpm-wrapper"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+EOF
+
+    : > "$calls"
+    cat > "$wrapper" <<EOF
+#!/bin/sh
+echo "\$@" >> "$calls"
+exec "$(command -v rpm)" "\$@"
+EOF
+    chmod +x "$wrapper"
+
+    local out
+    if ! out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --pmcmd "$wrapper" --justdb --nodeps --noask -q \
+        --install poldek-signkey-test 2>&1); then
+        echo "$out"
+        fail "install of signed test package failed"
+    fi
+
+    grep -q -- '--import' "$calls" ||
+        fail "signing key was not imported"
+    $RPM -q poldek-signkey-test >/dev/null ||
+        fail "signed test package was not installed"
+}
+
+# signkey: interactive runs ask before importing a missing key
+testRPMsignkeyImportPrompt() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local conf="$TMPDIR/signkey.conf"
+    local wrapper="$TMPDIR/rpm-wrapper"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+EOF
+
+    cat > "$wrapper" <<EOF
+#!/bin/sh
+exec "$(command -v rpm)" "\$@"
+EOF
+    chmod +x "$wrapper"
+
+    local out
+    out=$( { for i in 1 2 3; do sleep 1; printf 'y\n'; done; } |
+        TERM=xterm timeout 60 script -qec \
+        "$POLDEK --conf $conf --root $DESTINATION_REPO --pmcmd $wrapper --justdb --nodeps -q --install poldek-signkey-test" \
+        /dev/null 2>&1 )
+
+    echo "$out" | grep -q "Importing OpenPGP key" ||
+        fail "no signkey import prompt"
+    if ! $RPM -q poldek-signkey-test >/dev/null; then
+        echo "$out"
+        fail "signed test package was not installed after accepting the key"
+    fi
+}
+
+# signkey: declining the import aborts installation, even if the package
+# itself is signed by the source key and passes the source keyring check
+testRPMsignkeyImportDeclined() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local conf="$TMPDIR/signkey.conf"
+    local wrapper="$TMPDIR/rpm-wrapper"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+EOF
+
+    cat > "$wrapper" <<EOF
+#!/bin/sh
+exec "$(command -v rpm)" "\$@"
+EOF
+    chmod +x "$wrapper"
+
+    local out
+    out=$( { for i in 1 2 3; do sleep 1; printf 'n\n'; done; } |
+        TERM=xterm timeout 60 script -qec \
+        "$POLDEK --conf $conf --root $DESTINATION_REPO --pmcmd $wrapper --justdb --nodeps -q --install poldek-signkey-test" \
+        /dev/null 2>&1 ) || true
+
+    echo "$out" | grep -q "Import into rpm keyring? \[N/y\]" ||
+        fail "no signkey import prompt"
+    if $RPM -q poldek-signkey-test >/dev/null 2>&1; then
+        echo "$out"
+        fail "package was installed after declining the key import"
+    fi
+}
+
+# signkey: a package from a source may only use that source's key, even
+# when the package is signed by another key trusted globally by rpm
+testRPMsignkeySourceIsolation() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local conf="$TMPDIR/signkey.conf"
+
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Wrong test key <wrong@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 || fail "cannot generate wrong key"
+
+    gpg --armor --export 'Wrong test key' > "$TMPDIR/wrong-key.asc" \
+        2>>"$gpglog"
+    build_package "$REPO" poldek-signkey-bad 1-1 \
+        -f /usr/share/poldek-signkey-bad/README
+    local wrongfp=$(gpg --list-keys --with-colons 'Wrong test key' \
+                      2>>"$gpglog" |
+                    awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $wrongfp" \
+        "$REPO/poldek-signkey-bad-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "cannot sign package with wrong key"
+
+    # rpm now trusts the wrong key globally; only the per-source keyring
+    # must reject the package
+    $RPM --import "$TMPDIR/wrong-key.asc"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+EOF
+
+    local out
+    if out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-bad 2>&1); then
+        echo "$out"
+        fail "package signed by another repo's key was accepted"
+    fi
+
+    if $RPM -q poldek-signkey-bad >/dev/null 2>&1; then
+        fail "package signed by another repo's key was installed"
+    fi
+}
+
+# signkey alone implies signed = yes
+testRPMsignkeyImpliesSigned() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local conf="$TMPDIR/signkey.conf"
+
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Wrong test key 3 <wrong3@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 || fail "cannot generate wrong key"
+
+    gpg --armor --export 'Wrong test key 3' > "$TMPDIR/wrong-key3.asc" \
+        2>>"$gpglog"
+    build_package "$REPO" poldek-signkey-bad3 1-1 \
+        -f /usr/share/poldek-signkey-bad3/README
+    local wrongfp=$(gpg --list-keys --with-colons 'Wrong test key 3' \
+                      2>>"$gpglog" |
+                    awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $wrongfp" \
+        "$REPO/poldek-signkey-bad3-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "cannot sign package with wrong key"
+
+    $RPM --import "$TMPDIR/wrong-key3.asc"
+
+    # no explicit "signed = yes"; signkey alone should enable signature checks
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signkey = $key
+EOF
+
+    local out
+    if out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-bad3 2>&1); then
+        echo "$out"
+        fail "package signed by another repo's key was accepted (signkey implies signed)"
+    fi
+
+    if $RPM -q poldek-signkey-bad3 >/dev/null 2>&1; then
+        fail "package signed by another repo's key was installed (signkey implies signed)"
+    fi
+}
+
+# explicit signed = no disables signature verification even with signkey
+testRPMsignkeySignedNo() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local conf="$TMPDIR/signkey.conf"
+
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Wrong test key 4 <wrong4@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 || fail "cannot generate wrong key"
+
+    gpg --armor --export 'Wrong test key 4' > "$TMPDIR/wrong-key4.asc" \
+        2>>"$gpglog"
+    build_package "$REPO" poldek-signkey-bad4 1-1 \
+        -f /usr/share/poldek-signkey-bad4/README
+    local wrongfp=$(gpg --list-keys --with-colons 'Wrong test key 4' \
+                      2>>"$gpglog" |
+                    awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $wrongfp" \
+        "$REPO/poldek-signkey-bad4-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "cannot sign package with wrong key"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = no
+signkey = $key
+EOF
+
+    $POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-bad4 ||
+        fail "signed = no with signkey should accept a differently signed package"
+
+    $RPM -q poldek-signkey-bad4 >/dev/null ||
+        fail "package was not installed with signed = no"
+}
+
+# signkey: --nosignature skips the per-source signature check
+# and lets a package signed by another key be installed
+testRPMsignkeyNoSignature() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local conf="$TMPDIR/signkey.conf"
+
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Wrong test key 2 <wrong2@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 || fail "cannot generate wrong key"
+
+    gpg --armor --export 'Wrong test key 2' > "$TMPDIR/wrong-key2.asc" \
+        2>>"$gpglog"
+    build_package "$REPO" poldek-signkey-bad2 1-1 \
+        -f /usr/share/poldek-signkey-bad2/README
+    local wrongfp=$(gpg --list-keys --with-colons 'Wrong test key 2' \
+                      2>>"$gpglog" |
+                    awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $wrongfp" \
+        "$REPO/poldek-signkey-bad2-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "cannot sign package with wrong key"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+EOF
+
+    $POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask --nosignature -q \
+        --install poldek-signkey-bad2 ||
+        fail "--nosignature install of a differently signed package failed"
+
+    $RPM -q poldek-signkey-bad2 >/dev/null ||
+        fail "package was not installed with --nosignature"
+}
+
+# signkey: a bad signkey URL aborts the install, but --nosignature bypasses it
+testRPMsignkeyBadUrl() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local conf="$TMPDIR/signkey.conf"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signkey = file:///tmp/poldek-no-such-signkey.asc
+EOF
+
+    local out
+    if out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-test 2>&1); then
+        echo "$out"
+        fail "install with bad signkey URL succeeded"
+    fi
+
+    if $RPM -q poldek-signkey-test >/dev/null 2>&1; then
+        echo "$out"
+        fail "package was installed despite bad signkey URL"
+    fi
+
+    $POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask --nosignature -q \
+        --install poldek-signkey-test ||
+        fail "--nosignature install with bad signkey URL failed"
+
+    $RPM -q poldek-signkey-test >/dev/null ||
+        fail "package was not installed with --nosignature and bad signkey URL"
+}
+
 # the dirindex is stamped with the database mtime; if it is made in the
 # same second as a later database change, it must not be considered current
 testRPMdbcacheDirindexSameSecond() {
