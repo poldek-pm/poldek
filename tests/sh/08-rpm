@@ -462,6 +462,42 @@ EOF
         fail "package was not installed with --nosignature"
 }
 
+# signkey: a bad signkey URL aborts the install, but --nosignature bypasses it
+testRPMsignkeyBadUrl() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local conf="$TMPDIR/signkey.conf"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signkey = file:///tmp/poldek-no-such-signkey.asc
+EOF
+
+    local out
+    if out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-test 2>&1); then
+        echo "$out"
+        fail "install with bad signkey URL succeeded"
+    fi
+
+    if $RPM -q poldek-signkey-test >/dev/null 2>&1; then
+        echo "$out"
+        fail "package was installed despite bad signkey URL"
+    fi
+
+    $POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask --nosignature -q \
+        --install poldek-signkey-test ||
+        fail "--nosignature install with bad signkey URL failed"
+
+    $RPM -q poldek-signkey-test >/dev/null ||
+        fail "package was not installed with --nosignature and bad signkey URL"
+}
+
 # the dirindex is stamped with the database mtime; if it is made in the
 # same second as a later database change, it must not be considered current
 testRPMdbcacheDirindexSameSecond() {

@@ -279,12 +279,15 @@ static int colors_eq(const struct pkg *pkg, const char *path)
 }
 
 
-static tn_hash *pm_rpm_import_signkeys(struct pm_rpm *pm,
-                                       const struct poldek_ts *ts,
-                                       const tn_array *pkgs)
+static tn_hash *import_signkeys(struct pm_rpm *pm,
+                                const struct poldek_ts *ts,
+                                const tn_array *pkgs)
 {
     tn_hash *signkeys = n_hash_new(4, (tn_fn_free)pm_rpm_signkey_free);
     int i;
+
+    if (ts->getop(ts, POLDEK_OP_NOSIGNATURE))
+        return signkeys;
 
     for (i = 0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
@@ -384,7 +387,7 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         return 0;
     }
 
-    signkeys = pm_rpm_import_signkeys(pm, ts, pkgs);
+    signkeys = import_signkeys(pm, ts, pkgs);
     if (signkeys == NULL)
         return 0;
 
