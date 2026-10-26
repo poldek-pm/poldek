@@ -99,7 +99,7 @@ static int signkey_read_file(const char *path, char **bufp, size_t *lenp)
         return 0;
     }
 
-    buf = malloc((size_t)st.st_size + 1);
+    buf = n_malloc((size_t)st.st_size + 1);
     if (buf == NULL) {
         close(fd);
         return 0;
@@ -108,7 +108,7 @@ static int signkey_read_file(const char *path, char **bufp, size_t *lenp)
     while (len < (size_t)st.st_size) {
         n = read(fd, buf + len, (size_t)st.st_size - len);
         if (n <= 0) {
-            free(buf);
+            n_free(buf);
             close(fd);
             return 0;
         }
@@ -151,7 +151,7 @@ static tn_array *signkey_parse(const char *path)
             logn(LOGWARN, _("%s: signing key parse error"), path);
             free(pkts);
             n_array_free(keys);
-            free(buf);
+            n_free(buf);
             return NULL;
         }
 
@@ -159,7 +159,7 @@ static tn_array *signkey_parse(const char *path)
             logn(LOGWARN, _("%s: signing key parse error"), path);
             free(pkts);
             n_array_free(keys);
-            free(buf);
+            n_free(buf);
             return NULL;
         }
 
@@ -171,11 +171,11 @@ static tn_array *signkey_parse(const char *path)
     if (!parsed && !signkey_add_packets(keys, (const uint8_t *)buf, len)) {
         logn(LOGWARN, _("%s: signing key parse error"), path);
         n_array_free(keys);
-        free(buf);
+        n_free(buf);
         return NULL;
     }
 
-    free(buf);
+    n_free(buf);
     if (n_array_size(keys) == 0) {
         logn(LOGWARN, _("%s: no public key found in signing key file"), path);
         n_array_free(keys);
@@ -313,14 +313,14 @@ struct signkey *pm_rpm_signkey_load(const char *signkey_url)
     keys = signkey_parse(path);
     vfile_close(vf);
     if (keys == NULL) {
-        free(path);
+        n_free(path);
         return NULL;
     }
 
     keyring = signkey_make_keyring(keys, signkey_url);
     if (keyring == NULL) {
         n_array_free(keys);
-        free(path);
+        n_free(path);
         return NULL;
     }
 
@@ -344,7 +344,7 @@ void pm_rpm_signkey_free(struct signkey *sk)
         n_array_free(sk->keys);
     if (sk->keyring)
         rpmKeyringFree(sk->keyring);
-    free(sk);
+    n_free(sk);
 }
 
 rpmKeyring pm_rpm_signkey_keyring(const struct signkey *sk)
@@ -384,7 +384,7 @@ int pm_rpm_signkey_import(struct pm_rpm *pm, const struct poldek_ts *ts,
         char msg[4096];
 
         signkey_confirm_message(msg, sizeof(msg), sk->keys, sk->url);
-        if (!poldek__confirm(ts, 1, msg)) {
+        if (!poldek__confirm(ts, 0, msg)) {
             sk->import_status = SIGNKEY_IMPORT_DECLINED;
             return 0;
         }

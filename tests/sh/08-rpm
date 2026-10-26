@@ -87,9 +87,6 @@ testRPMdbcache() {
 }
 
 signkey_test_prepare() {
-    command -v gpg >/dev/null || fail "gpg is required for signkey tests"
-    command -v rpmsign >/dev/null || fail "rpmsign is required for signkey tests"
-
     local keydir="$TMPDIR/signkey-test"
     local gpglog="$TMPDIR/signkey-gpg.log"
     export GNUPGHOME="$keydir/gnupg"
@@ -276,7 +273,7 @@ EOF
         "$POLDEK --conf $conf --root $DESTINATION_REPO --pmcmd $wrapper --justdb --nodeps -q --install poldek-signkey-test" \
         /dev/null 2>&1 ) || true
 
-    echo "$out" | grep -q "Import? \[N/y\]" ||
+    echo "$out" | grep -q "Import into rpm keyring? \[N/y\]" ||
         fail "no signkey import prompt"
     if $RPM -q poldek-signkey-test >/dev/null 2>&1; then
         echo "$out"
