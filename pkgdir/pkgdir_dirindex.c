@@ -993,7 +993,7 @@ int pkgdir_dirindex_pkg_has_path(const struct pkgdir *pkgdir,
     const struct pkgdir_dirindex *dirindex = pkgdir->dirindex;
     const char    **tl, **tl_save;
     char          val[8192];
-    int           n, found;
+    int           n, found = 0;
 
     if (dirindex == NULL)
         return 0;
