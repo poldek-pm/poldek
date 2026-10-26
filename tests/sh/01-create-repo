@@ -221,5 +221,18 @@ testCreateWithIndexComprOption()
     die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
 }
 
+# poldek stops when rpm cannot read its configuration, instead of going on
+# with an unconfigured rpm and the umask the failed read left at 0
+testCreateWithoutRpmConfig()
+{
+    local dir=$TMPDIR/no-rpm-config out rc
+
+    rm -rf $dir && mkdir $dir || fail "mkdir failed"
+    out=$(umask 077; RPM_CONFIGDIR=$dir/none $POLDEK_NOCONF -s $REPO --mkidx=$dir 2>&1)
+    rc=$?
+    assertTrue "exit code 0 without rpm configuration: $out" "[ $rc -ne 0 ]"
+    assertEquals "files left in $dir" "" "$(ls -A $dir)"
+}
+
 
 . ./sh/lib/shunit2

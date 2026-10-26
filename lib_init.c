@@ -1640,9 +1640,10 @@ static int setup_pm(struct poldek_ctx *ctx)
 
 
     if (strcmp(pm, "rpm") == 0) {
-        ctx->pmctx = pm_new(pm);
-        pm_configure(ctx->pmctx, "macros", ctx->ts->rpmacros);
-        __setup_multilib(ctx);
+        if ((ctx->pmctx = pm_new(pm))) {
+            pm_configure(ctx->pmctx, "macros", ctx->ts->rpmacros);
+            __setup_multilib(ctx);
+        }
 
     } else if (strcmp(pm, "pset") == 0) {
         if (poldek__is_in_testing_mode()) /* need rpm_machine_score for testing */

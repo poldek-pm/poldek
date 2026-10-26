@@ -52,13 +52,14 @@ static int rpmlib_init()
 {
     /* lp#1644315: save original umask and restore it after rpmReadConfigFiles() call */
     mode_t mask = umask(0);
+    int rc = rpmReadConfigFiles(NULL, NULL);
 
-    if (rpmReadConfigFiles(NULL, NULL) != 0) {
+    umask(mask);
+    if (rc != 0) {
         logn(LOGERR, "failed to read rpmlib configs");
         return 0;
     }
 
-    umask(mask);
     return 1;
 }
 
@@ -92,8 +93,8 @@ void *pm_rpm_init(void)
     struct pm_rpm *pm_rpm;
 
     DBGF("%d\n", pm_refcnt);
-    if (pm_refcnt == 0)
-        rpmlib_init();
+    if (pm_refcnt == 0 && !rpmlib_init())
+        return NULL;
     pm_refcnt++;
 
     pm_rpm = n_malloc(sizeof(*pm_rpm));
