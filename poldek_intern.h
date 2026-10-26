@@ -20,6 +20,7 @@
 // pkgdir.h structures
 struct source;
 struct pkgdir;
+struct pkg;
 
 // pkgset.h structures
 struct pkgset;
