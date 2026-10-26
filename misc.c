@@ -886,7 +886,7 @@ int poldek__is_in_testing_mode(void)
 void poldek__relay_output(struct p_open_st *st, int verbose_level,
                           const char *logprefix)
 {
-    int endl = 1, nlines = 0;
+    int endl = 1;
 
     while (1) {
         struct timeval to = { 0, 200000 };
@@ -917,12 +917,6 @@ void poldek__relay_output(struct p_open_st *st, int verbose_level,
                 break;
 
             buf[n] = '\0';
-            if (buf[n - 1] == '\n') {
-                buf[n - 1] = '\0'; /* deal with last_endlined -> move '\n' to fmt */
-                fmt = "_%s\n";
-            }
-
-            msg_tty(verbose_level, fmt, buf);
 
             /* logged to file? -> prefix lines with the command name */
             for (i=0; i < n; i++) {
@@ -931,23 +925,26 @@ void poldek__relay_output(struct p_open_st *st, int verbose_level,
                 if (c == '\r')
                     continue;
 
-                if (c == '\n')
-                    endl = 1;
+                if (endl)
+                    msg_f(0, "%s: ", logprefix);
 
-                if (endl) {
-                    endl = 0;
-                    //if (nlines)
-                    //    msg_f(0, "_\n");
-                    nlines++;
-                    msg_f(0, "%s: %c", logprefix, c);
-                    continue;
-                }
                 msg_f(0, "_%c", c);
+                endl = (c == '\n');
             }
+
+            if (buf[n - 1] == '\n') {
+                buf[n - 1] = '\0'; /* deal with last_endlined -> move '\n' to fmt */
+                fmt = "_%s\n";
+            }
+
+            msg_tty(verbose_level, fmt, buf);
         }
     }
 
-    return;
+    if (!endl) {                /* the last line had no newline */
+        msg_f(0, "_\n");
+        msg_tty(verbose_level, "_\n");
+    }
 }
 
 int poldek_util_copy_file(const char *src, const char *dst)
