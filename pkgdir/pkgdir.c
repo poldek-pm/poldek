@@ -286,6 +286,18 @@ static void env_source(const struct source *src, const char *idxpath)
         setenv("POLDEK_SOURCE_NAME", src->name, 1);
 }
 
+/* refresh the dir and stub indexes from the source's index as it is now */
+static void update_indexes(const struct source *src)
+{
+    struct pkgdir *pkgdir = pkgdir_srcopen(src, 0);
+
+    if (pkgdir != NULL) {
+        pkgdir__dirindex_update(pkgdir);
+        pkgdir__stubindex_update(pkgdir);
+        pkgdir_free(pkgdir);
+    }
+}
+
 int pkgdir_update_a(const struct source *src)
 {
     const struct pkgdir_module  *mod;
@@ -309,14 +321,8 @@ int pkgdir_update_a(const struct source *src)
     if (rc && uprc == PKGDIR_UPRC_UPTODATE)
         msgn(1, _("%s is up to date"), source_idstr(src));
 
-    if (rc) {
-        struct pkgdir *pkgdir = pkgdir_srcopen(src, 0);
-        if (pkgdir != NULL) {
-            pkgdir__dirindex_update(pkgdir);
-            pkgdir__stubindex_update(pkgdir);
-            pkgdir_free(pkgdir);
-        }
-    }
+    if (rc)
+        update_indexes(src);
 
     return rc;
 }
