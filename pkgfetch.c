@@ -155,15 +155,14 @@ int packages_fetch(struct pm_ctx *pmctx,
                 logn(LOGERR, "%s: %m", path);
                 nerr++;
 
-            } else {
-                if (!pm_verify_signature(pmctx, path, PKGVERIFY_MD)) {
-                    logn(LOGERR, _("%s: MD5 signature verification failed"),
-                         n_basenam(path));
-                    nerr++;
-                }
-            }
-            if (is_destdir_custom && !poldek_util_copy_file(path, destdir))
+            } else if (!pm_verify_signature(pmctx, path, PKGVERIFY_MD)) {
+                logn(LOGERR, _("%s: MD5 signature verification failed"),
+                     n_basenam(path));
                 nerr++;
+
+            } else if (is_destdir_custom && !poldek_util_copy_file(path, destdir)) {
+                nerr++;
+            }
 
 	    pkgs_count--;
             continue;
@@ -259,6 +258,7 @@ int packages_fetch(struct pm_ctx *pmctx,
                 if (!pm_verify_signature(pmctx, localpath, PKGVERIFY_MD)) {
                     logn(LOGERR, _("%s: MD5 signature verification failed"),
                          n_basenam(localpath));
+                    vf_unlink(localpath);
                     nerr++;
                 }
 
