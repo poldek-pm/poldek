@@ -722,6 +722,9 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
             pkgdir__setup_depdirs(pkgdir);
 
         pkgdir__setup_langs(pkgdir);
+    } else {
+        /* none from a failed load: the package set takes pkgdir->pkgs regardless */
+        n_array_clean(pkgdir->pkgs);
     }
 
     msgn(3, ngettext("%d package loaded",

@@ -15,6 +15,7 @@
 #endif
 
 #include <ctype.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -995,9 +996,13 @@ static tn_array *includedir_files(const char *dirpath, const char *ppath)
 
     configs = n_array_new(32, free, (tn_fn_cmp)strcmp);
 
-    while ((ent = readdir(dir))) {
+    for (;;) {
         char path[PATH_MAX];
         int n;
+
+        errno = 0;
+        if ((ent = readdir(dir)) == NULL)
+            break;
 
         if (fnmatch("*.conf", ent->d_name, 0) != 0)
             continue;
@@ -1005,6 +1010,12 @@ static tn_array *includedir_files(const char *dirpath, const char *ppath)
         n = n_snprintf(path, sizeof(path), "%s%s%s", dirpath, sep, ent->d_name);
         if (access(path, R_OK) == 0)
             n_array_push(configs, n_strdupl(path, n));
+    }
+
+    /* readdir() failed: skip the whole directory, as when opendir() fails */
+    if (errno) {
+        logn(LOGERR, "%%includedir %s: %m", dirpath);
+        n_array_clean(configs);
     }
     closedir(dir);
 

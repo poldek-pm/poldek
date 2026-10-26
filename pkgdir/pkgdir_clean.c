@@ -15,6 +15,7 @@
 #endif
 
 #include <ctype.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -95,8 +96,12 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
     if (dirpath[strlen(dirpath) - 1] == '/')
         sepchr = "";
 
-    while ((ent = readdir(dir))) {
+    for (;;) {
         char path[PATH_MAX];
+
+        errno = 0;
+        if ((ent = readdir(dir)) == NULL)
+            break;
 
         if (*ent->d_name == '.') {
             if (ent->d_name[1] == '\0')
@@ -129,6 +134,9 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
                 pkgdir__rmf(path, mask, test);
         }
     }
+
+    if (errno)      /* readdir() failed, not the end of the directory */
+        logn(LOGWARN, "readdir %s: %m", dirpath);
 
     if (vflock)
         vf_lock_release(vflock);
