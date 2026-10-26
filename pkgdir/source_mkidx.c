@@ -321,6 +321,8 @@ static int do_make_merged_idx(tn_array *sources,
 
         n_array_free(pdirs);
         pkgdir_free(pkgdir);
+    } else {
+        rc = 0;
     }
 
     return rc;

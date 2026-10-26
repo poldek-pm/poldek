@@ -15,6 +15,7 @@
 #endif
 
 #include <dirent.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -215,10 +216,14 @@ int load_dir(struct pkgdir *pkgdir,
         sepchr = "";
 
     n = 0;
-    while ((ent = readdir(dir))) {
+    for (;;) {
         char path[PATH_MAX];
         struct pkg *pkg = NULL;
         Header h = NULL;
+
+        errno = 0;
+        if ((ent = readdir(dir)) == NULL)
+            break;
 
         if (fnmatch("*.rpm", ent->d_name, 0) != 0)
             continue;
@@ -300,6 +305,11 @@ int load_dir(struct pkgdir *pkgdir,
 
         if (n && n % 200 == 0)
             msg(1, "_%d..", n);
+    }
+
+    if (errno) {    /* readdir() failed: fail the load, not give a partial list */
+        logn(LOGERR, "readdir %s: %m", dirpath);
+        n = -1;
     }
 
     /* if there are packages from prev_pkgdir then assume that

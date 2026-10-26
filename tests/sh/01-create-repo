@@ -167,6 +167,19 @@ testCreateFromRemoteRepos()
     die_if_empty_index "$TMPDIR/packages.foo2.ndir$COMPR_EXT"
 }
 
+# a merged index from several sources is not written when one fails to load
+testCreateMergedWithMissingSource()
+{
+    msgn "--st dir -s /missing --st dir -s /foo --mkidx=<path>"
+    rm -rf $TMPDIR/merged
+    mkdir $TMPDIR/merged
+
+    # sources go in path order, so the missing one is loaded first
+    $POLDEK_NOCONF --st dir -s $TMPDIR/missing --st dir -s $REPO --mkidx=$TMPDIR/merged &&
+        fail "mkidx with a missing source succeeded"
+    [ -z "$(ls $TMPDIR/merged)" ] || fail "index written: $(ls $TMPDIR/merged)"
+}
+
 testCreateConfiguredDefaultIndexCompr()
 {
     msgn "with 'default index compr' = zst"

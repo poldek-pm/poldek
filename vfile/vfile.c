@@ -93,8 +93,12 @@ static int do_cachedir_clean(const char *dirpath)
     if (dirpath[strlen(dirpath) - 1] == '/')
 	sepchar = "";
 
-    while ((ent = readdir(dir)) != NULL) {
+    for (;;) {
 	char path[PATH_MAX];
+
+	errno = 0;
+	if ((ent = readdir(dir)) == NULL)
+	    break;
 
 	if (*ent->d_name == '.') {
 	    if (ent->d_name[1] == '\0')
@@ -112,11 +116,16 @@ static int do_cachedir_clean(const char *dirpath)
 
 	if (lstat(path, &st) == 0) {
             if (S_ISDIR(st.st_mode)) {
-		do_cachedir_clean(path);
+		nerr += do_cachedir_clean(path) != 0;
 	    } else {
-		nerr += unlink(path);
+		nerr += unlink(path) != 0;
 	    }
 	}
+    }
+
+    if (errno) {    /* readdir() failed, not the end of the directory */
+	vf_logerr("readdir %s: %m\n", dirpath);
+	nerr++;
     }
 
     closedir(dir);
@@ -126,7 +135,7 @@ static int do_cachedir_clean(const char *dirpath)
 
     // do not remove cache directory, only its subdirs
     if (n_str_ne(dirpath, vfile_cachedir())) {
-	nerr += rmdir(dirpath);
+	nerr += rmdir(dirpath) != 0;
     }
 
     return nerr;
