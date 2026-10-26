@@ -1052,6 +1052,15 @@ testUninstallGreedyPath() {
     try_uninstall_package "dir" "-evt --greedy" a "a-1-1,b-1-1"
 }
 
+# b has no files, so whether it has a's directory itself is asked of the
+# directory index, which auto_directory_dependencies loads
+testUninstallDirRequirement() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1 -f /opt/zzdir/data
+    build_installed b 1-1 -r /opt/zzdir
+    try_uninstall_package "dir" "-ev --test -Oauto_directory_dependencies=y" a "a-1-1,b-1-1"
+}
+
 # TODO
 xtestUninstallHold() {
     msgn "Preparing repositories..."
