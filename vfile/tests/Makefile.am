@@ -10,10 +10,10 @@ TESTS = test_vfile test_vopen3 test_valid_path test_p_open
 test_p_open_LDADD = $(LDADD) $(DL_LIBS)
 
 EXTRA_DIST = test.h http_server.py run_http_tests.sh \
-	      ftp_server.py run_ftp_tests.sh
+	      ftp_server.py run_ftp_tests.sh test_ssl_verify.sh
 
 # test_vhttp is run via check-http target with server setup
-check-local: check-http check-ftp
+check-local: check-http check-ftp check-ssl-verify
 
 clean-local:
 	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
@@ -21,6 +21,10 @@ clean-local:
 # Run HTTP tests with server setup
 check-http: test_vhttp$(EXEEXT)
 	$(SHELL) $(srcdir)/run_http_tests.sh ./test_vhttp$(EXEEXT)
+
+# Run HTTPS CLI test for --no-ssl-verify using the same server harness as vhttp
+check-ssl-verify:
+	$(SHELL) $(srcdir)/run_http_tests.sh $(SHELL) $(srcdir)/test_ssl_verify.sh
 
 # test_vftp needs its own FTP server plus HTTP redirector, so it is not part
 # of "make check"; run it with: make check-ftp

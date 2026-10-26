@@ -83,6 +83,7 @@ static void argp_as_docbook(struct argp *argp);
 #define OPT_NOPROGRESS          (OPT_GID + 20)
 #define OPT_FORCECOLOR        (OPT_GID + 21)
 #define OPT_DOCB              (OPT_GID + 24)
+#define OPT_NOSSLVERIFY       (OPT_GID + 25)
 
 #define OPT_AS_FLAG(OPT)       (1 << (OPT - OPT_GID))
 
@@ -131,6 +132,7 @@ static struct argp_option common_options[] = {
 {"docbook", OPT_DOCB, 0, OPTION_HIDDEN,
         N_("Dump options in docbook format"), OPT_GID },
 {"noprogress", OPT_NOPROGRESS, 0, 0, N_("Do not show progress bar"), OPT_GID },
+{"no-ssl-verify", OPT_NOSSLVERIFY, 0, 0, N_("Do not verify SSL/TLS certificates (insecure)"), OPT_GID },
 {"color", OPT_FORCECOLOR, 0, 0, N_("Force color on non-tty output"), OPT_GID },
 {0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
 {0,  'q', 0, 0, N_("Do not produce any output."), OPT_GID },
@@ -329,6 +331,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     	    ts->setop(ts, POLDEK_OP_PROGRESS_NONE, 1);
     	    poldek_configure(ctx, POLDEK_CONF_PROGRESS, arg);
     	    break;
+
+       case OPT_NOSSLVERIFY:
+            vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 1);
+            break;
 
        case OPT_FORCECOLOR:
     	    poldek_configure(ctx, POLDEK_CONF_FORCECOLOR, 1);
