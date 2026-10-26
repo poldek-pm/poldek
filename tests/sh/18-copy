@@ -75,6 +75,15 @@ testFetchRemoteDigestFails() {
     fetch_damaged $POLDEK_UP -Osource="src,type=pndir test://$REPO/" --nodeps -i a
 }
 
+# b needs a, so both are downloaded at once; b is gone from the repository
+testFetchRemoteDigestFailsWithFailedDownload() {
+    build_package $REPO b -r "a"
+    build_package $REPO sh -p /bin/sh
+    $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+    rm -f $REPO/b-1-1.noarch.rpm
+    fetch_damaged $POLDEK_UP -Osource="src,type=pndir test://$REPO/" -i b
+}
+
 testDestination() {
     $POLDEK_INSTALL -i a
     assertEquals "install failed" "0" "$?"

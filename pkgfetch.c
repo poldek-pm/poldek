@@ -247,23 +247,26 @@ int packages_fetch(struct pm_ctx *pmctx,
         }
 
         pkgdir_name = n_hash_get(pkgdir_labels_h, pkgpath);
-        if (!vf_fetcha(urls, real_destdir, 0, pkgdir_name, counter, pkgs_count)) {
+        int fetched = vf_fetcha(urls, real_destdir, 0, pkgdir_name, counter, pkgs_count);
+        if (!fetched)
             nerr++;
-        } else {
-            for (int j=0; j < n_array_size(urls); j++) {
-                char localpath[PATH_MAX];
-                n_snprintf(localpath, sizeof(localpath), "%s/%s", real_destdir,
-                         n_basenam(n_array_nth(urls, j)));
 
-                if (!pm_verify_signature(pmctx, localpath, PKGVERIFY_MD)) {
-                    logn(LOGERR, _("%s: MD5 signature verification failed"),
-                         n_basenam(localpath));
-                    vf_unlink(localpath);
-                    nerr++;
-                }
+        for (int j=0; j < n_array_size(urls); j++) {
+            char localpath[PATH_MAX];
+            n_snprintf(localpath, sizeof(localpath), "%s/%s", real_destdir,
+                       n_basenam(n_array_nth(urls, j)));
 
-		counter++;
+            if (!fetched && access(localpath, R_OK) != 0)
+                continue;       /* not downloaded */
+
+            if (!pm_verify_signature(pmctx, localpath, PKGVERIFY_MD)) {
+                logn(LOGERR, _("%s: MD5 signature verification failed"),
+                     n_basenam(localpath));
+                vf_unlink(localpath);
+                nerr++;
             }
+
+            counter++;
         }
     }
 
