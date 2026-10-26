@@ -400,7 +400,10 @@ int pkgdir_update(struct pkgdir *pkgdir)
         }
     }
 
-    if (rc) {
+    if (rc && uprc == PKGDIR_UPRC_REFETCHED) {
+        update_indexes(pkgdir->src);
+
+    } else if (rc) {
         pkgdir__dirindex_update(pkgdir);
         pkgdir__stubindex_update(pkgdir);
     }

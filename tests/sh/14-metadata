@@ -66,5 +66,33 @@ testLoadPercentInBaseurl()
     assertEquals "load failed" "$n" "1"
 }
 
+# after --up fetches a changed repository, ls lists its packages, not the
+# ones before the change
+testUpRefreshesStubIndex()
+{
+    local dir="$TMPDIR/meta-up"
+    local src="m,type=metadata test://$dir/"
+    local primary old new n
+
+    rm -rf $dir
+    mkdir -p $dir
+    cp -r metadata/repo_02/repodata $dir/ || fail "cp failed"
+    $POLDEK_RAW_UP -Osource="$src" --up || fail "up failed"
+
+    # rename fake_bash; primary.xml is named after its checksum
+    primary=$(ls $dir/repodata/*-primary.xml.gz)
+    old=$(sha256sum < $primary | cut -d' ' -f1)
+    zcat $primary | sed 's|<name>fake_bash</name>|<name>fake_zsh</name>|' | gzip -n > $dir/primary.gz
+    new=$(sha256sum < $dir/primary.gz | cut -d' ' -f1)
+    rm -f $primary
+    mv $dir/primary.gz $dir/repodata/$new-primary.xml.gz
+    sed -i "s/$old/$new/g" $dir/repodata/repomd.xml
+    $POLDEK_RAW_UP -Osource="$src" --up || fail "up failed"
+
+    # ls reads the stub index, which --up refreshes
+    n=$($POLDEK_RAW_UP -q -Osource="$src" --cmd ls | grep -c '^fake_zsh-')
+    assertEquals "ls should list the renamed package" "1" "$n"
+}
+
 
 . ./sh/lib/shunit2

@@ -78,6 +78,8 @@ enum pkgdir_uprc {
     PKGDIR_UPRC_NIL = 0,
     PKGDIR_UPRC_UPTODATE = 1,
     PKGDIR_UPRC_UPDATED  = 2,
+    PKGDIR_UPRC_REFETCHED = 3,  /* whole index fetched again; the pkgdir
+                                   being updated holds the old one */
     PKGDIR_UPRC_ERR_DESYNCHRONIZED = -1,
     PKGDIR_UPRC_ERR_UNKNOWN = -2,
 };
