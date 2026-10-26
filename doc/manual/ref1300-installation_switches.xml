@@ -88,6 +88,13 @@
    </para>
   </listitem>
 </varlistentry>
+<varlistentry><term><option id="ref.cmdl.nosignature">--nosignature </option></term>
+  <listitem>
+   <para>
+      Don't verify package signatures
+   </para>
+  </listitem>
+</varlistentry>
 <varlistentry><term><option id="ref.cmdl.mercy">-m, --mercy </option></term>
   <listitem>
 <xi:include  href="manual/ref.cmdl.mercy.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
