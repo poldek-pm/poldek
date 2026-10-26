@@ -203,9 +203,9 @@ static int do_verify_signature(const char *path, const char *rootdir,
 
 extern int pm_rpm_verbose;
 
-static int do_pm_rpm_verify_signature(void *pm_rpm, const char *rootdir,
-                                      rpmKeyring keyring, const char *path,
-                                      unsigned flags)
+static int verify_signature(void *pm_rpm, const char *rootdir,
+                            rpmKeyring keyring, const char *path,
+                            unsigned flags)
 {
     int v, rv = pm_rpm_verbose, rc;
 
@@ -235,7 +235,7 @@ int pm_rpm_verify_signature_ts(void *pm_rpm, const struct poldek_ts *ts,
                                const char *path, unsigned flags)
 {
     n_assert(ts);
-    return do_pm_rpm_verify_signature(pm_rpm, ts->rootdir, NULL, path, flags);
+    return verify_signature(pm_rpm, ts->rootdir, NULL, path, flags);
 }
 
 int pm_rpm_verify_signature_keyring(void *pm_rpm, const struct poldek_ts *ts,
@@ -244,12 +244,12 @@ int pm_rpm_verify_signature_keyring(void *pm_rpm, const struct poldek_ts *ts,
 {
     n_assert(ts);
     n_assert(sk);
-    return do_pm_rpm_verify_signature(pm_rpm, ts->rootdir,
-                                      pm_rpm_signkey_keyring(sk),
-                                      path, flags);
+    return verify_signature(pm_rpm, ts->rootdir,
+                            pm_rpm_signkey_keyring(sk),
+                            path, flags);
 }
 
 int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
 {
-    return do_pm_rpm_verify_signature(pm_rpm, NULL, NULL, path, flags);
+    return verify_signature(pm_rpm, NULL, NULL, path, flags);
 }
