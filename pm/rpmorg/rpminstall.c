@@ -397,6 +397,9 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     if ((cmd = pm_rpm_command(pm, ts, argv, &nargs)) == NULL)
         return 0;
 
+    if (ts->getop(ts, POLDEK_OP_NOSIGNATURE))
+        argv[nargs++] = "--nosignature";
+
     if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
                          POLDEK_TS_DOWNGRADE))
         argv[nargs++] = "--upgrade";
@@ -490,6 +493,8 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         }
 
         vrfyflags = pkg_get_verify_signflags(pkg);
+        if (ts->getop(ts, POLDEK_OP_NOSIGNATURE))
+            vrfyflags &= ~(PKGVERIFY_GPG | PKGVERIFY_PGP);
 
         if (vrfyflags) {
             struct source *src = pkg->pkgdir ? pkg->pkgdir->src : NULL;

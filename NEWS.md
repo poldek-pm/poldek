@@ -5,6 +5,8 @@
   interactive mode, and packages from the source are verified against that
   source's key only, when signature verification is enabled (`signed = yes`)
   for the source (rpm.org backend)
+* New `--nosignature` install option to skip package signature verification,
+  equivalent to `rpm --nosignature` (rpm.org backend)
 * Security hardening:
   - enable SSL/TLS certificate verification for HTTPS connections
   - block HTTPS to HTTP downgrade on redirects

@@ -331,6 +331,49 @@ EOF
     fi
 }
 
+# signkey: --nosignature skips the per-source signature check
+# and lets a package signed by another key be installed
+testRPMsignkeyNoSignature() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local conf="$TMPDIR/signkey.conf"
+
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Wrong test key 2 <wrong2@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 || fail "cannot generate wrong key"
+
+    gpg --armor --export 'Wrong test key 2' > "$TMPDIR/wrong-key2.asc" \
+        2>>"$gpglog"
+    build_package "$REPO" poldek-signkey-bad2 1-1 \
+        -f /usr/share/poldek-signkey-bad2/README
+    local wrongfp=$(gpg --list-keys --with-colons 'Wrong test key 2' \
+                      2>>"$gpglog" |
+                    awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $wrongfp" \
+        "$REPO/poldek-signkey-bad2-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "cannot sign package with wrong key"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+EOF
+
+    $POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask --nosignature -q \
+        --install poldek-signkey-bad2 ||
+        fail "--nosignature install of a differently signed package failed"
+
+    $RPM -q poldek-signkey-bad2 >/dev/null ||
+        fail "package was not installed with --nosignature"
+}
+
 # the dirindex is stamped with the database mtime; if it is made in the
 # same second as a later database change, it must not be considered current
 testRPMdbcacheDirindexSameSecond() {
