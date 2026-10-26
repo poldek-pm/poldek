@@ -279,6 +279,26 @@ static int colors_eq(const struct pkg *pkg, const char *path)
 }
 
 
+/* rpm, or "sudo rpm" for an ordinary user with "use sudo" (rpm --test
+   needs no root); NULL when that sudo is missing */
+static char *rpm_command(struct pm_rpm *pm, struct poldek_ts *ts,
+                         char **argv, int *nargs)
+{
+    if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0 &&
+        !ts->getop(ts, POLDEK_OP_RPMTEST)) {
+        if (!pm->sudo) {
+            logn(LOGERR, _("%s: command not found"), "sudo");
+            return NULL;
+        }
+        argv[(*nargs)++] = n_basenam(pm->sudo);
+        argv[(*nargs)++] = pm->rpm;
+        return pm->sudo;
+    }
+
+    argv[(*nargs)++] = n_basenam(pm->rpm);
+    return pm->rpm;
+}
+
 int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
                             const tn_array *pkgs_toremove,
                             struct poldek_ts *ts)
@@ -303,24 +323,8 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     argv[nargs] = NULL;
     nargs = 0;
 
-    if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
-        cmd = pm->rpm;
-        argv[nargs++] = n_basenam(pm->rpm);
-
-    } else if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
-        if (!pm->sudo) {
-            logn(LOGERR, _("%s: command not found"), "sudo");
-            return 0;
-        }
-
-        cmd = pm->sudo;
-        argv[nargs++] = n_basenam(pm->sudo);
-        argv[nargs++] = pm->rpm;
-
-    } else {
-        cmd = pm->rpm;
-        argv[nargs++] = n_basenam(pm->rpm);
-    }
+    if ((cmd = rpm_command(pm, ts, argv, &nargs)) == NULL)
+        return 0;
 
     if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
                          POLDEK_TS_DOWNGRADE))
@@ -501,23 +505,8 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 
     nargs = 0;
 
-    if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
-        cmd = pm->rpm;
-        argv[nargs++] = n_basenam(pm->rpm);
-
-    } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
-        if (!pm->sudo) {
-            logn(LOGWARN, _("%s: command not found"), "sudo");
-            return 0;
-        }
-        cmd = pm->sudo;
-        argv[nargs++] = n_basenam(pm->sudo);
-        argv[nargs++] = pm->rpm;
-
-    } else {
-        cmd = pm->rpm;
-        argv[nargs++] = n_basenam(pm->rpm);
-    }
+    if ((cmd = rpm_command(pm, ts, argv, &nargs)) == NULL)
+        return 0;
 
     argv[nargs++] = "--erase";
 
