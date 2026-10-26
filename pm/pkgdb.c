@@ -162,8 +162,9 @@ int pkgdb_tx_commit(struct pkgdb *db)
         db->_txcnt--;
 
     if (db->_txcnt == 0 && db->_ctx->mod->dbtxcommit)
-        db->_ctx->mod->dbtxcommit(db->dbh);
-    return db->_txcnt;
+        return db->_ctx->mod->dbtxcommit(db->dbh);
+
+    return 1;
 }
 
 

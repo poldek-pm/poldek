@@ -1,0 +1,56 @@
+#!/bin/sh
+# packages copied to a --fetch directory or a --destination repository
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+ORIGREPO=
+
+setUp() {
+    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
+    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
+    rm -rf $ORIGREPO/*
+
+    REPO="$ORIGREPO/src"
+    DESTINATION_REPO="$ORIGREPO/dest"
+    FETCHDIR="$ORIGREPO/fetched"
+    mkdir -p $REPO $DESTINATION_REPO $FETCHDIR || fail "mkdir failed"
+
+    build_package $REPO a
+    # provide /bin/sh auto requirement
+    build_package $DESTINATION_REPO sh -p /bin/sh
+    POLDEK_INSTALL="$POLDEK_NOCONF --st dir -s $REPO --dt dir --destination $DESTINATION_REPO"
+}
+
+# cp refuses to write through a dangling symlink
+block_copy_to() {
+    ln -s $ORIGREPO/nothing-here $1/a-1-1.noarch.rpm || fail "ln failed"
+}
+
+testFetch() {
+    $POLDEK_INSTALL -i --fetch=$FETCHDIR a
+    assertEquals "fetch failed" "0" "$?"
+    assertTrue "a not fetched" "[ -f $FETCHDIR/a-1-1.noarch.rpm ]"
+}
+
+testFetchCopyFails() {
+    block_copy_to $FETCHDIR
+    $POLDEK_INSTALL -i --fetch=$FETCHDIR a
+    rc=$?
+    assertTrue "a failed copy ended with exit code 0" "[ $rc -ne 0 ]"
+}
+
+testDestination() {
+    $POLDEK_INSTALL -i a
+    assertEquals "install failed" "0" "$?"
+    assertTrue "a not copied" "[ -f $DESTINATION_REPO/a-1-1.noarch.rpm ]"
+}
+
+testDestinationCopyFails() {
+    block_copy_to $DESTINATION_REPO
+    $POLDEK_INSTALL -i a
+    rc=$?
+    assertTrue "a failed copy ended with exit code 0" "[ $rc -ne 0 ]"
+}
+
+. ./sh/lib/shunit2

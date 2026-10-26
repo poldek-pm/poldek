@@ -307,8 +307,8 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
 
     rc = do_install_dist(ts);
 
-    if (!ts->getop(ts, POLDEK_OP_RPMTEST))
-        pkgdb_tx_commit(ts->db);
+    if (!ts->getop(ts, POLDEK_OP_RPMTEST) && !pkgdb_tx_commit(ts->db))
+        rc = 0;
     pkgdb_free(ts->db);
     ts->db = NULL;
 

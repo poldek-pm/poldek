@@ -162,8 +162,8 @@ int packages_fetch(struct pm_ctx *pmctx,
                     nerr++;
                 }
             }
-            if (is_destdir_custom)
-                poldek_util_copy_file(path, destdir);
+            if (is_destdir_custom && !poldek_util_copy_file(path, destdir))
+                nerr++;
 
 	    pkgs_count--;
             continue;

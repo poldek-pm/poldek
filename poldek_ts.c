@@ -890,8 +890,8 @@ static int ts_run_upgrade_dist(struct poldek_ts *ts)
 
     pkgdb_tx_begin(ts->db, ts);
     rc = do_poldek_ts_upgrade_dist(ts);
-    if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
-        pkgdb_tx_commit(ts->db);
+    if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST) && !pkgdb_tx_commit(ts->db))
+        rc = 0;
     pkgdb_free(ts->db);
     ts->db = NULL;
     return rc;
@@ -930,8 +930,8 @@ static int ts_run_install(struct poldek_ts *ts)
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
     rc = i3_do_poldek_ts_install(ts);
-    if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
-        pkgdb_tx_commit(ts->db);
+    if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST) && !pkgdb_tx_commit(ts->db))
+        rc = 0;
 
     pkgdb_free(ts->db);
     ts->db = NULL;
@@ -952,8 +952,8 @@ static int ts_run_uninstall(struct poldek_ts *ts)
 
     rc = do_poldek_ts_uninstall(ts);
 
-    if (rc && !ts->getop(ts, POLDEK_OP_TEST))
-        pkgdb_tx_commit(ts->db);
+    if (rc && !ts->getop(ts, POLDEK_OP_TEST) && !pkgdb_tx_commit(ts->db))
+        rc = 0;
 
     MEMINF("before dbfree");
     pkgdb_free(ts->db);
