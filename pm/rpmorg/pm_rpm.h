@@ -185,6 +185,12 @@ int pm_rpm_vercmp(const char *one, const char *two);
 
 
 void pm_rpm_setup_commands(struct pm_rpm *pm);
+
+/* choose between rpm and "sudo rpm"; returns cmd and fills argv[0] (and
+   argv[1..] for sudo); NULL when sudo is required but missing */
+char *pm_rpm_command(struct pm_rpm *pm, struct poldek_ts *ts,
+                     char **argv, int *nargs);
+
 int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty,
                    int verbose_level);
 

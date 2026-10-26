@@ -397,20 +397,9 @@ int pm_rpm_signkey_import(struct pm_rpm *pm, const struct poldek_ts *ts,
         return 0;
     }
 
-    if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
-        if (pm->sudo == NULL) {
-            sk->import_status = SIGNKEY_IMPORT_FAILED;
-            logn(LOGERR, _("%s: command not found"), "sudo");
-            return 0;
-        }
-
-        cmd = pm->sudo;
-        argv[nargs++] = n_basenam(pm->sudo);
-        argv[nargs++] = pm->rpm;
-
-    } else {
-        cmd = pm->rpm;
-        argv[nargs++] = n_basenam(pm->rpm);
+    if ((cmd = pm_rpm_command(pm, ts, argv, &nargs)) == NULL) {
+        sk->import_status = SIGNKEY_IMPORT_FAILED;
+        return 0;
     }
 
     if (ts->rootdir) {

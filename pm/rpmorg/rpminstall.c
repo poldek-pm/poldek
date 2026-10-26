@@ -347,8 +347,8 @@ static int signkeys_import_failed(const tn_hash *signkeys)
 
 /* rpm, or "sudo rpm" for an ordinary user with "use sudo" (rpm --test
    needs no root); NULL when that sudo is missing */
-static char *rpm_command(struct pm_rpm *pm, struct poldek_ts *ts,
-                         char **argv, int *nargs)
+char *pm_rpm_command(struct pm_rpm *pm, struct poldek_ts *ts,
+                     char **argv, int *nargs)
 {
     if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0 &&
         !ts->getop(ts, POLDEK_OP_RPMTEST)) {
@@ -394,7 +394,7 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     argv[nargs] = NULL;
     nargs = 0;
 
-    if ((cmd = rpm_command(pm, ts, argv, &nargs)) == NULL)
+    if ((cmd = pm_rpm_command(pm, ts, argv, &nargs)) == NULL)
         return 0;
 
     if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
@@ -595,7 +595,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 
     nargs = 0;
 
-    if ((cmd = rpm_command(pm, ts, argv, &nargs)) == NULL)
+    if ((cmd = pm_rpm_command(pm, ts, argv, &nargs)) == NULL)
         return 0;
 
     argv[nargs++] = "--erase";
