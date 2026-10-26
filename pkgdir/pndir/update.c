@@ -321,6 +321,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
     msgn(2, "pndir_m_update idxsize: %lld\n", (long long)mdsize);
 
+    first_patch_found = 0;
     while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
         char *md, *pdate;
         time_t ts;
