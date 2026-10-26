@@ -331,6 +331,94 @@ EOF
     fi
 }
 
+# signkey alone implies signed = yes
+testRPMsignkeyImpliesSigned() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local conf="$TMPDIR/signkey.conf"
+
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Wrong test key 3 <wrong3@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 || fail "cannot generate wrong key"
+
+    gpg --armor --export 'Wrong test key 3' > "$TMPDIR/wrong-key3.asc" \
+        2>>"$gpglog"
+    build_package "$REPO" poldek-signkey-bad3 1-1 \
+        -f /usr/share/poldek-signkey-bad3/README
+    local wrongfp=$(gpg --list-keys --with-colons 'Wrong test key 3' \
+                      2>>"$gpglog" |
+                    awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $wrongfp" \
+        "$REPO/poldek-signkey-bad3-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "cannot sign package with wrong key"
+
+    $RPM --import "$TMPDIR/wrong-key3.asc"
+
+    # no explicit "signed = yes"; signkey alone should enable signature checks
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signkey = $key
+EOF
+
+    local out
+    if out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-bad3 2>&1); then
+        echo "$out"
+        fail "package signed by another repo's key was accepted (signkey implies signed)"
+    fi
+
+    if $RPM -q poldek-signkey-bad3 >/dev/null 2>&1; then
+        fail "package signed by another repo's key was installed (signkey implies signed)"
+    fi
+}
+
+# explicit signed = no disables signature verification even with signkey
+testRPMsignkeySignedNo() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local conf="$TMPDIR/signkey.conf"
+
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Wrong test key 4 <wrong4@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 || fail "cannot generate wrong key"
+
+    gpg --armor --export 'Wrong test key 4' > "$TMPDIR/wrong-key4.asc" \
+        2>>"$gpglog"
+    build_package "$REPO" poldek-signkey-bad4 1-1 \
+        -f /usr/share/poldek-signkey-bad4/README
+    local wrongfp=$(gpg --list-keys --with-colons 'Wrong test key 4' \
+                      2>>"$gpglog" |
+                    awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $wrongfp" \
+        "$REPO/poldek-signkey-bad4-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "cannot sign package with wrong key"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = no
+signkey = $key
+EOF
+
+    $POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-bad4 ||
+        fail "signed = no with signkey should accept a differently signed package"
+
+    $RPM -q poldek-signkey-bad4 >/dev/null ||
+        fail "package was not installed with signed = no"
+}
+
 # signkey: --nosignature skips the per-source signature check
 # and lets a package signed by another key be installed
 testRPMsignkeyNoSignature() {

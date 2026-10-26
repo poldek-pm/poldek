@@ -635,20 +635,21 @@ Every repository is configured in its own [ source ] section.
   <option name="noauto" type="boolean" default="no" obsoleted="yes" />
   <option name="noautoup" type="boolean" default="no" obsoleted="yes"/>
 
-  <option name="signed" type="boolean" default="no">
+  <option name="signkey" type="string" value="/some/url/or/dir">
     <description>
-    Packages PGP/GPG signatures (if any) will be verified before their
-    installation.
+    Path or URL to public PGP/GPG packages signing key. At install time it is
+    imported to rpm's keyring if it is not already present; interactive
+    installations ask for confirmation first. Packages from the source
+    are verified against this key, not against global rpm keyring.
     </description>
   </option>
 
-  <option name="signkey" type="string" default="no">
+  <option name="signed" type="boolean3" default="auto">
     <description>
-    URL to public PGP/GPG packages signing key. At install time it is
-    imported to rpm's keyring if it is not already present; interactive
-    installations ask for confirmation first. Packages from the source
-    are verified against this key, not against arbitrary keys trusted by
-    the global rpm keyring.
+    Controls whether packages PGP/GPG signatures (if any) are verified
+    before their installation. When set to "auto" (the default), signature
+    verification is enabled automatically if the source has a "signkey"
+    configured. Set to "yes" to force it on, or "no" to force it off.
     </description>
   </option>
 

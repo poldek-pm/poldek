@@ -634,6 +634,9 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
     if ((vs = poldek_conf_get(htcnf, "signkey", NULL))) {
         src->signkey = n_strdup(vs);
         src->flags |= PKGSOURCE_SIGNKEY;
+
+        if (poldek_conf_get_bool3(htcnf, "signed", 2) != 0);
+            src->flags |= PKGSOURCE_VRFY_SIGN;
     }
 
     vs = poldek_conf_get(htcnf, "original type", NULL);
