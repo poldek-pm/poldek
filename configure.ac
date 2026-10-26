@@ -498,6 +498,14 @@ if test -f /etc/redhat-release; then
         LIBS="$LIBS -ldl" # rh's crypto needs this
 fi
 
+dnl dlsym() is in libdl before glibc 2.34; only vfile/tests/test_p_open needs it
+saved_LIBS="$LIBS"
+AC_SEARCH_LIBS(dlsym, dl)
+LIBS="$saved_LIBS"
+DL_LIBS=
+case "$ac_cv_search_dlsym" in -l*) DL_LIBS="$ac_cv_search_dlsym" ;; esac
+AC_SUBST(DL_LIBS)
+
 dnl use local ../trurlib copy if it exists
 CONF_IN_LDFLAGS=
 

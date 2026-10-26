@@ -54,3 +54,6 @@ clean-local:
 
 # a source's flags hold only its options
 check_PROGRAMS += test_source_flags
+
+# copying fails cleanly when cp cannot be started
+check_PROGRAMS += test_copy_file

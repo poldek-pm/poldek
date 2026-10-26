@@ -39,6 +39,7 @@ EXPORT void p_st_destroy(struct p_open_st *pst);
 #define P_OPEN_KEEPSTDIN (1 << 0) /* don't close stdin */
 #define P_OPEN_OUTPTYS   (1 << 1) /* pass output through pseudo-tty */
 
+/* NULL: nothing was started, and pst->errmsg says why */
 EXPORT FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
              char *const argv[]);
 
