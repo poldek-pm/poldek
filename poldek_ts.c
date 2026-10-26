@@ -862,6 +862,13 @@ static int load_sources(struct poldek_ctx *ctx)
 
 static int ts_run_install_dist(struct poldek_ts *ts)
 {
+    /* --destination copies packages to a repository (pset), it cannot
+       install them under a root directory */
+    if (n_str_eq(pm_get_name(ts->pmctx), "pset")) {
+        logn(LOGERR, _("--install-dist cannot be used with --destination"));
+        return 0;
+    }
+
     if (!load_sources(ts->ctx)) {
         return 0;
     }
