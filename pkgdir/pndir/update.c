@@ -284,6 +284,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     memcpy(current_md, idx->dg->md, TNIDX_DIGEST_SIZE + 1);
 
     off_t mdsize = 0, mdpatchsize = 0;
+    int too_big = 0;
     struct vf_stat stats;
 
     char *idx_path, *idx_ext;
@@ -369,19 +370,24 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
              (long long)mdpatchsize, (long long)mdsize);
 
 	if (mdpatchsize * 9 / 10 > mdsize) {
-	    vfile_close(vf);
-	    msgn(1, _("Index patches size too big\n"));
-	    msgn(1, _("Retrieving whole index ...\n"));
-	    rc = update_whole_idx(pkgdir->src);
-	    if (rc)
-	      *uprc = PKGDIR_UPRC_UPTODATE;
-	    return rc;
+	    too_big = 1;
+	    break;
 	}
     }
 
     /* restore verbosity */
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     vfile_configure(VFILE_CONF_NOTFOUND_OK, 0);
+
+    if (too_big) {
+        vfile_close(vf);
+        msgn(1, _("Index patches size too big\n"));
+        msgn(1, _("Retrieving whole index ...\n"));
+        rc = update_whole_idx(pkgdir->src);
+        if (rc)
+            *uprc = PKGDIR_UPRC_UPTODATE;
+        return rc;
+    }
 
     n_stream_seek(vf->vf_tnstream, 0L, SEEK_SET); // to the begining
 
