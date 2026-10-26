@@ -350,7 +350,7 @@ static int signkeys_import_failed(const tn_hash *signkeys)
 
 /* rpm, or "sudo rpm" for an ordinary user with "use sudo" (rpm --test
    needs no root); NULL when that sudo is missing */
-char *pm_rpm_command(struct pm_rpm *pm, struct poldek_ts *ts,
+char *pm_rpm_command(struct pm_rpm *pm, const struct poldek_ts *ts,
                      char **argv, int *nargs)
 {
     if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0 &&
