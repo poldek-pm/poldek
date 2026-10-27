@@ -42,7 +42,8 @@ EXPORT int arg_packages_add_pkgs(struct arg_packages *aps, const tn_array *pkgs)
 
 EXPORT int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
 
-#define ARG_PACKAGES_RESOLV_EXACT       (1 << 0)/* no fnmatch() */
+#define ARG_PACKAGES_RESOLV_EXACT       (1 << 0)/* error if a name matches several
+                                                   packages */
 #define ARG_PACKAGES_RESOLV_MISSINGOK   (1 << 1)/* be quiet if nothing matches*/
 #define ARG_PACKAGES_RESOLV_UNAMBIGUOUS (1 << 2)/* don't match duplicates */
 #define ARG_PACKAGES_RESOLV_CAPS        (1 << 3)/* search in package caps too */
@@ -53,6 +54,8 @@ EXPORT int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
                                                       resolves only to native arch;
                                                       "install curl-1.0-1.i686" and
                                                       "install curl*" still match all */
+#define ARG_PACKAGES_RESOLV_AMBIGUOUSOK (1 << 7)/* be quiet if a name matches
+                                                   several packages */
 
 int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpkgs,
                                       tn_array **resolved, int quiet);
