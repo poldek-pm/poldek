@@ -288,5 +288,23 @@ testInstallDistConflictErrorForce() {
     try_install a "a,b,sh" --force
 }
 
+# --destination copies packages to a repository, it cannot install them
+# under a root directory
+testInstallDistWithDestinationRefused() {
+    local dest=$ORIGREPO/pset out rc
+
+    build a
+    build sh -p /bin/sh
+    mkdir -p $dest
+
+    out=$($POLDEK_INSTALL --dt dir --destination $dest a 2>&1)
+    rc=$?
+    echo "$out"
+    assertEquals "exit code" "1" "$rc"
+    echo "$out" | grep -q -- "--install-dist cannot be used with --destination"
+    assertEquals "not refused: $out" "0" "$?"
+    assertEquals "files left under the root" "" "$(ls -A $DESTINATION_REPO)"
+}
+
 
 . ./sh/lib/shunit2
