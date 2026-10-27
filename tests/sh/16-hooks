@@ -4,6 +4,8 @@
 # of an operation and the ones in post-install.d once after the last one,
 # however many package sets the operation installs. A failing pre-install
 # hook stops the operation; a failing post-install one is only reported.
+# Hook output keeps its lines on the terminal and in the log file, where
+# each line follows the hook's name.
 # Hooks do not run for rpm test runs, nor with a root other than /.
 
 . ./sh/lib/setup
@@ -115,6 +117,28 @@ testHooksRunInNameOrderSkippingBackupsAndDotFiles()
     $POLDEK_HOOKS -uv hooka
     assertEquals "install failed" "0" "$?"
     assertRuns "a b c rpm post"
+}
+
+testHookOutputLineByLine()
+{
+    skip_if_rpm_testing_off && return
+
+    local log=$TMPDIR/hooks-poldek.log line out
+
+    build hooka
+    # the last line with no newline
+    printf '#!/bin/sh\nprintf "one\\ntwo"\n' > $HOOKS/post-install.d/a-out
+    printf '#!/bin/sh\necho three\n' > $HOOKS/post-install.d/b-out
+    chmod 755 $HOOKS/post-install.d/a-out $HOOKS/post-install.d/b-out
+    rm -f $log
+
+    out=$($POLDEK_HOOKS -uv hooka --log=$log 2>&1)
+    assertEquals "install failed" "0" "$?"
+    echo "$out"
+    assertEquals "'two' not a line of the output" "1" "$(echo "$out" | grep -c '^two$')"
+    for line in "a-out: one" "a-out: two" "b-out: three"; do
+        assertEquals "'$line' not a line of the log" "1" "$(grep -c " $line\$" $log)"
+    done
 }
 
 testMissingPreInstallDirMeansNoPreHooks()

@@ -27,13 +27,10 @@
 #include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
-#include <errno.h>
 #include <signal.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
-#include <sys/time.h>
 #include <sys/wait.h>
-#include <sys/ioctl.h>
 #include <fnmatch.h>
 
 #include <trurl/nassert.h>
@@ -57,65 +54,6 @@
 #include "pm_hooks.h"
 
 #ifdef HAVE_OPENPTY
-static void rpmr_process_output(struct p_open_st *st, int verbose_level)
-{
-    int endl = 1;
-
-    while (1) {
-        struct timeval to = { 0, 200000 };
-        fd_set fdset;
-        int rc;
-
-        if (p_wait(st)) {
-            int yes = 1;
-            ioctl(st->fd, FIONBIO, &yes);
-        }
-
-        FD_ZERO(&fdset);
-        FD_SET(st->fd, &fdset);
-        if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
-            if (errno == EAGAIN || errno == EINTR)
-                continue;
-
-            break;
-
-        } else if (rc == 0) {
-            if (p_wait(st))
-                break;
-
-        } else if (rc > 0) {
-            char  buf[4096], *fmt = "%s";
-            int   n, i;
-
-            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
-                break;
-            buf[n] = '\0';
-            msg_tty(verbose_level, fmt, buf);
-
-            /* logged to file? -> prefix lines with 'rpm: ' */
-            for (i=0; i < n; i++) {
-                int c = buf[i];
-
-                if (c == '\r')
-                    continue;
-
-                if (c == '\n')
-                    endl = 1;
-
-                if (endl) {
-                    endl = 0;
-                    msg_f(0, "_\n");
-                    msg_f(0, "rpm: %c", c);
-                    continue;
-                }
-                msg_f(0, "_%c", c);
-            }
-        }
-    }
-
-    return;
-}
-
 int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {
     struct p_open_st pst;
@@ -150,7 +88,7 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
     if (poldek_VERBOSE == 0)
         vsaved = poldek_set_verbose(1);
 
-    rpmr_process_output(&pst, verbose_level);
+    poldek__relay_output(&pst, verbose_level, "rpm");
     if ((ec = p_close(&pst)) != 0 && pst.errmsg != NULL)
         logn(LOGERR, "%s", pst.errmsg);
 

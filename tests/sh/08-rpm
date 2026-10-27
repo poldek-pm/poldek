@@ -662,6 +662,28 @@ testInstallRpmNoticesFiltered() {
     rpm_state_check "a" ""
 }
 
+# what rpm prints goes to the log file line by line, after "rpm: "
+testInstallRpmOutputLoggedLineByLine() {
+    skip_if_rpm_testing_off && return
+    local log=$TMPDIR/rpm-poldek.log wrapper=$TMPDIR/rpm-wrapper line
+
+    build a 1-1
+    cat > $wrapper <<EOF
+#!/bin/sh
+printf 'line1\nline2\n'
+exec "$(command -v rpm)" "\$@"
+EOF
+    chmod +x $wrapper
+    rm -f $log
+
+    $POLDEK_INSTALL --pmcmd $wrapper -uv a --log=$log
+    assertEquals "install failed" "0" "$?"
+    for line in "rpm: line1" "rpm: line2"; do
+        assertEquals "'$line' not a line of the log" "1" "$(grep -c " $line\$" $log)"
+    done
+    rpm_state_check "a" ""
+}
+
 # desc -L and ls -S take as new the changelog entries dated after the day
 # the installed version was built: entries carry their date only, and rpm
 # stores it as noon, later than a build made that morning
