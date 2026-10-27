@@ -17,6 +17,10 @@
   - call `initgroups()` when dropping privileges
 
 ### Bug fixes
+* Fix: `--install-dist` with `--destination` is now refused instead of trying to install through `pset` (@arekm #85)
+* Fix: output from hooks, `cp` and `rpm` is logged line properly (@arekm #84)
+* Fix: `--fetch` no longer leaves packages that fail the digest check in the destination directory; when one download of a group fails, the packages that did download are still checked (@arekm #83)
+* Fix: after `--up` fetches a whole index, the stub and directory indexes are refreshed from the new index, so `ls` no longer lists packages the repository no longer has (pndir with patches larger than the index, rpm-md when repomd.xml changed) (@arekm #82)
 * Fix: removing a package could keep one that requires its directory when `auto_directory_dependencies` is enabled; `pkgdir_dirindex_pkg_has_path()` could return an uninitialized value (@arekm #80)
 * Fix: `--up` read an uninitialized variable while sizing the index patches (@arekm #79)
 * Fix: a read error in a directory was taken for its end; `readdir()` errors are now reported and partial results are no longer used silently in `%includedir`, dir sources, cache cleaning and index cleaning (@arekm #78)
