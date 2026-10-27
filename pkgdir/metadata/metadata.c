@@ -153,10 +153,11 @@ int verify_digest(struct repomd_ent *ent, const char *path)
     FILE *stream;
     int type, len;
 
-    if (n_str_eq(ent->checksum_type, "sha"))
+    /* createrepo writes SHA-1 as "sha" or "sha1" */
+    if (n_str_eq(ent->checksum_type, "sha") || n_str_eq(ent->checksum_type, "sha1"))
         type = DIGEST_SHA1;
 
-    if (n_str_eq(ent->checksum_type, "sha256"))
+    else if (n_str_eq(ent->checksum_type, "sha256"))
         type = DIGEST_SHA256;
 
     else if (n_str_eq(ent->checksum_type, "md5"))

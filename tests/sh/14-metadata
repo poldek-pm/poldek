@@ -45,6 +45,28 @@ testLoadLargeSizes()
     assertEquals "sizes should be 4096.0 MB" "$n" "2"
 }
 
+# createrepo names SHA-1 checksums "sha" or "sha1"
+testLoadSha1Checksums()
+{
+    local dir="$TMPDIR/meta-sha1"
+    local type f old new n
+
+    for type in sha sha1; do
+        rm -rf $dir
+        mkdir -p $dir/repo
+        cp -r metadata/repo_02/repodata $dir/repo/ || fail "cp failed"
+        for f in $dir/repo/repodata/*.xml.gz; do
+            old=$(sha256sum < $f | cut -d' ' -f1)
+            new=$(sha1sum < $f | cut -d' ' -f1)
+            sed -i "s|<checksum type=\"sha256\">$old<|<checksum type=\"$type\">$new<|" $dir/repo/repodata/repomd.xml
+        done
+        printf '[r]\nname=R\nenabled=1\nbaseurl=repo\n' > $dir/r.repo
+
+        n=$($POLDEK -s $dir/r.repo ls | grep fake_bash | wc -l)
+        assertEquals "repository with $type checksums not loaded" "1" "$n"
+    done
+}
+
 testLoadZst()
 {
     msg $POLDEK -s ../metadata/02zst.repo ls
