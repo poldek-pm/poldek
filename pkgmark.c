@@ -75,7 +75,7 @@ struct pkgmark_set *pkgmark_set_new(struct pkgset *ps, int size, unsigned flags)
         flags |= PKGMARK_SET_IDNEVR; /* default */
 
     na = n_alloc_new(8, TN_ALLOC_OBSTACK);
-    pms = na->na_malloc(na, sizeof(*na));
+    pms = na->na_malloc(na, sizeof(*pms));
 
     pms->flags = flags;
     pms->ht = n_hash_new_na(na, size > 256 ? size : 256,
