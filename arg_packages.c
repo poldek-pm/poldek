@@ -663,10 +663,13 @@ static int verify_pakcage_caps(struct arg_packages *aps, tn_array *resolved_pkgs
 }
 
 
-tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
+tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps,
+                                struct pkgset *ps)
 {
     struct pset_virtual_ent *ent;
     tn_array *keys = n_hash_keys(aps->resolved_caps);
+    /* nothing is marked yet: count every package a provider drags */
+    struct pkgmark_set *pms = pkgmark_set_new(ps, 0, 0);
     int i;
 
     for (i=0; i < n_array_size(keys); i++) {
@@ -676,7 +679,7 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
 
         pkgs = n_hash_get(aps->resolved_caps, key);
 
-        ent = n_hash_get(aps->pset_virtuals, key);
+        ent = aps->pset_virtuals ? n_hash_get(aps->pset_virtuals, key) : NULL;
         if (ent && ent->mask) {
             int j;
             for (j=0; j < n_array_size(pkgs); j++) {
@@ -693,7 +696,7 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
             int j, ndragged_min = INT_MAX - 1;
             for (j=0; j < n_array_size(pkgs); j++) {
                 struct pkg *p = n_array_nth(pkgs, j);
-                int ndragged = pkgmark_pkg_drags(p, NULL, 2);
+                int ndragged = pkgmark_pkg_drags(p, pms, 2);
 
                 DBGF("- %s %d\n", pkg_snprintf_s0(p), ndragged);
                 if (ndragged < ndragged_min) {
@@ -710,6 +713,7 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
         n_array_push(topkgs, pkg_link(pkg));
     }
 
+    pkgmark_set_free(pms);
     n_array_free(keys);
     return topkgs;
 }
@@ -813,7 +817,7 @@ int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
         verify_pakcage_caps(aps, aps->resolved_pkgs);
 
     if (flags & ARG_PACKAGES_RESOLV_CAPSINLINE) {
-        resolve_resolved_caps(aps->resolved_pkgs, aps);
+        resolve_resolved_caps(aps->resolved_pkgs, aps, ps);
         n_array_sort(aps->resolved_pkgs);
         n_array_uniq(aps->resolved_pkgs);
         if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)

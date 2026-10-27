@@ -109,6 +109,19 @@ testInstallDist() {
     try_install a "a,b,c,sh"
 }
 
+# of several providers of a capability given by name, the one that drags
+# fewer packages is chosen
+testInstallDistCaplookup() {
+    skip_if_rpm_testing_off && return
+
+    build a -p "foo"
+    build b -p "foo" -r "c"
+    build c
+    build sh -p /bin/sh -f /bin/sh
+
+    try_install "--caplookup foo sh" "a,sh"
+}
+
 # install-dist for real (rpm database only): rpm must find every dependency met
 assert_dist_db() {
     $POLDEK_INSTALL --justdb "$@" >/dev/null 2>&1
