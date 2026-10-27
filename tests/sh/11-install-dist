@@ -136,6 +136,22 @@ testInstallDistPsetVirtualDefault() {
     try_install "--pset $ORIGREPO/pset" "b,c,sh"
 }
 
+# in multilib mode a package set's default provider is taken in the native
+# arch, as a package named on the command line is, even when the foreign
+# one has a higher EVR
+testInstallDistPsetVirtualDefaultNativeArch() {
+    skip_if_rpm_testing_off && return
+
+    build f 1-1 -a x86_64 -p "foo" -f "/f.x86_64"
+    build f 1:1-1 -a i686 -p "foo" -f "/f.i686"
+    build sh -p /bin/sh -f /bin/sh
+
+    for default in "f" "f*"; do
+        printf '@foo %s\nsh\n' "$default" > $ORIGREPO/pset
+        try_install "--pset $ORIGREPO/pset" "f-1-1.x86_64,sh" "-Omultilib=1"
+    done
+}
+
 # install-dist for real (rpm database only): rpm must find every dependency met
 assert_dist_db() {
     $POLDEK_INSTALL --justdb "$@" >/dev/null 2>&1
