@@ -636,7 +636,7 @@ int resolve_pset_virtuals(struct arg_packages *aps, struct pkgset *ps,
 }
 
 
-static int verify_pakcage_caps(struct arg_packages *aps, tn_array *resolved_pkgs)
+static int verify_package_caps(struct arg_packages *aps, tn_array *resolved_pkgs)
 {
     tn_array *keys;
     int i, j;
@@ -660,7 +660,7 @@ static int verify_pakcage_caps(struct arg_packages *aps, tn_array *resolved_pkgs
     return n_hash_size(aps->resolved_caps);
 }
 
-
+static
 tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps,
                                 struct pkgset *ps)
 {
@@ -812,7 +812,7 @@ int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
     }
 
     if (n_array_size(aps->resolved_pkgs))
-        verify_pakcage_caps(aps, aps->resolved_pkgs);
+        verify_package_caps(aps, aps->resolved_pkgs);
 
     if (flags & ARG_PACKAGES_RESOLV_CAPSINLINE) {
         resolve_resolved_caps(aps->resolved_pkgs, aps, ps);
