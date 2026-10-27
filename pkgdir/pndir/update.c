@@ -385,7 +385,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
         msgn(1, _("Retrieving whole index ...\n"));
         rc = update_whole_idx(pkgdir->src);
         if (rc)
-            *uprc = PKGDIR_UPRC_UPTODATE;
+            *uprc = PKGDIR_UPRC_REFETCHED;
         return rc;
     }
 

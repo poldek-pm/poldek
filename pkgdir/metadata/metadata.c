@@ -624,7 +624,7 @@ int metadata_update(const struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
     if ((idx.repomd_vf->vf_flags & VF_FETCHED)) {
         struct pkgdir *tmp;
-        *uprc = PKGDIR_UPRC_UPDATED;
+        *uprc = PKGDIR_UPRC_REFETCHED;
 
         if ((tmp = pkgdir_srcopen(pkgdir->src, PKGDIR_OPEN_REFRESH)))
             pkgdir_free(tmp);
