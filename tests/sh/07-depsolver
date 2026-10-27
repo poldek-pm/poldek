@@ -1061,6 +1061,17 @@ testUninstallDirRequirement() {
     try_uninstall_package "dir" "-ev --test -Oauto_directory_dependencies=y" a "a-1-1,b-1-1"
 }
 
+# a package named by several arguments is removed once; both pairs, as
+# which one leaves the duplicates apart depends on the database order
+testUninstallSamePackageTwice() {
+    msgn "Preparing repositories..."
+    build_installed k 1-1
+    build_installed k 2-1
+
+    try_uninstall "k-1-1 k" "k-1-1,k-2-1"
+    try_uninstall "k-2-1 k" "k-1-1,k-2-1"
+}
+
 # TODO
 xtestUninstallHold() {
     msgn "Preparing repositories..."
