@@ -109,6 +109,33 @@ testInstallDist() {
     try_install a "a,b,c,sh"
 }
 
+# of several providers of a capability given by name, the one that drags
+# fewer packages is chosen
+testInstallDistCaplookup() {
+    skip_if_rpm_testing_off && return
+
+    build a -p "foo"
+    build b -p "foo" -r "c"
+    build c
+    build sh -p /bin/sh -f /bin/sh
+
+    try_install "--caplookup foo sh" "a,sh"
+}
+
+# a package set's default provider given with a version ("@foo b 1") is
+# chosen, even when another provider would drag fewer packages
+testInstallDistPsetVirtualDefault() {
+    skip_if_rpm_testing_off && return
+
+    build a -p "foo"
+    build b 1-1 -p "foo" -r "c"
+    build c
+    build sh -p /bin/sh -f /bin/sh
+
+    printf '@foo b 1\nsh\n' > $ORIGREPO/pset
+    try_install "--pset $ORIGREPO/pset" "b,c,sh"
+}
+
 # install-dist for real (rpm database only): rpm must find every dependency met
 assert_dist_db() {
     $POLDEK_INSTALL --justdb "$@" >/dev/null 2>&1

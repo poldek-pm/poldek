@@ -155,18 +155,16 @@ int prepare_file_pkgmask(struct arg_packages *aps,
 
     } else {
         struct pset_virtual_ent *ent;
-        int n, len = strlen(virtname) + 1;
+        int n, masklen = 0, len = strlen(virtname) + 1;
 
-        if (name) {
-            len += strlen(name) + 1;
-            if (evrstr)
-                len += strlen(evrstr) + 1;
-        }
+        if (name)
+            masklen = make_mask(mask, sizeof(mask), name, version, release);
+        len += masklen + 1;
         ent = n_malloc(sizeof(*ent) + len + 1);
         n = n_snprintf(ent->_buf, len, "%s", virtname);
         ent->virtname = ent->_buf;
         ent->mask = NULL;
-        if (name && make_mask(mask, sizeof(mask), name, version, release)) {
+        if (masklen) {
             n++;                /* skip '\0' */
             n_snprintf(&ent->_buf[n], len - n, "%s", mask);
             ent->mask = &ent->_buf[n];
@@ -638,7 +636,7 @@ int resolve_pset_virtuals(struct arg_packages *aps, struct pkgset *ps,
 }
 
 
-static int verify_pakcage_caps(struct arg_packages *aps, tn_array *resolved_pkgs)
+static int verify_package_caps(struct arg_packages *aps, tn_array *resolved_pkgs)
 {
     tn_array *keys;
     int i, j;
@@ -662,11 +660,14 @@ static int verify_pakcage_caps(struct arg_packages *aps, tn_array *resolved_pkgs
     return n_hash_size(aps->resolved_caps);
 }
 
-
-tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
+static
+tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps,
+                                struct pkgset *ps)
 {
     struct pset_virtual_ent *ent;
     tn_array *keys = n_hash_keys(aps->resolved_caps);
+    /* nothing is marked yet: count every package a provider drags */
+    struct pkgmark_set *pms = pkgmark_set_new(ps, 0, 0);
     int i;
 
     for (i=0; i < n_array_size(keys); i++) {
@@ -676,13 +677,13 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
 
         pkgs = n_hash_get(aps->resolved_caps, key);
 
-        ent = n_hash_get(aps->pset_virtuals, key);
+        ent = aps->pset_virtuals ? n_hash_get(aps->pset_virtuals, key) : NULL;
         if (ent && ent->mask) {
             int j;
             for (j=0; j < n_array_size(pkgs); j++) {
                 struct pkg *p = n_array_nth(pkgs, j);
                 if (strcmp(p->name, ent->mask) == 0 ||
-                    fnmatch(pkg_id(p), ent->mask, 0) == 0) {
+                    fnmatch(ent->mask, pkg_id(p), 0) == 0) {
                     pkg = n_array_nth(pkgs, j);
                     break;
                 }
@@ -693,7 +694,7 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
             int j, ndragged_min = INT_MAX - 1;
             for (j=0; j < n_array_size(pkgs); j++) {
                 struct pkg *p = n_array_nth(pkgs, j);
-                int ndragged = pkgmark_pkg_drags(p, NULL, 2);
+                int ndragged = pkgmark_pkg_drags(p, pms, 2);
 
                 DBGF("- %s %d\n", pkg_snprintf_s0(p), ndragged);
                 if (ndragged < ndragged_min) {
@@ -710,6 +711,7 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
         n_array_push(topkgs, pkg_link(pkg));
     }
 
+    pkgmark_set_free(pms);
     n_array_free(keys);
     return topkgs;
 }
@@ -810,10 +812,10 @@ int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
     }
 
     if (n_array_size(aps->resolved_pkgs))
-        verify_pakcage_caps(aps, aps->resolved_pkgs);
+        verify_package_caps(aps, aps->resolved_pkgs);
 
     if (flags & ARG_PACKAGES_RESOLV_CAPSINLINE) {
-        resolve_resolved_caps(aps->resolved_pkgs, aps);
+        resolve_resolved_caps(aps->resolved_pkgs, aps, ps);
         n_array_sort(aps->resolved_pkgs);
         n_array_uniq(aps->resolved_pkgs);
         if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)
