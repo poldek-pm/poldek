@@ -94,5 +94,28 @@ testUpRefreshesStubIndex()
     assertEquals "ls should list the renamed package" "1" "$n"
 }
 
+# a new repomd.xml whose primary.xml cannot be fetched fails the update
+testUpFailsWithoutNewPrimary()
+{
+    local dir="$TMPDIR/meta-noprimary"
+    local src="m,type=metadata test://$dir/"
+    local op primary old new
+
+    for op in --up --upa; do
+        rm -rf $dir $CACHEDIR/*
+        mkdir -p $dir
+        cp -r metadata/repo_02/repodata $dir/ || fail "cp failed"
+        $POLDEK_RAW_UP -Osource="$src" --up || fail "up failed"
+
+        primary=$(ls $dir/repodata/*-primary.xml.gz)
+        old=$(sha256sum < $primary | cut -d' ' -f1)
+        new=$(echo changed | sha256sum | cut -d' ' -f1)
+        sed -i "s/$old/$new/g" $dir/repodata/repomd.xml
+
+        $POLDEK_RAW_UP -Osource="$src" $op
+        assertTrue "$op ended with exit code 0" "[ $? -ne 0 ]"
+    done
+}
+
 
 . ./sh/lib/shunit2

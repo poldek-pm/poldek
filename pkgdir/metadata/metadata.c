@@ -626,10 +626,11 @@ int metadata_update(const struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
         struct pkgdir *tmp;
         *uprc = PKGDIR_UPRC_REFETCHED;
 
-        if ((tmp = pkgdir_srcopen(pkgdir->src, PKGDIR_OPEN_REFRESH)))
-            pkgdir_free(tmp);
-        else
+        if ((tmp = pkgdir_srcopen(pkgdir->src, PKGDIR_OPEN_REFRESH)) == NULL) {
             *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
+            return 0;
+        }
+        pkgdir_free(tmp);
     }
 
     return 1;
@@ -687,10 +688,11 @@ int do_update_a(const struct source *src, const char *path,
         struct pkgdir *tmp;
         *uprc = PKGDIR_UPRC_UPDATED;
 
-        if ((tmp = pkgdir_srcopen(src, PKGDIR_OPEN_REFRESH)))
-            pkgdir_free(tmp);
-        else
+        if ((tmp = pkgdir_srcopen(src, PKGDIR_OPEN_REFRESH)) == NULL) {
             *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
+            return 0;
+        }
+        pkgdir_free(tmp);
     }
 
     return 1;
