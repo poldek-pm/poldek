@@ -142,4 +142,22 @@ testUpdate()
 
 }
 
+# --upa of a changed repository fetches the whole index again
+testUpaChangedRepoIsNotUpToDate()
+{
+    local out n
+
+    rm -rf $REPO/*.* $CACHEDIR/*
+    mkidx
+    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --upa || fail "upa failed"
+
+    sleep 1
+    add_package_to_repo
+    mkidx
+    out=$($POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --upa 2>&1) || fail "upa failed"
+    n=$(echo "$out" | grep -c 'is up to date')
+    assertEquals "--upa said a changed repository is up to date: $out" "0" "$n"
+    ls_expect 1
+}
+
 . ./sh/lib/shunit2
