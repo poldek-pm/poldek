@@ -164,7 +164,7 @@ int pndir_m_update_a(const struct source *src, const char *idxpath,
         case 0:
             rc = update_whole_idx(src);
             if (rc)
-                *uprc = PKGDIR_UPRC_UPTODATE;
+                *uprc = PKGDIR_UPRC_UPDATED;
             break;
 
         default:
