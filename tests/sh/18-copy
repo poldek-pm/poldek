@@ -9,7 +9,7 @@ ORIGREPO=
 setUp() {
     [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
     [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
-    rm -rf $ORIGREPO/*
+    rm -rf $ORIGREPO/* $CACHEDIR/*
 
     REPO="$ORIGREPO/src"
     DESTINATION_REPO="$ORIGREPO/dest"
@@ -38,6 +38,50 @@ testFetchCopyFails() {
     $POLDEK_INSTALL -i --fetch=$FETCHDIR a
     rc=$?
     assertTrue "a failed copy ended with exit code 0" "[ $rc -ne 0 ]"
+}
+
+# change a payload byte: the header still loads, the digest no longer matches
+corrupt_package() {
+    local off byte
+
+    off=$(($(stat -c %s $1) - 100))
+    byte=$(dd if=$1 bs=1 skip=$off count=1 2>/dev/null | od -An -tx1 | tr -d ' ')
+    [ "$byte" = 58 ] && byte=Y || byte=X
+    printf $byte | dd of=$1 bs=1 seek=$off conv=notrunc 2>/dev/null || fail "dd failed"
+}
+
+# damage a, then run the given install with --fetch and the rpm backend,
+# which checks package digests (--dt dir does not)
+fetch_damaged() {
+    local root=$ORIGREPO/root out
+
+    corrupt_package $REPO/a-1-1.noarch.rpm
+    mkdir -p $root && rpm --root $root --initdb || fail "initdb failed"
+    out=$("$@" --root $root --fetch=$FETCHDIR 2>&1)
+    rc=$?
+    echo "$out"
+    echo "$out" | grep -q "a-1-1.noarch.rpm: MD5 signature verification failed" ||
+        fail "a was not refused by the digest check"
+    assertTrue "a damaged package ended with exit code 0" "[ $rc -ne 0 ]"
+    assertFalse "a damaged package left in the fetch directory" "[ -e $FETCHDIR/a-1-1.noarch.rpm ]"
+}
+
+testFetchDigestFails() {
+    fetch_damaged $POLDEK_NOCONF --st dir -s $REPO --nodeps -i a
+}
+
+testFetchRemoteDigestFails() {
+    $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+    fetch_damaged $POLDEK_UP -Osource="src,type=pndir test://$REPO/" --nodeps -i a
+}
+
+# b needs a, so both are downloaded at once; b is gone from the repository
+testFetchRemoteDigestFailsWithFailedDownload() {
+    build_package $REPO b -r "a"
+    build_package $REPO sh -p /bin/sh
+    $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+    rm -f $REPO/b-1-1.noarch.rpm
+    fetch_damaged $POLDEK_UP -Osource="src,type=pndir test://$REPO/" -i b
 }
 
 testDestination() {
