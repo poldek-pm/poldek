@@ -155,18 +155,16 @@ int prepare_file_pkgmask(struct arg_packages *aps,
 
     } else {
         struct pset_virtual_ent *ent;
-        int n, len = strlen(virtname) + 1;
+        int n, masklen = 0, len = strlen(virtname) + 1;
 
-        if (name) {
-            len += strlen(name) + 1;
-            if (evrstr)
-                len += strlen(evrstr) + 1;
-        }
+        if (name)
+            masklen = make_mask(mask, sizeof(mask), name, version, release);
+        len += masklen + 1;
         ent = n_malloc(sizeof(*ent) + len + 1);
         n = n_snprintf(ent->_buf, len, "%s", virtname);
         ent->virtname = ent->_buf;
         ent->mask = NULL;
-        if (name && make_mask(mask, sizeof(mask), name, version, release)) {
+        if (masklen) {
             n++;                /* skip '\0' */
             n_snprintf(&ent->_buf[n], len - n, "%s", mask);
             ent->mask = &ent->_buf[n];
@@ -685,7 +683,7 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps,
             for (j=0; j < n_array_size(pkgs); j++) {
                 struct pkg *p = n_array_nth(pkgs, j);
                 if (strcmp(p->name, ent->mask) == 0 ||
-                    fnmatch(pkg_id(p), ent->mask, 0) == 0) {
+                    fnmatch(ent->mask, pkg_id(p), 0) == 0) {
                     pkg = n_array_nth(pkgs, j);
                     break;
                 }
