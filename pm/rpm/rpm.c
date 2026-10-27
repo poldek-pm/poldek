@@ -65,14 +65,14 @@ void *pm_rpm_init(void)
     if (initialized == 0) {
 	/* lp#1644315: save original umask and restore it after rpmReadConfigFiles() call */
 	mode_t mask = umask(0);
+        int rc = rpmReadConfigFiles(NULL, NULL);
 
-        if (rpmReadConfigFiles(NULL, NULL) != 0) {
+        umask(mask);
+        if (rc != 0) {
             logn(LOGERR, "failed to read rpmlib configs");
             return 0;
         }
         initialized = 1;
-
-        umask(mask);
     }
 
     pm_rpm = n_malloc(sizeof(*pm_rpm));

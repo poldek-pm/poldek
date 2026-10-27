@@ -49,6 +49,7 @@
 #define AUTODIRDEP          (1 << 2)
 
 struct pm_pset {
+    struct pm_ctx *rpm;         /* keeps rpm configured, see pm_pset_init() */
     char      *installer_path;
     tn_hash   *cnf;
     tn_array  *sources;
@@ -70,9 +71,16 @@ struct pm_psetdb {
 void *pm_pset_init(void)
 {
     struct pm_pset *pm;
+    struct pm_ctx *rpm;
     char path[PATH_MAX];
 
+    /* pset copies rpm packages: reading their headers and scoring their
+       archs goes through librpm, which needs rpm's configuration */
+    if ((rpm = pm_new("rpm")) == NULL)
+        return NULL;
+
     pm = n_malloc(sizeof(*pm));
+    pm->rpm = rpm;
 
     if (vf_find_external_command(path, sizeof(path), "pset-pm.sh", NULL))
         pm->installer_path = n_strdup(path);
@@ -91,6 +99,7 @@ void pm_pset_destroy(void *pm_pset)
 {
     struct pm_pset *pm = pm_pset;
 
+    pm_free(pm->rpm);
     n_cfree(&pm->installer_path);
     n_hash_free(pm->cnf);
     n_array_free(pm->sources);
