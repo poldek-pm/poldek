@@ -676,7 +676,7 @@ tn_array *do_resolve(struct arg_packages *aps,
                      tn_array *ents, unsigned flags)
 {
     tn_array *ments = NULL, *masks;
-    int i, j, nmasks;
+    int i, j, nmasks, *nvrmasks, nnvrmasks = 0;
     int *matches, *matches_bycmp;
 
     masks = arg_packages_get_masks(aps, 0);
@@ -741,6 +741,39 @@ tn_array *do_resolve(struct arg_packages *aps,
                 matches[j]++;
             }
         }
+    }
+
+    /* ls poldek-1.0-1 in multilib mode, for the masks nothing else matched */
+    nvrmasks = alloca(nmasks * sizeof(*nvrmasks));
+    for (j=0; j < nmasks; j++)
+        if (matches[j] == 0)
+            nvrmasks[nnvrmasks++] = j;
+
+    if (nnvrmasks) {
+        tn_buf *nbuf = n_buf_new(128);
+
+        for (i=0; i < n_array_size(ents); i++) {
+            struct pkg_dent *ent = n_array_nth(ents, i);
+            const char *nvr;
+            int k;
+
+            if (pkg_dent_isdir(ent) ||
+                (nvr = pkg_noarch_id(ent->pkg_dent_pkg, nbuf)) == NULL)
+                continue;
+
+            for (k=0; k < nnvrmasks; k++) {
+                const char *mask = n_array_nth(masks, nvrmasks[k]);
+
+                if (*mask == '@')
+                    mask++;
+
+                if (fnmatch(mask, nvr, 0) == 0) {
+                    n_array_push(ments, pkg_dent_link(ent));
+                    matches[nvrmasks[k]]++;
+                }
+            }
+        }
+        n_buf_free(nbuf);
     }
 
 

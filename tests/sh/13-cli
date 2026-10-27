@@ -124,6 +124,37 @@ testIndexWithoutPackageInfo()
     assertEquals "desc -L failed ($out)" "$?" "0"
 }
 
+# in multilib mode, where package ids end in .ARCH, ls still finds a
+# package by name-version-release
+testLsNvrMultilib()
+{
+    skip_if_rpm_testing_off && return
+
+    build a 1-1
+    index
+
+    out=$($POLDEK -Omultilib=1 ls a-1-1 2>&1)
+    assertEquals "ls a-1-1 failed ($out)" "$?" "0"
+    echo "$out" | grep -q '^a-1-1'
+    assertEquals "a-1-1 not listed ($out)" "$?" "0"
+}
+
+# a full package id wins over name-version-release: "m-1-1.i686" lists
+# the i686 package, not also m-1-1.i686.x86_64 (release "1.i686")
+testLsExplicitArchOverNvrMultilib()
+{
+    skip_if_rpm_testing_off && return
+
+    build m 1-1 -a i686 -f /m.i686
+    build m 1-1.i686 -a x86_64 -f /m.x86_64
+    index
+
+    out=$($POLDEK -Omultilib=1 ls m-1-1.i686 2>&1)
+    assertEquals "ls m-1-1.i686 failed ($out)" "$?" "0"
+    n=$(echo "$out" | grep -c '^m-1-1')
+    assertEquals "m-1-1.i686 should list one package ($out)" "1" "$n"
+}
+
 testUpgrade()
 {
     skip_if_rpm_testing_off && return

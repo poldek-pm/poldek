@@ -456,15 +456,17 @@ tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
 }
 
 /*
-  multilib: should this package be skipped for a bare-name mask match?
+  multilib: should this package be skipped for a bare-name mask match
+  (a bare name, or NAME-VERSION-RELEASE without .ARCH)?
 
   Problem: "install curl" on a multilib system resolves to curl.x86_64,
   curl.i686, curl.x32 — pulling in a massive foreign-arch dependency
   chain.  The user just wanted the native-arch package.
 
-  This only applies to bare-name matches (strcmp with pkg->name).
-  Explicit names ("install curl-1.0-1.i686") and globs ("install curl*")
-  go through the fnmatch path and are not affected.
+  This only applies to bare-name matches ("install curl",
+  "install curl-1.0-1"). Explicit arches ("install curl-1.0-1.i686") and
+  globs that cover the arch ("install curl*") match pkg_id() and are not
+  affected.
   A package set's default provider ("@foo curl") is picked in one
   arch only, so there any match prefers a native one.
 
@@ -489,7 +491,7 @@ int resolve_masks(tn_array *re,
                   unsigned flags, int quiet)
 {
     int i, j, nmasks, rc = 1;
-    int *matches, *matches_bycmp;
+    int *matches, *matches_bycmp, *nvrmasks, nnvrmasks = 0;
     const char **first_foreign_id;
 
     nmasks = n_array_size(aps->package_masks);
@@ -544,6 +546,48 @@ int resolve_masks(tn_array *re,
                 matches[j]++;
             }
         }
+    }
+
+    /* NAME-VERSION-RELEASE without .ARCH, as a bare name, for the masks
+       nothing matched by name or by package id */
+    nvrmasks = alloca(nmasks * sizeof(*nvrmasks));
+    for (j=0; j < nmasks; j++)
+        if (matches[j] == 0 && first_foreign_id[j] == NULL)
+            nvrmasks[nnvrmasks++] = j;
+
+    if (nnvrmasks) {
+        tn_buf *nbuf = n_buf_new(128);
+
+        for (i=0; i < n_array_size(avpkgs); i++) {
+            struct pkg *pkg = n_array_nth(avpkgs, i);
+            const char *nvr = pkg_noarch_id(pkg, nbuf);
+            int k;
+
+            if (nvr == NULL)
+                continue;
+
+            for (k=0; k < nnvrmasks; k++) {
+                const char *mask = n_array_nth(aps->package_masks, nvrmasks[k]);
+
+                j = nvrmasks[k];
+                if (*mask == '@')
+                    mask++;
+
+                if (fnmatch(mask, nvr, 0) != 0)
+                    continue;
+
+                if (multilib_skip_foreign(pkg, flags)) {
+                    if (!first_foreign_id[j])
+                        first_foreign_id[j] = pkg_id(pkg);
+                } else {
+                    if (re)
+                        n_array_push(re, pkg_link(pkg));
+
+                    matches[j]++;
+                }
+            }
+        }
+        n_buf_free(nbuf);
     }
 
 
@@ -662,11 +706,13 @@ static int verify_package_caps(struct arg_packages *aps, tn_array *resolved_pkgs
     return n_hash_size(aps->resolved_caps);
 }
 
-/* the first provider the default's mask names, a native-arch one if any */
+/* the first provider the default's mask names, a native-arch one if any;
+   NAME-VERSION-RELEASE without .ARCH is tried only when nothing else matches */
 static struct pkg *find_default_provider(tn_array *pkgs, const char *mask,
                                          unsigned flags)
 {
     struct pkg *first = NULL;
+    tn_buf *nbuf;
     int j;
 
     for (j=0; j < n_array_size(pkgs); j++) {
@@ -681,6 +727,27 @@ static struct pkg *find_default_provider(tn_array *pkgs, const char *mask,
         if (first == NULL)
             first = p;
     }
+
+    if (first)
+        return first;
+
+    nbuf = n_buf_new(128);
+    for (j=0; j < n_array_size(pkgs); j++) {
+        struct pkg *p = n_array_nth(pkgs, j);
+        const char *nvr = pkg_noarch_id(p, nbuf);
+
+        if (nvr == NULL || fnmatch(mask, nvr, 0) != 0)
+            continue;
+
+        if (!multilib_skip_foreign(p, flags)) {
+            first = p;
+            break;
+        }
+
+        if (first == NULL)
+            first = p;
+    }
+    n_buf_free(nbuf);
 
     return first;
 }

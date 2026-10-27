@@ -1438,6 +1438,22 @@ char *pkg_str(char *str, size_t size, const struct pkg *pkg)
     return NULL;
 }
 
+/* in multilib mode pkg_id() ends in .ARCH; NAME-VERSION-RELEASE, put in
+   nbuf, still names the package for a mask without it; NULL otherwise */
+const char *pkg_noarch_id(const struct pkg *pkg, tn_buf *nbuf)
+{
+    if (!poldek_conf_MULTILIB || pkg_arch(pkg) == NULL)
+        return NULL;
+
+    n_buf_clean(nbuf);
+    n_buf_puts(nbuf, pkg->name);
+    n_buf_puts(nbuf, "-");
+    n_buf_puts(nbuf, pkg->ver);
+    n_buf_puts(nbuf, "-");
+    n_buf_puts_z(nbuf, pkg->rel);
+    return n_buf_ptr(nbuf);
+}
+
 tn_array *pkgs_array_new_ex(int size,
                             int (*cmpfn)(const struct pkg *p1,
                                          const struct pkg *p2))
