@@ -456,6 +456,17 @@ testUpgradeObsolete() {
     try_install a "a,a-devel,a-static,bar" "a,a-devel,a-static,foo"
 }
 
+# x conflicts with foo-2-1 through its foo = 1; z replaces foo by its second
+# Obsoletes of foo, so z resolves the conflict
+testUpgradeConflictReplacedBySecondObsoletes() {
+    msgn "Preparing repositories..."
+    build_installed foo 2-1 -p "'foo = 1'"
+    build x 1-1 -c "'foo < 2'"
+    build z 1-1 -p "'foo = 3'" -o "'foo < 1'" -o "'foo = 2-1'"
+
+    try_install x "x,z" "foo"
+}
+
 # a capability lost with two obsoleted packages is one broken requirement
 testUpgradeObsoletedSameCap() {
     msgn "Preparing repositories..."
