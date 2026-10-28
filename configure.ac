@@ -275,8 +275,8 @@ else
 fi
 
 
-AC_MSG_CHECKING([for rpmorg (>= 4.14)])
-PKG_CHECK_EXISTS([rpm >= 6.0], [is_rpmorg=yes], [PKG_CHECK_EXISTS([rpm >= 4.14 rpm < 5.0], [is_rpmorg=yes], [is_rpmorg=no])])
+AC_MSG_CHECKING([for rpmorg (>= 6.0)])
+PKG_CHECK_EXISTS([rpm >= 6.0], [is_rpmorg=yes], [is_rpmorg=no])
 if test "${is_rpmorg}." = "yes."; then
     AC_MSG_RESULT(yes)
     AM_CONDITIONAL(WITH_RPMORG, true)
@@ -286,7 +286,8 @@ if test "${is_rpmorg}." = "yes."; then
 	 ], have_tag_suggests=yes, have_tag_suggests=no)
 else
     AC_MSG_RESULT(no)
-    AM_CONDITIONAL(WITH_RPMORG, false)
+    rpm_version=`$PKG_CONFIG --modversion rpm 2>/dev/null`
+    AC_MSG_ERROR([rpm.org 6.0 or later is required, found rpm ${rpm_version:-without rpm.pc}])
 fi
 
 AC_MSG_CHECKING([for rpm5])

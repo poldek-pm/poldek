@@ -20,7 +20,7 @@ URL:	        http://team.pld.org.pl/~mis/poldek/
 Requires:	rpm
 %{?_with_poldekuser:Requires: sudo}
 BuildRequires:	bzip2-devel
-BuildRequires:	rpm-devel >= 4.0
+BuildRequires:	rpm-devel >= 6.0
 BuildRequires:	openssl-devel
 BuildRequires:	readline-devel
 BuildRequires:	zlib-devel
