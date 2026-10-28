@@ -28,6 +28,7 @@
 #include "log.h"
 #include "pm/pm.h"
 #include "pm_rpm.h"
+#include "rpmcompat.h"
 
 static int extract_rpmds(tn_array *caps, rpmds ds)
 {
@@ -87,12 +88,8 @@ static int get_rpm_internal_caps(tn_array *caps)
     int       i;
     rpmcap_fn functions[] = {
         rpmdsRpmlib,
-#ifdef HAVE_RPMDSUNAME
         pm_rpmdsUname,
-#endif
-#ifdef HAVE_RPMDSCPUINFO
         pm_rpmdsCpuinfo,
-#endif
         NULL,
     };
 

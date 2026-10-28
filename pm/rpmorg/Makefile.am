@@ -14,6 +14,7 @@ libpm_rpm_la_SOURCES =			\
 	misc.c				\
 	rpm.c				\
 	pm_rpm.h			\
+	rpmcompat.h			\
 	rpmhdr.c			\
 	rpminstall.c			\
 	rpm_pkg_ld.c			\
