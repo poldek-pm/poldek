@@ -23,6 +23,7 @@
 #include <fcntl.h>
 
 #include <rpm/rpmlog.h>
+#include <rpm/rpmkeyring.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
@@ -38,17 +39,14 @@
 #include "pkgmisc.h"
 #include "pm_rpm.h"
 
-/* missing rpm prototypes */
-extern rpmRC rpmLeadRead(FD_t fd, char **emsg);
-extern rpmRC rpmReadSignature(FD_t fd, Header *sighp, char ** msg);
-
 static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
 {
     unsigned        flags;
     FD_t            fdt;
-    Header          sign = NULL;
-    HeaderIterator  it;
-    char            *msg = NULL;
+    Header          h = NULL;
+    rpmts           ts;
+    rpmKeyring      keyring;
+    rpmRC           rc;
 
     *signature_flags = 0;
 
@@ -59,22 +57,22 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
         return 0;
     }
 
-    if (rpmLeadRead(fdt, &msg) != RPMRC_OK) {
-        logn(LOGERR, "%s: %s", n_basenam(path), msg);
-        if (msg)
-            free(msg);
-        return 0;
-    }
+    /* read the headers only; an empty keyring keeps rpm from loading
+       the system keyring */
+    ts = rpmtsCreate();
+    keyring = rpmKeyringNew();
+    rpmtsSetKeyring(ts, keyring);
+    rpmKeyringFree(keyring);
+    rpmtsSetVSFlags(ts, RPMVSF_MASK_NODIGESTS | RPMVSF_MASK_NOSIGNATURES);
+    rc = rpmReadPackageFile(ts, fdt, n_basenam(path), &h);
+    rpmtsFree(ts);
 
-    if (rpmReadSignature(fdt, &sign, &msg) != RPMRC_OK) {
-        logn(LOGERR, "%s: rpmReadSignature failed: %s", n_basenam(path), msg);
-        if (msg)
-            free(msg);
-        return 0;
-    }
-
-    if (sign == NULL) {
-        logn(LOGERR, "%s: no signatures available", n_basenam(path));
+    if (rc != RPMRC_OK || h == NULL) {
+        if (rc == RPMRC_NOTFOUND)   /* rpm says nothing about a bad lead */
+            logn(LOGERR, "%s: not an rpm package", n_basenam(path));
+        else
+            logn(LOGERR, "%s: rpmReadPackageFile failed", n_basenam(path));
+        headerFree(h);
         Fclose(fdt);
         return 0;
     }
@@ -87,40 +85,22 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
         Fclose(fdt);
     }
 
-
+    /* rpm copies these from the signature header and refuses a package
+       whose main header has them (CVE-2021-20271): they cannot be faked */
     flags = 0;
-    it = headerInitIterator(sign);
-    unsigned tag;
-    while ((tag = headerNextTag(it)) != RPMTAG_NOT_FOUND) {
-        switch (tag) {
-            case RPMSIGTAG_RSA:
-                flags |= PKGVERIFY_PGP;
-                flags |= PKGVERIFY_GPG;
-                break;
-            case RPMSIGTAG_PGP5:	/* XXX legacy */
-            case RPMSIGTAG_PGP:
-                flags |= PKGVERIFY_PGP;
-                break;
+    if (headerIsEntry(h, RPMTAG_RSAHEADER))
+        flags |= PKGVERIFY_PGP | PKGVERIFY_GPG;
 
-            case RPMSIGTAG_DSA:
-            case RPMSIGTAG_GPG:
-                flags |= PKGVERIFY_GPG;
-                break;
+    if (headerIsEntry(h, RPMTAG_SIGPGP))
+        flags |= PKGVERIFY_PGP;
 
-            case RPMSIGTAG_LEMD5_2:
-            case RPMSIGTAG_LEMD5_1:
-            case RPMSIGTAG_MD5:
-                flags |= PKGVERIFY_MD;
-                break;
+    if (headerIsEntry(h, RPMTAG_DSAHEADER) || headerIsEntry(h, RPMTAG_SIGGPG))
+        flags |= PKGVERIFY_GPG;
 
-            default:
-                continue;
-                break;
-        }
-    }
+    if (headerIsEntry(h, RPMTAG_SIGMD5))
+        flags |= PKGVERIFY_MD;
 
-    headerFreeIterator(it);
-    headerFree(sign);
+    headerFree(h);
     *signature_flags = flags;
     return 1;
 }

@@ -378,6 +378,36 @@ EOF
     fi
 }
 
+# signkey: an unsigned package from a signed source is refused
+testRPMsignkeyUnsigned() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local conf="$TMPDIR/signkey.conf"
+
+    build_package "$REPO" poldek-signkey-unsigned 1-1 \
+        -f /usr/share/poldek-signkey-unsigned/README
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+EOF
+
+    local out
+    if out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-unsigned 2>&1); then
+        echo "$out"
+        fail "unsigned package from a signed source was accepted"
+    fi
+    echo "$out" | grep -q "poldek-signkey-unsigned-1-1.noarch.rpm: .*signature not found" ||
+        fail "unsigned package not refused for a missing signature: $out"
+}
+
 # explicit signed = no disables signature verification even with signkey
 testRPMsignkeySignedNo() {
     skip_if_rpm_testing_off && return
