@@ -211,8 +211,10 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/octet-stream")
             self.send_header("Content-Length", str(len(content)))
+            # whole seconds, cut down as stat() does; a float
+            # takes N.999999999 to N + 1
             self.send_header("Last-Modified", email.utils.formatdate(
-                os.path.getmtime(filepath), usegmt=True))
+                os.stat(filepath).st_mtime_ns // 10**9, usegmt=True))
             self.send_header("Connection", "close")
             self.end_headers()
             self.wfile.write(content)
