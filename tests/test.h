@@ -21,11 +21,7 @@
 #include "capreq.h"
 #include "pm/pm.h"
 #include "config.h"
-#ifdef HAVE_RPMORG
-# include "pm/rpmorg/pm_rpm.h"
-#else
-# include "pm/rpm/pm_rpm.h"
-#endif
+#include "pm/rpmorg/pm_rpm.h"
 #include "pkgmisc.h"
 
 struct test_case {

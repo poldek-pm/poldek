@@ -35,11 +35,7 @@
 #include "pkgdir_intern.h"
 
 #include "pm/pm.h"
-#ifdef HAVE_RPMORG
-# include "pm/rpmorg/pm_rpm.h"
-#else
-# include "pm/rpm/pm_rpm.h"
-#endif
+#include "pm/rpmorg/pm_rpm.h"
 #include "pm/pm.h"
 #include "pkgroup.h"
 

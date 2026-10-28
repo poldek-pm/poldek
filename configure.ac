@@ -15,15 +15,8 @@ AC_CONFIG_HEADERS([config.h])
 VERSION_YEAR=$(date +%Y)
 
 AH_TEMPLATE([ENABLE_TRACE],[])
-AH_TEMPLATE([HAVE_RPM_4_0_4],[])
-AH_TEMPLATE([HAVE_RPM_4_1],[])
-AH_TEMPLATE([HAVE_RPM_4_2],[])
-AH_TEMPLATE([HAVE_RPM_EXTDEPS],[])
-AH_TEMPLATE([HAVE_RPM_HGETCOLOR],[])
 AH_TEMPLATE([HAVE_TM_GMTOFF],[])
 AH_TEMPLATE([HAVE_TM___GMTOFF],[])
-AH_TEMPLATE([HAVE_RPM_HEADER_MAGIC_YES],[])
-AH_TEMPLATE([HAVE_RPM_INT32_TYPE],[])
 AH_TEMPLATE([HAVE_RPM_5],[])
 AH_TEMPLATE([HAVE_RPMORG],[])
 
@@ -232,54 +225,10 @@ dnl RH rpm needs this
 CPPFLAGS="-I/usr/include/rpm $CPPFLAGS"
 AC_CHECK_HEADER([rpm/rpmdb.h], [], AC_MSG_ERROR(["missing required rpmdb.h"]))
 
-AC_MSG_CHECKING([for rpm 4.x])
-AC_EGREP_CPP(yes,
-    [#include <rpm/rpmlib.h>
-     #ifdef RPMDBI_PACKAGES
-	yes
-     #endif
-    ], is_rpm4=yes, is_rpm4=no)
-
-if test "${is_rpm4}." = "no." ; then
-	AC_MSG_RESULT(no)
-else
-	AC_MSG_RESULT(yes)
-	AC_DEFINE([HAVE_RPM_4_0],1,[defined if rpm 4.x is installed])
-	AC_EGREP_CPP(RPMSENSE_SCRIPT_PRE,
-		[ #include <rpm/rpmlib.h>
-		], is_rpm_extdeps=yes, is_rpm_extdeps=no)
-	if test "${is_rpm_extdeps}." = "yes." ; then
-		AC_DEFINE([HAVE_RPM_EXTDEPS])
-	fi
-
-	AC_MSG_CHECKING([for rpm >= 4.0.4])
-	AC_EGREP_CPP(RPMSENSE_KEYRING,
-		[ #include <rpm/rpmcli.h>
-		], is_rpm4_0_4=yes, is_rpm4_0_4=no)
-
-	if test "${is_rpm4_0_4}." = "yes." ; then
-		AC_DEFINE([HAVE_RPM_4_0_4],1,[])
-		CFLAGS="$CFLAGS -D_REENTRANT"
-		AC_MSG_RESULT(yes)
-	else
-	        AC_MSG_RESULT(no)
-	fi
-
-	AC_EGREP_CPP(RPMTAG_PUBKEYS,
-		[ #include <rpm/rpmlib.h>
-		], have_tag_pubkeys=yes, have_tag_pubkeys=no)
-
-        AC_EGREP_CPP(RPMTAG_SUGGESTS,
-		[ #include <rpm/rpmlib.h>
-		], have_tag_suggests=yes, have_tag_suggests=no)
-fi
-
-
 AC_MSG_CHECKING([for rpmorg (>= 6.0)])
 PKG_CHECK_EXISTS([rpm >= 6.0], [is_rpmorg=yes], [is_rpmorg=no])
 if test "${is_rpmorg}." = "yes."; then
     AC_MSG_RESULT(yes)
-    AM_CONDITIONAL(WITH_RPMORG, true)
     AC_DEFINE([HAVE_RPMORG], [1], [])
     AC_EGREP_CPP(RPMTAG_SUGGESTNAME,
          [ #include <rpm/rpmtag.h>
@@ -314,147 +263,25 @@ if test "${have_tag_suggests}." = "yes." ; then
     AC_DEFINE([HAVE_RPMTAG_SUGGESTS], 1, [rpm with RPMTAG_SUGGESTS support])
 fi
 
-AC_EGREP_CPP(RPMTAG_PUBKEYS,
-	 [ #include <rpm/rpmtag.h>
-         ], have_tag_pubkeys=yes, have_tag_pubkeys=no)
-
-if test "${have_tag_pubkeys}." = "yes." ; then
-    AC_DEFINE([HAVE_RPMTAG_PUBKEYS], 1, [rpm with RPMTAG_PUBKEYS])
-fi
-
-dnl Checks for libraries.
-dnl AC_CHECK_LIB(bz2, BZ2_bzCompress)
-dnl AC_CHECK_LIB(z, gzopen)
-dnl AC_CHECK_FUNCS(gzungetc)
-
-DBLIB=""
-if test "${is_rpm4_0_4}." = "no." ; then
-	dnl tocheck: -ldb-3.1 causes link with static lib from /usr/lib
-	dnl instead shared one from /lib
-	#AC_CHECK_LIB(db-3.1, db_create, [DBLIB="-ldb-3.1"],
-	#  AC_CHECK_LIB(db-3.0, db_create, [DBLIB="-ldb-3.0"],
-	#    AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"])
-	#  )
-	#)
-	CPPFLAGS="-I/usr/include/db3 $CPPFLAGS"
-
-	AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])
-	# assume that librpm complied with --enable-db1
-	#if test "${ENABLE_STATIC}." = "yes."; then
-	#	DBLIB="$DBLIB -ldb1"
-	#fi
-else
-    if test "${is_rpmorg}." = "yes."; then
-	: ;
-    else
-        AC_CHECK_LIB(db4, db_create, [DBLIB="-ldb4" DBINCLUDE="-I/usr/include/db4"],
-            [AC_CHECK_LIB(db-4.1, db_create, [DBLIB="-ldb-4.1" DBINCLUDE="-I/usr/include/db4.1"],
-                 [AC_CHECK_LIB(db-4.0, db_create, [DBLIB="-ldb-4.0" DBINCLUDE="-I/usr/include/db4.0"],
-                     [AC_CHECK_LIB(db-5.2, db_create, [DBLIB="-ldb-5.2" DBINCLUDE="-I/usr/include/db5.2"],,[$LIBS])],
-                              [$LIBS])],, [$LIBS])],, [$LIBS])
-    fi
-
-    if test "${ENABLE_STATIC}." = "yes."; then
-    	DBLIB="$DBLIB"
-    fi
-
-    CPPFLAGS="$DBINCLUDE $CPPFLAGS"
-fi
-
-if test "${is_rpm4_0_4}." = "yes." ; then
-	AC_CHECK_LIB(beecrypt, dhaes_pContextInitEncrypt,
-	have_beecrypt=yes, have_beecrypt=no)
-fi
-
 AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR(["rpmio not found"]))
 
-AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $DBLIB $LIBS"],
-	AC_CHECK_LIB(rpm, rpmReadPackageHeader,
-		[LIBS="-lrpm $DBLIB $LIBS"],
-		AC_CHECK_LIB(rpm, rpmReadPackageFile,
-			[AC_CHECK_LIB(elf, elf_begin)
-			 LIBS="-lrpm $DBLIB $LIBS"
-			 AC_DEFINE([HAVE_RPM_4_1],1,[])],
-			AC_MSG_ERROR(["rpmlib not found"]),
-			[$DBLIB]),
-		[$DBLIB]),
-	    [$DBLIB])
+AC_CHECK_LIB(rpm, rpmReadPackageFile, [LIBS="-lrpm $LIBS"],
+	AC_MSG_ERROR(["rpmlib not found"]))
 
-AC_CHECK_FUNCS(rpmlog vrpmlog rpmCheckSig rpmVerifySignature)
+AC_CHECK_FUNCS(rpmlog)
 AC_CHECK_FUNCS(rpmdbIndexKeyIteratorInit)
 dnl a digest of the database contents, see pm_rpm_dbstamp()
 AC_CHECK_FUNCS(rpmdbCookie)
 
-dnl rpm 4.2?
-AC_CHECK_FUNCS(rpmtsColor, AC_DEFINE([HAVE_RPM_4_2],1,[]))
-AC_CHECK_FUNCS(hGetColor, AC_DEFINE([HAVE_RPM_HGETCOLOR],1,[]))
 dnl rpm 6.0? arch colors (archcolor: table), see rpmGetArchColor()
 AC_CHECK_FUNCS(rpmGetArchColor, AC_DEFINE([HAVE_RPMGETARCHCOLOR],1,[]))
 
-if test "${is_rpmorg}." != "yes."; then
-AC_CHECK_HEADERS([db_185.h],,[
-	AC_MSG_WARN(["disabled synchronization with db file-dependencies"]) ])
-AC_CHECK_FUNCS(__db185_open)
-fi
-
-dnl 4.0.4 has cross dependenecies(?)
-if test "${is_rpm4_0_4}." = "yes." -a "${ENABLE_STATIC}." = "yes." ; then
-	if "${have_beecrypt}." = "yes." ; then
-		LIBS="$LIBS -lbz2 -lrpmio -lbeecrypt -lpthread"
-	fi
-	LIBS="$LIBS -lbz2 -lrpmio"
-fi
-
-AC_CHECK_FUNCS(rpmdsRpmlib,,
-               [ AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
-          	 [AC_MSG_WARN(["poldek will not work fine with rpmlib\(...\) capabilities"])],
-          	 [$CONF_IN_LDFLAGS])], [$CONF_IN_LDFLAGS])
-
-dnl FIXME: it is inline function, how to detect it without AC_EGREP_CPP?
-AC_CHECK_FUNCS(headerFreeData)
-
 dnl rpm 4.4.6
 AC_CHECK_FUNCS(rpmdsUname)
-AC_CHECK_FUNCS(rpmdsSysinfo)
-AC_CHECK_FUNCS(rpmdsGetconf)
 AC_CHECK_FUNCS(rpmdsCpuinfo)
-
-dnl rpm 4.4.7
-dnl  - killed rpmMachineScore and rpmGetVar
-AC_CHECK_FUNCS(rpmMachineScore)
-AC_CHECK_FUNCS(rpmPlatformScore)
-AC_CHECK_FUNCS(rpmGetVar)
-AC_CHECK_FUNCS(rpmioAccess)
-dnl  - new _rpmvercmp()
-AC_CHECK_FUNCS(_rpmvercmp)
 
 dnl rpm 4.4.9
 AC_CHECK_HEADERS([rpm/rpmevr.h])
-
-dnl rpm 5.x
-dnl fnpyKey provider
-AC_CHECK_HEADERS([rpm/rpmcb.h])
-AC_CHECK_FUNCS(rpmpkgRead)
-
-AC_CHECK_FUNCS(headerNVR)     # removed since 5.0
-AC_CHECK_FUNCS(headerNEVRA)
-AC_CHECK_FUNCS(rpmErrorString)
-
-AC_CHECK_TYPE([rpmmi],
-	      [AC_DEFINE([HAVE_RPMMI], 1, [rpm with database iterator])],
-	      [],
-	      [[#include <rpm/rpmtypes.h>]])
-
-dnl  - removed enum (not macro) HEADER_MAGIC_YES
-if test "${is_rpm4}." = "yes." ; then
-   AC_EGREP_CPP(HEADER_MAGIC_YES,
-               [ #include <rpm/header.h>
-               ], AC_DEFINE([HAVE_RPM_HEADER_MAGIC_YES], 1, []))
-   dnl and renamed RPM_INT32_TYPE to RPM_UIINT32_TYPE
-   AC_EGREP_CPP(RPM_INT32_TYPE,
-               [ #include <rpm/header.h>
-               ], AC_DEFINE([HAVE_RPM_INT32_TYPE], 1, []))
-fi
 
 dnl metadata & xml2
 AC_ARG_WITH(xml-metadata,
@@ -639,7 +466,6 @@ AC_CONFIG_FILES([
         pkgdir/rpmdb/Makefile
         pkgdir/metadata/Makefile
         pm/Makefile
-        pm/rpm/Makefile
         pm/rpmorg/Makefile
         pm/pset/Makefile
         sigint/Makefile
