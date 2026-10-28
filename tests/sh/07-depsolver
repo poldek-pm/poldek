@@ -456,6 +456,19 @@ testUpgradeObsolete() {
     try_install a "a,a-devel,a-static,bar" "a,a-devel,a-static,foo"
 }
 
+# a capability lost with two obsoleted packages is one broken requirement
+testUpgradeObsoletedSameCap() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1 -p x
+    build_installed b 1-1 -p x
+    build_installed c 1-1 -r x
+    build n 1-1 -o a -o b
+
+    local n
+    n=$($POLDEK_INSTALL -uv --test --noask n 2>&1 | grep -c "x is required by installed c-1-1")
+    assertEquals "the broken requirement should be reported once" "1" "$n"
+}
+
 # note: rpm6 ERASE for the same arch family, for arch aliases (amd64/x86_64)
 # and for noarch; KEEP BOTH across families (x86_64 vs i686 vs x32).
 testUpgradeMultilib() {

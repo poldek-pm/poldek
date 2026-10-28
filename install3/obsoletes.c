@@ -607,9 +607,12 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
     if (changed_caps == NULL)   /* holds the unsatisfied ones too */
         return 0;
 
+    n_array_sort(changed_caps);     /* uniq drops adjacent duplicates only */
     n_array_uniq(changed_caps);
-    if (unsatisfied_caps)
+    if (unsatisfied_caps) {
+        n_array_sort(unsatisfied_caps);
         n_array_uniq(unsatisfied_caps);
+    }
 
     orphaned = pkgs_array_new_ex(16, pkg_cmp_recno);
 
