@@ -30,6 +30,7 @@
 #include "cli.h"
 #include "arg_packages.h"
 #include "poldek_util.h"
+#include "poldek_intern.h"      /* for cctx->ctx->ts, TOFIX */
 
 static inline
 struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
@@ -646,7 +647,7 @@ tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir,
 
 static
 tn_array *do_resolve(struct arg_packages *aps, tn_array *ents,
-                     unsigned flags);
+                     unsigned flags, int multilib);
 
 
 tn_array *poclidek_resolve_dents(const char *path,
@@ -667,13 +668,15 @@ tn_array *poclidek_resolve_dents(const char *path,
     if (poldek_ts_get_arg_count(ts) == 0)
         return n_ref(ents);
 
-    return do_resolve(ts->aps, ents, resolve_flags);
+    /* XXX: should be ts here, needs to be fixed */
+    int multilib = poldek_ts_getop(cctx->ctx->ts, POLDEK_OP_MULTILIB);
+    return do_resolve(ts->aps, ents, resolve_flags, multilib);
 }
 
 
 static
 tn_array *do_resolve(struct arg_packages *aps,
-                     tn_array *ents, unsigned flags)
+                     tn_array *ents, unsigned flags, int multilib)
 {
     tn_array *ments = NULL, *masks;
     int i, j, nmasks;
@@ -743,6 +746,38 @@ tn_array *do_resolve(struct arg_packages *aps,
         }
     }
 
+    /* ls poldek-1.0-1 in multilib mode, for the masks nothing else matched */
+    if (multilib) {
+        int *nvrmasks, nnvrmasks = 0;
+        nvrmasks = alloca(nmasks * sizeof(*nvrmasks));
+        for (j=0; j < nmasks; j++)
+            if (matches[j] == 0)
+                nvrmasks[nnvrmasks++] = j;
+
+        if (nnvrmasks) {
+            for (i=0; i < n_array_size(ents); i++) {
+                struct pkg_dent *ent = n_array_nth(ents, i);
+                char nvr[256];
+                int k;
+
+                if (pkg_dent_isdir(ent) ||
+                    pkg_snprintf(nvr, sizeof(nvr), ent->pkg_dent_pkg) <= 0)
+                    continue;
+
+                for (k=0; k < nnvrmasks; k++) {
+                    const char *mask = n_array_nth(masks, nvrmasks[k]);
+
+                    if (*mask == '@')
+                        mask++;
+
+                    if (fnmatch(mask, nvr, 0) == 0) {
+                        n_array_push(ments, pkg_dent_link(ent));
+                        matches[nvrmasks[k]]++;
+                    }
+                }
+            }
+        }
+    }
 
     for (j=0; j < n_array_size(masks); j++) {
         const char *mask = n_array_nth(masks, j);

@@ -1101,6 +1101,38 @@ testInstallExplicitArchMultilib() {
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
+# name-version-release without arch should install only native arch, as
+# a bare name does
+testInstallNvrMultilibNativeOnly() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    build a 1-1 -a x86_64 -f "/hello.x86_64"
+    build a 1-1 -a i686 -f "/hello.i686"
+
+    msgn "Name-version-release should pick only native arch"
+    try_install a-1-1 "a-1-1.x86_64"
+
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+# a full package id wins over name-version-release: "m-1-1.i686" is the
+# i686 package, not also m-1-1.i686.x86_64 (release "1.i686")
+testInstallExplicitArchOverNvrMultilib() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    build m 1-1 -a i686 -f "/m.i686"
+    build m 1-1.i686 -a x86_64 -f "/m.x86_64"
+
+    msgn "Explicit arch should install only the i686 package"
+    try_install m-1-1.i686 "m-1-1.i686"
+
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
 # glob pattern should install all matching arches
 testInstallGlobMultilibAllArches() {
     ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"

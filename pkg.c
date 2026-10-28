@@ -1425,10 +1425,25 @@ char *pkg_evr_str(char *str, size_t size, const struct pkg *pkg)
 
 int pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
-    int n;
+    size_t nl, vl, rl, n;
 
-    n = n_snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
-    return n;
+    nl = strlen(pkg->name);
+    vl = strlen(pkg->ver);
+    rl = strlen(pkg->rel);
+    n = nl + vl + rl + 2;
+
+    if (n < size) {
+        char *p = str;
+        memcpy(p, pkg->name, nl); p += nl;
+        *p++ = '-';
+        memcpy(p, pkg->ver, vl); p += vl;
+        *p++ = '-';
+        memcpy(p, pkg->rel, rl); p += rl;
+        *p = '\0';
+        return n;
+    }
+
+    return n_snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
 }
 
 char *pkg_str(char *str, size_t size, const struct pkg *pkg)

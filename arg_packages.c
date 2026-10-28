@@ -456,15 +456,19 @@ tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
 }
 
 /*
-  multilib: should this package be skipped for a bare-name mask match?
+  multilib: should this package be skipped for a bare-name mask match
+  (a bare name, or NAME-VERSION-RELEASE without .ARCH)?
 
   Problem: "install curl" on a multilib system resolves to curl.x86_64,
   curl.i686, curl.x32 — pulling in a massive foreign-arch dependency
   chain.  The user just wanted the native-arch package.
 
-  This only applies to bare-name matches (strcmp with pkg->name).
-  Explicit names ("install curl-1.0-1.i686") and globs ("install curl*")
-  go through the fnmatch path and are not affected.
+  This only applies to bare-name matches ("install curl",
+  "install curl-1.0-1"). Explicit arches ("install curl-1.0-1.i686") and
+  globs that cover the arch ("install curl*") match pkg_id() and are not
+  affected.
+  A package set's default provider ("@foo curl") is picked in one
+  arch only, so there any match prefers a native one.
 
   Returns true if the package should be skipped:
   - caller asked for PREFER_NATIVE (install path, not ls/search)
@@ -540,6 +544,48 @@ int resolve_masks(tn_array *re,
                     n_array_push(re, pkg_link(pkg));
 
                 matches[j]++;
+            }
+        }
+    }
+
+    /* NAME-VERSION-RELEASE without .ARCH, as a bare name, for the masks
+       nothing matched by name or by package id; multilib only */
+    if (poldek_conf_MULTILIB) {
+        int *nvrmasks, nnvrmasks = 0;
+
+        nvrmasks = alloca(nmasks * sizeof(*nvrmasks));
+        for (j=0; j < nmasks; j++)
+            if (matches[j] == 0 && first_foreign_id[j] == NULL)
+                nvrmasks[nnvrmasks++] = j;
+
+        if (nnvrmasks) {
+            for (i=0; i < n_array_size(avpkgs); i++) {
+                struct pkg *pkg = n_array_nth(avpkgs, i);
+                char nvr[256];
+                int k;
+
+                if (pkg_snprintf(nvr, sizeof(nvr), pkg) <= 0)
+                    continue;
+
+                for (k=0; k < nnvrmasks; k++) {
+                    const char *mask = n_array_nth(aps->package_masks, nvrmasks[k]);
+
+                    j = nvrmasks[k];
+                    if (*mask == '@')
+                        mask++;
+
+                    if (fnmatch(mask, nvr, 0) != 0)
+                        continue;
+
+                    if (multilib_skip_foreign(pkg, flags)) {
+                        if (!first_foreign_id[j])
+                            first_foreign_id[j] = pkg_id(pkg);
+                    } else {
+                        if (re)
+                            n_array_push(re, pkg_link(pkg));
+                        matches[j]++;
+                    }
+                }
             }
         }
     }
@@ -660,9 +706,53 @@ static int verify_package_caps(struct arg_packages *aps, tn_array *resolved_pkgs
     return n_hash_size(aps->resolved_caps);
 }
 
+/* the first provider the default's mask names, a native-arch one if any;
+   NAME-VERSION-RELEASE without .ARCH is tried only when nothing else matches */
+static struct pkg *find_default_provider(tn_array *pkgs, const char *mask,
+                                         unsigned flags)
+{
+    struct pkg *first = NULL;
+    int j;
+
+    for (j=0; j < n_array_size(pkgs); j++) {
+        struct pkg *p = n_array_nth(pkgs, j);
+
+        if (strcmp(p->name, mask) != 0 && fnmatch(mask, pkg_id(p), 0) != 0)
+            continue;
+
+        if (!multilib_skip_foreign(p, flags))
+            return p;
+
+        if (first == NULL)
+            first = p;
+    }
+
+    if (first)
+        return first;
+
+    for (j=0; j < n_array_size(pkgs); j++) {
+        struct pkg *p = n_array_nth(pkgs, j);
+        char nvr[256];
+
+        if (pkg_snprintf(nvr, sizeof(nvr), p) <= 0 ||
+            fnmatch(mask, nvr, 0) != 0)
+            continue;
+
+        if (!multilib_skip_foreign(p, flags)) {
+            first = p;
+            break;
+        }
+
+        if (first == NULL)
+            first = p;
+    }
+
+    return first;
+}
+
 static
 tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps,
-                                struct pkgset *ps)
+                                struct pkgset *ps, unsigned flags)
 {
     struct pset_virtual_ent *ent;
     tn_array *keys = n_hash_keys(aps->resolved_caps);
@@ -678,17 +768,8 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps,
         pkgs = n_hash_get(aps->resolved_caps, key);
 
         ent = aps->pset_virtuals ? n_hash_get(aps->pset_virtuals, key) : NULL;
-        if (ent && ent->mask) {
-            int j;
-            for (j=0; j < n_array_size(pkgs); j++) {
-                struct pkg *p = n_array_nth(pkgs, j);
-                if (strcmp(p->name, ent->mask) == 0 ||
-                    fnmatch(ent->mask, pkg_id(p), 0) == 0) {
-                    pkg = n_array_nth(pkgs, j);
-                    break;
-                }
-            }
-        }
+        if (ent && ent->mask)
+            pkg = find_default_provider(pkgs, ent->mask, flags);
 
         if (pkg == NULL) {      /* no default or default not found */
             int j, ndragged_min = INT_MAX - 1;
@@ -815,7 +896,7 @@ int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
         verify_package_caps(aps, aps->resolved_pkgs);
 
     if (flags & ARG_PACKAGES_RESOLV_CAPSINLINE) {
-        resolve_resolved_caps(aps->resolved_pkgs, aps, ps);
+        resolve_resolved_caps(aps->resolved_pkgs, aps, ps, flags);
         n_array_sort(aps->resolved_pkgs);
         n_array_uniq(aps->resolved_pkgs);
         if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)
