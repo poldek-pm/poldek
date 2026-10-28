@@ -185,8 +185,8 @@ START_TEST (test_eval) {
         tn_array *re = booldep_eval(dep, &ctx);
 
 
-        NTEST_LOG("%d. %s => expected %s, got %s\n", i, e->expr, e->expected,
-                  re ? array_str(re) : NULL);
+        NTEST_LOG("%d. %s => expected %s, got %s\n", i, e->expr,
+                  e->expected ? e->expected : "(null)", re && n_array_size(re) > 0 ? array_str(re) : "(null)");
 
         expect_notnull(re);
 
