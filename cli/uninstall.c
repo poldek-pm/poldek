@@ -256,9 +256,10 @@ static int uninstall(struct cmdctx *cmdctx)
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
 
-    /* must be resolved here to allow globbing, RPM doesn't support globs AFAIK */
+    /* must be resolved here to allow globbing, RPM doesn't support globs AFAIK;
+       a name takes all its installed versions, as -e does */
     pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, ts,
-                                     ARG_PACKAGES_RESOLV_EXACT,
+                                     ARG_PACKAGES_RESOLV_AMBIGUOUSOK,
                                      PKG_DENT_LDFIND_STUBSOK);
     if (pkgs == NULL) {
         err++;

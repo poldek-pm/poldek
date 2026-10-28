@@ -1012,6 +1012,21 @@ testUninstall() {
     try_uninstall a "a-1-1,a-devel-1-1"
 }
 
+# in the shell a name erases every installed version of it, as -e does
+testUninstallShellAllVersions() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1
+    build_installed a 2-1
+    build_installed b 1-1
+
+    local out rc
+    out=$($POLDEK_UNINSTALL --noask --parsable-tr-summary --cmd "uninstall --test a" 2>&1)
+    rc=$?
+    assertEquals "uninstall failed" "0" "$rc"
+    out=$(echo "$out" | grep -E '^%[RD]|ambiguous' | sort | tr '\n' ' ')
+    assertEquals "unexpected uninstall result" "%R a-1-1 %R a-2-1 " "$out"
+}
+
 testUninstallGreedy() {
     msgn "Preparing repositories..."
     build_installed d 1-1       # to prevent sh from uninstalling

@@ -619,7 +619,8 @@ int resolve_masks(tn_array *re,
             rc = 0;
         }
 
-        if ((flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS) == 0 && matches_bycmp[j] > 1) {
+        if ((flags & (ARG_PACKAGES_RESOLV_UNAMBIGUOUS | ARG_PACKAGES_RESOLV_AMBIGUOUSOK)) == 0 &&
+            matches_bycmp[j] > 1) {
             int pri = (flags & ARG_PACKAGES_RESOLV_EXACT) ? LOGERR : LOGWARN;
             if (!quiet)
                 logn(pri, _("%s: ambiguous name"), mask);
