@@ -18,21 +18,19 @@
 #include "../vfile.h"
 #define fail_ifnot fail_unless
 
-/* the mtime of NAME in the test server's data directory */
-static inline time_t server_mtime(const char *name)
+/* set the mtime of NAME in the test server's data directory to the last
+   nanosecond of second SEC, which a server rounding the time sends as SEC + 1 */
+static inline int set_server_mtime(const char *name, time_t sec)
 {
     char path[PATH_MAX];
-    struct stat st;
+    struct timespec ts[2] = { { sec, 999999999 }, { sec, 999999999 } };
     const char *datadir = getenv("TEST_DATA_DIR");
 
-    if (datadir == NULL)
+    if (datadir == NULL ||
+        (size_t)snprintf(path, sizeof(path), "%s/%s", datadir, name) >= sizeof(path))
         return -1;
 
-    if ((size_t)snprintf(path, sizeof(path), "%s/%s", datadir, name) >= sizeof(path) ||
-        stat(path, &st) != 0)
-        return -1;
-
-    return st.st_mtime;
+    return utimensat(AT_FDCWD, path, ts, 0);
 }
 
 /* preserve TZ across a test case; use_zone_with_dst() changes it */

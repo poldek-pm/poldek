@@ -138,7 +138,9 @@ class FTPSession:
                     self.send("550 no such file\r\n")
             elif cmd == 'MDTM':
                 if os.path.isfile(self.localpath()):
-                    ts = time.gmtime(os.path.getmtime(self.localpath()))
+                    # whole seconds, cut down as stat() does; a float
+                    # takes N.999999999 to N + 1
+                    ts = time.gmtime(os.stat(self.localpath()).st_mtime_ns // 10**9)
                     self.send("213 %s\r\n" % time.strftime("%Y%m%d%H%M%S", ts))
                 else:
                     self.send("550 no such file\r\n")

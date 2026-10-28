@@ -119,16 +119,16 @@ START_TEST(test_ftp_keeps_server_mtime)
 {
     char dest[PATH_MAX];
     struct stat st;
-    time_t expected;
+    time_t expected = 1720000000;   /* July, summer time in the zone below */
 
     fail_if(ftp_port == 0);
     use_zone_with_dst();
+    fail_if(set_server_mtime(TEST_FILE_SMALL, expected) != 0);
 
     fail_if(fetch_ftp(TEST_FILE_SMALL) == 0);
     if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
         ck_abort_msg("path truncated");
     fail_if(stat(dest, &st) != 0);
-    expected = server_mtime(TEST_FILE_SMALL);
     ck_assert_msg(st.st_mtime == expected,
                   "mtime %ld != server %ld", (long)st.st_mtime, (long)expected);
 }
