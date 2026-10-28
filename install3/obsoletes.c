@@ -50,6 +50,24 @@ static int boolreq_names_cap(const struct capreq *req, const tn_array *caps)
     return found;
 }
 
+/* does a cap in caps satisfy req? */
+static int caps_match_req(tn_array *caps, const struct capreq *req)
+{
+    int i = capreq_arr_find(caps, capreq_name(req));
+
+    for (; i >= 0 && i < n_array_size(caps); i++) {
+        const struct capreq *cap = n_array_nth(caps, i);
+
+        if (strcmp(capreq_name(cap), capreq_name(req)) != 0)
+            break;
+
+        if (cap_match_req(cap, req, 1))
+            return 1;
+    }
+
+    return 0;
+}
+
 static struct orphan *orphan_new(int indent, struct i3ctx *ictx,
                                  struct pkg *pkg, tn_array *caps,
                                  tn_array *changed_caps)
@@ -62,14 +80,15 @@ static struct orphan *orphan_new(int indent, struct i3ctx *ictx,
     o->reqs = capreq_arr_new(4);
     n_array_ctl_set_freefn(o->reqs, NULL); /* weak ref */
 
-    for (i=0; caps && i < n_array_size(caps); i++) {
-        const struct capreq *req;
-        struct capreq *cap = n_array_nth(caps, i);
+    /* each requirement a lost cap satisfied; pkg_requires_cap() would
+       skip a plain x when x = 1 goes */
+    for (i=0; caps && pkg->reqs && i < n_array_size(pkg->reqs); i++) {
+        struct capreq *req = n_array_nth(pkg->reqs, i);
 
-        req = pkg_requires_cap(pkg, cap);
-        tracef(indent, "%s requires %s? %s", pkg_id(pkg), capreq_stra(cap), req ? "yes" : "no");
-        if (req)
-            n_array_push(o->reqs, (struct capreq *)req);
+        if (caps_match_req(caps, req)) {
+            tracef(indent, "%s requires %s? yes", pkg_id(pkg), capreq_stra(req));
+            n_array_push(o->reqs, req);
+        }
     }
 
     /* a boolean requirement names the caps in it, and only the whole

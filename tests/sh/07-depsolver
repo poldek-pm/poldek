@@ -439,6 +439,18 @@ testBeGreedyOnUnmetDeps() {
 }
 
 
+# a plain requirement of a is broken when a goes, though a provides a = 1-1
+testUpgradeObsoletedNameRequirement() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1
+    build_installed c 1-1 -r a
+    build n 1-1 -o a
+
+    local n
+    n=$($POLDEK_INSTALL -uv --test --noask n 2>&1 | grep -c "a is required by installed c-1-1")
+    assertEquals "the broken requirement should be reported" "1" "$n"
+}
+
 # bar obsoletes foo
 testUpgradeObsolete() {
     msgn "Preparing repositories..."
