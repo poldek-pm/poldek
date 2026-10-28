@@ -26,8 +26,7 @@
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
 
-#include <sys/time.h>           /* rpm5 needs timeval */
-#include <stdio.h>              /* rpm5 headers needs FILE* */
+#include <stdio.h>
 
 #include <vfile/vfile.h>
 

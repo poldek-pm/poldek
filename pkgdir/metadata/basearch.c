@@ -6,11 +6,7 @@
 #include <stdio.h>
 
 #include "pm/pm.h"
-#ifdef HAVE_RPMORG
-# include "pm/rpmorg/pm_rpm.h"
-#else
-# error "rpm5 is not yet supported"
-#endif
+#include "pm/rpmorg/pm_rpm.h"
 
 // taken from libdnf
 static const struct {

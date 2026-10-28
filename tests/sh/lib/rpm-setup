@@ -1,15 +1,6 @@
 #!/bin/sh
 
-# XXX for some reason rpm5 does not create its database correctly if running as ordinary user:
-#  $ rpm --root /tmp/root --initdb
-#  $ rpm --root /tmp/root -ivh --justdb foo-1-1.noarch.rpm
-#  rpmdb: BDB0577 The primary and secondary must be opened in the same environment
-#  error: db3associate:db3.c:1674: db->associate(22): Invalid argument
-#  BDB0624 DBcursor->pget may only be used on secondary indices
-#  error: db3cpget:db3.c:1537: dbcursor->pget(22): Invalid argument
-#  error: error(22) getting keys from Triggername index
-#
-# ...and fakeroot does not help with above
+# rpm --root chroot()s into the target, which takes root
 
 rpm_up() {
     sudo_up

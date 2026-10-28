@@ -17,8 +17,6 @@ VERSION_YEAR=$(date +%Y)
 AH_TEMPLATE([ENABLE_TRACE],[])
 AH_TEMPLATE([HAVE_TM_GMTOFF],[])
 AH_TEMPLATE([HAVE_TM___GMTOFF],[])
-AH_TEMPLATE([HAVE_RPM_5],[])
-AH_TEMPLATE([HAVE_RPMORG],[])
 
 AM_INIT_AUTOMAKE([1.11 foreign no-dist-gzip dist-xz])
 
@@ -229,38 +227,10 @@ AC_MSG_CHECKING([for rpmorg (>= 6.0)])
 PKG_CHECK_EXISTS([rpm >= 6.0], [is_rpmorg=yes], [is_rpmorg=no])
 if test "${is_rpmorg}." = "yes."; then
     AC_MSG_RESULT(yes)
-    AC_DEFINE([HAVE_RPMORG], [1], [])
-    AC_EGREP_CPP(RPMTAG_SUGGESTNAME,
-         [ #include <rpm/rpmtag.h>
-	 ], have_tag_suggests=yes, have_tag_suggests=no)
 else
     AC_MSG_RESULT(no)
     rpm_version=`$PKG_CONFIG --modversion rpm 2>/dev/null`
     AC_MSG_ERROR([rpm.org 6.0 or later is required, found rpm ${rpm_version:-without rpm.pc}])
-fi
-
-AC_MSG_CHECKING([for rpm5])
-PKG_CHECK_EXISTS([rpm >= 5.0 rpm < 6.0], [is_rpm5=yes], [is_rpm5=no])
-
-if test "${is_rpm5}." = "yes."; then
-    AC_DEFINE([HAVE_RPM_5], [1], [])
-    LIBS="$LIBS -lrpmdb"
-    AC_MSG_RESULT(yes)
-    AC_EGREP_CPP(RPMTAG_SUGGESTSNAME,
-         [ #include <rpm/rpmtag.h>
-	 ], have_tag_suggests=yes, have_tag_suggests=no)
-
-dnl rpm5 linking w/o
-    AC_CHECK_LIB(bz2, BZ2_bzCompress)
-    AC_CHECK_LIB(z, gzopen)
-    AC_CHECK_FUNCS(gzungetc)
-    AC_CHECK_LIB(popt, poptReadConfigFile)
-else
-    AC_MSG_RESULT(no)
-fi
-
-if test "${have_tag_suggests}." = "yes." ; then
-    AC_DEFINE([HAVE_RPMTAG_SUGGESTS], 1, [rpm with RPMTAG_SUGGESTS support])
 fi
 
 AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR(["rpmio not found"]))
@@ -268,20 +238,9 @@ AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR(["rpmio not found"]))
 AC_CHECK_LIB(rpm, rpmReadPackageFile, [LIBS="-lrpm $LIBS"],
 	AC_MSG_ERROR(["rpmlib not found"]))
 
-AC_CHECK_FUNCS(rpmlog)
-AC_CHECK_FUNCS(rpmdbIndexKeyIteratorInit)
-dnl a digest of the database contents, see pm_rpm_dbstamp()
-AC_CHECK_FUNCS(rpmdbCookie)
-
-dnl rpm 6.0? arch colors (archcolor: table), see rpmGetArchColor()
-AC_CHECK_FUNCS(rpmGetArchColor, AC_DEFINE([HAVE_RPMGETARCHCOLOR],1,[]))
-
-dnl rpm 4.4.6
+dnl uname() and cpuinfo() dependencies, from PLD's rpm patches
 AC_CHECK_FUNCS(rpmdsUname)
 AC_CHECK_FUNCS(rpmdsCpuinfo)
-
-dnl rpm 4.4.9
-AC_CHECK_HEADERS([rpm/rpmevr.h])
 
 dnl metadata & xml2
 AC_ARG_WITH(xml-metadata,

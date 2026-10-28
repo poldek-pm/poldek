@@ -338,12 +338,11 @@ time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
 char *pm_rpm_dbstamp(void *pm_rpm, const char *dbpath)
 {
     struct stat st;
-    char buf[256], *cookie = NULL;
+    char buf[256], *cookie;
 
     if (dbfile_stat(dbpath, &st) != 0) /* no database */
         return NULL;
 
-#ifdef HAVE_RPMDBCOOKIE
     struct rpmorg_db *db = pm_rpm_opendb(pm_rpm, NULL, "/", dbpath,
                                          O_RDONLY, NULL);
     if (db == NULL)
@@ -353,14 +352,11 @@ char *pm_rpm_dbstamp(void *pm_rpm, const char *dbpath)
     pm_rpm_closedb(db);
     if (cookie == NULL)
         return NULL;
-#else
-    pm_rpm = pm_rpm;
-#endif
 
     n_snprintf(buf, sizeof(buf), "%llu %lld.%09ld %lld %s",
                (unsigned long long)st.st_ino, (long long)st.st_mtim.tv_sec,
                (long)st.st_mtim.tv_nsec, (long long)st.st_size,
-               cookie ? cookie : "-");
+               cookie);
     free(cookie);
     return n_strdup(buf);
 }
@@ -406,7 +402,7 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
     return dir;
 }
 
-#if !defined ENABLE_STATIC && defined HAVE_RPMLOG
+#ifndef ENABLE_STATIC
 /*
 static int rpmlog_callback(rpmlogRec rec, rpmlogCallbackData data) {
     msgn(0, "rpmlogCallback %s", rec->message);
@@ -489,7 +485,7 @@ EXPORT void rpmlog(int prii, const char *fmt, ...)
 
     va_end(args);
 }
-#endif /* HAVE_RPMLOG */
+#endif /* ENABLE_STATIC */
 
 int pm_rpm_vercmp(const char *one, const char *two)
 {

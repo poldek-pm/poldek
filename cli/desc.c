@@ -456,12 +456,8 @@ static void show_suggests(struct cmdctx *cmdctx, struct pkg *pkg, int term_width
     if (pkg->sugs == NULL)
         return;
 
-#ifdef HAVE_RPMORG
     show_weakreqs(cmdctx, "Recommends:", pkg->sugs, WEAK_WEAK, term_width);
     show_weakreqs(cmdctx, "Suggests:", pkg->sugs, WEAK_VERYWEAK, term_width);
-#else
-    show_weakreqs(cmdctx, "Suggests:", pkg->sugs, WEAK_ANY, term_width);
-#endif
 }
 
 static void show_enhances(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)

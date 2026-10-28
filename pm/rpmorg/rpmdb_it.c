@@ -139,11 +139,7 @@ int pm_rpm_db_reqnames(void *dbh, tn_hash *names)
     const void *key;
     size_t keylen;
 
-#ifdef HAVE_RPMDBINDEXKEYITERATORINIT
     ii = rpmdbIndexKeyIteratorInit(rpmtsGetRdb(db->ts), RPMDBI_REQUIRENAME);
-#else                           /* rpm < 4.16: reads the package lists too */
-    ii = rpmdbIndexIteratorInit(rpmtsGetRdb(db->ts), RPMDBI_REQUIRENAME);
-#endif
     if (ii == NULL)
         return 0;
 

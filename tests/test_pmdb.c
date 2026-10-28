@@ -67,7 +67,6 @@ START_TEST (test_custom_rpmdb) {
 }
 END_TEST
 
-#ifdef HAVE_RPMORG              /* tests the header loader of the rpm.org module */
 /* rpm stores LONGFILESIZES instead of FILESIZES in a v6 package and for a file
    of 4 GiB or more; poldek keeps sizes in 32 bits, so 5 GiB becomes UINT32_MAX */
 START_TEST (test_ldhdr_long_file_sizes) {
@@ -163,6 +162,3 @@ END_TEST
 NTEST_RUNNER("PM database", test_system_rpmdb, test_custom_rpmdb,
              test_ldhdr_long_file_sizes, test_ldhdr_dirindex_out_of_range,
              test_ldhdr_file_tag_count);
-#else
-NTEST_RUNNER("PM database", test_system_rpmdb, test_custom_rpmdb);
-#endif

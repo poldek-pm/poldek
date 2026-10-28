@@ -2,15 +2,6 @@
 # $Id$
 # Script for quick build fake foo-packages
 
-rpm5ize_booldep() {
-    local dep="$1"
-    if echo $dep | grep -qP '^\('; then
-        dep=$(echo $dep | tr ' ' '_')
-        dep="__${dep}"
-    fi
-    echo $dep
-}
-
 name=
 version=
 release="1"
@@ -110,11 +101,6 @@ echo "Building $name-$version-$release.$arch.rpm (from spec $SPEC)"
 echo > $SPEC
 echo "%define _target_cpu $arch" >> $SPEC
 echo "%define _noautoreq libc.so.6 rtld" >> $SPEC
-
-# breaks coloring with rpm5 and probably with rpmorg too
-#if grep -q "HAVE_RPMORG 1" ../config.h; then
-#    echo "AutoReqProv: no" >> $SPEC # rpmorg only,
-#fi
 
 echo "Name: $name" >> $SPEC
 echo "Version: $version" >> $SPEC
