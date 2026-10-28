@@ -263,12 +263,13 @@ testPostPreunRequirements() {
 }
 
 # if packages "bar" and "baz" have Obsoletes: foo, Provides: foo, Conflicts: foo,
-# then librpm knows that you can only have "bar" or "baz" but not both
+# then you can only have one of them; Obsoletes: foo names no installed
+# package, so baz does not replace bar and rpm refuses it as a conflict
 testRpmOrgMutualExclusive() {
     build_installed bar -o foo -p foo -c foo
     build baz -o foo -p foo -c foo
 
-    try_install "baz" "baz" "bar"
+    try_install_package_should_fail "dir" "-uv --test" baz
 }
 
 testRpmOrgMutualExclusive_2() {
@@ -465,6 +466,48 @@ testUpgradeConflictReplacedBySecondObsoletes() {
     build z 1-1 -p "'foo = 3'" -o "'foo < 1'" -o "'foo = 2-1'"
 
     try_install x "x,z" "foo"
+}
+
+# Obsoletes: a removes the package a, not c that only provides a
+testUpgradeObsoleteNotProvider() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1
+    build_installed c 1-1 -p a -r a
+    build n 1-1 -o a
+
+    try_install n "n" "a"
+}
+
+# d provides a for c; n obsoletes the package a, so n and d go together
+testUpgradeObsoleteWithProviderPulledIn() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1
+    build_installed c 1-1 -r "'a >= 1'"
+    build d 1-1 -p "'a = 1-1'"
+    build n 1-1 -o a
+
+    try_install n "n,d" "a"
+}
+
+# x is checked against y through its Conflicts on foo; its Obsoletes of the
+# package foo must not refuse y, which only provides foo
+testUpgradeInstalledObsoletesNotProvider() {
+    msgn "Preparing repositories..."
+    build_installed x 1-1 -o foo -c "'foo < 1'"
+    build y 1-1 -p "'foo = 2'"
+
+    try_install y "y"
+}
+
+# x conflicts with foo-2-1 through its foo = 1; z obsoletes foo < 2, which
+# the package version 2-1 does not match, so z does not resolve the conflict
+testUpgradeConflictNotReplacedByProvide() {
+    msgn "Preparing repositories..."
+    build_installed foo 2-1 -p "'foo = 1'"
+    build x 1-1 -c "'foo < 2'"
+    build z 1-1 -p "'foo = 3'" -o "'foo < 2'"
+
+    try_install_package_should_fail "dir" "-uv --test" x
 }
 
 # a capability lost with two obsoleted packages is one broken requirement

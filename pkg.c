@@ -995,7 +995,8 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
         if (strcmp(capreq_name(cnfl), opkg->name) != 0)
             break;
 
-        if (capreq_is_obsl(cnfl) && pkg_match_req(opkg, cnfl, 1)) {
+        /* as in rpm: the package EVR, never its Provides */
+        if (capreq_is_obsl(cnfl) && pkg_evr_match_req(opkg, cnfl, 0)) {
             DBG("chk%d (%s) -> match\n", i, capreq_snprintf_s(cnfl));
             return 1;
         }

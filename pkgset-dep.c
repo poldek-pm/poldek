@@ -431,9 +431,16 @@ tn_array *get_conflicted(int indent, struct pkgset *ps,
             if (capreq_is_bastard(cnfl) && pkg_cmp_name(pkg, spkg) != 0)
                 continue;
 
-            if (capreq_has_ver(cnfl))  /* check version */
-                if (!pkg_match_req(spkg, cnfl, 1 /* strict */))
+            if (capreq_is_obsl(cnfl)) {
+                /* as in rpm: a package name and its EVR, never Provides */
+                if (strcmp(spkg->name, cnflname) != 0 ||
+                    !pkg_evr_match_req(spkg, cnfl, 0))
                     continue;
+
+            } else if (capreq_has_ver(cnfl) &&  /* check version */
+                       !pkg_match_req(spkg, cnfl, 1 /* strict */)) {
+                continue;
+            }
 
             /* do not conflict with myself */
             if (spkg == pkg)
