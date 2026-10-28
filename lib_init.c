@@ -901,6 +901,32 @@ void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts)
     poldek__ts_apply_config(ctx, ts);
 }
 
+/* ts's created before setup miss config and PM-dependent settings
+   (e.g. multilib); they are kept here and synced by poldek_setup().
+   Weak references - poldek_ts_destroy() unregisters itself. */
+void poldek__ts_defer(struct poldek_ctx *ctx, struct poldek_ts *ts)
+{
+    if (ctx->_ts_deferred == NULL)
+        ctx->_ts_deferred = n_array_new(2, NULL, NULL);
+
+    n_array_push(ctx->_ts_deferred, ts);
+}
+
+void poldek__ts_undefer(struct poldek_ctx *ctx, struct poldek_ts *ts)
+{
+    int i;
+
+    if (ctx->_ts_deferred == NULL)
+        return;
+
+    for (i = 0; i < n_array_size(ctx->_ts_deferred); i++) {
+        if (n_array_nth(ctx->_ts_deferred, i) == ts) {
+            n_array_remove_nth(ctx->_ts_deferred, i);
+            break;
+        }
+    }
+}
+
 /* for testing purposes only - test:// fetcher is needed to test
    remote config access */
 static int preload_conf(const char *path)
@@ -1145,6 +1171,16 @@ static
 void poldek_destroy(struct poldek_ctx *ctx)
 {
     ctx = ctx;
+
+    /* orphaned deferred ts's must not touch this list on destroy */
+    if (ctx->_ts_deferred) {
+        while (n_array_size(ctx->_ts_deferred)) {
+            struct poldek_ts *ts = n_array_pop(ctx->_ts_deferred);
+
+            ts->_iflags &= ~TS_CONFIG_LATER;
+        }
+        n_array_free(ctx->_ts_deferred);
+    }
 
     vfile_destroy();
 
@@ -1731,6 +1767,20 @@ int poldek_setup(struct poldek_ctx *ctx)
     }
 
     ctx->_iflags |= SETUP_DONE;
+
+    /* config and PM are known now; finalize ts's created before setup */
+    if (rc && ctx->_ts_deferred) {
+        int i;
+
+        for (i = 0; i < n_array_size(ctx->_ts_deferred); i++) {
+            struct poldek_ts *ts = n_array_nth(ctx->_ts_deferred, i);
+
+            poldek__ts_postconf(ctx, ts);
+            ts->_iflags &= ~TS_CONFIG_LATER;
+        }
+        n_array_clean(ctx->_ts_deferred);
+    }
+
     return rc;
 }
 

@@ -30,7 +30,6 @@
 #include "cli.h"
 #include "arg_packages.h"
 #include "poldek_util.h"
-#include "poldek_intern.h"      /* for cctx->ctx->ts, TOFIX */
 
 static inline
 struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
@@ -668,8 +667,7 @@ tn_array *poclidek_resolve_dents(const char *path,
     if (poldek_ts_get_arg_count(ts) == 0)
         return n_ref(ents);
 
-    /* XXX: should be ts here, needs to be fixed */
-    int multilib = poldek_ts_getop(cctx->ctx->ts, POLDEK_OP_MULTILIB);
+    int multilib = poldek_ts_getop(ts, POLDEK_OP_MULTILIB);
     return do_resolve(ts->aps, ents, resolve_flags, multilib);
 }
 

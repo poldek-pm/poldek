@@ -76,8 +76,6 @@ struct ts_run ts_run_tbl[] = {
 };
 
 
-#define TS_CONFIG_LATER (1 << 0)
-
 static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx);
 static void poldek_ts_destroy(struct poldek_ts *ts);
 
@@ -243,8 +241,10 @@ static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     } else {
         ts->ctx = ctx;
         memcpy(ts->_opvect, ctx->ts->_opvect, sizeof(ts->_opvect));
-        if (!poldek__is_setup_done(ctx))
+        if (!poldek__is_setup_done(ctx)) {
             ts->_iflags |= TS_CONFIG_LATER;
+            poldek__ts_defer(ctx, ts);
+        }
 
         ts->aps = arg_packages_new();
         ts->pmctx = ctx->pmctx;
@@ -296,6 +296,9 @@ static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
 
 static void poldek_ts_destroy(struct poldek_ts *ts)
 {
+    if (ts->ctx && (ts->_iflags & TS_CONFIG_LATER))
+        poldek__ts_undefer(ts->ctx, ts);
+
     ts->_flags = 0;
     ts->ctx = NULL;
 

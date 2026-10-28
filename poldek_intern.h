@@ -61,12 +61,22 @@ struct poldek_ctx {
                                tn_array *choices, int hint);
 
     tn_hash        *_cnf;       /* runtime config */
+    tn_array       *_ts_deferred; /* ts's created before setup, waiting
+                                     for postconf (weak refs) */
     unsigned       _iflags;     /* internal flags */
     int            _refcnt;
 };
 
 int poldek__is_setup_done(struct poldek_ctx *ctx);
+
+/* ts->_iflags: created before setup, poldek_setup() will apply postconf */
+#define TS_CONFIG_LATER (1 << 0)
+
 void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts);
+
+/* register/unregister a TS_CONFIG_LATER ts for sync at poldek_setup() */
+void poldek__ts_defer(struct poldek_ctx *ctx, struct poldek_ts *ts);
+void poldek__ts_undefer(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
 struct pkgdb;
 struct pkgdb *poldek_ts_dbopen(struct poldek_ts *ts, mode_t mode);
