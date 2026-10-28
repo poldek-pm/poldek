@@ -250,7 +250,6 @@ EXPORT int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg);
 EXPORT int pkg_printf(const struct pkg *pkg, const char *str);
 EXPORT int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
 EXPORT char *pkg_str(char *str, size_t size, const struct pkg *pkg);
-EXPORT const char *pkg_noarch_id(const struct pkg *pkg, tn_buf *nbuf);
 
 #define pkg_snprintf_s(pkg) pkg_str(alloca(256), 256, pkg)
 #define pkg_snprintf_s0(pkg) pkg_str(alloca(256), 256, pkg)

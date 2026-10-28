@@ -1425,10 +1425,25 @@ char *pkg_evr_str(char *str, size_t size, const struct pkg *pkg)
 
 int pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
-    int n;
+    size_t nl, vl, rl, n;
 
-    n = n_snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
-    return n;
+    nl = strlen(pkg->name);
+    vl = strlen(pkg->ver);
+    rl = strlen(pkg->rel);
+    n = nl + vl + rl + 2;
+
+    if (n < size) {
+        char *p = str;
+        memcpy(p, pkg->name, nl); p += nl;
+        *p++ = '-';
+        memcpy(p, pkg->ver, vl); p += vl;
+        *p++ = '-';
+        memcpy(p, pkg->rel, rl); p += rl;
+        *p = '\0';
+        return n;
+    }
+
+    return n_snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
 }
 
 char *pkg_str(char *str, size_t size, const struct pkg *pkg)
@@ -1436,22 +1451,6 @@ char *pkg_str(char *str, size_t size, const struct pkg *pkg)
     if (pkg_snprintf(str, size, pkg) > 0)
         return str;
     return NULL;
-}
-
-/* in multilib mode pkg_id() ends in .ARCH; NAME-VERSION-RELEASE, put in
-   nbuf, still names the package for a mask without it; NULL otherwise */
-const char *pkg_noarch_id(const struct pkg *pkg, tn_buf *nbuf)
-{
-    if (!poldek_conf_MULTILIB || pkg_arch(pkg) == NULL)
-        return NULL;
-
-    n_buf_clean(nbuf);
-    n_buf_puts(nbuf, pkg->name);
-    n_buf_puts(nbuf, "-");
-    n_buf_puts(nbuf, pkg->ver);
-    n_buf_puts(nbuf, "-");
-    n_buf_puts_z(nbuf, pkg->rel);
-    return n_buf_ptr(nbuf);
 }
 
 tn_array *pkgs_array_new_ex(int size,

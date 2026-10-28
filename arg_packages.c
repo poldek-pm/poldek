@@ -491,7 +491,7 @@ int resolve_masks(tn_array *re,
                   unsigned flags, int quiet)
 {
     int i, j, nmasks, rc = 1;
-    int *matches, *matches_bycmp, *nvrmasks, nnvrmasks = 0;
+    int *matches, *matches_bycmp;
     const char **first_foreign_id;
 
     nmasks = n_array_size(aps->package_masks);
@@ -549,45 +549,45 @@ int resolve_masks(tn_array *re,
     }
 
     /* NAME-VERSION-RELEASE without .ARCH, as a bare name, for the masks
-       nothing matched by name or by package id */
-    nvrmasks = alloca(nmasks * sizeof(*nvrmasks));
-    for (j=0; j < nmasks; j++)
-        if (matches[j] == 0 && first_foreign_id[j] == NULL)
-            nvrmasks[nnvrmasks++] = j;
+       nothing matched by name or by package id; multilib only */
+    if (poldek_conf_MULTILIB) {
+        int *nvrmasks, nnvrmasks = 0;
 
-    if (nnvrmasks) {
-        tn_buf *nbuf = n_buf_new(128);
+        nvrmasks = alloca(nmasks * sizeof(*nvrmasks));
+        for (j=0; j < nmasks; j++)
+            if (matches[j] == 0 && first_foreign_id[j] == NULL)
+                nvrmasks[nnvrmasks++] = j;
 
-        for (i=0; i < n_array_size(avpkgs); i++) {
-            struct pkg *pkg = n_array_nth(avpkgs, i);
-            const char *nvr = pkg_noarch_id(pkg, nbuf);
-            int k;
+        if (nnvrmasks) {
+            for (i=0; i < n_array_size(avpkgs); i++) {
+                struct pkg *pkg = n_array_nth(avpkgs, i);
+                char nvr[256];
+                int k;
 
-            if (nvr == NULL)
-                continue;
-
-            for (k=0; k < nnvrmasks; k++) {
-                const char *mask = n_array_nth(aps->package_masks, nvrmasks[k]);
-
-                j = nvrmasks[k];
-                if (*mask == '@')
-                    mask++;
-
-                if (fnmatch(mask, nvr, 0) != 0)
+                if (pkg_snprintf(nvr, sizeof(nvr), pkg) <= 0)
                     continue;
 
-                if (multilib_skip_foreign(pkg, flags)) {
-                    if (!first_foreign_id[j])
-                        first_foreign_id[j] = pkg_id(pkg);
-                } else {
-                    if (re)
-                        n_array_push(re, pkg_link(pkg));
+                for (k=0; k < nnvrmasks; k++) {
+                    const char *mask = n_array_nth(aps->package_masks, nvrmasks[k]);
 
-                    matches[j]++;
+                    j = nvrmasks[k];
+                    if (*mask == '@')
+                        mask++;
+
+                    if (fnmatch(mask, nvr, 0) != 0)
+                        continue;
+
+                    if (multilib_skip_foreign(pkg, flags)) {
+                        if (!first_foreign_id[j])
+                            first_foreign_id[j] = pkg_id(pkg);
+                    } else {
+                        if (re)
+                            n_array_push(re, pkg_link(pkg));
+                        matches[j]++;
+                    }
                 }
             }
         }
-        n_buf_free(nbuf);
     }
 
 
@@ -712,7 +712,6 @@ static struct pkg *find_default_provider(tn_array *pkgs, const char *mask,
                                          unsigned flags)
 {
     struct pkg *first = NULL;
-    tn_buf *nbuf;
     int j;
 
     for (j=0; j < n_array_size(pkgs); j++) {
@@ -731,12 +730,12 @@ static struct pkg *find_default_provider(tn_array *pkgs, const char *mask,
     if (first)
         return first;
 
-    nbuf = n_buf_new(128);
     for (j=0; j < n_array_size(pkgs); j++) {
         struct pkg *p = n_array_nth(pkgs, j);
-        const char *nvr = pkg_noarch_id(p, nbuf);
+        char nvr[256];
 
-        if (nvr == NULL || fnmatch(mask, nvr, 0) != 0)
+        if (pkg_snprintf(nvr, sizeof(nvr), p) <= 0 ||
+            fnmatch(mask, nvr, 0) != 0)
             continue;
 
         if (!multilib_skip_foreign(p, flags)) {
@@ -747,7 +746,6 @@ static struct pkg *find_default_provider(tn_array *pkgs, const char *mask,
         if (first == NULL)
             first = p;
     }
-    n_buf_free(nbuf);
 
     return first;
 }
