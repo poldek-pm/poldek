@@ -853,6 +853,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts)
         goto l_end;
     }
 
+    n_array_sort(uctx->unpkgs);  /* uniq drops adjacent duplicates only */
     n_array_uniq(uctx->unpkgs);
     if (nerr == 0 && n_array_size(uctx->unpkgs)) {
         do_process(uctx);

@@ -825,9 +825,8 @@ tn_array *poclidek_resolve_packages(const char *path, struct poclidek_ctx *cctx,
         pkgs = arg_packages_get_resolved(ts->aps);
         if (n_array_size(pkgs) == 0)
             n_array_cfree(&pkgs);
-
-        /* just make sure its the same comparator as in dent */
-        n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+        else /* just make sure its the same comparator as in dent */
+            n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
     }
     n_array_free(avpkgs);
 
