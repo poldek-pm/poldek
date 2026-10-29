@@ -106,6 +106,11 @@ AC_CHECK_HEADERS([ncurses/curses.h],
 	[ CPPFLAGS="-I/usr/include/ncurses $CPPFLAGS" ],
 	[ AC_CHECK_HEADERS(curses.h,, [AC_MSG_ERROR(["curses.h not found"])],) ])
 
+dnl search is built in either mode
+AC_CHECK_LIB(pcre2-8, pcre2_compile_8,,[ AC_MSG_ERROR(["pcre2 not found"])])
+AC_CHECK_HEADER([pcre2.h],,[ AC_MSG_ERROR(["pcre2.h not found"])],
+		[#define PCRE2_CODE_UNIT_WIDTH 8])
+
 AC_ARG_ENABLE(imode,
 [  --disable-imode               turn off interactive mode],
 INTERACTIVE_MODE=$enableval, INTERACTIVE_MODE=yes)
@@ -114,9 +119,6 @@ if test "${INTERACTIVE_MODE}." != "yes."; then
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, false)
 else
 	AC_CHECK_LIB(readline, readline,,[ AC_MSG_ERROR(["readline not found"])])
-	AC_CHECK_LIB(pcre2-8, pcre2_compile_8,,[ AC_MSG_ERROR(["pcre2 not found"])])
-	AC_CHECK_HEADER([pcre2.h],,[ AC_MSG_ERROR(["pcre2.h not found"])],
-			[#define PCRE2_CODE_UNIT_WIDTH 8])
 
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
 	AC_DEFINE([ENABLE_INTERACTIVE_MODE],1,[defined if interactive mode is requested])
