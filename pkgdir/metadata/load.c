@@ -410,8 +410,12 @@ tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
     xmlDocPtr doc;
     xmlNode  *root = NULL, *node;
     tn_array *pkgs;
+    int      opts = XML_PARSE_NONET;
 
-    doc = xmlReadFile(path, NULL, XML_PARSE_NONET | XML_PARSE_UNZIP);
+#if LIBXML_VERSION >= 21400     /* earlier libxml2 always decompresses */
+    opts |= XML_PARSE_UNZIP;
+#endif
+    doc = xmlReadFile(path, NULL, opts);
 
     if (doc == NULL) {
         logn(LOGERR, "%s: parser error", path);
