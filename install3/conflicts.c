@@ -299,6 +299,12 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
 
         for (j = 0; j < n_array_size(dbpkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(dbpkg->cnfls, j);
+/* see pkg.c for the OBSOLETES_MATCH_PROVIDES rationale */
+#ifndef OBSOLETES_MATCH_PROVIDES
+            /* Obsoletes name a package, never one of its Provides */
+            if (capreq_is_obsl(cnfl) && !pkg_eq_capreq(pkg, cap))
+                continue;
+#endif
             if (cap_match_req(cap, cnfl, 1)) {
                 if (resolve_conflict(indent, ictx, pkg, cnfl, dbpkg))
                     continue;

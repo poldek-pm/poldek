@@ -599,8 +599,11 @@ int pkgdb_q_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
 
 /* FIXME: is reverse match should be performed there too? */
         n += get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, cnfl, exclude, ldflags);
+/* see pkg.c for the OBSOLETES_MATCH_PROVIDES rationale */
+#ifdef OBSOLETES_MATCH_PROVIDES
 #ifdef HAVE_RPM_4_1             /* TODO -- code this in pm's module */
         n += get_obsoletedby_cap(db, PMTAG_CAP, dbpkgs, cnfl, exclude, ldflags);
+#endif
 #endif
     }
 

@@ -974,47 +974,46 @@ int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg)
 }
 
 
-/* look up into package caps */
 int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
 {
-    int n;
+    int i;
 
-    DBG("\npkg_obs_match_pkg %s %s\n", pkg_id(pkg), pkg_id(opkg));
+    DBGF("%s %s", pkg_id(pkg), pkg_id(opkg));
 
     if (pkg->cnfls == NULL || n_array_size(pkg->cnfls) == 0)
         return 0;     /* not match */
 
-    if ((n = capreq_arr_find(pkg->cnfls, opkg->name)) == -1) {
+    if ((i = capreq_arr_find(pkg->cnfls, opkg->name)) == -1) {
         return 0;
     }
 
-    struct capreq *cnfl;
+    /* every Conflicts and Obsoletes of that name, from the first one on */
+    for (; i < n_array_size(pkg->cnfls); i++) {
+        struct capreq *cnfl = n_array_nth(pkg->cnfls, i);
 
-    cnfl = n_array_nth(pkg->cnfls, n);
+        if (strcmp(capreq_name(cnfl), opkg->name) != 0)
+            break;
 
-    if (capreq_is_obsl(cnfl) && pkg_match_req(opkg, cnfl, 1)) {
-        DBG("chk%d (%s) -> match\n", n, capreq_snprintf_s(cnfl));
-        return 1;
-    }
-    n++;
-
-    for (int i = n; i<n_array_size(pkg->cnfls); i++) {
-        cnfl = n_array_nth(pkg->cnfls, n);
         if (!capreq_is_obsl(cnfl))
             continue;
 
-        if (strcmp(capreq_name(cnfl), pkg->name) != 0) {
-            DBG("chk%d %s -> NOT match IRET\n", i, capreq_snprintf_s(cnfl));
-            return 0;
+/*
+ rpm semantics: Obsoletes matches the package name and EVR only, never its Provides.
+ The opposite (OBSOLETES_MATCH_PROVIDES) was historically used in PLD for replace
+ packages in one transaction, e.g. crond, cronie and hc-cron all providing
+ crondaemon; kept behind a compile flag for possible future support.
+*/
+#ifndef OBSOLETES_MATCH_PROVIDES
+        if (pkg_evr_match_req(opkg, cnfl, 0)) {
+            DBG("chk%d (%s) -> match\n", i, capreq_snprintf_s(cnfl));
+            return 1;
         }
-
-
+#else
         if (pkg_match_req(opkg, cnfl, 1)) {
             DBG("chk %s -> match\n", capreq_snprintf_s(cnfl));
             return 1;
-        } else {
-            DBG("chk%d %s -> NOT match\n", i, capreq_snprintf_s(cnfl));
         }
+#endif
     }
     DBG("NONE\n");
 
