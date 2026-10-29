@@ -88,7 +88,7 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     /* rpm copies these from the signature header and refuses a package
        whose main header has them (CVE-2021-20271): they cannot be faked */
     flags = 0;
-    if (headerIsEntry(h, RPMTAG_RSAHEADER))
+    if (headerIsEntry(h, RPMTAG_RSAHEADER) || headerIsEntry(h, RPMTAG_OPENPGP))
         flags |= PKGVERIFY_PGP | PKGVERIFY_GPG;
 
     if (headerIsEntry(h, RPMTAG_SIGPGP))
@@ -97,7 +97,9 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     if (headerIsEntry(h, RPMTAG_DSAHEADER) || headerIsEntry(h, RPMTAG_SIGGPG))
         flags |= PKGVERIFY_GPG;
 
-    if (headerIsEntry(h, RPMTAG_SIGMD5))
+    /* v6 packages carry no MD5, only SHA-256 and SHA3-256 digests */
+    if (headerIsEntry(h, RPMTAG_SIGMD5) || headerIsEntry(h, RPMTAG_SHA256HEADER) ||
+        headerIsEntry(h, RPMTAG_SHA3_256HEADER))
         flags |= PKGVERIFY_MD;
 
     headerFree(h);

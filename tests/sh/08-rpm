@@ -86,7 +86,16 @@ testRPMdbcache() {
     fi
 }
 
+# a package in the rpm 6 format (v6) has SHA-256 digests and no MD5
+testRPMformat6() {
+    skip_if_rpm_testing_off && return
+
+    build fmt6 1-1 -F 6
+    try_install fmt6 "fmt6-1-1" ""
+}
+
 signkey_test_prepare() {
+    local rpmformat="${1:-}"
     local keydir="$TMPDIR/signkey-test"
     local gpglog="$TMPDIR/signkey-gpg.log"
     export GNUPGHOME="$keydir/gnupg"
@@ -105,7 +114,7 @@ signkey_test_prepare() {
     gpg --armor --export 'Poldek test key' > "$keydir/key.asc" 2>>"$gpglog"
 
     build_package "$REPO" poldek-signkey-test 1-1 \
-        -f /usr/share/poldek-signkey-test/README
+        -f /usr/share/poldek-signkey-test/README ${rpmformat:+-F $rpmformat}
 
     local fp=$(gpg --list-keys --with-colons 2>>"$gpglog" |
                  awk -F: '$1 == "fpr" { print $10; exit }')
@@ -365,6 +374,32 @@ EOF
     fi
     echo "$out" | grep -q "poldek-signkey-test-1-1: package is not signed by the source's key" ||
         fail "package signed by a revoked key not refused by its signature: $out"
+}
+
+# signkey: a v6 package carries its signature in the OPENPGP tag
+testRPMsignkeyFormat6() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare 6
+    local conf="$TMPDIR/signkey.conf"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $SIGNKEY_TEST_KEY
+EOF
+
+    local out
+    if ! out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-test 2>&1); then
+        echo "$out"
+        fail "signed v6 package from a signed source was refused"
+    fi
+    $RPM -q poldek-signkey-test >/dev/null ||
+        fail "signed v6 package was not installed"
 }
 
 # signkey alone implies signed = yes

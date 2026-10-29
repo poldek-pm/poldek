@@ -19,11 +19,12 @@ changelog=
 arch="noarch"
 sourcedir="rpm"
 rpmdir="repo"
+rpmformat=
 
 COMMAND="$0 $@"
 
 usage_and_exit() {
-    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-a ARCH] [-p PROVIDES] [-r REQUIRES] [-s SUGGESTS] [-f file] [-l 'DATE|ENTRY'] "
+    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-a ARCH] [-p PROVIDES] [-r REQUIRES] [-s SUGGESTS] [-f file] [-l 'DATE|ENTRY'] [-F RPMFORMAT] "
     exit 1
 }
 
@@ -74,6 +75,9 @@ while test $# -gt 0 ; do
 
         -d)
             shift; rpmdir="${1}"; shift;;
+
+        -F)                     # package format, rpm's %_rpmformat
+            shift; rpmformat="${1}"; shift;;
 
         *)
             echo "unknown option ${1}"; exit 1;
@@ -187,8 +191,10 @@ echo -e "* Wed Apr 22 2020 Foo <foo@example.com>\n- $name package changelog thir
 
 [ ! -d "$rpmdir" ] && rpmdir="$TMPDIR"
 
+set --
+[ -n "$rpmformat" ] && set -- --define "_rpmformat $rpmformat"
 # the build time is SOURCE_DATE_EPOCH when the caller sets it
-rpmbuild --define 'use_source_date_epoch_as_buildtime 1' --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC
+rpmbuild --define 'use_source_date_epoch_as_buildtime 1' --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" "$@" --target $arch -bb $SPEC
 ec=$?
 # rpmorg stores packages in $arch subdir
 if [ -d "$rpmdir/$arch" ]; then
