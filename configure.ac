@@ -114,10 +114,9 @@ if test "${INTERACTIVE_MODE}." != "yes."; then
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, false)
 else
 	AC_CHECK_LIB(readline, readline,,[ AC_MSG_ERROR(["readline not found"])])
-	AC_CHECK_LIB(pcre, pcre_compile,,[ AC_MSG_ERROR(["pcre not found"])])
-	AC_CHECK_HEADERS([pcre.h],,[
-		AC_CHECK_HEADERS([pcre/pcre.h],
-			         [CPPFLAGS="-I/usr/include/pcre $CPPFLAGS"], )], )
+	AC_CHECK_LIB(pcre2-8, pcre2_compile_8,,[ AC_MSG_ERROR(["pcre2 not found"])])
+	AC_CHECK_HEADER([pcre2.h],,[ AC_MSG_ERROR(["pcre2.h not found"])],
+			[#define PCRE2_CODE_UNIT_WIDTH 8])
 
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
 	AC_DEFINE([ENABLE_INTERACTIVE_MODE],1,[defined if interactive mode is requested])

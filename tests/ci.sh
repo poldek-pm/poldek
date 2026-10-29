@@ -12,7 +12,7 @@ set -xeu
 # rpm bug? "rpm -Uvh coreutils-... linux-libc-headers-..." fails with unmet dep 'coreutils'
 poldek --noask -uv findutils coreutils
 
-poldek --noask -uv ca-certificates git-core libstdc++ fakeroot autoconf automake libtool rpm-build-tools bzip2-devel check-devel docbook-dtd412-xml docbook2X gettext-autopoint gettext-tools glibc-devel libgomp-devel libxml2-devel lua54-devel ncurses-devel openssl-devel pcre-devel perl-XML-Simple perl-base perl-modules pkgconfig popt-devel readline-devel rpm-devel tar gzip texinfo xmlto xz zlib-devel zstd-devel #| tee ci-poldek.log
+poldek --noask -uv ca-certificates git-core libstdc++ fakeroot autoconf automake libtool rpm-build-tools bzip2-devel check-devel docbook-dtd412-xml docbook2X gettext-autopoint gettext-tools glibc-devel libgomp-devel libxml2-devel lua54-devel ncurses-devel openssl-devel pcre2-8-devel perl-XML-Simple perl-base perl-modules pkgconfig popt-devel readline-devel rpm-devel tar gzip texinfo xmlto xz zlib-devel zstd-devel #| tee ci-poldek.log
 
 git config --global --add safe.directory /poldek
 

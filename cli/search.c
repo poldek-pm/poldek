@@ -36,7 +36,8 @@
 # undef __BSD_VISIBLE
 #endif
 
-#include <pcre.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nmalloc.h>
@@ -52,8 +53,8 @@
 #include "pkgu.h"
 #include "cli.h"
 
-static const unsigned char   *pcre_chartable = NULL;
-static int                    pcre_established = 0;
+static pcre2_general_context *pcre_gcontext = NULL;
+static pcre2_compile_context *pcre_ccontext = NULL;
 
 #define PATTERN_FMASK   0
 #define PATTERN_PCRE    1
@@ -63,8 +64,8 @@ struct pattern {
     char             *regexp;
     int              fnmatch_flags;
     unsigned         pcre_flags;
-    pcre             *pcre;
-    pcre_extra       *pcre_extra;
+    pcre2_code       *pcre;
+    pcre2_match_data *pcre_match;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
@@ -170,19 +171,19 @@ static struct pattern *build_pattern(struct cmdctx *cmdctx, char *arg)
         while (*p) {
             switch (*p) {
                 case 'i':
-                    flags |= PCRE_CASELESS;
+                    flags |= PCRE2_CASELESS;
                     break;
 
                 case 'm':
-                    flags |= PCRE_MULTILINE;
+                    flags |= PCRE2_MULTILINE;
                     break;
 
                 case 's':
-                    flags |= PCRE_DOTALL;
+                    flags |= PCRE2_DOTALL;
                     break;
 
                 case 'x':
-                    flags |= PCRE_EXTENDED;
+                    flags |= PCRE2_EXTENDED;
                     break;
 
                 default:
@@ -207,7 +208,7 @@ static struct pattern *build_pattern(struct cmdctx *cmdctx, char *arg)
     pt->fnmatch_flags = 0;
     pt->pcre_flags = flags;
     pt->pcre = NULL;
-    pt->pcre_extra = NULL;
+    pt->pcre_match = NULL;
     return pt;
 }
 
@@ -296,30 +297,38 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
+static void *pcre_malloc_fn(PCRE2_SIZE size, void *data)
+{
+    (void)data;
+    return n_malloc(size);
+}
+
+static void pcre_free_fn(void *ptr, void *data)
+{
+    (void)data;
+    free(ptr);
+}
+
 static
 void init_pcre(void)
 {
-    if (pcre_established == 0) {
-        pcre_malloc = n_malloc;
-        pcre_free = free;
-        pcre_chartable = pcre_maketables();
-#if 0
-        if (pcre_chartable != NULL)
-            printf("pcre_chartable ON: %s\n", pcre_chartable);
-#endif
-        pcre_established = 1;
+    if (pcre_ccontext == NULL) {
+        pcre_gcontext = pcre2_general_context_create(pcre_malloc_fn, pcre_free_fn, NULL);
+        pcre_ccontext = pcre2_compile_context_create(pcre_gcontext);
+        /* tables for the current locale, not pcre2's built-in "C" ones */
+        pcre2_set_character_tables(pcre_ccontext, pcre2_maketables(pcre_gcontext));
     }
 }
 
 static
-int pattern_compile(struct pattern *pt, int ntimes)
+int pattern_compile(struct pattern *pt)
 {
-    const char       *pcre_err = NULL;
-    int              pcre_err_off = 0;
+    int              pcre_err = 0;
+    PCRE2_SIZE       pcre_err_off = 0;
 
 
     n_assert(pt->pcre == NULL);
-    n_assert(pt->pcre_extra == NULL);
+    n_assert(pt->pcre_match == NULL);
 
 #ifdef FNM_CASEFOLD
     pt->fnmatch_flags |= FNM_CASEFOLD;
@@ -328,24 +337,20 @@ int pattern_compile(struct pattern *pt, int ntimes)
     if (pt->type != PATTERN_PCRE)
         return 1;
 
-    pt->pcre = pcre_compile(pt->regexp, pt->pcre_flags, &pcre_err,
-                            &pcre_err_off, pcre_chartable);
+    pt->pcre = pcre2_compile((PCRE2_SPTR)pt->regexp, PCRE2_ZERO_TERMINATED,
+                             pt->pcre_flags, &pcre_err, &pcre_err_off,
+                             pcre_ccontext);
 
     if (pt->pcre == NULL) {
+        char msg[256];
+
+        pcre2_get_error_message(pcre_err, (PCRE2_UCHAR *)msg, sizeof(msg));
         logn(LOGERR, _("search: pattern: %s:%d: %s"), pt->regexp,
-             pcre_err_off, pcre_err);
+             (int)pcre_err_off, msg);
         return 0;
     }
 
-    if (ntimes > 10) {
-        pcre_err = NULL;
-        pt->pcre_extra = pcre_study(pt->pcre, 0, &pcre_err);
-        if (pt->pcre_extra == NULL && pcre_err) {
-            logn(LOGERR, _("search: pattern study: %s: %s"), pt->regexp,
-                 pcre_err);
-            return 0;
-        }
-    }
+    pt->pcre_match = pcre2_match_data_create_from_pattern(pt->pcre, pcre_gcontext);
     return 1;
 }
 
@@ -364,7 +369,7 @@ int pattern_match(struct pattern *pt, const char *s, int len)
             break;
 
         case PATTERN_PCRE:
-            if (pcre_exec(pt->pcre, pt->pcre_extra, s, len, 0, 0, NULL, 0) == 0)
+            if (pcre2_match(pt->pcre, (PCRE2_SPTR)s, len, 0, 0, pt->pcre_match, NULL) >= 0)
                 match = 1;
             break;
 
@@ -386,14 +391,14 @@ void pattern_free(struct pattern *pt)
     }
 
 
-    if (pt->pcre) {
-        free(pt->pcre);
-        pt->pcre = NULL;
+    if (pt->pcre_match) {
+        pcre2_match_data_free(pt->pcre_match);
+        pt->pcre_match = NULL;
     }
 
-    if (pt->pcre_extra) {
-        free(pt->pcre_extra);
-        pt->pcre_extra = NULL;
+    if (pt->pcre) {
+        pcre2_code_free(pt->pcre);
+        pt->pcre = NULL;
     }
 
     free(pt);
@@ -603,7 +608,7 @@ static int search(struct cmdctx *cmdctx)
         cmdctx->_flags |= OPT_SEARCH_DEFAULT;
 
     init_pcre();
-    if (!pattern_compile(pt, poldek_ts_get_arg_count(cmdctx->ts))) {
+    if (!pattern_compile(pt)) {
         err++;
         goto l_end;
     }
