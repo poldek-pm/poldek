@@ -182,11 +182,12 @@ static int do_verify_signature(const char *path, const char *rootdir,
             return 0;
         }
         rpmtsSetVfyFlags(ts, vfyflags);
-	if ((flags & (PKGVERIFY_PGP | PKGVERIFY_GPG)) == 0) {
-	    int vfylevel = rpmtsVfyLevel(ts);
-	    vfylevel &= ~RPMSIG_SIGNATURE_TYPE;
-	    rpmtsSetVfyLevel(ts, vfylevel);
-	}
+        int vfylevel = rpmtsVfyLevel(ts);
+        if ((flags & (PKGVERIFY_PGP | PKGVERIFY_GPG)) == 0)
+            vfylevel &= ~RPMSIG_SIGNATURE_TYPE;
+        else    /* the default %_pkgverify_level accepts unsigned packages */
+            vfylevel |= RPMSIG_SIGNATURE_TYPE;
+        rpmtsSetVfyLevel(ts, vfylevel);
         rc = rpmVerifySignatures(&qva, ts, fdt, n_basenam(path));
         rpmtsFree(ts);
 

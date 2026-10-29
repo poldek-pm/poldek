@@ -331,6 +331,42 @@ EOF
     fi
 }
 
+# signkey: a package signed by a key revoked since is refused, although rpm
+# lets such a NOTTRUSTED signature pass at its default %_pkgverify_level
+testRPMsignkeyRevoked() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local keydir="$TMPDIR/signkey-test"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local conf="$TMPDIR/signkey.conf"
+    local fp=$(gpg --list-keys --with-colons 2>>"$gpglog" |
+                 awk -F: '$1 == "fpr" { print $10; exit }')
+
+    # gpg keeps a revocation certificate for each key it generates
+    sed 's/^:-----BEGIN/-----BEGIN/' "$GNUPGHOME/openpgp-revocs.d/$fp.rev" |
+        gpg --batch --import >>"$gpglog" 2>&1 || fail "cannot revoke key"
+    gpg --armor --export "$fp" > "$keydir/revoked.asc" 2>>"$gpglog"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $keydir/revoked.asc
+EOF
+
+    local out
+    if out=$($POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --justdb --nodeps --noask -q --install poldek-signkey-test 2>&1); then
+        echo "$out"
+        fail "package signed by a revoked key was installed"
+    fi
+    echo "$out" | grep -q "poldek-signkey-test-1-1: package is not signed by the source's key" ||
+        fail "package signed by a revoked key not refused by its signature: $out"
+}
+
 # signkey alone implies signed = yes
 testRPMsignkeyImpliesSigned() {
     skip_if_rpm_testing_off && return
