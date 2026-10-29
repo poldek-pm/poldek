@@ -134,7 +134,8 @@ static int do_verify_signature(const char *path, const char *rootdir,
             n += n_snprintf(&signam[n], sizeof(signam) - n, "pgp/");
 
         n_assert(n > 0);
-        signam[n - 1] = '\0';   /* eat last '/' */
+        if (n > 0)
+            signam[n - 1] = '\0';   /* eat last '/' */
         logn(LOGWARN, _("%s: %s signature not found"), n_basenam(path),
              signam);
         return 0;
