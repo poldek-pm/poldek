@@ -1484,11 +1484,7 @@ static int poldek_init(struct poldek_ctx *ctx, unsigned flags)
                     break;
 
                 case POLDEK_OP_AUTODIRDEP:
-#if !defined(HAVE_RPMDSUNAME) || defined(HAVE_RPMORG)
                     v = 0;
-#else          /* rpmdsUname - rpm 4.4.6  */
-                    v = 1;
-#endif
                     break;
 
                 default:

@@ -20,10 +20,6 @@
 #include <netinet/in.h>
 #include <trurl/trurl.h>
 
-#ifdef HAVE_RPM_RPMEVR_H
-# define _RPMEVR_INTERNAL 1
-#endif
-
 #include "i18n.h"
 #include "log.h"
 #include "capreq.h"
@@ -48,7 +44,6 @@ static struct rpm_cap_tagset rpm_cap_tags_tab[] = {
     { PMCAP_CAP,  "cap",  RPMTAG_PROVIDENAME, RPMTAG_PROVIDEVERSION, RPMTAG_PROVIDEFLAGS, 0 },
     { PMCAP_CNFL, "cnfl", RPMTAG_CONFLICTNAME, RPMTAG_CONFLICTVERSION, RPMTAG_CONFLICTFLAGS, 0 },
     { PMCAP_OBSL, "obsl", RPMTAG_OBSOLETENAME, RPMTAG_OBSOLETEVERSION, RPMTAG_OBSOLETEFLAGS, CAPREQ_OBCNFL },
-#if HAVE_RPMTAG_SUGGESTS
     { PMCAP_RECO, "reco", RPMTAG_RECOMMENDNAME, RPMTAG_RECOMMENDVERSION, RPMTAG_RECOMMENDFLAGS, 0 },
     { PMCAP_SUG,  "sugg", RPMTAG_SUGGESTNAME, RPMTAG_SUGGESTVERSION, RPMTAG_SUGGESTFLAGS,  CAPREQ_VRYWEAK },
 
@@ -58,21 +53,13 @@ static struct rpm_cap_tagset rpm_cap_tags_tab[] = {
 
     //{ PMCAP_SUG,  "sugg", RPMTAG_SUGGESTNAME, RPMTAG_SUGGESTVERSION, RPMTAG_SUGGESTFLAGS },
 
-#endif
     { 0, 0, 0, 0, 0, 0 },
 };
 
 static unsigned setup_reqflags(unsigned rpmflags, unsigned rflags)
 {
-
-#if RPMSENSE_PREREQ != RPMSENSE_ANY /* rpm 4.4 drops legacy PreReq support */
-    if (isLegacyPreReq(rpmflags)) /* prepared by rpm < 4.0.2  */
-        rflags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
-
-    else
-#endif
-        if (isInstallPreReq(rpmflags))
-            rflags |= CAPREQ_PREREQ;
+    if (isInstallPreReq(rpmflags))
+        rflags |= CAPREQ_PREREQ;
 
     if (isErasePreReq(rpmflags))
         rflags |= CAPREQ_PREREQ_UN;
@@ -87,10 +74,7 @@ static unsigned setup_reqflags(unsigned rpmflags, unsigned rflags)
 
 static int is_suggestion(unsigned flag)
 {
-#if HAVE_RPMTAG_SUGGESTS        /* skipping suggests */
     return (flag & RPMSENSE_MISSINGOK);
-#endif
-    return 0;
 }
 
 

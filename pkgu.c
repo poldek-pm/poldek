@@ -34,11 +34,7 @@
 #include "log.h"
 #include "pkgu.h"
 #include "misc.h"
-#ifdef HAVE_RPMORG
-# include "pm/rpmorg/pm_rpm.h"
-#else
-# include "pm/rpm/pm_rpm.h"
-#endif
+#include "pm/rpmorg/pm_rpm.h"
 
 #define NA_OWNED             (1 << 0)
 #define RECODE_SUMMMARY      (1 << 1) /* needs to be recoded */
@@ -738,7 +734,7 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr, tn_array *loadlangs)
     }
 
     pkgu->vendor = cp_tag(pkgu->_na, h, RPMTAG_VENDOR);
-    pkgu->license = cp_tag(pkgu->_na, h, PM_RPMTAG_LICENSE);
+    pkgu->license = cp_tag(pkgu->_na, h, RPMTAG_LICENSE);
     pkgu->url = cp_tag(pkgu->_na, h, RPMTAG_URL);
     pkgu->distro = cp_tag(pkgu->_na, h, RPMTAG_DISTRIBUTION);
     pkgu->buildhost = cp_tag(pkgu->_na, h, RPMTAG_BUILDHOST);

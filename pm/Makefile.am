@@ -1,11 +1,6 @@
 NULL =
 
-SUBDIRS = pset
-if WITH_RPMORG
-SUBDIRS += rpmorg
-else
-SUBDIRS += rpm
-endif
+SUBDIRS = pset rpmorg
 
 
 AM_CPPFLAGS = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
@@ -17,13 +12,7 @@ libpm_la_SOURCES  = \
 		pm.c pm.h \
 		mod.h mod.c pkgdb.c
 
-pm_modules = pset/libpm_pset.la
-
-if WITH_RPMORG
-pm_modules += rpmorg/libpm_rpm.la
-else
-pm_modules += rpm/libpm_rpm.la
-endif
+pm_modules = pset/libpm_pset.la rpmorg/libpm_rpm.la
 
 libpm_la_LIBADD  = $(pm_modules)
 

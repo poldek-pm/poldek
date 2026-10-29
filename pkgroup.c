@@ -27,11 +27,7 @@
 #include "pkgu.h"
 #include "pkgroup.h"
 #include "misc.h"
-#ifdef HAVE_RPMORG
-# include "pm/rpmorg/pm_rpm.h"
-#else
-# include "pm/rpm/pm_rpm.h"
-#endif
+#include "pm/rpmorg/pm_rpm.h"
 
 struct pkgroup_idx {
     tn_hash *ht;                /* name => struct pkgroup */

@@ -29,13 +29,6 @@
 #include <rpm/rpmdb.h>
 #include <rpm/rpmmacro.h>
 
-/* RPMTAG_COPYRIGHT disappears in 4.4.3, not sure when RPMTAG_LICENSE begins */
-#ifdef RPMTAG_COPYRIGHT
-# define PM_RPMTAG_LICENSE RPMTAG_COPYRIGHT
-#else
-# define PM_RPMTAG_LICENSE RPMTAG_LICENSE
-#endif
-
 #include <trurl/trurl.h>
 #include "poldek.h"
 #include "pm/pm.h"

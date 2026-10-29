@@ -33,11 +33,7 @@
 #include "log.h"
 #include "misc.h"
 
-#ifdef HAVE_RPMORG
-# include "pm/rpmorg/pm_rpm.h"
-#else
-# include "pm/rpm/pm_rpm.h"
-#endif
+#include "pm/rpmorg/pm_rpm.h"
 
 #include "pkgdir.h"
 #include "pkgdir_intern.h"
