@@ -443,10 +443,9 @@ static
 tn_array *divide_into_pipelines(tn_array *cmd_chain)
 {
     tn_array *cmd_chain2;
-    int i, is_err = 0;
+    int is_err = 0;
 
     cmd_chain2 = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
-    i = 0;
     while (n_array_size(cmd_chain)) {
         struct cmd_chain_ent *ent = n_array_shift(cmd_chain);
         if (ent->flags & CMD_CHAIN_ENT_SEMICOLON)
@@ -489,14 +488,11 @@ tn_array *divide_into_pipelines(tn_array *cmd_chain)
             //printf("prev3= %p %p\n", prev, prev->next_piped);
             continue;
         }
-        //printf("push ent[%d] %s, %d\n", i, ent->cmd->name,
-        //       n_array_size(ent->a_argv));
         n_array_push(cmd_chain2, ent);
-        i++;
     }
 
 #if ENABLE_TRACE
-    for (i=0; i < n_array_size(cmd_chain2); i++) {
+    for (int i=0; i < n_array_size(cmd_chain2); i++) {
         struct cmd_chain_ent *ent = n_array_nth(cmd_chain2, i);
         printf("ent[%d]:  %s, %d", i, ent->cmd->name, n_array_size(ent->a_argv));
         while (ent->next_piped) {

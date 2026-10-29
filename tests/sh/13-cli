@@ -155,6 +155,24 @@ testLsExplicitArchOverNvrMultilib()
     assertEquals "m-1-1.i686 should list one package ($out)" "1" "$n"
 }
 
+# search fails when its pattern does not compile
+testSearchInvalidPattern()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    out=$($POLDEK search --perlre '/(/' 2>&1)
+    rc=$?
+    assertTrue "search with an invalid pattern succeeded ($out)" "[ $rc -ne 0 ]"
+
+    out=$($POLDEK search --perlre '/^a$/' 2>&1)
+    assertEquals "search failed ($out)" "0" "$?"
+    echo "$out" | grep -q '^a-1-1'
+    assertEquals "a-1-1 not found ($out)" "0" "$?"
+}
+
 testUpgrade()
 {
     skip_if_rpm_testing_off && return

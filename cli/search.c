@@ -696,5 +696,5 @@ l_end:
 
     if (pt)
         pattern_free(pt);
-    return 1;
+    return err == 0;
 }

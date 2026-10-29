@@ -1142,7 +1142,7 @@ int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg)
 
 int pkgdir_add_packages(struct pkgdir *pkgdir, tn_array *pkgs)
 {
-    int i, n = 0;
+    int i;
     uint8_t *to_add;
 
     to_add = alloca(n_array_size(pkgs));
@@ -1161,7 +1161,6 @@ int pkgdir_add_packages(struct pkgdir *pkgdir, tn_array *pkgs)
 
             pkg->recno = 0;             /* local to pkgdir */
             n_array_push(pkgdir->pkgs, pkg_link(pkg));
-            n++;
         }
     }
 

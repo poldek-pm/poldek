@@ -82,7 +82,7 @@ int mdigest(FILE *stream, unsigned char *md, unsigned *md_size, int digest_type)
 {
     unsigned char buf[8*1024];
     EVP_MD_CTX *ctx;
-    unsigned n, nn = 0;
+    unsigned n;
 
     n_assert(md_size && *md_size);
     ctx = EVP_MD_CTX_create();
@@ -104,10 +104,8 @@ int mdigest(FILE *stream, unsigned char *md, unsigned *md_size, int digest_type)
         n_die("%d: unknown digest type", digest_type);
     }
 
-    while ((n = fread(buf, 1, sizeof(buf), stream)) > 0) {
+    while ((n = fread(buf, 1, sizeof(buf), stream)) > 0)
         EVP_DigestUpdate(ctx, buf, n);
-        nn += n;
-    }
 
     EVP_DigestFinal(ctx, buf, &n);
     EVP_MD_CTX_destroy(ctx);
