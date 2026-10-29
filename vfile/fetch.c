@@ -293,7 +293,7 @@ static void ffetcher_free(struct ffetcher *ftch)
 
 static void process_output(struct p_open_st *st, const char *prefix)
 {
-    int endl = 1, cnt = 0;
+    int endl = 1;
 
 
     if (prefix == NULL)
@@ -344,8 +344,6 @@ static void process_output(struct p_open_st *st, const char *prefix)
 
                 if (c == '\n' || c == '\r')
                     endl = 1;
-
-                cnt++;
             }
         }
     }

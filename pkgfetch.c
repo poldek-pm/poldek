@@ -61,7 +61,7 @@ unsigned pkg_get_verify_signflags(struct pkg *pkg)
 void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
                             const char *destdir, int is_destdir_custom)
 {
-    uint64_t bytesget = 0, bytesdownload = 0, bytesused = 0;
+    uint64_t bytesget = 0, bytesdownload = 0;
     int i;
 
     n_assert(is_destdir_custom == 0); /* not implemented */
@@ -73,7 +73,6 @@ void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
             break;
 
         bytesget += pkg->fsize;
-        bytesused += pkg->size;
         if (pkg->pkgdir && (vf_url_type(pkg->pkgdir->path) & VFURL_REMOTE)) {
             if (pkg_localpath(pkg, path, sizeof(path), destdir)) {
                 struct stat st;

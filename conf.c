@@ -1246,7 +1246,7 @@ tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
                               tn_array *lines)
 {
     tn_hash *ht_sect = NULL;
-    int i, nerr = 0;
+    int i;
 
     if (sectnam == NULL)
         sectnam = global_tag;
@@ -1268,10 +1268,8 @@ tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
 
         n_strdupap(line, &tmp);
 
-        if (split_option_line(tmp, &name, &value, NULL, 0)) {
-            if (!add_param(ht_sect, sectnam, name, value, ADD_PARAM_VALIDATE, NULL, 0))
-                nerr++;
-        }
+        if (split_option_line(tmp, &name, &value, NULL, 0))
+            add_param(ht_sect, sectnam, name, value, ADD_PARAM_VALIDATE, NULL, 0);
     }
 
     return htconf;
