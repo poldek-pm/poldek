@@ -974,12 +974,11 @@ int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg)
 }
 
 
-/* look up into package caps */
 int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
 {
     int i;
 
-    DBG("\npkg_obs_match_pkg %s %s\n", pkg_id(pkg), pkg_id(opkg));
+    DBGF("%s %s", pkg_id(pkg), pkg_id(opkg));
 
     if (pkg->cnfls == NULL || n_array_size(pkg->cnfls) == 0)
         return 0;     /* not match */
@@ -995,11 +994,26 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
         if (strcmp(capreq_name(cnfl), opkg->name) != 0)
             break;
 
-        /* as in rpm: the package EVR, never its Provides */
-        if (capreq_is_obsl(cnfl) && pkg_evr_match_req(opkg, cnfl, 0)) {
+        if (!capreq_is_obsl(cnfl))
+            continue;
+
+/*
+ rpm semantics: Obsoletes matches the package name and EVR only, never its Provides.
+ The opposite (OBSOLETES_MATCH_PROVIDES) was historically used in PLD for replace
+ packages in one transaction, e.g. crond, cronie and hc-cron all providing
+ crondaemon; kept behind a compile flag for possible future support.
+*/
+#ifndef OBSOLETES_MATCH_PROVIDES
+        if (pkg_evr_match_req(opkg, cnfl, 0)) {
             DBG("chk%d (%s) -> match\n", i, capreq_snprintf_s(cnfl));
             return 1;
         }
+#else
+        if (pkg_match_req(opkg, cnfl, 1)) {
+            DBG("chk %s -> match\n", capreq_snprintf_s(cnfl));
+            return 1;
+        }
+#endif
     }
     DBG("NONE\n");
 

@@ -263,6 +263,16 @@ testPostPreunRequirements() {
 }
 
 # if packages "bar" and "baz" have Obsoletes: foo, Provides: foo, Conflicts: foo,
+# then they are replacements (not supported by rpm)
+# test succeed obly with -DOBSOLETES_MATCH_PROVIDES at the moment
+xtestObsoletedProvides() {
+    build_installed bar -o foo -p foo -c foo
+    build baz -o foo -p foo -c foo
+
+    try_install "baz" "baz" "bar"
+}
+
+# if packages "bar" and "baz" have Obsoletes: foo, Provides: foo, Conflicts: foo,
 # then you can only have one of them; Obsoletes: foo names no installed
 # package, so baz does not replace bar and rpm refuses it as a conflict
 testRpmOrgMutualExclusive() {

@@ -410,6 +410,22 @@ tn_array *pkgset_get_required_packages(int indent, struct pkgset *ps,
     return reqpkgs;
 }
 
+static int cnfl_matches_pkg(struct capreq *cnfl, const struct pkg *spkg)
+{
+/* see pkg.c for the OBSOLETES_MATCH_PROVIDES rationale */
+#ifndef OBSOLETES_MATCH_PROVIDES
+    if (capreq_is_obsl(cnfl)) {
+        /* as in rpm: a package name and its EVR, never Provides */
+        return strcmp(spkg->name, capreq_name(cnfl)) == 0 &&
+               pkg_evr_match_req(spkg, cnfl, 0);
+    }
+#endif
+    if (capreq_has_ver(cnfl))
+        return pkg_match_req(spkg, cnfl, 1 /* strict */);
+
+    return 1;
+}
+
 static
 tn_array *get_conflicted(int indent, struct pkgset *ps,
                          const struct pkg *pkg, struct capreq *cnfl, tn_array *re)
@@ -431,16 +447,8 @@ tn_array *get_conflicted(int indent, struct pkgset *ps,
             if (capreq_is_bastard(cnfl) && pkg_cmp_name(pkg, spkg) != 0)
                 continue;
 
-            if (capreq_is_obsl(cnfl)) {
-                /* as in rpm: a package name and its EVR, never Provides */
-                if (strcmp(spkg->name, cnflname) != 0 ||
-                    !pkg_evr_match_req(spkg, cnfl, 0))
-                    continue;
-
-            } else if (capreq_has_ver(cnfl) &&  /* check version */
-                       !pkg_match_req(spkg, cnfl, 1 /* strict */)) {
+            if (!cnfl_matches_pkg(cnfl, spkg))
                 continue;
-            }
 
             /* do not conflict with myself */
             if (spkg == pkg)
