@@ -25,7 +25,7 @@ BuildRequires:	openssl-devel
 BuildRequires:	readline-devel
 BuildRequires:	zlib-devel
 BuildRequires:	zstd-devel
-BuildRequires:	pcre-devel
+BuildRequires:	pcre2-8-devel
 %{!?_without_xml_metadata:BuildRequires: libxml2-devel}
 %{?_with_static:BuildRequires:	bzip2-static}
 %{?_with_static:BuildRequires:	openssl-static}

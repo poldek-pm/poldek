@@ -386,5 +386,30 @@ testDescInstalledRootFromCache()
     done
 }
 
+# search --perlre takes /regexp/flags
+testSearchPerlRegexp()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build abc
+    index
+
+    out=$($POLDEK search --perlre '/^A$/i' 2>&1)
+    assertEquals "search failed ($out)" "0" "$?"
+    echo "$out" | grep -q '^a-1-1'
+    assertEquals "a-1-1 not found ($out)" "0" "$?"
+    n=$(echo "$out" | grep -c '^abc-1-1')
+    assertEquals "abc-1-1 found ($out)" "0" "$n"
+
+    out=$($POLDEK search --perlre '/^A$/' 2>&1)
+    n=$(echo "$out" | grep -c '^a-1-1')
+    assertEquals "a-1-1 found without the i flag ($out)" "0" "$n"
+
+    out=$($POLDEK search --perlre '/(/' 2>&1)
+    echo "$out" | grep -q 'search: pattern: (:1: '
+    assertEquals "no error for an invalid pattern ($out)" "0" "$?"
+}
+
 
 . ./sh/lib/shunit2
