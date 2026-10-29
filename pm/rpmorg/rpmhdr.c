@@ -112,10 +112,7 @@ static rpmVSFlags default_vsflags(void)
 {
     return RPMVSF_NOSHA1HEADER |
            RPMVSF_NOMD5 |
-           RPMVSF_NODSAHEADER |
-           RPMVSF_NORSAHEADER |
-           RPMVSF_NORSA |
-           RPMVSF_NODSA;
+           RPMVSF_MASK_NOSIGNATURES;
 }
 
 int pm_rpmhdr_loadfdt_ts(FD_t fdt, Header *hdr, const char *path, rpmts ts)
