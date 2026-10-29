@@ -402,6 +402,21 @@ EOF
         fail "signed v6 package was not installed"
 }
 
+# reading a source checks no signatures, so a missing key goes unmentioned
+testRPMformat6SignedNoKeyWarning() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare 6
+
+    local out
+    out=$($POLDEK_NOCONF --st dir -s "$REPO" --cmd ls 2>&1)
+    echo "$out" | grep -q "^poldek-signkey-test-1-1" ||
+        fail "signed v6 package not listed: $out"
+    if echo "$out" | grep -q "NOKEY"; then
+        fail "reading a signed v6 package checked its signature: $out"
+    fi
+}
+
 # signkey alone implies signed = yes
 testRPMsignkeyImpliesSigned() {
     skip_if_rpm_testing_off && return
