@@ -734,6 +734,7 @@ int main(int argc, char **argv)
         goto out;
     }
 
+#undef ENABLE_TRACE
 #define ENABLE_TRACE 0
 #if ENABLE_TRACE
     int i = 0;

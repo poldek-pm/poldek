@@ -602,7 +602,7 @@ char *util__abs_path(/* const */ char *path)
         rpath[n] = '\0';
     }
 
-    DBGF("%s -> %s\n", path, rpath);
+    DBGF("%s -> %s\n", path, rpath ? rpath : "(null)");
     return rpath ? rpath : path;
 }
 

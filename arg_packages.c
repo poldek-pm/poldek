@@ -143,7 +143,8 @@ int prepare_file_pkgmask(struct arg_packages *aps,
     }
 
     DBGF("virtname = %s, name = %s, evrstr = %s\n",
-         virtname, name, evrstr);
+         virtname ? virtname : "(null)", name ? name : "(null)",
+         evrstr ? evrstr : "(null)");
 
     if (evrstr)
         poldek_util_parse_evr((char*)evrstr, &epoch, &version, &release);

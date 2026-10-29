@@ -30,6 +30,7 @@
 
 #include <vfile/vfile.h>
 
+#undef  ENABLE_TRACE
 #define  ENABLE_TRACE 0
 
 #include "compiler.h"

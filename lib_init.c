@@ -769,7 +769,7 @@ static tn_array *build_default_op_map(void)
     }
 #if ENABLE_TRACE
     for (i=0; i<n_array_size(op_map); i++) {
-        struct default_op_map_ent *ent = n_array_nth(op_map, i);
+        ent = n_array_nth(op_map, i);
         DBGF("%s %d\n", ent->name, ent->_defaultv);
     }
 #endif

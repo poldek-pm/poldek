@@ -130,7 +130,7 @@ struct pkgdir *load_rpmdbcache(const char *cachedir,
         dir = pkgdir_open_ext(path, rpmdb_path, RPMDBCACHE_PDIRTYPE, dbpath,
                               NULL, 0, lc_lang);
 
-        DBGF("dbcache stamp=%s, db stamp=%s, %s\n", dir ? dir->dbstamp : NULL,
+        DBGF("dbcache stamp=%s, db stamp=%s, %s\n", dir ? dir->dbstamp : "(null)",
              dbstamp, path);
 
         /* made from another state of the database, or by an older poldek */
