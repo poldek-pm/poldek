@@ -73,6 +73,14 @@ void cmd_chain_ent_free(struct cmd_chain_ent *ent)
     free(ent);
 }
 
+/* the tokenizer returns each unquoted ; and | as a token of its own, and a
+   quoted or escaped lone one the same way */
+static
+int is_break(const char *arg, const char *brk)
+{
+    return *arg != '\0' && *(arg + 1) == '\0' && strchr(brk, *arg) != NULL;
+}
+
 static
 int a_argv_contains_break(tn_array *a_argv)
 {
@@ -81,10 +89,8 @@ int a_argv_contains_break(tn_array *a_argv)
 
     for (i=0; i < n_array_size(a_argv); i++) {
         char *arg = n_array_nth(a_argv, i);
-        if (strchr(brk, *arg)) {
-            n_assert(*(arg + 1) == '\0');
+        if (is_break(arg, brk))
             return 1;
-        }
     }
     return 0;
 }
@@ -120,7 +126,7 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
     for (i=0; i < n_array_size(a_argv); i++) {
         char *arg = n_array_nth(a_argv, i);
 
-        if (strchr(brk, *arg) == NULL) {
+        if (!is_break(arg, brk)) {
             int external = 0;
             if (is_external(arg)) {
                 n_array_push(tl, n_strdup("!"));
@@ -134,7 +140,6 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
                 n_array_push(tl, n_strdup("--")); /* pass opt to external cmd */
 
         } else {
-            n_assert(*(arg + 1) == '\0');
             if (n_array_size(tl)) {
                 struct a_argv_ent *ent;
 

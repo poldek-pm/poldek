@@ -124,6 +124,25 @@ testIndexWithoutPackageInfo()
     assertEquals "desc -L failed ($out)" "$?" "0"
 }
 
+# a quoted argument may begin with | or ;
+testCmdQuotedPipeOrSemicolon()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build abc
+    index
+
+    out=$($POLDEK --cmd "search --perlre '|^a\$|' | install" 2>&1)
+    assertEquals "search | install failed ($out)" "0" "$?"
+    rpm_state_check "a" "abc"
+
+    out=$($POLDEK --cmd "search --perlre ';^abc\$;'" 2>&1)
+    assertEquals "search failed ($out)" "0" "$?"
+    echo "$out" | grep -q '^abc-1-1'
+    assertEquals "abc-1-1 not found ($out)" "0" "$?"
+}
+
 # in multilib mode, where package ids end in .ARCH, ls still finds a
 # package by name-version-release
 testLsNvrMultilib()
