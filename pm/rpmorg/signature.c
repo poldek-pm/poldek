@@ -39,7 +39,7 @@
 #include "pkgmisc.h"
 #include "pm_rpm.h"
 
-static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
+static int rpm_signatures(const char *path, unsigned *signature_flags)
 {
     unsigned        flags;
     FD_t            fdt;
@@ -66,6 +66,7 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     rpmtsSetVSFlags(ts, RPMVSF_MASK_NODIGESTS | RPMVSF_MASK_NOSIGNATURES);
     rc = rpmReadPackageFile(ts, fdt, n_basenam(path), &h);
     rpmtsFree(ts);
+    Fclose(fdt);
 
     if (rc != RPMRC_OK || h == NULL) {
         if (rc == RPMRC_NOTFOUND)   /* rpm says nothing about a bad lead */
@@ -73,16 +74,7 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
         else
             logn(LOGERR, "%s: rpmReadPackageFile failed", n_basenam(path));
         headerFree(h);
-        Fclose(fdt);
         return 0;
-    }
-
-    if (fd) {
-        Fseek(fdt, 0, SEEK_SET);
-        *fd = fdt;              /* fd to the caller */
-
-    } else {
-        Fclose(fdt);
     }
 
     /* rpm copies these from the signature header and refuses a package
@@ -117,7 +109,7 @@ static int do_verify_signature(const char *path, const char *rootdir,
 
     n_assert(flags & (PKGVERIFY_MD | PKGVERIFY_GPG | PKGVERIFY_PGP));
 
-    if (!rpm_signatures(path, &presented_signs, NULL))
+    if (!rpm_signatures(path, &presented_signs))
         return 0;
 
     if ((presented_signs & flags) == 0) {
