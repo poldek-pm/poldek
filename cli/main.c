@@ -659,8 +659,13 @@ static int run_poldek(struct poclidek_ctx *cctx)
         rc = poclidek_execline(cctx, g_args.ts, g_args.shcmd);
     } else {
         // shell
+#ifdef ENABLE_INTERACTIVE_MODE
         poclidek_setup(cctx);
         rc = poclidek_shell(cctx);
+#else
+        logn(LOGERR, _("this poldek is built without interactive mode"));
+        rc = 0;
+#endif
     }
 
     return rc;
