@@ -47,7 +47,7 @@ struct poclidek_cmd command_get = {
     COMMAND_NEEDAVAIL,
     "get", N_("PACKAGE..."), N_("Download packages"),
     options, parse_opt,
-    NULL, get, NULL, NULL, NULL, NULL, 0, 5, 0,
+    NULL, get, NULL, free, NULL, NULL, 0, 5, 0,
     "fetch"
 };
 
@@ -64,6 +64,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     logn(LOGERR, _("%s: no such directory"), arg);
                     return EINVAL;
                 }
+                free(cmdctx->_data);
                 cmdctx->_data = n_strdup(arg);
             }
             break;
@@ -107,8 +108,6 @@ static int get(struct cmdctx *cmdctx)
  l_end:
     if (pkgs)
         n_array_free(pkgs);
-
-    n_cfree(&cmdctx->_data);
 
     return err == 0;
 }

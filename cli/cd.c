@@ -31,7 +31,7 @@ struct poclidek_cmd command_cd = {
     COMMAND_SELFARGS | COMMAND_EMPTYARGS | COMMAND_NOOPTS | COMMAND_INTERACTIVE,
     "cd", N_("[PATH]"), N_("Change current package directory"),
     NULL, parse_opt, NULL, cd,
-    NULL, NULL, NULL, NULL, NULL, 0, 0,
+    NULL, free, NULL, NULL, NULL, 0, 0,
     NULL
 };
 
@@ -82,8 +82,6 @@ static int cd(struct cmdctx *cmdctx)
 
     if (!rc)
         logn(LOGERR, "%s: no such directory", path);
-
-    n_cfree(&cmdctx->_data);
 
     //printf("pwd = %s\n", cmdctx->cctx->currdir->name);
     return rc;

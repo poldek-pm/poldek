@@ -88,7 +88,7 @@ struct poclidek_cmd command_ls = {
     COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
     "ls", N_("[PACKAGE...]"), N_("List packages"),
     options, parse_opt, NULL, ls,
-    NULL, NULL, NULL, NULL, NULL, 0, 0,
+    NULL, (tn_fn_free)lsqf_ent_array_free, NULL, NULL, NULL, 0, 0,
     NULL
 };
 
@@ -175,6 +175,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 		if ((array = lsqf_parse(arg)) == NULL)
 		    return EINVAL;
 
+		lsqf_ent_array_free(cmdctx->_data);
 		cmdctx->_data = array;
 	    }
 
@@ -396,11 +397,6 @@ static int ls(struct cmdctx *cmdctx)
 
 
  l_end:
-    if (cmdctx->_flags & OPT_LS_QUERYFMT) {
-	lsqf_ent_array_free(cmdctx->_data);
-	cmdctx->_data = NULL;
-    }
-
     if (ls_ents)
         n_array_free(ls_ents);
 

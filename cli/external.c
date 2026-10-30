@@ -34,7 +34,7 @@ struct poclidek_cmd command_external = {
     COMMAND_SELFARGS | COMMAND_PIPEABLE | COMMAND_HIDDEN | COMMAND_INTERACTIVE,
     "!", N_("COMMAND"), N_("Execute external command"),
     NULL, parse_opt, NULL, external,
-    NULL, NULL, NULL, NULL, NULL, 0, 0,
+    NULL, (tn_fn_free)n_array_free, NULL, NULL, NULL, 0, 0,
     NULL
 };
 
@@ -111,5 +111,10 @@ static int external(struct cmdctx *cmdctx)
     DBGF("close..\n");
     rc = vopen3_close(st) == 0;
     DBGF("END\n");
+
+    vopen3_destroy(&st_process);
+    if (cmdctx->pipe_left)
+        vopen3_destroy(&st_feed);
+
     return rc;
 }

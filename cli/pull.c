@@ -33,6 +33,7 @@ void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
 
 static int pull(struct cmdctx *cmdctx);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
+static void arg_s_free(void *ptr);
 
 static struct argp_option options[] = {
   { 0, 'l', 0, 0, N_("List repos"), OPT_GID_OP_UP + 1 }, /* just for convinience */
@@ -43,7 +44,7 @@ struct poclidek_cmd command_pull = {
     COMMAND_SELFARGS | COMMAND_HASVERBOSE | COMMAND_EMPTYARGS | COMMAND_BATCH,
     "up", N_("REPO..."), N_("Update list of available packages"),
     options, parse_opt,
-    NULL, pull, NULL, NULL, NULL, NULL, NULL, 0, 0,
+    NULL, pull, NULL, arg_s_free, NULL, NULL, NULL, 0, 0,
     NULL
 };
 
@@ -54,6 +55,15 @@ struct arg_s {
     unsigned            action;
     tn_array            *repos;
 };
+
+static void arg_s_free(void *ptr)
+{
+    struct arg_s *arg_s = ptr;
+
+    if (arg_s->repos)
+        n_array_free(arg_s->repos);
+    free(arg_s);
+}
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -114,9 +124,6 @@ static int pull(struct cmdctx *cmdctx)
             if (!source_update(src, PKGSOURCE_UP | PKGSOURCE_UPAUTOA))
                 nerr++;
         }
-
-        if (args->repos)
-            n_array_free(args->repos);
     }
 
 
