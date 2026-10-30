@@ -382,6 +382,18 @@ testClean()
 
 }
 
+# the source given with -s has no name, so up REPO leaves it alone
+testUpRepoSkipsSourceWithoutName()
+{
+    skip_if_rpm_testing_off && return
+
+    index
+    before=$(find $CACHEDIR | sort)
+    $POLDEK up nosuch
+    assertEquals "up nosuch failed" "$?" "0"
+    assertEquals "up nosuch updated the source given with -s" "$before" "$(find $CACHEDIR | sort)"
+}
+
 # what the cache of installed packages leaves out (descriptions, file lists)
 # comes from the --root database, not from the host's
 testDescInstalledRootFromCache()

@@ -105,7 +105,9 @@ static int pull(struct cmdctx *cmdctx)
         for (int i=0; i < n_array_size(sources); i++) {
             struct source *src = n_array_nth(sources, i);
 
-            if (args->repos && n_array_bsearch(args->repos, src->name) == NULL) {
+            /* a source given as a bare path (-s PATH) has no name */
+            if (args->repos && (src->name == NULL ||
+                                n_array_bsearch(args->repos, src->name) == NULL)) {
                 continue;
             } else if (src->flags & PKGSOURCE_NOAUTOUP) {
                 continue;
