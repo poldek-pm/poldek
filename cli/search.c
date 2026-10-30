@@ -70,6 +70,7 @@ struct pattern {
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int search(struct cmdctx *cmdctx);
+static void pattern_free(void *ptr);
 
 #define OPT_PATTERN_PCRE     (1 << 10)
 
@@ -124,7 +125,7 @@ struct poclidek_cmd command_search = {
     "search", N_("PATTERN [PACKAGE...]"), N_("Search packages"),
     options, parse_opt,
     NULL, search,
-    NULL, NULL,
+    NULL, pattern_free,
     N_("With --perlre pattern must be supplied as:\n"
        "     <delimiter>perl-regexp<delimiter>[imsx]\n"
        "  For example to find the packages containing foo.bar do:\n"
@@ -382,8 +383,9 @@ int pattern_match(struct pattern *pt, const char *s, int len)
 }
 
 static
-void pattern_free(struct pattern *pt)
+void pattern_free(void *ptr)
 {
+    struct pattern *pt = ptr;
 
     if (pt->regexp) {
         free(pt->regexp);
@@ -598,7 +600,6 @@ static int search(struct cmdctx *cmdctx)
         err++;
         goto l_end;
     }
-    cmdctx->_data = NULL;            /* we'll free pattern myself */
 
     cctx = cmdctx->cctx;
 
@@ -696,10 +697,5 @@ l_end:
     if (matched_pkgs)
         n_array_free(matched_pkgs);
 
-    if (cmdctx->_data)
-        cmdctx->_data = NULL;
-
-    if (pt)
-        pattern_free(pt);
     return err == 0;
 }
