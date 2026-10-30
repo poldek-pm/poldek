@@ -453,11 +453,15 @@ tn_array *divide_into_pipelines(tn_array *cmd_chain)
     cmd_chain2 = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
     while (n_array_size(cmd_chain)) {
         struct cmd_chain_ent *ent = n_array_shift(cmd_chain);
-        if (ent->flags & CMD_CHAIN_ENT_SEMICOLON)
+        if (ent->flags & CMD_CHAIN_ENT_SEMICOLON) {
+            cmd_chain_ent_free(ent);
             continue;
+        }
 
         if (ent->flags & CMD_CHAIN_ENT_PIPE) {
             struct cmd_chain_ent *prev;
+
+            cmd_chain_ent_free(ent);
             prev = n_array_nth(cmd_chain2, n_array_size(cmd_chain2) - 1);
             n_assert(prev);
             n_assert(prev->cmd);
