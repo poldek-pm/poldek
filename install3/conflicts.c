@@ -14,6 +14,9 @@
 # include "config.h"
 #endif
 
+#include <stdarg.h>
+#include <string.h>
+
 #include "ictx.h"
 
 static
@@ -209,6 +212,70 @@ l_end:
 }
 
 
+/* a conflict with an installed package is reported once all packages are
+   processed, as a package processed later may still remove dbpkg */
+struct db_conflict {
+    struct pkg *pkg;
+    struct pkg *dbpkg;
+    char       message[0];
+};
+
+static void db_conflict_free(struct db_conflict *c)
+{
+    pkg_free(c->pkg);
+    pkg_free(c->dbpkg);
+    free(c);
+}
+
+static void db_conflict(struct i3ctx *ictx, struct pkg *pkg,
+                        struct pkg *dbpkg, const char *fmt, ...)
+{
+    struct db_conflict *c;
+    char message[1024];
+    va_list args;
+    int i, n;
+
+    va_start(args, fmt);
+    n = n_vsnprintf(message, sizeof(message), fmt, args);
+    va_end(args);
+
+    if (ictx->db_conflicts == NULL)
+        ictx->db_conflicts = n_array_new(4, (tn_fn_free)db_conflict_free, NULL);
+
+    for (i = 0; i < n_array_size(ictx->db_conflicts); i++) {
+        c = n_array_nth(ictx->db_conflicts, i);
+        if (c->pkg == pkg && strcmp(c->message, message) == 0)
+            return;             /* pkg processed again after a rollback */
+    }
+
+    c = n_malloc(sizeof(*c) + n + 1);
+    c->pkg = pkg_link(pkg);
+    c->dbpkg = pkg_link(dbpkg);
+    memcpy(c->message, message, n + 1);
+    n_array_push(ictx->db_conflicts, c);
+}
+
+void i3_report_db_conflicts(struct i3ctx *ictx)
+{
+    int i;
+
+    if (ictx->db_conflicts == NULL)
+        return;
+
+    for (i = 0; i < n_array_size(ictx->db_conflicts); i++) {
+        struct db_conflict *c = n_array_nth(ictx->db_conflicts, i);
+
+        /* pkg was rolled back, or dbpkg goes away in this transaction */
+        if (!i3_is_marked(ictx, c->pkg) ||
+            i3_is_marked_for_removal(ictx, c->dbpkg))
+            continue;
+
+        i3_error(ictx, c->pkg, I3ERR_DBCONFLICT, "%s", c->message);
+    }
+
+    n_array_cfree(&ictx->db_conflicts);
+}
+
 /* check if cnfl conflicts with db */
 static
 int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
@@ -261,9 +328,9 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
 
         if (pkg_match_req(dbpkg, cnfl, 1)) {
             if (!resolve_conflict(indent, ictx, pkg, cnfl, dbpkg)) {
-                i3_error(ictx, pkg, I3ERR_DBCONFLICT,
-                         _("%s (cnfl %s) conflicts with installed %s"),
-                         pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
+                db_conflict(ictx, pkg, dbpkg,
+                            _("%s (cnfl %s) conflicts with installed %s"),
+                            pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
                 ncnfl++;
             }
         }
@@ -309,10 +376,10 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
                 if (resolve_conflict(indent, ictx, pkg, cnfl, dbpkg))
                     continue;
 
-                i3_error(ictx, pkg, I3ERR_DBCONFLICT,
-                         _("%s (cap %s) conflicts with installed %s (%s)"),
-                         pkg_id(pkg), capreq_stra(cap),
-                         pkg_id(dbpkg), capreq_stra(cnfl));
+                db_conflict(ictx, pkg, dbpkg,
+                            _("%s (cap %s) conflicts with installed %s (%s)"),
+                            pkg_id(pkg), capreq_stra(cap),
+                            pkg_id(dbpkg), capreq_stra(cnfl));
                 ncnfl++;
             }
         }

@@ -271,6 +271,7 @@ static int install_packages(struct i3ctx *ictx)
 
     i3_return_zero_if_stoppped(ictx);
 
+    i3_report_db_conflicts(ictx);
     install_summary(ictx);
     pkgdb_close(ts->db); /* release db as soon as possible */
 

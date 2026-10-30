@@ -309,6 +309,29 @@ testConflictWithInstalledNotAvailable() {
     }
 }
 
+# installed z-1-1 conflicts with a; b requires a and z >= 2, and a is
+# checked before z-2-1 replaces z-1-1, which must not refuse a
+testConflictWithInstalledReplacedLater() {
+    msgn "Preparing repositories..."
+    build_installed z 1-1 -c a
+    build z 2-1
+    build a 1-1
+    build b 1-1 -r a -r "'z >= 2'"
+
+    try_install b "b,a,z" "z"
+}
+
+# the same for a Conflicts of a on zc, which only z-1-1 provides
+testConflictWithInstalledCapReplacedLater() {
+    msgn "Preparing repositories..."
+    build_installed z 1-1 -p zc
+    build z 2-1
+    build a 1-1 -c zc
+    build b 1-1 -r a -r "'z >= 2'"
+
+    try_install b "b,a,z" "z"
+}
+
 
 # suggested packages should be installed
 testSuggestsAll() {
