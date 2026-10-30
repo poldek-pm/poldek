@@ -614,20 +614,6 @@ static int pkgroupid(struct pkgroup_idx *idx, const char *name)
     return -1;
 }
 
-#if ENABLE_TRACE
-static void dumpidx(struct pkgroup_idx *idx, const char *prefix)
-{
-    struct pkgroup *gr;
-    int i;
-
-    for (i=0; i < n_array_size(idx->arr); i++) {
-        gr = n_array_nth(idx->arr, i);
-        printf("%s: %d %s\n", prefix, gr->id, gr->name);
-    }
-}
-#endif
-
-
 int pkgroup_idx_remap_groupid(struct pkgroup_idx *idx_to,
                               struct pkgroup_idx *idx_from,
                               int groupid, int merge)
@@ -640,8 +626,6 @@ int pkgroup_idx_remap_groupid(struct pkgroup_idx *idx_to,
 
 
     DBGF("%d\n", groupid);
-    //dumpidx(idx_from, "FROM");
-    //dumpidx(idx_to,   "TO  ");
 
     if ((gr = n_array_bsearch(idx_from->arr, &tmpgr)) == NULL) {
         logn(LOGERR, "%d: gid not found", groupid);

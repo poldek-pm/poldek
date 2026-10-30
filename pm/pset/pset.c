@@ -540,19 +540,6 @@ static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
     return 1;
 }
 
-#if ENABLE_TRACE
-static void dumpdir(struct pkgdir *pkgdir)
-{
-    int i;
-    DBGF("dump:\n");
-    for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-        if (strcmp(pkg->name, "fix-info-dir") == 0)
-            DBGF("  %p %s\n", pkg, pkg->name);
-    }
-}
-#endif
-
 static int is_immutable(struct pm_pset *pm, const char *oplabel)
 {
     char reason[64];
@@ -619,7 +606,6 @@ int pm_pset_packages_install(struct pkgdb *pdb, const tn_array *pkgs,
 
         msgn(2, _("Copying %s to %s"), path, pkgdir->path);
     }
-    //dumpdir(pkgdir);
     return 1;
 }
 

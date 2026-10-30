@@ -114,12 +114,12 @@ void pkgdir__setup_langs(struct pkgdir *pkgdir)
     {
         int i;
         for (i=0;  i<n_array_size(avlangs); i++) {
-            DBGF("av_lang %s\n", n_array_nth(avlangs, i));
+            DBGF("av_lang %s\n", (char *)n_array_nth(avlangs, i));
         }
 
         if (pkgdir->langs)
             for (i=0;  i<n_array_size(pkgdir->langs); i++) {
-                DBGF("lang %s\n", n_array_nth(pkgdir->langs, i));
+                DBGF("lang %s\n", (char *)n_array_nth(pkgdir->langs, i));
             }
     }
 #endif
@@ -503,7 +503,8 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     do_pkgdir__make_idxpath(idxpath, sizeof(idxpath), path, type,
                             compr, &fn);
 
-    DBGF("pkg_prefix %s, fn %s\n", pkg_prefix, fn);
+    DBGF("pkg_prefix %s, fn %s\n", pkg_prefix ? pkg_prefix : "(null)",
+         fn ? fn : "(null)");
     /* fn with subdir -> make prefix without it */
     if (fn && strchr(fn, '/') && pkg_prefix == NULL)
         pkg_prefix = path;
