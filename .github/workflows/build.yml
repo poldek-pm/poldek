@@ -75,7 +75,7 @@ jobs:
           echo "sth wrong with cache"
         fi
     - name: save test cache
-      if: always() && steps.rpm-cache.outputs.cache-primary-key != ''
+      if: always() && steps.rpm-cache.outputs.cache-primary-key != '' && steps.rpm-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master'
       uses: actions/cache/save@v4
       with:
         path: ${{ env.POLDEK_TEST_RPM_CACHE }}
