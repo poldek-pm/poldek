@@ -100,11 +100,16 @@ fi
 
 TMPDIR="${TMPDIR:-/tmp}"
 
+# reproducible build time unless the caller overrides it
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date -u -d '2020-04-24' +%s)}"
+export SOURCE_DATE_EPOCH
+
 SPEC="$TMPDIR/$name.$$.spec"
 echo "Building $name-$version-$release.$arch.rpm (from spec $SPEC)"
 echo > $SPEC
 echo "%define _target_cpu $arch" >> $SPEC
 echo "%define _noautoreq libc.so.6 rtld" >> $SPEC
+[ -n "$rpmformat" ] && echo "%define _rpmformat $rpmformat" >> $SPEC
 
 echo "Name: $name" >> $SPEC
 echo "Version: $version" >> $SPEC
@@ -132,8 +137,8 @@ else
 fi
 
 echo -e "%description\nPackage build by $COMMAND\n" >> $SPEC
-echo -e "%description -l pl\n(pl)Package build by $COMMAND\n" >> $SPEC
-echo -e "%description -l de\n(de)Package build by $COMMAND\n" >> $SPEC
+echo -e "%description -l pl\n(pl)Package build by $(basename $0) langPL\n" >> $SPEC
+echo -e "%description -l de\n(de)Package build by $(basename $0) langDE\n" >> $SPEC
 
 echo -e "%prep\n%pre\n" >> $SPEC
 
@@ -191,14 +196,51 @@ echo -e "* Wed Apr 22 2020 Foo <foo@example.com>\n- $name package changelog thir
 
 [ ! -d "$rpmdir" ] && rpmdir="$TMPDIR"
 
-set --
-[ -n "$rpmformat" ] && set -- --define "_rpmformat $rpmformat"
+## caching rpms
+# build-id: rpm version + digest of the rpmbuild binary
+CACHE_DIR="${POLDEK_TEST_RPM_CACHE:-$HOME/.cache/poldek-test-rpm-cache}"
+RPMBUILD_BIN=$(command -v rpmbuild)
+RPMBUILD_VERSION=$(rpmbuild --version | tr ' .' '_' | tr '[A-Z]' '[a-z]')
+RPMBUILD_DIGEST=$(sha1sum "$RPMBUILD_BIN" | awk '{print $1}')
+BUILD_ID="${RPMBUILD_VERSION}-${RPMBUILD_DIGEST}"
+
+# hash the spec minus environment-dependent lines (PID, paths, invocation)
+SPEC_HASH=$(grep -v -E '^(BuildRoot:|%description|Package build by)' "$SPEC" |
+            grep -v '\$\$' |
+            sha1sum | awk '{print $1}')
+
+# hash contents of files that are copied into the package
+FILE_HASH=""
+for f in $files; do
+    bn=$(basename "$f")
+    if [ -f "$bn" ]; then
+        FILE_HASH="${FILE_HASH}$(sha1sum "$bn" | awk '{print $1}')"
+    fi
+done
+[ -n "$FILE_HASH" ] && FILE_HASH="-${FILE_HASH}"
+
+CACHE_KEY="${BUILD_ID}-${SPEC_HASH}${FILE_HASH}"
+CACHE_SUBDIR="$CACHE_DIR/$CACHE_KEY"
+CACHED_RPM="$CACHE_SUBDIR/$name-$version-$release.$arch.rpm"
+
+if [ -f "$CACHED_RPM" ]; then
+    echo "Using cached $CACHED_RPM"
+    cp -p "$CACHED_RPM" "$rpmdir/"
+    cat "$SPEC"
+    exit 0
+fi
+
 # the build time is SOURCE_DATE_EPOCH when the caller sets it
-rpmbuild --define 'use_source_date_epoch_as_buildtime 1' --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" "$@" --target $arch -bb $SPEC
+rpmbuild --define 'use_source_date_epoch_as_buildtime 1' --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC
 ec=$?
 # rpmorg stores packages in $arch subdir
 if [ -d "$rpmdir/$arch" ]; then
     mv -f $rpmdir/$arch/$name-*.rpm $rpmdir/ 2>/dev/null
+fi
+
+if [ $ec -eq 0 ]; then
+    mkdir -p "$CACHE_SUBDIR"
+    cp -p "$rpmdir/$name-$version-$release.$arch.rpm" "$CACHED_RPM"
 fi
 
 cat $SPEC

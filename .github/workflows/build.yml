@@ -6,16 +6,52 @@ on:
   pull_request:
     branches: [ "master" ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     container: ghcr.io/poldek-pm/pld-devel:latest
     env:
       LANG: C
+      POLDEK_TEST_RPM_CACHE: /var/cache/poldek-test-rpm-cache
     steps:
+    - name: get image digest
+      id: image-digest
+      run: |
+        DIGEST=$(docker buildx imagetools inspect ghcr.io/poldek-pm/pld-devel:latest --format '{{.Manifest.Digest}}')
+        if [ -z "$DIGEST" ]; then
+          echo "::error::image digest failed"
+          exit 1
+        fi
+        echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
     - uses: actions/checkout@v4
     - name: git safe dir
       run: git config --global --add safe.directory $(pwd)
+    - name: verify hash paths
+      run: |
+        ls tests/sh/ >/dev/null 2>&1 || { echo "::error::tests/sh missing"; exit 1; }
+        ls tests/build-test-rpm.sh >/dev/null 2>&1 || { echo "::error::tests/build-test-rpm.sh missing"; exit 1; }
+    - name: restore test cache
+      id: rpm-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ env.POLDEK_TEST_RPM_CACHE }}
+        key: rpm-cache-${{ steps.image-digest.outputs.digest }}-${{ hashFiles('tests/sh/**', 'tests/build-test-rpm.sh') }}
+        restore-keys: |
+          rpm-cache-${{ steps.image-digest.outputs.digest }}-
+    - name: pre cache check
+      run: |
+        if [ -d "${{ env.POLDEK_TEST_RPM_CACHE }}" ]; then
+          echo "cached $(find ${{ env.POLDEK_TEST_RPM_CACHE }} -name '*.rpm' | wc -l) test packages"
+        else
+          echo "no cache yet (first run or miss)"
+        fi
     - name: autogen
       run: ./autogen.sh --enable-strict
     - name: make
@@ -31,3 +67,16 @@ jobs:
         name: sh-tests.log
         path: tests/sh-tests.log
         retention-days: 7
+    - name: post cache check
+      run: |
+        if [ -d "${{ env.POLDEK_TEST_RPM_CACHE }}" ]; then
+          echo "cached $(find ${{ env.POLDEK_TEST_RPM_CACHE }} -name '*.rpm' | wc -l) test packages"
+        else
+          echo "sth wrong with cache"
+        fi
+    - name: save test cache
+      if: always() && steps.rpm-cache.outputs.cache-primary-key != ''
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ env.POLDEK_TEST_RPM_CACHE }}
+        key: ${{ steps.rpm-cache.outputs.cache-primary-key }}
