@@ -111,9 +111,10 @@ void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg)
 {
     int n = 0;
 
+    /* a source given as a bare path (-s PATH) has no name */
     if (pkg->pkgdir)
         n += n_snprintf(psc->pkgbuf, sizeof(psc->pkgbuf),
-                        "%s:", pkg->pkgdir->name);
+                        "%s:", pkg->pkgdir->name ? pkg->pkgdir->name : "");
 
     // pkgname_off - size of pkgdir_name
     psc->pkgname_off = n;
