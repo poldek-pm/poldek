@@ -1381,6 +1381,11 @@ msgstr "Zarobaczony zestaw pakietów"
 msgid "%s (cnfl %s) conflicts with installed %s"
 msgstr "%s (cnfl %s) jest w konflicie z zainstalowanm %s"
 
+#: install3/conflicts.c:390
+#, c-format
+msgid "%s is obsoleted by installed %s (%s)"
+msgstr "%s jest zastępowany przez zainstalowany %s (%s)"
+
 #: install3/conflicts.c:250
 #, c-format
 msgid "%s (cap %s) conflicts with installed %s (%s)"

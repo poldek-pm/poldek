@@ -349,11 +349,23 @@ static
 int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
                                       struct pkg *pkg, const struct capreq *cap)
 {
-    int i, j, ncnfl = 0;
+    int i, j, ncnfl = 0, by_obsl;
     tn_array *dbpkgs = NULL;
 
     pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_CNFL, capreq_name(cap),
                  iset_packages_by_recno(ictx->unset), PKG_LDWHOLE_FLDEPDIRS);
+
+    /* Obsoletes have an index of their own; obsoletes = no skips them, as
+       it does for Obsoletes of a new package */
+    by_obsl = ictx->ts->getop(ictx->ts, POLDEK_OP_OBSOLETES);
+/* see pkg.c for the OBSOLETES_MATCH_PROVIDES rationale */
+#ifndef OBSOLETES_MATCH_PROVIDES
+    /* Obsoletes name a package, never one of its Provides */
+    by_obsl = by_obsl && pkg_eq_capreq(pkg, cap);
+#endif
+    if (by_obsl)
+        pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_OBSL, capreq_name(cap),
+                     iset_packages_by_recno(ictx->unset), PKG_LDWHOLE_FLDEPDIRS);
 
     if (dbpkgs == NULL)
         return 0;
@@ -366,19 +378,22 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
 
         for (j = 0; j < n_array_size(dbpkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(dbpkg->cnfls, j);
-/* see pkg.c for the OBSOLETES_MATCH_PROVIDES rationale */
-#ifndef OBSOLETES_MATCH_PROVIDES
-            /* Obsoletes name a package, never one of its Provides */
-            if (capreq_is_obsl(cnfl) && !pkg_eq_capreq(pkg, cap))
+
+            if (capreq_is_obsl(cnfl) && !by_obsl)
                 continue;
-#endif
+
             if (cap_match_req(cap, cnfl, 1)) {
                 /* may mark a package that replaces dbpkg, see db_conflict */
                 resolve_conflict(indent, ictx, pkg, cnfl, dbpkg);
-                db_conflict(ictx, pkg, dbpkg,
-                            _("%s (cap %s) conflicts with installed %s (%s)"),
-                            pkg_id(pkg), capreq_stra(cap),
-                            pkg_id(dbpkg), capreq_stra(cnfl));
+                if (capreq_is_obsl(cnfl))
+                    db_conflict(ictx, pkg, dbpkg,
+                                _("%s is obsoleted by installed %s (%s)"),
+                                pkg_id(pkg), pkg_id(dbpkg), capreq_stra(cnfl));
+                else
+                    db_conflict(ictx, pkg, dbpkg,
+                                _("%s (cap %s) conflicts with installed %s (%s)"),
+                                pkg_id(pkg), capreq_stra(cap),
+                                pkg_id(dbpkg), capreq_stra(cnfl));
                 ncnfl++;
             }
         }
