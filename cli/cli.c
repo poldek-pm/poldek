@@ -868,6 +868,9 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     if (ts == NULL)
         poldek_ts_free(cmdctx.ts);
 
+    if (cmdctx.pipe_left)
+        cmd_pipe_free(cmdctx.pipe_left);
+
     if (runit && ent->next_piped)
         return poclidek_exec_cmd_ent(cctx, ts, ent->next_piped, cmd_pipe);
 
