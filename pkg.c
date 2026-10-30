@@ -1122,6 +1122,8 @@ struct pkgflist *pkg_get_nodep_flist(const struct pkg *pkg)
         flist->_na = na;
         flist->fl = fl;
         n_tuple_sort_ex(flist->fl, (tn_fn_cmp)pkgfl_ent_cmp);
+    } else {
+        n_alloc_free(na);
     }
 
     return flist;
