@@ -190,6 +190,38 @@ path   = %{_prefix}/PLD/%{_arch}/RPMS/
     assertEquals "expected $url, got $source_url" "$source_url" "$url"
 }
 
+testConfArchMacroDefault()
+{
+    local arch=$(rpm --eval '%{_target_cpu}')
+
+    echo "
+[source]
+type = pndir
+name = default-arch
+path = /repo/%{_arch}/RPMS/
+" > $TMPDIR/arch-default.conf
+
+    local source_url=$($POLDEK --conf $TMPDIR/arch-default.conf -l | awk '/^default-arch/ {print $2}')
+    local url="/repo/${arch}/RPMS/"
+    assertEquals "expected $url, got $source_url" "$source_url" "$url"
+}
+
+testConfArchMacroShadow()
+{
+    echo "
+_arch = foo
+
+[source]
+type = pndir
+name = shadow-arch
+path = /repo/%{_arch}/RPMS/
+" > $TMPDIR/arch-shadow.conf
+
+    local source_url=$($POLDEK --conf $TMPDIR/arch-shadow.conf -l | awk '/^shadow-arch/ {print $2}')
+    local url="/repo/foo/RPMS/"
+    assertEquals "expected $url, got $source_url" "$source_url" "$url"
+}
+
 testConfInclude()
 {
     #cat $TMPDIR/poldek.conf

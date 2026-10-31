@@ -3,6 +3,7 @@
 #include "test.h"
 #include "conf_intern.h"
 #include "conf.h"
+#include "pm/rpmorg/arch.h"
 
 
 #define TEST_POLDEK_CONFIG "poldek_test_conf.conf"
@@ -225,6 +226,111 @@ START_TEST (test_config_lists_excl) {
 }
 END_TEST
 
+START_TEST(test_config_undefined_macro) {
+    tn_hash *cnf, *s;
+    tn_array *lines;
+    const char *v;
+    const char *name = "poldek_test_undefined_macro.conf";
+
+    /* unknown macro stays literal */
+    lines = n_array_new(16, 0, 0);
+    n_array_push(lines, "[global]");
+    n_array_push(lines, "cachedir = /tmp");
+    n_array_push(lines, "[source]");
+    n_array_push(lines, "type = pndir");
+    n_array_push(lines, "path = /repo/%{_nosuch}/RPMS");
+    make_conf_file(name, lines);
+
+    cnf = poldek_conf_load(name, 0);
+    fail_if(cnf == NULL, "load config failed");
+
+    s = poldek_conf_get_section(cnf, "source");
+    v = poldek_conf_get(s, "path", NULL);
+    fail_unless(n_str_eq(v, "/repo/%{_nosuch}/RPMS"),
+                "unknown macro should stay literal: %s", v);
+    n_array_free(lines);
+    remove(name);
+}
+
+START_TEST(test_config_arch_macro) {
+    tn_hash *cnf, *s;
+    tn_array *lines;
+    const char *v;
+    char expected[PATH_MAX];
+    const char *name = "poldek_test_arch_macro.conf";
+
+    /* default _arch expands to rpm canonical arch */
+    lines = n_array_new(16, 0, 0);
+    n_array_push(lines, "[global]");
+    n_array_push(lines, "cachedir = /tmp");
+    n_array_push(lines, "[source]");
+    n_array_push(lines, "type = pndir");
+    n_array_push(lines, "path = /repo/%{_arch}/RPMS");
+    make_conf_file(name, lines);
+
+    cnf = poldek_conf_load(name, 0);
+    fail_if(cnf == NULL, "load config failed");
+    s = poldek_conf_get_section(cnf, "source");
+    fail_if(s == NULL, "no source section?");
+    v = poldek_conf_get(s, "path", NULL);
+    fail_if(v == NULL, "no path?");
+
+    char *arch = pm_rpm_arch();
+    n_snprintf(expected, sizeof(expected), "/repo/%s/RPMS", arch);
+    free(arch);
+
+    fail_unless(n_str_eq(v, expected),
+                "default _arch not expanded: got %s, expected %s",
+                v, expected);
+    n_array_free(lines);
+    remove(name);
+
+    /* file-level _arch shadows the default */
+    lines = n_array_new(16, 0, 0);
+    n_array_push(lines, "[global]");
+    n_array_push(lines, "cachedir = /tmp");
+    n_array_push(lines, "[source]");
+    n_array_push(lines, "type = pndir");
+    n_array_push(lines, "_arch = foo");
+    n_array_push(lines, "path = /repo/%{_arch}/RPMS");
+    make_conf_file(name, lines);
+
+    cnf = poldek_conf_load(name, 0);
+    fail_if(cnf == NULL, "load config failed");
+    s = poldek_conf_get_section(cnf, "source");
+    v = poldek_conf_get(s, "path", NULL);
+    fail_unless(n_str_eq(v, "/repo/foo/RPMS"),
+                "shadowing _arch failed: %s", v);
+    n_array_free(lines);
+    remove(name);
+
+    /* nested macro expansion */
+    lines = n_array_new(16, 0, 0);
+    n_array_push(lines, "[global]");
+    n_array_push(lines, "cachedir = /tmp");
+    n_array_push(lines, "[source]");
+    n_array_push(lines, "type = pndir");
+    n_array_push(lines, "_prefix = /repo/%{_arch}");
+    n_array_push(lines, "path = %{_prefix}/RPMS");
+    make_conf_file(name, lines);
+    cnf = poldek_conf_load(name, 0);
+    fail_if(cnf == NULL, "load config failed");
+    s = poldek_conf_get_section(cnf, "source");
+    v = poldek_conf_get(s, "path", NULL);
+
+    arch = pm_rpm_arch();
+    n_snprintf(expected, sizeof(expected), "/repo/%s/RPMS", arch);
+    free(arch);
+
+    fail_unless(n_str_eq(v, expected),
+                "nested _arch expansion failed: got %s, expected %s",
+                v, expected);
+    n_array_free(lines);
+    remove(name);
+}
+END_TEST
+
+
 START_TEST(setup) {
     int ec = system("make " TEST_POLDEK_CONFIG);
     fail_if(ec != 0, "make " TEST_POLDEK_CONFIG " failed");
@@ -235,4 +341,6 @@ NTEST_RUNNER("config",
              setup,
              test_config,
              test_config_lists,
-             test_config_lists_excl);
+             test_config_lists_excl,
+             test_config_undefined_macro,
+             test_config_arch_macro);

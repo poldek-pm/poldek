@@ -7,6 +7,7 @@
 
 #include "pm/pm.h"
 #include "pm/rpmorg/pm_rpm.h"
+#include "pm/rpmorg/arch.h"
 
 // taken from libdnf
 static const struct {
@@ -53,14 +54,13 @@ static const char *find_base_arch(const char *native) {
 }
 
 const char *get_base_arch() {
-    const char *arch;
+    char *arch = pm_rpm_arch();
+    const char *base;
 
-    void *ctx = pm_rpm_init();
+    if (arch == NULL)
+        return NULL;
 
-    rpmGetArchInfo(&arch, NULL);
-    arch = find_base_arch(arch);
-
-    pm_rpm_destroy(ctx);
-
-    return arch;
+    base = find_base_arch(arch);
+    free(arch);
+    return base;
 }
