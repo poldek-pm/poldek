@@ -267,14 +267,11 @@ dnl openpty() might be declared in:
 dnl - pty.h (Tru64 or Linux)
 dnl - libutil.h (FreeBSD)
 dnl - util.h (NetBSD)
-AC_CHECK_FUNC(openpty, have_openpty=yes, [
-  AC_CHECK_LIB(util, openpty, have_openpty=yes need_libutil=yes)])
-
-if test "${have_openpty}." = "yes."; then
-  AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])
-  AC_CHECK_HEADERS([pty.h libutil.h util.h], break)
-  test "$need_libutil" = "yes" && LIBS="-lutil $LIBS"
-fi
+AC_CHECK_FUNC(openpty,, [
+  AC_CHECK_LIB(util, openpty, [LIBS="-lutil $LIBS"],
+    [AC_MSG_ERROR([openpty() is needed by $PACKAGE])])])
+AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])
+AC_CHECK_HEADERS([pty.h libutil.h util.h], break)
 
 AC_CHECK_FUNCS(EVP_DigestInit,,
 	[AC_CHECK_LIB(crypto, EVP_DigestInit,,
