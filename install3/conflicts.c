@@ -227,8 +227,11 @@ static void db_conflict_free(struct db_conflict *c)
     free(c);
 }
 
-static void db_conflict(struct i3ctx *ictx, struct pkg *pkg,
-                        struct pkg *dbpkg, const char *fmt, ...)
+/* resolve_conflict() may mark a replacement for dbpkg, but the
+   conflict is only truly resolved if that package is installed.
+   Register it for final checking after all packages are processed. */
+static void register_db_conflict(struct i3ctx *ictx, struct pkg *pkg,
+                                 struct pkg *dbpkg, const char *fmt, ...)
 {
     struct db_conflict *c;
     char message[1024];
@@ -327,11 +330,11 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
             continue;
 
         if (pkg_match_req(dbpkg, cnfl, 1)) {
-            /* may mark a package that replaces dbpkg, see db_conflict */
+            /* may mark a package that replaces dbpkg, see register_db_conflict */
             resolve_conflict(indent, ictx, pkg, cnfl, dbpkg);
-            db_conflict(ictx, pkg, dbpkg,
-                        _("%s (cnfl %s) conflicts with installed %s"),
-                        pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
+            register_db_conflict(ictx, pkg, dbpkg,
+                                 _("%s (cnfl %s) conflicts with installed %s"),
+                                 pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
             ncnfl++;
         }
     }
@@ -383,17 +386,17 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
                 continue;
 
             if (cap_match_req(cap, cnfl, 1)) {
-                /* may mark a package that replaces dbpkg, see db_conflict */
+                /* may mark a package that replaces dbpkg, see register_db_conflict */
                 resolve_conflict(indent, ictx, pkg, cnfl, dbpkg);
                 if (capreq_is_obsl(cnfl))
-                    db_conflict(ictx, pkg, dbpkg,
-                                _("%s is obsoleted by installed %s (%s)"),
-                                pkg_id(pkg), pkg_id(dbpkg), capreq_stra(cnfl));
+                    register_db_conflict(ictx, pkg, dbpkg,
+                                         _("%s is obsoleted by installed %s (%s)"),
+                                         pkg_id(pkg), pkg_id(dbpkg), capreq_stra(cnfl));
                 else
-                    db_conflict(ictx, pkg, dbpkg,
-                                _("%s (cap %s) conflicts with installed %s (%s)"),
-                                pkg_id(pkg), capreq_stra(cap),
-                                pkg_id(dbpkg), capreq_stra(cnfl));
+                    register_db_conflict(ictx, pkg, dbpkg,
+                                         _("%s (cap %s) conflicts with installed %s (%s)"),
+                                         pkg_id(pkg), capreq_stra(cap),
+                                         pkg_id(dbpkg), capreq_stra(cnfl));
                 ncnfl++;
             }
         }
