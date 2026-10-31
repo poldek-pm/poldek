@@ -413,6 +413,25 @@ testUpRepoSkipsSourceWithoutName()
     assertEquals "up nosuch updated the source given with -s" "$before" "$(find $CACHEDIR | sort)"
 }
 
+# a source given as a bare path (-s PATH) has no name: the source part
+# of a hold or ignore mask matches it as an empty name
+testIgnoreSourceMaskWithoutName()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    index
+
+    out=$($POLDEK --ignore '(null):*' ls 2>&1)
+    assertEquals "ls failed ($out)" "0" "$?"
+    assertEquals "'(null):*' ignored packages ($out)" "2" "$(echo "$out" | grep -c '^[ab]-1-1')"
+
+    out=$($POLDEK --ignore '*:a*' ls 2>&1)
+    assertEquals "ls failed ($out)" "0" "$?"
+    assertEquals "'*:a*' did not ignore only a ($out)" "b-1-1" "$(echo "$out" | grep -o '^[ab]-1-1')"
+}
+
 # what the cache of installed packages leaves out (descriptions, file lists)
 # comes from the --root database, not from the host's
 testDescInstalledRootFromCache()
