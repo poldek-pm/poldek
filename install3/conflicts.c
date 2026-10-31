@@ -213,7 +213,7 @@ l_end:
 
 
 /* a conflict with an installed package is reported once all packages are
-   processed, as a package processed later may still remove dbpkg */
+   processed, unless dbpkg is removed by then, which alone resolves it */
 struct db_conflict {
     struct pkg *pkg;
     struct pkg *dbpkg;
@@ -327,12 +327,12 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
             continue;
 
         if (pkg_match_req(dbpkg, cnfl, 1)) {
-            if (!resolve_conflict(indent, ictx, pkg, cnfl, dbpkg)) {
-                db_conflict(ictx, pkg, dbpkg,
-                            _("%s (cnfl %s) conflicts with installed %s"),
-                            pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
-                ncnfl++;
-            }
+            /* may mark a package that replaces dbpkg, see db_conflict */
+            resolve_conflict(indent, ictx, pkg, cnfl, dbpkg);
+            db_conflict(ictx, pkg, dbpkg,
+                        _("%s (cnfl %s) conflicts with installed %s"),
+                        pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
+            ncnfl++;
         }
     }
 
@@ -373,9 +373,8 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
                 continue;
 #endif
             if (cap_match_req(cap, cnfl, 1)) {
-                if (resolve_conflict(indent, ictx, pkg, cnfl, dbpkg))
-                    continue;
-
+                /* may mark a package that replaces dbpkg, see db_conflict */
+                resolve_conflict(indent, ictx, pkg, cnfl, dbpkg);
                 db_conflict(ictx, pkg, dbpkg,
                             _("%s (cap %s) conflicts with installed %s (%s)"),
                             pkg_id(pkg), capreq_stra(cap),

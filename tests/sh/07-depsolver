@@ -332,6 +332,15 @@ testConflictWithInstalledCapReplacedLater() {
     try_install b "b,a,z" "z"
 }
 
+# y-2-1 provides y = 3, which matches the reversed y > 2, yet x stays
+testConflictWithInstalledNotResolvedByOwnProvide() {
+    msgn "Preparing repositories..."
+    build_installed x 1-1 -c "'y <= 2'"
+    build y 2-1 -p "'y = 3'"
+
+    try_install_package_should_fail "dir" "-uv --test" y
+}
+
 
 # suggested packages should be installed
 testSuggestsAll() {
