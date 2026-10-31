@@ -1434,6 +1434,11 @@ msgstr "fehlerhafte Paketzusammenstellung"
 msgid "%s (cnfl %s) conflicts with installed %s"
 msgstr "'%s' (Konflikt '%s') kollidiert mit installiertem '%s'"
 
+#: install3/conflicts.c:390
+#, c-format
+msgid "%s is obsoleted by installed %s (%s)"
+msgstr "'%s' wird durch installiertes '%s' abgelöst (%s)"
+
 #: install3/conflicts.c:250
 #, c-format
 msgid "%s (cap %s) conflicts with installed %s (%s)"

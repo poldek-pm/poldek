@@ -14,6 +14,9 @@
 # include "config.h"
 #endif
 
+#include <stdarg.h>
+#include <string.h>
+
 #include "ictx.h"
 
 static
@@ -209,6 +212,73 @@ l_end:
 }
 
 
+/* a conflict with an installed package is reported once all packages are
+   processed, unless dbpkg is removed by then, which alone resolves it */
+struct db_conflict {
+    struct pkg *pkg;
+    struct pkg *dbpkg;
+    char       message[0];
+};
+
+static void db_conflict_free(struct db_conflict *c)
+{
+    pkg_free(c->pkg);
+    pkg_free(c->dbpkg);
+    free(c);
+}
+
+/* resolve_conflict() may mark a replacement for dbpkg, but the
+   conflict is only truly resolved if that package is installed.
+   Register it for final checking after all packages are processed. */
+static void register_db_conflict(struct i3ctx *ictx, struct pkg *pkg,
+                                 struct pkg *dbpkg, const char *fmt, ...)
+{
+    struct db_conflict *c;
+    char message[1024];
+    va_list args;
+    int i, n;
+
+    va_start(args, fmt);
+    n = n_vsnprintf(message, sizeof(message), fmt, args);
+    va_end(args);
+
+    if (ictx->db_conflicts == NULL)
+        ictx->db_conflicts = n_array_new(4, (tn_fn_free)db_conflict_free, NULL);
+
+    for (i = 0; i < n_array_size(ictx->db_conflicts); i++) {
+        c = n_array_nth(ictx->db_conflicts, i);
+        if (c->pkg == pkg && strcmp(c->message, message) == 0)
+            return;             /* pkg processed again after a rollback */
+    }
+
+    c = n_malloc(sizeof(*c) + n + 1);
+    c->pkg = pkg_link(pkg);
+    c->dbpkg = pkg_link(dbpkg);
+    memcpy(c->message, message, n + 1);
+    n_array_push(ictx->db_conflicts, c);
+}
+
+void i3_report_db_conflicts(struct i3ctx *ictx)
+{
+    int i;
+
+    if (ictx->db_conflicts == NULL)
+        return;
+
+    for (i = 0; i < n_array_size(ictx->db_conflicts); i++) {
+        struct db_conflict *c = n_array_nth(ictx->db_conflicts, i);
+
+        /* pkg was rolled back, or dbpkg goes away in this transaction */
+        if (!i3_is_marked(ictx, c->pkg) ||
+            i3_is_marked_for_removal(ictx, c->dbpkg))
+            continue;
+
+        i3_error(ictx, c->pkg, I3ERR_DBCONFLICT, "%s", c->message);
+    }
+
+    n_array_cfree(&ictx->db_conflicts);
+}
+
 /* check if cnfl conflicts with db */
 static
 int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
@@ -260,12 +330,12 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
             continue;
 
         if (pkg_match_req(dbpkg, cnfl, 1)) {
-            if (!resolve_conflict(indent, ictx, pkg, cnfl, dbpkg)) {
-                i3_error(ictx, pkg, I3ERR_DBCONFLICT,
-                         _("%s (cnfl %s) conflicts with installed %s"),
-                         pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
-                ncnfl++;
-            }
+            /* may mark a package that replaces dbpkg, see register_db_conflict */
+            resolve_conflict(indent, ictx, pkg, cnfl, dbpkg);
+            register_db_conflict(ictx, pkg, dbpkg,
+                                 _("%s (cnfl %s) conflicts with installed %s"),
+                                 pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
+            ncnfl++;
         }
     }
 
@@ -282,11 +352,23 @@ static
 int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
                                       struct pkg *pkg, const struct capreq *cap)
 {
-    int i, j, ncnfl = 0;
+    int i, j, ncnfl = 0, by_obsl;
     tn_array *dbpkgs = NULL;
 
     pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_CNFL, capreq_name(cap),
                  iset_packages_by_recno(ictx->unset), PKG_LDWHOLE_FLDEPDIRS);
+
+    /* Obsoletes have an index of their own; obsoletes = no skips them, as
+       it does for Obsoletes of a new package */
+    by_obsl = ictx->ts->getop(ictx->ts, POLDEK_OP_OBSOLETES);
+/* see pkg.c for the OBSOLETES_MATCH_PROVIDES rationale */
+#ifndef OBSOLETES_MATCH_PROVIDES
+    /* Obsoletes name a package, never one of its Provides */
+    by_obsl = by_obsl && pkg_eq_capreq(pkg, cap);
+#endif
+    if (by_obsl)
+        pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_OBSL, capreq_name(cap),
+                     iset_packages_by_recno(ictx->unset), PKG_LDWHOLE_FLDEPDIRS);
 
     if (dbpkgs == NULL)
         return 0;
@@ -299,20 +381,22 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
 
         for (j = 0; j < n_array_size(dbpkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(dbpkg->cnfls, j);
-/* see pkg.c for the OBSOLETES_MATCH_PROVIDES rationale */
-#ifndef OBSOLETES_MATCH_PROVIDES
-            /* Obsoletes name a package, never one of its Provides */
-            if (capreq_is_obsl(cnfl) && !pkg_eq_capreq(pkg, cap))
-                continue;
-#endif
-            if (cap_match_req(cap, cnfl, 1)) {
-                if (resolve_conflict(indent, ictx, pkg, cnfl, dbpkg))
-                    continue;
 
-                i3_error(ictx, pkg, I3ERR_DBCONFLICT,
-                         _("%s (cap %s) conflicts with installed %s (%s)"),
-                         pkg_id(pkg), capreq_stra(cap),
-                         pkg_id(dbpkg), capreq_stra(cnfl));
+            if (capreq_is_obsl(cnfl) && !by_obsl)
+                continue;
+
+            if (cap_match_req(cap, cnfl, 1)) {
+                /* may mark a package that replaces dbpkg, see register_db_conflict */
+                resolve_conflict(indent, ictx, pkg, cnfl, dbpkg);
+                if (capreq_is_obsl(cnfl))
+                    register_db_conflict(ictx, pkg, dbpkg,
+                                         _("%s is obsoleted by installed %s (%s)"),
+                                         pkg_id(pkg), pkg_id(dbpkg), capreq_stra(cnfl));
+                else
+                    register_db_conflict(ictx, pkg, dbpkg,
+                                         _("%s (cap %s) conflicts with installed %s (%s)"),
+                                         pkg_id(pkg), capreq_stra(cap),
+                                         pkg_id(dbpkg), capreq_stra(cnfl));
                 ncnfl++;
             }
         }

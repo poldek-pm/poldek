@@ -92,6 +92,7 @@ void i3pkg_free(struct i3pkg *i3pkg);
 
 struct i3ctx {
     tn_hash           *errors;       /* pkg_id => i3_error[] pairs */
+    tn_array          *db_conflicts; /* struct db_conflict[], see conflicts.c */
     tn_array          *i3pkg_stack;  /* i3pkg stack */
 
     struct poldek_ts  *ts;
@@ -203,6 +204,8 @@ tn_array *i3_boolreq_unmet(int indent, struct i3ctx *ictx, struct pkg *pkg,
                            const struct capreq *req);
 
 /* conflicts.c */
+void i3_report_db_conflicts(struct i3ctx *ictx);
+
 int i3_resolve_conflict(int indent, struct i3ctx *ictx,
                         struct pkg *pkg, const struct capreq *cnfl,
                         struct pkg *dbpkg);

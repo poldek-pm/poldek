@@ -318,6 +318,38 @@ testConflictWithInstalledNotAvailable() {
     }
 }
 
+# installed z-1-1 conflicts with a; b requires a and z >= 2, and a is
+# checked before z-2-1 replaces z-1-1, which must not refuse a
+testConflictWithInstalledReplacedLater() {
+    msgn "Preparing repositories..."
+    build_installed z 1-1 -c a
+    build z 2-1
+    build a 1-1
+    build b 1-1 -r a -r "'z >= 2'"
+
+    try_install b "b,a,z" "z"
+}
+
+# the same for a Conflicts of a on zc, which only z-1-1 provides
+testConflictWithInstalledCapReplacedLater() {
+    msgn "Preparing repositories..."
+    build_installed z 1-1 -p zc
+    build z 2-1
+    build a 1-1 -c zc
+    build b 1-1 -r a -r "'z >= 2'"
+
+    try_install b "b,a,z" "z"
+}
+
+# y-2-1 provides y = 3, which matches the reversed y > 2, yet x stays
+testConflictWithInstalledNotResolvedByOwnProvide() {
+    msgn "Preparing repositories..."
+    build_installed x 1-1 -c "'y <= 2'"
+    build y 2-1 -p "'y = 3'"
+
+    try_install_package_should_fail "dir" "-uv --test" y
+}
+
 
 # suggested packages should be installed
 testSuggestsAll() {
@@ -528,6 +560,64 @@ testUpgradeInstalledObsoletesNotProvider() {
     build y 1-1 -p "'foo = 2'"
 
     try_install y "y"
+}
+
+# installed x obsoletes the package y, so rpm refuses to install y
+testUpgradeObsoletedByInstalled() {
+    msgn "Preparing repositories..."
+    build_installed x 1-1 -o y
+    build y 1-1
+
+    try_install_package_should_fail "dir" "-uv --test" y
+}
+
+# x-2-1 no longer obsoletes y, so installing y upgrades x
+testUpgradeObsoletedByInstalledUpgradesIt() {
+    msgn "Preparing repositories..."
+    build_installed x 1-1 -o "'y < 2'"
+    build x 2-1
+    build y 1-1
+
+    try_install y "y,x" "x"
+}
+
+# installed z-1-1 obsoletes a; b requires a and z >= 2, and a is checked
+# before z-2-1 replaces z-1-1, which must not refuse a
+testUpgradeObsoletedByInstalledReplacedLater() {
+    msgn "Preparing repositories..."
+    build_installed z 1-1 -o a
+    build z 2-1
+    build a 1-1
+    build b 1-1 -r a -r "'z >= 2'"
+
+    try_install b "b,a,z" "z"
+}
+
+# obsoletes = no lets y in next to x, as it lets in a new x next to y
+testUpgradeObsoletedByInstalledObsoletesOff() {
+    msgn "Preparing repositories..."
+    build_installed x 1-1 -o y
+    build y 1-1
+
+    try_install y "y" -Oobsoletes=no
+}
+
+# y <= 2 has no release, so y-2-1 matches it whatever its release, as in rpm
+testUpgradeObsoletedByInstalledRangeWithoutRelease() {
+    msgn "Preparing repositories..."
+    build_installed x 1-1 -o "'y <= 2'"
+    build y 2-1
+
+    try_install_package_should_fail "dir" "-uv --test" y
+}
+
+# y-2-1 provides y = 3, which matches the reversed y > 2, yet x stays
+testUpgradeObsoletedByInstalledNotResolvedByOwnProvide() {
+    msgn "Preparing repositories..."
+    build_installed x 1-1 -o "'y <= 2'"
+    build y 2-1 -p "'y = 3'"
+
+    try_install_package_should_fail "dir" "-uv --test" y
 }
 
 # x conflicts with foo-2-1 through its foo = 1; z obsoletes foo < 2, which
