@@ -270,7 +270,6 @@ dnl - util.h (NetBSD)
 AC_CHECK_FUNC(openpty,, [
   AC_CHECK_LIB(util, openpty, [LIBS="-lutil $LIBS"],
     [AC_MSG_ERROR([openpty() is needed by $PACKAGE])])])
-AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])
 AC_CHECK_HEADERS([pty.h libutil.h util.h], break)
 
 AC_CHECK_FUNCS(EVP_DigestInit,,
