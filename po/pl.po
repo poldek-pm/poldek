@@ -1555,6 +1555,20 @@ msgstr[0] "%d pakiet"
 msgstr[1] "%d pakiety"
 msgstr[2] "%d pakietów"
 
+#: misc.c:911
+#, c-format
+msgid ""
+"Interrupted: %s runs to the end and the rest is cancelled; ^C again stops "
+"it"
+msgstr ""
+"Przerwano: %s dokończy pracę, reszta zostanie anulowana; kolejne ^C go "
+"zatrzyma"
+
+#: misc.c:916
+#, c-format
+msgid "Stopping %s: a transaction already begun runs to the end"
+msgstr "Zatrzymywanie programu %s: rozpoczęta transakcja zostanie dokończona"
+
 #: pkgcmp.c:352
 #, c-format
 msgid "duplicated name %s"

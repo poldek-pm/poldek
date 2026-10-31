@@ -54,13 +54,13 @@ terminal_rpm() {
 # as on a terminal; rpm runs on pipes, or on a pty when poldek's output is one
 poldek_on_pipes() {
     chmod 755 $TERMINAL_RPM
-    with_sigint DEFAULT $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM "$@" 2>&1
+    with_sigint DEFAULT env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM "$@" 2>&1
 }
 
 poldek_on_pty() {
     chmod 755 $TERMINAL_RPM
     timeout 30 script -qec "perl -e '\$SIG{INT} = \"DEFAULT\"; exec @ARGV' \
-        $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM $*" /dev/null </dev/null 2>&1
+        env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM $*" /dev/null </dev/null 2>&1
 }
 
 # with_sigint DEFAULT|IGNORE <command>: run it with SIGINT so set, whatever
@@ -149,6 +149,8 @@ testInterruptLetsRpmAndScriptletsRun()
     assertEquals "exit code $rc: $out" "0" "$rc"
     assertEquals "rpm got the ^C: $out" "1" "$(grep -c 'rpm done' $RUNS)"
     assertEquals "rpm asked to stop" "0" "$(grep -c TERM $RUNS)"
+    assertEquals "not told: $out" "1" \
+                 "$(echo "$out" | grep -c 'Interrupted: rpm runs to the end')"
 }
 
 testSecondInterruptAsksRpmToStop()
@@ -161,6 +163,8 @@ testSecondInterruptAsksRpmToStop()
     out=$(poldek_on_pipes -uv a)
     assertEquals "rpm got the ^C: $out" "1" "$(grep -c 'rpm done' $RUNS)"
     assertEquals "rpm not asked to stop: $out" "1" "$(grep -c TERM $RUNS)"
+    assertEquals "not told: $out" "1" \
+                 "$(echo "$out" | grep -c '^notice: Stopping rpm: a transaction')"
 }
 
 testInterruptBeforeRpmStopsInstall()

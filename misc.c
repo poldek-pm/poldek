@@ -901,8 +901,21 @@ void poldek__relay_output(struct p_open_st *st, int verbose_level,
         /* the first ^C lets the command finish, the second asks it to stop */
         if (sigint_ignored && st->pid > 0 && sigint_count() > nsigint) {
             nsigint = sigint_count();
-            if (nsigint > 1)
+            if (!endl) {
+                msg_f(0, "_\n");
+                msg_tty(verbose_level, "_\n");
+                endl = 1;
+            }
+
+            if (nsigint == 1) {
+                logn(LOGNOTICE, _("Interrupted: %s runs to the end and the "
+                                  "rest is cancelled; ^C again stops it"),
+                     logprefix);
+            } else {
                 kill(st->pid, SIGTERM);
+                logn(LOGNOTICE, _("Stopping %s: a transaction already begun "
+                                  "runs to the end"), logprefix);
+            }
         }
 
         FD_ZERO(&fdset);
