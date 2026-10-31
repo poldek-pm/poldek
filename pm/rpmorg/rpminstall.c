@@ -52,6 +52,7 @@
 #include "misc.h"
 #include "pm_rpm.h"
 #include "pm_hooks.h"
+#include "sigint/sigint.h"
 
 #ifdef HAVE_OPENPTY
 
@@ -59,7 +60,9 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
 {
     struct p_open_st pst;
     int vsaved = -999, ec;
-    unsigned p_open_flags = P_OPEN_KEEPSTDIN;
+    /* a ^C reaches rpm too, from the terminal or through sudo, and would
+       kill the scriptlet rpm runs */
+    unsigned p_open_flags = P_OPEN_KEEPSTDIN | P_OPEN_IGNSIGINT;
 
 
     p_st_init(&pst);
@@ -89,7 +92,7 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
     if (poldek_VERBOSE == 0)
         vsaved = poldek_set_verbose(1);
 
-    poldek__relay_output(&pst, verbose_level, "rpm");
+    poldek__relay_output(&pst, verbose_level, "rpm", 1);
     if ((ec = p_close(&pst)) != 0 && pst.errmsg != NULL)
         logn(LOGERR, "%s", pst.errmsg);
 
@@ -254,6 +257,11 @@ static tn_hash *import_signkeys(struct pm_rpm *pm,
 
         pm_rpm_signkey_import(pm, ts, sk);
         n_hash_insert(signkeys, src->signkey, sk);
+
+        if (sigint_reached()) {     /* ^C while rpm imported a key */
+            n_hash_free(signkeys);
+            return NULL;
+        }
     }
 
     return signkeys;

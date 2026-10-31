@@ -22,6 +22,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -156,6 +157,8 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 
     if ((pid = fork()) == 0) {
         p_dupnull(STDIN_FILENO, flags);
+        if (flags & P_OPEN_IGNSIGINT)
+            signal(SIGINT, SIG_IGN);
         close(pp[0]);
 
 	dup2(pp[1], STDOUT_FILENO);
@@ -316,6 +319,8 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     setvbuf(pst->stream, NULL, _IONBF, 0);
 
     if ((pid = forkptys(fd, slave)) == 0) {
+        if (flags & P_OPEN_IGNSIGINT)
+            signal(SIGINT, SIG_IGN);
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
 

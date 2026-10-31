@@ -3,6 +3,7 @@
 # ^C during an install or a removal on the command line lets the rpm run in
 # progress finish, skips what is left and ends poldek with an error when
 # something was skipped, as the shell does, rather than killing poldek.
+# rpm and the scriptlet it runs ignore the ^C; a second one asks rpm to stop.
 # A ^C before the first rpm run stops an install, upgrade-dist and removals
 # with an error, and rpm does not run. Started with SIGINT ignored, poldek
 # keeps ignoring it. On a terminal rpm reads from the pty it writes to, not
@@ -33,6 +34,33 @@ setUp() {
     chmod 755 $FAKE_RPM
 
     SIGINT_AT_INIT="$PWD/.libs/sigint_at_init.so"
+    TERMINAL_RPM="$TMPDIR/terminal-rpm"
+}
+
+# terminal_rpm N: writes the fake rpm for N ^C typed on the terminal while
+# rpm runs. The terminal sends SIGINT to every process of poldek's group, so
+# each ^C is SIGINT to poldek and to rpm. The fake rpm logs its run, a SIGTERM
+# and its end.
+terminal_rpm() {
+    printf '#!/bin/sh\ntrap "echo TERM >> %s" TERM\n' "$RUNS"
+    printf 'echo rpm "$@" >> %s\n' "$RUNS"
+    for i in $(seq $1); do
+        printf 'kill -INT $PPID $$\nsleep 1\n'
+    done
+    printf 'sleep 1\necho rpm done >> %s\n' "$RUNS"
+}
+
+# poldek_on_pipes|poldek_on_pty <args>: poldek with that fake rpm and SIGINT
+# as on a terminal; rpm runs on pipes, or on a pty when poldek's output is one
+poldek_on_pipes() {
+    chmod 755 $TERMINAL_RPM
+    with_sigint DEFAULT $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM "$@" 2>&1
+}
+
+poldek_on_pty() {
+    chmod 755 $TERMINAL_RPM
+    timeout 30 script -qec "perl -e '\$SIG{INT} = \"DEFAULT\"; exec @ARGV' \
+        $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM $*" /dev/null </dev/null 2>&1
 }
 
 # with_sigint DEFAULT|IGNORE <command>: run it with SIGINT so set, whatever
@@ -107,6 +135,32 @@ testRpmReadsFromItsPty()
     assertEquals "rpm runs" "1" "$(grep -c '^rpm stdin /dev/' $RUNS)"
     set -- $(cat $RUNS)
     assertEquals "rpm stdin: $*" "$5" "$3"
+}
+
+testInterruptLetsRpmAndScriptletsRun()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    terminal_rpm 1 > $TERMINAL_RPM
+
+    out=$(poldek_on_pty -uv a)
+    rc=$?
+    assertEquals "exit code $rc: $out" "0" "$rc"
+    assertEquals "rpm got the ^C: $out" "1" "$(grep -c 'rpm done' $RUNS)"
+    assertEquals "rpm asked to stop" "0" "$(grep -c TERM $RUNS)"
+}
+
+testSecondInterruptAsksRpmToStop()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    terminal_rpm 2 > $TERMINAL_RPM
+
+    out=$(poldek_on_pipes -uv a)
+    assertEquals "rpm got the ^C: $out" "1" "$(grep -c 'rpm done' $RUNS)"
+    assertEquals "rpm not asked to stop: $out" "1" "$(grep -c TERM $RUNS)"
 }
 
 testInterruptBeforeRpmStopsInstall()

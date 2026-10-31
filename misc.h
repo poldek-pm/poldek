@@ -69,9 +69,11 @@ char *poldek__conf_path(char *s, char *v);
 
 int poldek__is_in_testing_mode(void);
 
-/* copies the output of a p_open()-ed command to the screen and the log */
+/* copies the output of a p_open()-ed command to the screen and the log;
+   with sigint_ignored, for a command started with P_OPEN_IGNSIGINT, a
+   second ^C is passed on to it as SIGTERM */
 void poldek__relay_output(struct p_open_st *st, int verbose_level,
-                          const char *logprefix);
+                          const char *logprefix, int sigint_ignored);
 
 #include "poldek_util.h"
 const char *lc_messages_lang(void);

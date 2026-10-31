@@ -213,6 +213,77 @@ EOF
         fail "signed test package was not installed"
 }
 
+# signkey: a ^C while rpm imports a key lets the import finish, and neither
+# the next key's import nor the install starts
+testRPMsignkeyImportInterrupted() {
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local key="$SIGNKEY_TEST_KEY"
+    local gpglog="$TMPDIR/signkey-gpg.log"
+    local repo2="$TMPDIR/signkey-repo2"
+    local conf="$TMPDIR/signkey.conf"
+    local calls="$TMPDIR/rpm-calls.log"
+    local wrapper="$TMPDIR/rpm-wrapper"
+
+    # a second source with a key of its own
+    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
+        --quick-generate-key 'Second test key <second@poldek.invalid>' \
+        rsa2048 sign 0 >>"$gpglog" 2>&1 || fail "cannot generate second key"
+    gpg --armor --export 'Second test key' > "$TMPDIR/second-key.asc" \
+        2>>"$gpglog"
+    rm -rf "$repo2"
+    mkdir -p "$repo2"
+    build_package "$repo2" poldek-signkey-two 1-1 \
+        -f /usr/share/poldek-signkey-two/README
+    local fp2=$(gpg --list-keys --with-colons 'Second test key' \
+                  2>>"$gpglog" |
+                awk -F: '$1 == "fpr" { print $10; exit }')
+    rpmsign --addsign --define "_gpg_name $fp2" \
+        "$repo2/poldek-signkey-two-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
+        fail "cannot sign package with second key"
+
+    cat > "$conf" <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $key
+
+[source]
+name = signed2
+type = dir
+path = $repo2
+signed = yes
+signkey = $TMPDIR/second-key.asc
+EOF
+
+    # the ^C typed on the terminal: SIGINT to poldek and to rpm
+    : > "$calls"
+    cat > "$wrapper" <<EOF
+#!/bin/sh
+echo "\$@" >> "$calls"
+case "\$*" in *--import*) kill -INT \$PPID \$\$ ;; esac
+exec "$(command -v rpm)" "\$@"
+EOF
+    chmod +x "$wrapper"
+
+    # SIGINT as on a terminal, whatever the tests inherited; both packages
+    # in one set, so both keys are imported before one rpm run
+    perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV or die "$ARGV[0]: $!\n"' \
+        $POLDEK --conf "$conf" --root "$DESTINATION_REPO" \
+        --pmcmd "$wrapper" --justdb --nodeps --noask -q \
+        -O 'particle install=no' \
+        --install poldek-signkey-test poldek-signkey-two >/dev/null 2>&1
+    rc=$?
+
+    assertEquals "exit code $rc" "1" "$rc"
+    assertEquals "keys imported: $($RPM -qa gpg-pubkey)" "1" \
+                 "$($RPM -qa gpg-pubkey | wc -l)"
+    assertEquals "rpm runs: $(cat $calls)" "1" "$(wc -l < $calls)"
+}
+
 # signkey: interactive runs ask before importing a missing key
 testRPMsignkeyImportPrompt() {
     skip_if_rpm_testing_off && return

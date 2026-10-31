@@ -134,7 +134,7 @@ static int run_hook(const char *path, const char *sudo, int loglevel)
         return 0;
     }
 
-    poldek__relay_output(&pst, 1, n_basenam(path));
+    poldek__relay_output(&pst, 1, n_basenam(path), 0);
 
     if ((ec = p_close(&pst)) != 0) {
         if (pst.errmsg)

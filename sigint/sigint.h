@@ -37,4 +37,7 @@ EXPORT int sigint_reached(void);
 /* sigint_reached(); sigint_reset() if reset */
 EXPORT int sigint_reached_reset(int reset);
 
+/* number of SIGINTs since the last reset, to tell a repeated ^C */
+EXPORT int sigint_count(void);
+
 #endif
