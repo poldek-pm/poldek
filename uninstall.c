@@ -103,12 +103,12 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
 
         pkgfl_it_init(&it, pkg->fl);
         while ((path = pkgfl_it_get(&it, NULL))) {
-            struct capreq *cap;
-            capreq_new_name_a(path, cap);
+            struct capreq *cap = capreq_new(NULL, path, 0, NULL, NULL, 0, 0);
             tracef(0, "%s of %s", pkg_id(pkg), path);
 
             pkgdb_q_what_requires(uctx->db, orphans, cap,
                                   uctx->unpkgs, ldflags, 0);
+            capreq_free(cap);
         }
     }
 
@@ -149,9 +149,11 @@ static int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
 
         pkgfl_it_init(&it, pkg->fl);
         while ((path = pkgfl_it_get(&it, NULL))) {
-            struct capreq *cap;
-            capreq_new_name_a(path, cap);
-            if (pkgdb_q_is_required(uctx->db, cap, exclude))
+            struct capreq *cap = capreq_new(NULL, path, 0, NULL, NULL, 0, 0);
+            int required = pkgdb_q_is_required(uctx->db, cap, exclude);
+
+            capreq_free(cap);
+            if (required)
                 goto l_yes;
         }
     }
