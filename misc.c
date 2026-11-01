@@ -886,7 +886,7 @@ int poldek__is_in_testing_mode(void)
 void poldek__relay_output(struct p_open_st *st, int verbose_level,
                           const char *logprefix, enum poldek_relay_sigint on_sigint)
 {
-    int endl = 1, nsigint = 0;
+    int endl = 1, nsigint = 0, eof = 0;
 
     while (1) {
         struct timeval to = { 0, 200000 };
@@ -923,6 +923,17 @@ void poldek__relay_output(struct p_open_st *st, int verbose_level,
             }
         }
 
+        /* a command may close its output and go on, a ^C still to be seen to;
+           the end of output mostly comes just before the command's own end */
+        if (eof) {
+            struct timeval tick = { 0, 10000 };
+
+            if (p_wait(st))
+                break;
+            select(0, NULL, NULL, NULL, &tick);
+            continue;
+        }
+
         FD_ZERO(&fdset);
         FD_SET(st->fd, &fdset);
         if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
@@ -938,8 +949,10 @@ void poldek__relay_output(struct p_open_st *st, int verbose_level,
             char  buf[4096], *fmt = "_%s";
             int   n, i;
 
-            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
-                break;
+            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0) {
+                eof = 1;
+                continue;
+            }
 
             buf[n] = '\0';
 

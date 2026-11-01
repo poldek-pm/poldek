@@ -37,12 +37,14 @@ setUp() {
     TERMINAL_RPM="$TMPDIR/terminal-rpm"
 }
 
-# terminal_rpm N: writes the fake rpm for N ^C typed on the terminal while
-# rpm runs. The terminal sends SIGINT to every process of poldek's group, so
-# each ^C is SIGINT to poldek and to rpm. The fake rpm logs its run, a SIGTERM
-# and its end.
+# terminal_rpm N [quiet]: writes the fake rpm for N ^C typed on the terminal
+# while rpm runs. The terminal sends SIGINT to every process of poldek's group,
+# so each ^C is SIGINT to poldek and to rpm. The fake rpm logs its run, a
+# SIGTERM and its end; quiet, it first sends its output elsewhere, as a
+# 'pm command' wrapper may.
 terminal_rpm() {
     printf '#!/bin/sh\ntrap "echo TERM >> %s" TERM\n' "$RUNS"
+    [ "${2:-}" = quiet ] && printf 'exec </dev/null >/dev/null 2>&1\n'
     printf 'echo rpm "$@" >> %s\n' "$RUNS"
     for i in $(seq $1); do
         printf 'kill -INT $PPID $$\nsleep 1\n'
@@ -162,6 +164,19 @@ testSecondInterruptAsksRpmToStop()
 
     out=$(poldek_on_pipes -uv a)
     assertEquals "rpm got the ^C: $out" "1" "$(grep -c 'rpm done' $RUNS)"
+    assertEquals "rpm not asked to stop: $out" "1" "$(grep -c TERM $RUNS)"
+    assertEquals "not told: $out" "1" \
+                 "$(echo "$out" | grep -c '^notice: Stopping rpm: a transaction')"
+}
+
+testSecondInterruptAsksQuietRpmToStop()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    terminal_rpm 2 quiet > $TERMINAL_RPM
+
+    out=$(poldek_on_pipes -uv a)
     assertEquals "rpm not asked to stop: $out" "1" "$(grep -c TERM $RUNS)"
     assertEquals "not told: $out" "1" \
                  "$(echo "$out" | grep -c '^notice: Stopping rpm: a transaction')"
