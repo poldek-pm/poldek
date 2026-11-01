@@ -246,7 +246,9 @@ and [filename]*-source.conf[/filename], file getters are declared in
 
   <option name="pm command" type="string" default="/bin/rpm" multiple="no">
     <description>
-    Full path name to a PM (rpm for now) binary.
+    Full path name to a PM (rpm for now) binary. Unless it runs through sudo
+    (see 'use sudo'), it runs without a controlling terminal and cannot ask
+    for a password, so a wrapper that runs sudo does not belong here.
     </description>
     <alias name="rpm command" obsoleted="yes" />
   </option>

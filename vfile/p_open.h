@@ -39,6 +39,9 @@ EXPORT void p_st_destroy(struct p_open_st *pst);
 #define P_OPEN_KEEPSTDIN (1 << 0) /* keep stdin, unless the command runs on a pty */
 #define P_OPEN_OUTPTYS   (1 << 1) /* run the command on a pseudo-tty */
 #define P_OPEN_IGNSIGINT (1 << 2) /* start the command with SIGINT ignored */
+/* start the command in a session of its own, without a controlling
+   terminal: keys typed on ours (^C, ^\, ^Z) and its hangup miss it */
+#define P_OPEN_SETSID    (1 << 3)
 
 /* NULL: nothing was started, and pst->errmsg says why */
 EXPORT FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,

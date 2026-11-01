@@ -7,7 +7,8 @@
 # A ^C before the first rpm run stops an install, upgrade-dist and removals
 # with an error, and rpm does not run. Started with SIGINT ignored, poldek
 # keeps ignoring it. On a terminal rpm reads from the pty it writes to, not
-# from poldek's terminal, where sudo would take the ^C before poldek.
+# from poldek's terminal, where sudo would take the ^C before poldek. A ^\
+# ends poldek, and rpm run without sudo goes on in a session of its own.
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
@@ -38,16 +39,15 @@ setUp() {
 }
 
 # terminal_rpm N [quiet]: writes the fake rpm for N ^C typed on the terminal
-# while rpm runs. The terminal sends SIGINT to every process of poldek's group,
-# so each ^C is SIGINT to poldek and to rpm. The fake rpm logs its run, a
-# SIGTERM and its end; quiet, it first sends its output elsewhere, as a
-# 'pm command' wrapper may.
+# while rpm runs: SIGINT to every process of poldek's group. The fake rpm logs
+# its run, a SIGTERM and its end; quiet, it first sends its output elsewhere,
+# as a 'pm command' wrapper may.
 terminal_rpm() {
     printf '#!/bin/sh\ntrap "echo TERM >> %s" TERM\n' "$RUNS"
     [ "${2:-}" = quiet ] && printf 'exec </dev/null >/dev/null 2>&1\n'
     printf 'echo rpm "$@" >> %s\n' "$RUNS"
     for i in $(seq $1); do
-        printf 'kill -INT $PPID $$\nsleep 1\n'
+        printf 'kill -INT -- -$(cut -d" " -f5 /proc/$PPID/stat)\nsleep 1\n'
     done
     printf 'sleep 1\necho rpm done >> %s\n' "$RUNS"
 }
@@ -56,13 +56,47 @@ terminal_rpm() {
 # as on a terminal; rpm runs on pipes, or on a pty when poldek's output is one
 poldek_on_pipes() {
     chmod 755 $TERMINAL_RPM
-    with_sigint DEFAULT env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM "$@" 2>&1
+    setsid -w perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV' \
+        env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM "$@" 2>&1
 }
 
 poldek_on_pty() {
     chmod 755 $TERMINAL_RPM
     timeout 30 script -qec "perl -e '\$SIG{INT} = \"DEFAULT\"; exec @ARGV' \
         env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM $*" /dev/null </dev/null 2>&1
+}
+
+# quit_rpm: writes the fake rpm for a ^\ typed on the terminal while rpm
+# runs: SIGQUIT to every process of poldek's group, which ends poldek. The
+# fake rpm logs its run and, a second later, its end.
+quit_rpm() {
+    printf '#!/bin/sh\necho rpm "$@" >> %s\n' "$RUNS"
+    printf 'kill -QUIT -- -$(cut -d" " -f5 /proc/$PPID/stat)\n'
+    printf 'sleep 1\necho rpm done >> %s\n' "$RUNS"
+}
+
+# quit_on_pty|quit_on_pipes: poldek installing a with that fake rpm, SIGQUIT
+# as on a terminal (a background job ignores it) and no core when it dies of
+# it; on pipes in a group of its own, as on a terminal
+quit_on_pty() {
+    chmod 755 $TERMINAL_RPM
+    timeout 30 script -qec "ulimit -c 0; exec perl -e '\$SIG{QUIT} = \"DEFAULT\"; exec @ARGV' \
+        env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM -u a" /dev/null </dev/null >/dev/null 2>&1
+}
+
+quit_on_pipes() {
+    chmod 755 $TERMINAL_RPM
+    (ulimit -c 0; timeout 30 setsid -w perl -e '$SIG{QUIT} = "DEFAULT"; exec @ARGV' \
+        env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM -u a) >/dev/null 2>&1
+}
+
+# rpm_done: whether the fake rpm got to its end within 5 s
+rpm_done() {
+    for i in $(seq 50); do
+        grep -q 'rpm done' $RUNS 2>/dev/null && return 0
+        sleep 0.1
+    done
+    return 1
 }
 
 # with_sigint DEFAULT|IGNORE <command>: run it with SIGINT so set, whatever
@@ -180,6 +214,49 @@ testSecondInterruptAsksQuietRpmToStop()
     assertEquals "rpm not asked to stop: $out" "1" "$(grep -c TERM $RUNS)"
     assertEquals "not told: $out" "1" \
                  "$(echo "$out" | grep -c '^notice: Stopping rpm: a transaction')"
+}
+
+testQuitKeyLetsRpmRunOnPty()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    quit_rpm > $TERMINAL_RPM
+
+    quit_on_pty
+    assertEquals "rpm runs" "1" "$(grep -c '^rpm ' $RUNS)"
+    assertTrue "rpm got the ^\\: $(cat $RUNS)" rpm_done
+}
+
+testQuitKeyLetsRpmRunOnPipes()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    quit_rpm > $TERMINAL_RPM
+
+    quit_on_pipes
+    assertEquals "rpm runs" "1" "$(grep -c '^rpm ' $RUNS)"
+    assertTrue "rpm got the ^\\: $(cat $RUNS)" rpm_done
+}
+
+# a ^C is kept from rpm without ignoring SIGINT, which the scriptlets and the
+# daemons they start would inherit; the fake rpm runs a scriptlet that sends
+# itself a SIGINT
+testScriptletsStopOnInterrupt()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    cat > $TERMINAL_RPM <<EOF
+#!/bin/sh
+echo rpm "\$@" >> $RUNS
+sh -c 'kill -INT \$\$; echo SIGINT ignored >> $RUNS'
+EOF
+
+    poldek_on_pipes -u a
+    assertEquals "rpm runs" "1" "$(grep -c '^rpm ' $RUNS)"
+    assertEquals "the scriptlet ignored SIGINT" "0" "$(grep -c 'SIGINT ignored' $RUNS)"
 }
 
 testInterruptBeforeRpmStopsInstall()

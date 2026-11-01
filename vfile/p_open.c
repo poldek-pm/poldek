@@ -153,6 +153,8 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 
     if ((pid = fork()) == 0) {
         p_dupnull(STDIN_FILENO, flags);
+        if (flags & P_OPEN_SETSID)
+            setsid();
         if (flags & P_OPEN_IGNSIGINT)
             signal(SIGINT, SIG_IGN);
         close(pp[0]);
@@ -319,6 +321,8 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     setvbuf(pst->stream, NULL, _IONBF, 0);
 
     if ((pid = forkptys(fd, slave)) == 0) {
+        if (flags & P_OPEN_SETSID)
+            setsid();
         if (flags & P_OPEN_IGNSIGINT)
             signal(SIGINT, SIG_IGN);
         execv(cmd, argv);
