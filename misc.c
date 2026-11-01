@@ -884,7 +884,7 @@ int poldek__is_in_testing_mode(void)
 }
 
 void poldek__relay_output(struct p_open_st *st, int verbose_level,
-                          const char *logprefix, int sigint_ignored)
+                          const char *logprefix, enum poldek_relay_sigint on_sigint)
 {
     int endl = 1, nsigint = 0;
 
@@ -898,23 +898,28 @@ void poldek__relay_output(struct p_open_st *st, int verbose_level,
             ioctl(st->fd, FIONBIO, &yes);
         }
 
-        /* the first ^C lets the command finish, the second asks it to stop */
-        if (sigint_ignored && st->pid > 0 && sigint_count() > nsigint) {
+        /* the first ^C lets the command finish, the second may ask it to stop */
+        if (on_sigint && st->pid > 0 && sigint_count() > nsigint) {
+            int first = (nsigint == 0), stop = (on_sigint == RELAY_SIGINT_STOP);
+
             nsigint = sigint_count();
-            if (!endl) {
+            if (!endl && (first || stop)) {
                 msg_f(0, "_\n");
                 msg_tty(verbose_level, "_\n");
                 endl = 1;
             }
 
-            if (nsigint == 1) {
-                logn(LOGNOTICE, _("Interrupted: %s runs to the end and the "
-                                  "rest is cancelled; ^C again stops it"),
-                     logprefix);
-            } else {
+            if (stop && nsigint > 1) {
                 kill(st->pid, SIGTERM);
                 logn(LOGNOTICE, _("Stopping %s: a transaction already begun "
                                   "runs to the end"), logprefix);
+            } else if (stop) {
+                logn(LOGNOTICE, _("Interrupted: %s runs to the end and the "
+                                  "rest is cancelled; ^C again stops it"),
+                     logprefix);
+            } else if (first) {
+                logn(LOGNOTICE, _("Interrupted: %s runs to the end and the "
+                                  "rest is cancelled"), logprefix);
             }
         }
 

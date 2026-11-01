@@ -411,7 +411,7 @@ int pm_rpm_signkey_import(struct pm_rpm *pm, const struct poldek_ts *ts,
     argv[nargs++] = sk->path;
     argv[nargs] = NULL;
 
-    ec = pm_rpm_execrpm(cmd, argv, 1, 1);
+    ec = pm_rpm_execrpm(cmd, argv, 1, cmd == pm->sudo, 1);
     if (ec != 0) {
         sk->import_status = SIGNKEY_IMPORT_FAILED;
         logn(LOGWARN, _("%s: signing key import failed"), sk->url);

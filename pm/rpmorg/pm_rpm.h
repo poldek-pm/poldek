@@ -184,7 +184,8 @@ void pm_rpm_setup_commands(struct pm_rpm *pm);
 char *pm_rpm_command(struct pm_rpm *pm, const struct poldek_ts *ts,
                      char **argv, int *nargs);
 
-int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty,
+/* sudo: cmd is sudo, which then runs rpm */
+int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int sudo,
                    int verbose_level);
 
 #endif
