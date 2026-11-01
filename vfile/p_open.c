@@ -199,8 +199,13 @@ int p_waitpid(struct p_open_st *pst, int woptions)
     pst->errmsg = NULL;
 
 
-    if ((pid = waitpid(pst->pid, &st, woptions)) <= 0)
+    if ((pid = waitpid(pst->pid, &st, woptions)) <= 0) {
+        /* with SIGCHLD ignored the kernel reaps the command at its end,
+           its exit status lost */
+        if (pid < 0 && errno == ECHILD)
+            pst->pid = 0;
         return 0;
+    }
 
     if (WIFEXITED(st)) {
         rc = WEXITSTATUS(st);
