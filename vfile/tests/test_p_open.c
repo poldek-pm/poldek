@@ -71,8 +71,6 @@ START_TEST(test_pipe_fdopen_fails)
 }
 END_TEST
 
-#ifdef HAVE_OPENPTY
-
 /* with P_OPEN_OUTPTYS the reader must see the end of the output once
    the command has exited, not only when its own wait times out */
 START_TEST(test_pty_output_ends_with_command)
@@ -130,7 +128,3 @@ END_TEST
 
 NTEST_RUNNER("p_open", test_pipe_fdopen_fails, test_pty_output_ends_with_command,
              test_pty_fdopen_fails);
-#else
-/* without openpty() P_OPEN_OUTPTYS falls back to a pipe */
-NTEST_RUNNER("p_open", test_pipe_fdopen_fails);
-#endif

@@ -34,16 +34,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#if HAVE_OPENPTY
-# if HAVE_PTY_H
-#  include <pty.h>
-# elif HAVE_LIBUTIL_H           /* FreeBSD */
-#  include <libutil.h>
-# elif HAVE_UTIL_H
-#  include <util.h>
-# endif
-# include <termios.h>
-#endif /* HAVE_OPENPTY */
+#if HAVE_PTY_H
+# include <pty.h>
+#elif HAVE_LIBUTIL_H           /* FreeBSD */
+# include <libutil.h>
+#elif HAVE_UTIL_H
+# include <util.h>
+#endif
+#include <termios.h>
 
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
@@ -93,10 +91,8 @@ void p_st_destroy(struct p_open_st *pst)
 FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
              char *const argv[])
 {
-#ifdef HAVE_OPENPTY
     if (flags & P_OPEN_OUTPTYS)
         return pty_open(pst, flags, cmd, argv);
-#endif
 
     return pp_open(pst, flags, cmd, argv);
 }
@@ -246,7 +242,6 @@ int p_close(struct p_open_st *pst)
 }
 
 
-#ifdef HAVE_OPENPTY
 pid_t forkptys(int master, int slave)
 {
     pid_t pid;
@@ -338,5 +333,3 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 
     return pst->stream;
 }
-
-#endif /* HAVE_OPENPTY */

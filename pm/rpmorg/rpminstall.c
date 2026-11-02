@@ -14,23 +14,13 @@
 # include "config.h"
 #endif
 
-#if HAVE_STRSIGNAL
-# define __USE_GNU 1
-#endif
-
 #include <string.h>
-
-//#if HAVE_STRSIGNAL
-//# undef __USE_GNU
-//#endif
-
 #include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
 #include <signal.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <fnmatch.h>
 
 #include <trurl/nassert.h>
@@ -53,8 +43,6 @@
 #include "pm_rpm.h"
 #include "pm_hooks.h"
 #include "sigint/sigint.h"
-
-#ifdef HAVE_OPENPTY
 
 int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {
@@ -103,65 +91,6 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
 
     return ec;
 }
-
-#else  /* HAVE_OPENPTY */
-int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_level)
-{
-    int rc, st, n;
-    pid_t pid;
-
-    ontty = ontty;               /* unused */
-
-    msg_f(1, _("Executing %s "), cmd);
-    n = 0;
-    while (argv[n])
-        msg_f(1, "_%s ", argv[n++]);
-    msg_f(1, "\n");
-    if (access(cmd, X_OK) != 0) {
-        logn(LOGERR, _("%s: no such file"), cmd);
-        return -1;
-    }
-
-    if ((pid = fork()) == 0) {
-        printf("fork\n");
-
-        execv(cmd, argv);
-        exit(EXIT_FAILURE);
-
-    } else if (pid < 0) {
-        logn(LOGERR, _("%s: no such file"), cmd);
-        return -1;
-    }
-
-    rc = 0;
-    while (wait(&st) > 0) {
-        if (WIFEXITED(st)) {
-            const char *errmsg_exited = N_("%s exited with %d");
-            rc = WEXITSTATUS(st);
-            if (rc != 0)
-                logn(LOGERR, _(errmsg_exited), cmd, WEXITSTATUS(st));
-            else
-                msgn_f(1, _(errmsg_exited), cmd, rc);
-
-        } else if (WIFSIGNALED(st)) {
-#if HAVE_STRSIGNAL
-            logn(LOGERR, _("%s terminated by signal %s"), cmd,
-                 strsignal(WTERMSIG(st)));
-#else
-            logn(LOGERR, _("%s terminated by signal %d"), cmd,
-                 WTERMSIG(st));
-#endif
-            rc = -1;
-        } else {
-            logn(LOGERR, _("%s died under inscrutable circumstances"), cmd);
-            rc = -1;
-        }
-    }
-
-    return rc;
-}
-
-#endif /* HAVE_FORKPTY */
 
 static void setup_command(char **cmdp, const char *defaultcmd)
 {
