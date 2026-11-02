@@ -22,6 +22,7 @@
 #include "sigint.h"
 
 static volatile sig_atomic_t interrupted = 0;
+static volatile sig_atomic_t count = 0;   /* SIGINTs since the last reset */
 static tn_array *cb_stack = NULL;
 static void (*orig_sighandler)(int) = NULL;
 static void (*sigint_reached_cb)(void) = NULL;
@@ -41,6 +42,7 @@ static void sigint_handler(int sig)
         return;
     
     interrupted = 1;
+    count++;
     
     for (i=0; i < n_array_size(cb_stack); i++) {
         void (*cb)(void) = n_array_nth(cb_stack, i);
@@ -59,6 +61,7 @@ void sigint_emit(void)
         return;
 
     interrupted = 1;
+    count++;
 
     for (i = 0; i < n_array_size(cb_stack); i++) {
         void (*cb)(void) = n_array_nth(cb_stack, i);
@@ -75,6 +78,7 @@ void sigint_enable(int v)
 void sigint_reset(void) 
 {
     interrupted = 0;
+    count = 0;
     cnt = 0;
 }
 
@@ -91,6 +95,7 @@ void sigint_init(void)
 
     orig_sighandler = NULL;
     interrupted = 0;
+    count = 0;
     cnt = 0;
     orig_sighandler = signal(SIGINT, sigint_handler);
     if (orig_sighandler == SIG_IGN)     /* started with ^C ignored: keep it so */
@@ -132,6 +137,11 @@ int sigint_reached(void)
     }
 
     return v;
+}
+
+int sigint_count(void)
+{
+    return count;
 }
 
 int sigint_reached_reset(int reset)

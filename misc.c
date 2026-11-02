@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
 #include <sys/time.h>
@@ -61,6 +62,7 @@
 #include "pkg.h"
 #include "poldek_term.h"
 #include "pkgmisc.h"
+#include "sigint/sigint.h"
 
 int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size)
 {
@@ -882,9 +884,9 @@ int poldek__is_in_testing_mode(void)
 }
 
 void poldek__relay_output(struct p_open_st *st, int verbose_level,
-                          const char *logprefix)
+                          const char *logprefix, int sigint_ignored)
 {
-    int endl = 1;
+    int endl = 1, nsigint = 0;
 
     while (1) {
         struct timeval to = { 0, 200000 };
@@ -894,6 +896,26 @@ void poldek__relay_output(struct p_open_st *st, int verbose_level,
         if (p_wait(st)) {
             int yes = 1;
             ioctl(st->fd, FIONBIO, &yes);
+        }
+
+        /* the first ^C lets the command finish, the second asks it to stop */
+        if (sigint_ignored && st->pid > 0 && sigint_count() > nsigint) {
+            nsigint = sigint_count();
+            if (!endl) {
+                msg_f(0, "_\n");
+                msg_tty(verbose_level, "_\n");
+                endl = 1;
+            }
+
+            if (nsigint == 1) {
+                logn(LOGNOTICE, _("Interrupted: %s runs to the end and the "
+                                  "rest is cancelled; ^C again stops it"),
+                     logprefix);
+            } else {
+                kill(st->pid, SIGTERM);
+                logn(LOGNOTICE, _("Stopping %s: a transaction already begun "
+                                  "runs to the end"), logprefix);
+            }
         }
 
         FD_ZERO(&fdset);
@@ -967,7 +989,7 @@ int poldek_util_copy_file(const char *src, const char *dst)
         return 0;
     }
 
-    poldek__relay_output(&pst, 1, "cp");
+    poldek__relay_output(&pst, 1, "cp", 0);
     if ((ec = p_close(&pst) != 0))
         logn(LOGERR, "%s: cannot copy to %s: %s", n_basenam(src), dst,
              pst.errmsg ? pst.errmsg : "cp failed");
