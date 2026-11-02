@@ -15,7 +15,7 @@
 
 /* Canonical machine architecture as reported by rpm.
    The returned string is freshly allocated and must be freed by the
-   caller. Returns NULL only if rpm initialization fails. */
-char *pm_rpm_arch(void);
+   caller. */
+char *pm_rpm_arch_standalone(void);
 
 #endif /* POLDEK_PM_RPMORG_ARCH_H */

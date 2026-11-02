@@ -198,3 +198,10 @@ int pm_rpm_arch_color(const char *arch)
     return rpmGetArchColor(arch);
 }
 
+const char *pm_rpm_arch(void)
+{
+    const char *arch = NULL;
+    rpmGetArchInfo(&arch, NULL);
+
+    return arch;
+}

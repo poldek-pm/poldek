@@ -53,14 +53,14 @@ static const char *find_base_arch(const char *native) {
     return NULL;
 }
 
-const char *get_base_arch() {
-    char *arch = pm_rpm_arch();
-    const char *base;
+const char *metadata__get_base_arch() {
+    char *arch = pm_rpm_arch_standalone();
 
     if (arch == NULL)
         return NULL;
 
-    base = find_base_arch(arch);
+    const char *base = find_base_arch(arch);
     free(arch);
+
     return base;
 }

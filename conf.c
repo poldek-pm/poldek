@@ -385,10 +385,13 @@ static tn_hash *sysmacros_get(void)
         sysmacros = n_hash_new(2, (tn_fn_free)copt_free);
         n_hash_ctl(sysmacros, TN_HASH_NOCPKEY);
 
-        struct copt *opt = copt_new("_arch");
-        opt->val = pm_rpm_arch();
+        char *arch = pm_rpm_arch_standalone();
+        if (arch) {
+            struct copt *opt = copt_new("_arch");
+            opt->val = arch;
+            n_hash_insert(sysmacros, opt->name, opt);
+        }
 
-        n_hash_insert(sysmacros, opt->name, opt);
         atexit(sysmacros_free);
     }
 

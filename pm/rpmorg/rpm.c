@@ -70,21 +70,18 @@ static void rpmlib_destroy()
     rpmFreeRpmrc();
 }
 
-char *pm_rpm_arch(void)
+char *pm_rpm_arch_standalone(void)
 {
     if (pm_refcnt == 0 && !rpmlib_init())
         return NULL;
 
-    const char *rpmarch = NULL;
-    rpmGetArchInfo(&rpmarch, NULL);
-
-    if (rpmarch == NULL)
-        rpmarch = "unknown";
+    const char *rpmarch = pm_rpm_arch();
+    char *arch = rpmarch ? n_strdup(rpmarch) : NULL;
 
     if (pm_refcnt == 0)
         rpmlib_destroy();
 
-    return n_strdup(rpmarch);
+    return arch;
 }
 
 void pm_rpm_destroy(void *pm_rpm)

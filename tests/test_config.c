@@ -258,6 +258,8 @@ START_TEST(test_config_arch_macro) {
     const char *v;
     char expected[PATH_MAX];
     const char *name = "poldek_test_arch_macro.conf";
+    char *arch = pm_rpm_arch_standalone();
+    fail_unless(arch != NULL, "pm_rpm_arch_standalone() failed");
 
     /* default _arch expands to rpm canonical arch */
     lines = n_array_new(16, 0, 0);
@@ -275,9 +277,7 @@ START_TEST(test_config_arch_macro) {
     v = poldek_conf_get(s, "path", NULL);
     fail_if(v == NULL, "no path?");
 
-    char *arch = pm_rpm_arch();
     n_snprintf(expected, sizeof(expected), "/repo/%s/RPMS", arch);
-    free(arch);
 
     fail_unless(n_str_eq(v, expected),
                 "default _arch not expanded: got %s, expected %s",
@@ -318,15 +318,15 @@ START_TEST(test_config_arch_macro) {
     s = poldek_conf_get_section(cnf, "source");
     v = poldek_conf_get(s, "path", NULL);
 
-    arch = pm_rpm_arch();
     n_snprintf(expected, sizeof(expected), "/repo/%s/RPMS", arch);
-    free(arch);
+
 
     fail_unless(n_str_eq(v, expected),
                 "nested _arch expansion failed: got %s, expected %s",
                 v, expected);
     n_array_free(lines);
     remove(name);
+    free(arch);
 }
 END_TEST
 

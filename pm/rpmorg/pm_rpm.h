@@ -172,6 +172,7 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
                                    const char *dbpath, unsigned pkgdir_ldflags,
                                    tn_hash *kw);
 
+const char *pm_rpm_arch(void);
 int pm_rpm_arch_score(const char *arch);
 int pm_rpm_arch_color(const char *arch);
 int pm_rpm_vercmp(const char *one, const char *two);
