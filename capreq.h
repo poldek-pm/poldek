@@ -113,6 +113,8 @@ EXPORT struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                                  const char *version, const char *release,
                                  int32_t relflags, int32_t flags);
 #ifndef SWIG
+/* alloca(): the capreq lives until the caller returns, too long for a loop
+   over a list of any length */
 #define capreq_new_name_a(nam, crptr)                              \
     {                                                              \
         struct capreq *__cr;                                       \

@@ -839,6 +839,40 @@ testUpgradeMultipleInstalledWithDeps() {
     try_install a "a-1.1.1k-1" "a-1.1.1j-1"
 }
 
+# poldek -e on a 512 kB stack: room enough for poldek, but not for a stack
+# that grows with each file
+uninstall_on_small_stack() {
+    local expected="$1" out rc
+    shift
+
+    out=$(ulimit -s 512; $RAW_POLDEK --root $DESTINATION_REPO -ev --test \
+              --parsable-tr-summary "$@" 2>&1)
+    rc=$?
+    assertEquals "-e $*: exit code $rc: $(echo "$out" | tail -1)" "0" "$rc"
+    out=$(echo "$out" | grep -E '^%[RD]' | sort | tr '\n' ' ')
+    assertEquals "-e $*: removed" "$expected" "$out"
+}
+
+# removal looks up what requires each file of a package it takes, and so does
+# --greedy for each file of a requirement it may take along; neither may need
+# stack for each file. The long names stay under the 255 bytes a file list
+# keeps: longer ones are skipped, and the test would pass without the fix.
+testUninstallManyFiles() {
+    skip_if_rpm_testing_off && return
+    local dir=/opt/zzmany/$(printf '%0200d' 0) files="" last i
+
+    for i in $(seq 1200); do
+        last=$dir/$(printf '%0230d' $i)
+        files="$files -f $last"
+    done
+    build_installed a 1-1 $files
+    build_installed b 1-1 -r $last
+
+    uninstall_on_small_stack "%D b-1-1.noarch %R a-1-1.noarch " a
+    uninstall_on_small_stack "%D a-1-1.noarch %D sh-1-1.noarch %R b-1-1.noarch " \
+                             --greedy b
+}
+
 # poldek's rpmlog() hides rpm's notices such as "<file>: digests OK"
 testInstallRpmNoticesFiltered() {
     skip_if_rpm_testing_off && return
