@@ -250,6 +250,9 @@ pid_t forkptys(int master, int slave)
 
     if ((pid = fork()) == 0) {
         close(master);
+        /* poldek's terminal on stdin would make sudo with use_pty read it,
+           a ^C too; rpm only needs a terminal there to wait for its lock */
+        dup2(slave, STDIN_FILENO);
         dup2(slave, STDOUT_FILENO);
         dup2(slave, STDERR_FILENO);
         if (slave > STDERR_FILENO)
@@ -313,7 +316,6 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     setvbuf(pst->stream, NULL, _IONBF, 0);
 
     if ((pid = forkptys(fd, slave)) == 0) {
-        p_dupnull(STDIN_FILENO, flags);
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
 

@@ -5,7 +5,8 @@
 # something was skipped, as the shell does, rather than killing poldek.
 # A ^C before the first rpm run stops an install, upgrade-dist and removals
 # with an error, and rpm does not run. Started with SIGINT ignored, poldek
-# keeps ignoring it.
+# keeps ignoring it. On a terminal rpm reads from the pty it writes to, not
+# from poldek's terminal, where sudo would take the ^C before poldek.
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
@@ -92,6 +93,20 @@ testInterruptLetsRemovalFinish()
     rc=$?
     assertEquals "exit code $rc" "0" "$rc"
     assertEquals "rpm runs" "1" "$(wc -l < $RUNS)"
+}
+
+testRpmReadsFromItsPty()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    printf '#!/bin/sh\necho rpm stdin $(tty) stderr $(tty 0<&2) >> %s\n' "$RUNS" > $FAKE_RPM
+
+    timeout 30 script -qec "$POLDEK_INSTALL -Ouse_sudo=n --pmcmd $FAKE_RPM -u a" \
+        /dev/null </dev/null >/dev/null 2>&1
+    assertEquals "rpm runs" "1" "$(grep -c '^rpm stdin /dev/' $RUNS)"
+    set -- $(cat $RUNS)
+    assertEquals "rpm stdin: $*" "$5" "$3"
 }
 
 testInterruptBeforeRpmStopsInstall()
