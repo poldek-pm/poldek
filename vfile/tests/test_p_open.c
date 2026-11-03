@@ -4,6 +4,7 @@
 
 #include <dlfcn.h>
 #include <poll.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
@@ -71,6 +72,28 @@ START_TEST(test_pipe_fdopen_fails)
 }
 END_TEST
 
+/* with SIGCHLD ignored, as poldek may inherit it, the kernel reaps the
+   command at its end and waitpid() finds no child: p_wait() still sees
+   the end */
+START_TEST(test_wait_sees_end_with_sigchld_ignored)
+{
+    char *argv[] = { "sh", "-c", ":", NULL };
+    struct p_open_st pst;
+    int i;
+
+    signal(SIGCHLD, SIG_IGN);
+    p_st_init(&pst);
+    fail_unless(p_open(&pst, 0, "/bin/sh", argv) != NULL, "p_open: %s",
+                pst.errmsg ? pst.errmsg : "?");
+    for (i = 0; i < 300 && !p_wait(&pst); i++)
+        usleep(10000);
+    signal(SIGCHLD, SIG_DFL);
+
+    fail_unless(p_wait(&pst), "the end not seen in 3 s");
+    p_st_destroy(&pst);
+}
+END_TEST
+
 /* with P_OPEN_OUTPTYS the reader must see the end of the output once
    the command has exited, not only when its own wait times out */
 START_TEST(test_pty_output_ends_with_command)
@@ -126,5 +149,6 @@ START_TEST(test_pty_fdopen_fails)
 }
 END_TEST
 
-NTEST_RUNNER("p_open", test_pipe_fdopen_fails, test_pty_output_ends_with_command,
-             test_pty_fdopen_fails);
+NTEST_RUNNER("p_open", test_pipe_fdopen_fails,
+             test_wait_sees_end_with_sigchld_ignored,
+             test_pty_output_ends_with_command, test_pty_fdopen_fails);

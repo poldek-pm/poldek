@@ -57,3 +57,6 @@ check_PROGRAMS += test_source_flags
 
 # copying fails cleanly when cp cannot be started
 check_PROGRAMS += test_copy_file
+
+# a ^C while a command runs, and what poldek passes on to it
+check_PROGRAMS += test_relay_output

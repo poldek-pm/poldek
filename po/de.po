@@ -1606,7 +1606,12 @@ msgstr[0] "%d Pakete"
 msgstr[1] "%d Paket"
 msgstr[2] "%d Pakete"
 
-#: misc.c:911
+#: misc.c:914
+#, c-format
+msgid "Stopping %s: a transaction already begun runs to the end"
+msgstr "%s wird beendet: eine begonnene Transaktion läuft bis zum Ende"
+
+#: misc.c:917
 #, c-format
 msgid ""
 "Interrupted: %s runs to the end and the rest is cancelled; ^C again stops "
@@ -1615,10 +1620,10 @@ msgstr ""
 "Unterbrochen: %s läuft bis zum Ende, der Rest wird abgebrochen; ein "
 "weiteres ^C beendet es"
 
-#: misc.c:916
+#: misc.c:921
 #, c-format
-msgid "Stopping %s: a transaction already begun runs to the end"
-msgstr "%s wird beendet: eine begonnene Transaktion läuft bis zum Ende"
+msgid "Interrupted: %s runs to the end and the rest is cancelled"
+msgstr "Unterbrochen: %s läuft bis zum Ende, der Rest wird abgebrochen"
 
 #: pkgcmp.c:352
 #, fuzzy, c-format

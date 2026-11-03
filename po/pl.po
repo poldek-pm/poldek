@@ -1555,7 +1555,12 @@ msgstr[0] "%d pakiet"
 msgstr[1] "%d pakiety"
 msgstr[2] "%d pakietów"
 
-#: misc.c:911
+#: misc.c:914
+#, c-format
+msgid "Stopping %s: a transaction already begun runs to the end"
+msgstr "Zatrzymywanie programu %s: rozpoczęta transakcja zostanie dokończona"
+
+#: misc.c:917
 #, c-format
 msgid ""
 "Interrupted: %s runs to the end and the rest is cancelled; ^C again stops "
@@ -1564,10 +1569,10 @@ msgstr ""
 "Przerwano: %s dokończy pracę, reszta zostanie anulowana; kolejne ^C go "
 "zatrzyma"
 
-#: misc.c:916
+#: misc.c:921
 #, c-format
-msgid "Stopping %s: a transaction already begun runs to the end"
-msgstr "Zatrzymywanie programu %s: rozpoczęta transakcja zostanie dokończona"
+msgid "Interrupted: %s runs to the end and the rest is cancelled"
+msgstr "Przerwano: %s dokończy pracę, reszta zostanie anulowana"
 
 #: pkgcmp.c:352
 #, c-format

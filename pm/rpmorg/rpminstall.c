@@ -44,7 +44,8 @@
 #include "pm_hooks.h"
 #include "sigint/sigint.h"
 
-int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_level)
+int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int sudo,
+                   int verbose_level)
 {
     struct p_open_st pst;
     int vsaved = -999, ec;
@@ -80,7 +81,10 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
     if (poldek_VERBOSE == 0)
         vsaved = poldek_set_verbose(1);
 
-    poldek__relay_output(&pst, verbose_level, "rpm", 1);
+    /* sudo with use_pty passes a SIGTERM on to rpm's whole process group,
+       so to the scriptlet in progress too */
+    poldek__relay_output(&pst, verbose_level, "rpm",
+                         sudo ? RELAY_SIGINT_NOTICE : RELAY_SIGINT_STOP);
     if ((ec = p_close(&pst)) != 0 && pst.errmsg != NULL)
         logn(LOGERR, "%s", pst.errmsg);
 
@@ -449,7 +453,7 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         msgn(1, _("Executing%s..."), buf);
     }
 
-    ec = pm_rpm_execrpm(cmd, argv, 1, 1);
+    ec = pm_rpm_execrpm(cmd, argv, 1, cmd == pm->sudo, 1);
     n_hash_free(signkeys);
     return ec == 0;
 
@@ -546,5 +550,5 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
         msgn(1, _("Running%s..."), buf);
     }
 
-    return pm_rpm_execrpm(cmd, argv, 1, 0) == 0;
+    return pm_rpm_execrpm(cmd, argv, 1, cmd == pm->sudo, 0) == 0;
 }
