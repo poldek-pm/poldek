@@ -98,6 +98,40 @@ FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 }
 
 
+/* the child runs none of poldek's handlers, so a SIGTERM before its exec
+   ends it; exec_command() lets the signals in after the child's setup */
+static pid_t fork_command(sigset_t *mask)
+{
+    sigset_t all;
+    pid_t pid;
+    int sig;
+
+    sigfillset(&all);
+    sigprocmask(SIG_BLOCK, &all, mask);
+    if ((pid = fork()) != 0) {
+        sigprocmask(SIG_SETMASK, mask, NULL);
+        return pid;
+    }
+
+    for (sig = 1; sig < NSIG; sig++) {
+        struct sigaction sa;
+
+        /* sa_handler shares its storage with sa_sigaction: both kinds */
+        if (sigaction(sig, NULL, &sa) == 0 &&
+            sa.sa_handler != SIG_DFL && sa.sa_handler != SIG_IGN)
+            signal(sig, SIG_DFL);
+    }
+    return 0;
+}
+
+static void exec_command(const char *cmd, char *const argv[],
+                         const sigset_t *mask)
+{
+    sigprocmask(SIG_SETMASK, mask, NULL);
+    execv(cmd, argv);
+    exit(EXIT_FAILURE);
+}
+
 static void p_dupnull(int fdno, unsigned p_open_flags)
 {
     switch (fdno) {
@@ -125,6 +159,7 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 {
     int    pp[2];
     pid_t  pid;
+    sigset_t mask;
     char   errmsg[1024];
 
     n_assert(pst->stream == NULL);
@@ -151,7 +186,7 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     }
     setvbuf(pst->stream, NULL, _IONBF, 0);
 
-    if ((pid = fork()) == 0) {
+    if ((pid = fork_command(&mask)) == 0) {
         p_dupnull(STDIN_FILENO, flags);
         if (flags & P_OPEN_SETSID)
             setsid();
@@ -163,8 +198,7 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 	dup2(pp[1], STDERR_FILENO);
 	close(pp[1]);
 
-        execv(cmd, argv);
-	exit(EXIT_FAILURE);
+        exec_command(cmd, argv, &mask);
 
     } else if (pid < 0) {
         snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
@@ -249,11 +283,11 @@ int p_close(struct p_open_st *pst)
 }
 
 
-pid_t forkptys(int master, int slave)
+pid_t forkptys(int master, int slave, sigset_t *mask)
 {
     pid_t pid;
 
-    if ((pid = fork()) == 0) {
+    if ((pid = fork_command(mask)) == 0) {
         close(master);
         /* poldek's terminal on stdin would make sudo with use_pty read it,
            a ^C too; rpm only needs a terminal there to wait for its lock */
@@ -278,6 +312,7 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     struct winsize  winsize;
     int             fd, slave;
     pid_t           pid;
+    sigset_t        mask;
     char            errmsg[1024];
 
 
@@ -320,13 +355,12 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     }
     setvbuf(pst->stream, NULL, _IONBF, 0);
 
-    if ((pid = forkptys(fd, slave)) == 0) {
+    if ((pid = forkptys(fd, slave, &mask)) == 0) {
         if (flags & P_OPEN_SETSID)
             setsid();
         if (flags & P_OPEN_IGNSIGINT)
             signal(SIGINT, SIG_IGN);
-        execv(cmd, argv);
-	exit(EXIT_FAILURE);
+        exec_command(cmd, argv, &mask);
 
     } else if (pid < 0) {
         snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);

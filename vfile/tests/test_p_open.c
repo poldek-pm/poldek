@@ -38,6 +38,39 @@ FILE *fdopen(int fd, const char *mode)
     return real_fdopen(fd, mode);
 }
 
+static int term_at_exec;
+
+/* the command gets a SIGTERM right before its exec, as when poldek asks it
+   to stop just after starting it; libvfile calls this one */
+__attribute__((visibility("default")))
+int execv(const char *path, char *const argv[])
+{
+    static int (*real_execv)(const char *, char *const []);
+
+    if (term_at_exec)
+        raise(SIGTERM);
+    if (real_execv == NULL)
+        real_execv = (int (*)(const char *, char *const []))dlsym(RTLD_NEXT, "execv");
+    return real_execv(path, argv);
+}
+
+static int term_after_fork;
+
+/* the command gets a SIGTERM right after fork(), before it has put
+   poldek's handlers away; libvfile calls this one */
+__attribute__((visibility("default")))
+pid_t fork(void)
+{
+    static pid_t (*real_fork)(void);
+    pid_t pid;
+
+    if (real_fork == NULL)
+        real_fork = (pid_t (*)(void))dlsym(RTLD_NEXT, "fork");
+    if ((pid = real_fork()) == 0 && term_after_fork)
+        raise(SIGTERM);
+    return pid;
+}
+
 /* with fdopen() failing, p_open() returns NULL and has started nothing */
 static void check_fdopen_failure(unsigned flags)
 {
@@ -99,6 +132,87 @@ END_TEST
 static void on_signal(int sig)
 {
     (void)sig;
+}
+
+static void on_siginfo(int sig, siginfo_t *info, void *context)
+{
+    (void)sig;
+    (void)info;
+    (void)context;
+}
+
+/* a SIGTERM that reaches the command before its exec, right after fork()
+   or right before execv() as WHEN says, ends it: it does not run the
+   handler poldek has for SIGTERM, one taking one argument or three */
+static void check_signal_before_exec(unsigned flags, int *when, int siginfo)
+{
+    const char *tmpdir = getenv("TMPDIR");
+    char dir[PATH_MAX], ran[PATH_MAX];
+    char *argv[] = { "sh", "-c", ": > \"$0\"", ran, NULL };
+    struct p_open_st pst;
+    struct sigaction sa;
+    FILE *stream;
+
+    n_snprintf(dir, sizeof(dir), "%s/poldek-p_open-XXXXXX",
+               tmpdir && *tmpdir ? tmpdir : "/tmp");
+    fail_if(mkdtemp(dir) == NULL, "mkdtemp %s: %s", dir, strerror(errno));
+    n_snprintf(ran, sizeof(ran), "%s/ran", dir);
+
+    memset(&sa, 0, sizeof(sa));
+    if (siginfo) {
+        sa.sa_sigaction = on_siginfo;
+        sa.sa_flags = SA_SIGINFO;
+    } else {
+        sa.sa_handler = on_signal;
+    }
+    sigaction(SIGTERM, &sa, NULL);
+    p_st_init(&pst);
+    *when = 1;
+    stream = p_open(&pst, flags, "/bin/sh", argv);
+    *when = 0;
+    fail_unless(stream != NULL, "p_open: %s", pst.errmsg ? pst.errmsg : "?");
+    p_close(&pst);
+    signal(SIGTERM, SIG_DFL);
+
+    fail_if(access(ran, F_OK) == 0, "the command ran, the signal lost");
+    fail_unless(pst.errmsg && strstr(pst.errmsg, "signal"),
+                "not ended by the signal: %s", pst.errmsg ? pst.errmsg : "exit 0");
+    p_st_destroy(&pst);
+    unlink(ran);
+    rmdir(dir);
+}
+
+/* a signal ignored, also with SA_SIGINFO among the flags it was set with,
+   stays ignored in the command: one that sends it to itself runs on */
+static void check_ignored_stays_ignored(unsigned flags, int sa_flags)
+{
+    const char *tmpdir = getenv("TMPDIR");
+    char dir[PATH_MAX], ran[PATH_MAX];
+    char *argv[] = { "sh", "-c", "kill -USR1 $$; : > \"$0\"", ran, NULL };
+    struct p_open_st pst;
+    struct sigaction sa, saved;
+    FILE *stream;
+
+    n_snprintf(dir, sizeof(dir), "%s/poldek-p_open-XXXXXX",
+               tmpdir && *tmpdir ? tmpdir : "/tmp");
+    fail_if(mkdtemp(dir) == NULL, "mkdtemp %s: %s", dir, strerror(errno));
+    n_snprintf(ran, sizeof(ran), "%s/ran", dir);
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = SIG_IGN;
+    sa.sa_flags = sa_flags;
+    sigaction(SIGUSR1, &sa, &saved);
+    p_st_init(&pst);
+    stream = p_open(&pst, flags, "/bin/sh", argv);
+    fail_unless(stream != NULL, "p_open: %s", pst.errmsg ? pst.errmsg : "?");
+    p_close(&pst);
+    sigaction(SIGUSR1, &saved, NULL);
+
+    fail_unless(access(ran, F_OK) == 0, "SIGUSR1 not ignored: %s",
+                pst.errmsg ? pst.errmsg : "?");
+    p_st_destroy(&pst);
+    unlink(ran);
+    rmdir(dir);
 }
 
 /* wait up to MS milliseconds for PATH to appear */
@@ -241,6 +355,35 @@ START_TEST(test_pty_fdopen_fails)
 }
 END_TEST
 
+/* on pipes, and on a pty with stdout a pty slave, as above */
+/* before its exec a command has the signal actions it has after it */
+START_TEST(test_signals_before_exec_act_as_after_it)
+{
+    int master, slave, saved_stdout;
+
+    check_signal_before_exec(0, &term_at_exec, 0);
+    check_signal_before_exec(0, &term_after_fork, 0);
+    check_signal_before_exec(0, &term_at_exec, 1);
+    check_ignored_stays_ignored(0, 0);
+    check_ignored_stays_ignored(0, SA_SIGINFO);
+
+    fail_unless(openpty(&master, &slave, NULL, NULL, NULL) == 0, "openpty: %m");
+    saved_stdout = dup(STDOUT_FILENO);
+    dup2(slave, STDOUT_FILENO);
+
+    check_signal_before_exec(P_OPEN_OUTPTYS, &term_at_exec, 0);
+    check_signal_before_exec(P_OPEN_OUTPTYS, &term_after_fork, 0);
+    check_signal_before_exec(P_OPEN_OUTPTYS, &term_at_exec, 1);
+    check_ignored_stays_ignored(P_OPEN_OUTPTYS, 0);
+    check_ignored_stays_ignored(P_OPEN_OUTPTYS, SA_SIGINFO);
+
+    dup2(saved_stdout, STDOUT_FILENO);
+    close(saved_stdout);
+    close(slave);
+    close(master);
+}
+END_TEST
+
 START_TEST(test_pty_quit_key_misses_command)
 {
     fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, QUIT_KEY),
@@ -259,4 +402,4 @@ NTEST_RUNNER("p_open", test_pipe_fdopen_fails,
              test_wait_sees_end_with_sigchld_ignored, test_quit_key_misses_command,
              test_hangup_misses_command, test_pty_output_ends_with_command,
              test_pty_fdopen_fails, test_pty_quit_key_misses_command,
-             test_pty_hangup_misses_command);
+             test_pty_hangup_misses_command, test_signals_before_exec_act_as_after_it);
