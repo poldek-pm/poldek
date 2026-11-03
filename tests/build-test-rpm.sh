@@ -209,15 +209,16 @@ SPEC_HASH=$(grep -v -E '^(BuildRoot:|%description|Package build by)' "$SPEC" |
             grep -v '\$\$' |
             sha1sum | awk '{print $1}')
 
-# hash contents of files that are copied into the package
+# hash contents of files that are copied into the package (from the cwd,
+# by basename; otherwise the path is created with touch inside the build)
 FILE_HASH=""
 for f in $files; do
     bn=$(basename "$f")
     if [ -f "$bn" ]; then
-        FILE_HASH="${FILE_HASH}$(sha1sum "$bn" | awk '{print $1}')"
+        FILE_HASH="${FILE_HASH}$(sha1sum "$bn" | awk '{print $1}')\n"
     fi
 done
-[ -n "$FILE_HASH" ] && FILE_HASH="-${FILE_HASH}"
+[ -n "$FILE_HASH" ] && FILE_HASH="-$(printf '%b' "$FILE_HASH" | sha1sum | awk '{print $1}')"
 
 CACHE_KEY="${BUILD_ID}-${SPEC_HASH}${FILE_HASH}"
 CACHE_SUBDIR="$CACHE_DIR/$CACHE_KEY"
