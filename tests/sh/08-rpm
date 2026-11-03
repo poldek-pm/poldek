@@ -819,6 +819,32 @@ testUpgradeMultipleInstalled() {
     try_install a "a-4-1" "a-3-1"
 }
 
+# with several versions installed, the old one goes in an rpm run of its
+# own after the new one is in; poldek interrupted meanwhile starts no such
+# run, keeps the old version and reports the upgrade as failed
+testUpgradeMultipleInstalledInterrupted() {
+    skip_if_rpm_testing_off && return
+    msgn "Preparing repositories..."
+    build_installed a 1-1
+    build_installed a 2-1
+    build_installed a 3-1
+    build a 4
+
+    # rpm that gets poldek interrupted as it installs
+    local rpm="$TMPDIR/rpm-then-sigint"
+    printf '#!/bin/sh\n%s rpm "$@"\nrc=$?\ncase "$*" in *--install*|*--upgrade*) kill -INT $PPID;; esac\nexit $rc\n' \
+           "$SUDO" > $rpm
+    chmod 755 $rpm
+
+    perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV' \
+         $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $rpm -uv a >/dev/null 2>&1
+    rc=$?
+    assertEquals "exit code $rc" "1" "$rc"
+    for v in 1-1 2-1 3-1 4-1; do
+        $RPM --quiet -q a-$v || fail "a-$v: package expected to be installed"
+    done
+}
+
 testUpgradeMultipleInstalledWithDeps() {
     skip_if_rpm_testing_off && return
     msgn "Preparing repositories..."

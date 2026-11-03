@@ -36,6 +36,7 @@
 #include "poldek.h"
 #include "poldek_intern.h"
 #include "pm_hooks.h"
+#include "sigint/sigint.h"
 
 #define HOOKS_SKIPPED    (1 << 0) /* nothing to run for this ts */
 #define HOOKS_PRE_DONE   (1 << 1) /* post-install hooks are due */
@@ -162,6 +163,8 @@ static int run_hooks(const char *hooksdir, const char *subdir,
     }
 
     for (i = 0; i < n_array_size(hooks); i++) {
+        if (is_pre && sigint_reached())     /* interrupted: no further step */
+            break;
         if (!run_hook(n_array_nth(hooks, i), sudo, loglevel)) {
             ok = 0;
             if (is_pre)

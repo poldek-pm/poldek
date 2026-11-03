@@ -4,6 +4,8 @@
 # of an operation and the ones in post-install.d once after the last one,
 # however many package sets the operation installs. A failing pre-install
 # hook stops the operation; a failing post-install one is only reported.
+# An operation interrupted while its pre-install hooks run starts neither
+# another pre-install hook nor rpm, and its post-install hooks still run.
 # Hook output keeps its lines on the terminal and in the log file, where
 # each line follows the hook's name.
 # Hooks do not run for rpm test runs, nor with a root other than /.
@@ -117,6 +119,23 @@ testHooksRunInNameOrderSkippingBackupsAndDotFiles()
     $POLDEK_HOOKS -uv hooka
     assertEquals "install failed" "0" "$?"
     assertRuns "a b c rpm post"
+}
+
+# poldek interrupted while a pre-install hook runs starts neither the next
+# hook nor rpm, as it starts no other step; the post-install hooks still run
+testInterruptDuringPreHookStartsNoFurtherStep()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    printf '#!/bin/sh\necho pre >> %s\nkill -INT $PPID\n' "$HOOKS_LOG" \
+        > $HOOKS/pre-install.d/log
+    hook pre-install.d log2 pre2
+
+    out=$(perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV' $POLDEK_HOOKS -Ouse_sudo=n -uv hooka 2>&1)
+    rc=$?
+    assertEquals "exit code $rc: $out" "1" "$rc"
+    assertRuns "pre post"
 }
 
 testHookOutputLineByLine()

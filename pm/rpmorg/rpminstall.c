@@ -55,6 +55,9 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int sudo,
     unsigned p_open_flags = P_OPEN_KEEPSTDIN |
         (sudo ? P_OPEN_IGNSIGINT : P_OPEN_SETSID);
 
+    if (sigint_reached())       /* as while a pre-install hook ran */
+        return -1;
+
     p_st_init(&pst);
     if (ontty)
         p_open_flags |= P_OPEN_OUTPTYS;
