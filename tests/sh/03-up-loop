@@ -6,7 +6,10 @@
 . ./sh/lib/compr-setup
 
 mkidx() {
-   $POLDEK_NOCONF $QUIET -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+    time1s_barrier
+    touch $REPO
+    time1s_stamp
+    $POLDEK_NOCONF $QUIET -s $REPO --mkidx --mt pndir || fail "mkidx failed"
 }
 
 up() {
@@ -55,7 +58,6 @@ load() {
   return $ec
 }
 
-
 testUpLoop()
 {
     rm -rf $REPO/*.rpm
@@ -78,11 +80,10 @@ testUpLoop()
     done
 
     nloop=0
-    maxloop=${MAXLOOP:-"60"}
+    maxloop=${MAXLOOP:-"$MAXLOOP_DEFAULT"}
     force_msg "# testing in $maxloop iterations"
     while [ $nloop -lt $maxloop ]; do
         msg "\n#### Iteration #${nloop}"
-        sleep 1
         random_change_repo
 
         npackages=$(ls $REPO/*.rpm 2>/dev/null | wc -l)

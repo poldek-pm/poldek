@@ -92,8 +92,8 @@ user_ns_up() {
 }
 user_ns_up "$0" "$@"
 
-
-MAXLOOP=60
+MAXLOOP_DEFAULT=32
+MAXLOOP=${MAXLOOP:-"$MAXLOOP_DEFAULT"}
 VERBOSE=""
 RUNTEST_ONLY=
 

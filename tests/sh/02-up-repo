@@ -6,7 +6,10 @@
 . ./sh/lib/compr-setup
 
 mkidx() {
-   $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+    time1s_barrier
+    touch $REPO
+    time1s_stamp
+    $POLDEK_NOCONF "$@" -s $REPO --mkidx --mt pndir || fail "mkidx failed"
 }
 
 ls_expect() {
@@ -38,7 +41,7 @@ testUpdate()
     # Create repo and generate some diffs
     msg "\n## Creating empty index"
     indexfile="$REPO/packages.ndir$COMPR_EXT"
-    $POLDEK_NOCONF --st dir -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+    mkidx --st dir
     die_if_invalid_index $indexfile 0
 
     msg "\n## up #0"
@@ -46,7 +49,6 @@ testUpdate()
 
     POLDEK_TESTING_DENIED_FILES="packages.ndir$COMPR_EXT"
     msg "\n## Changing repo #1"
-    sleep 1
     add_package_to_repo
     mkidx
     die_if_invalid_index $indexfile 1
@@ -55,7 +57,6 @@ testUpdate()
     up 1
 
     msg "\n## Changing repo #2"
-    sleep 1
     remove_package_from_repo
     mkidx
     die_if_invalid_index $indexfile 0
@@ -65,7 +66,6 @@ testUpdate()
     up 0
 
     msg "\n## Changing repo #3"
-    sleep 1
     add_package_to_repo
     add_package_to_repo
     mkidx
@@ -77,7 +77,6 @@ testUpdate()
 
     # <https://bugs.pld-linux.org/show_bug.cgi?id=28>
     msg "\n## Resetting repo"
-    sleep 1
     rm -rf $REPO/packages.*
     add_package_to_repo
     mkidx
@@ -92,7 +91,6 @@ testUpdate()
 
     # upa
     msg "\n## Changing repo #4"
-    sleep 1
     add_package_to_repo
     mkidx
     msg "\n## up #4"
@@ -107,7 +105,6 @@ testUpdate()
 
     # autoupa on missing diff
     msg "\n## Changing repo #5 (missing diff file and autoupa)"
-    sleep 1
     add_package_to_repo
     mkidx
     msg "\n## up #5"

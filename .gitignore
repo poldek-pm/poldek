@@ -39,6 +39,8 @@ autom4te.cache
 *.spec
 .#*
 *.log
+\#*
+/tmp
 tests/*.trs
 libtool
 ltmain.sh

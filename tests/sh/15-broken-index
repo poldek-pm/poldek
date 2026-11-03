@@ -7,6 +7,9 @@
 . ./sh/lib/compr-setup
 
 mkidx() {
+    time1s_barrier
+    touch $REPO
+    time1s_stamp
     $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
 }
 
@@ -41,15 +44,12 @@ check_cached_index_cut_to() {
 
     size=$1
     [ "$size" = "half" ] && size=$(($(stat -c %s $index) / 2))
-    sleep 1     # tndb trusts the .md5 next to a file with the same mtime second
     head -c $size $index > $index.tmp && mv $index.tmp $index
 
-    sleep 1
     remove_package_from_repo
     mkidx
     assertEquals "packages after the cached index was cut" "$(($n - 1))" "$(ls_count)"
 
-    sleep 1
     remove_package_from_repo
     mkidx
     up
@@ -77,7 +77,6 @@ check_cached_dscr_cut_to() {
 
     size=$1
     found=0
-    sleep 1     # tndb trusts the .md5 next to a file with the same mtime second
     for dscr in $(find $CACHEDIR -name 'packages.ndir.dscr*' ! -name '*.md5'); do
         [ -f "$dscr" ] || continue
         found=1
@@ -87,7 +86,6 @@ check_cached_dscr_cut_to() {
     done
     [ "$found" = 1 ] || fail "no cached descriptions"
 
-    sleep 1
     out=$(desc_sh)
     echo "$out" | grep -q 'sh package changelog entry' ||
         fail "descriptions after the cached file was cut to $size bytes"
@@ -129,10 +127,8 @@ check_cached_md_cut_to() {
     [ "$n" -gt 2 ] || fail "too few packages in the repository"
 
     size=$1
-    sleep 1
     head -c $size "$md" > "$md.tmp" && mv "$md.tmp" "$md"
 
-    sleep 1
     remove_package_from_repo
     mkidx
     assertEquals "packages after the cached digest was cut" "$(($n - 1))" "$(ls_count)"

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+. ./sh/lib/utils
+
 is_root() {
    test $(id -u) = "0"
 }
@@ -89,6 +91,7 @@ tearDown() {
 }
 
 setUp() {
+    time1s_reset
     repo_up
 }
 
@@ -221,6 +224,7 @@ poldek_quiet_up() {
 }
 
 oneTimeTearDown() {
+   time1s_report
    if echo $TMPDIR | grep -q poldekTest; then rm -rf $TMPDIR; fi
    tmpdir=$(dirname $TMPDIR)
    TMP="$tmpdir"
