@@ -53,7 +53,8 @@ terminal_rpm() {
 }
 
 # poldek_on_pipes|poldek_on_pty <args>: poldek with that fake rpm and SIGINT
-# as on a terminal; rpm runs on pipes, or on a pty when poldek's output is one
+# as on a terminal; rpm runs on pipes, or on a pty when poldek's output is one.
+# The shell script(1) starts must not stay in poldek's group: the ^C would end it
 poldek_on_pipes() {
     chmod 755 $TERMINAL_RPM
     setsid -w perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV' \
@@ -62,7 +63,7 @@ poldek_on_pipes() {
 
 poldek_on_pty() {
     chmod 755 $TERMINAL_RPM
-    timeout 30 script -qec "perl -e '\$SIG{INT} = \"DEFAULT\"; exec @ARGV' \
+    timeout 30 script -qec "exec perl -e '\$SIG{INT} = \"DEFAULT\"; exec @ARGV' \
         env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM $*" /dev/null </dev/null 2>&1
 }
 
