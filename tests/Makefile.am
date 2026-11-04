@@ -5,12 +5,21 @@ check_PROGRAMS = test_match test_env test_pmdb test_op test_config \
 		 test_store test_cmp test_booldeps test_getenv_path \
 		 test_ignore_merge test_log test_pndir test_pkgu test_sigint
 
+# a source's flags hold only its options
+check_PROGRAMS += test_source_flags
+# copying fails cleanly when cp cannot be started
+check_PROGRAMS += test_copy_file
+# a ^C while a command runs, and what poldek passes on to it
+check_PROGRAMS += test_relay_output
+
 TESTS = $(check_PROGRAMS)
 
 # pndir.h includes its siblings by name
 test_pndir_CPPFLAGS = -I$(top_srcdir)/pkgdir
 
-EXTRA_DIST = test.h poldek_test_conf.conf sh run-sh-tests.sh
+EXTRA_DIST = test.h poldek_test_conf.conf \
+	sh run-sh-tests.sh metadata \
+	build-test-rpm.sh
 
 # preloaded by sh/17-interrupt
 check_LTLIBRARIES = sigint_at_init.la
@@ -22,7 +31,7 @@ check-sh: $(check_LTLIBRARIES)
 	@./run-sh-tests.sh
 
 check-sh-no-loop: $(check_LTLIBRARIES)
-	@MAX_LOOP=3 ./run-sh-tests.sh
+	@MAXLOOP=3 ./run-sh-tests.sh
 
 # shared libraries export everything their headers declare EXPORT
 TESTS += exports.sh
@@ -51,12 +60,3 @@ clean-local:
 	ld -e _start -o $@ $<
 	strip $@
 	rm -f $<
-
-# a source's flags hold only its options
-check_PROGRAMS += test_source_flags
-
-# copying fails cleanly when cp cannot be started
-check_PROGRAMS += test_copy_file
-
-# a ^C while a command runs, and what poldek passes on to it
-check_PROGRAMS += test_relay_output
