@@ -1079,5 +1079,6 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
         logn(LOGNOTICE, _("Interrupted"));
 
     poldek__ts_hooks_post(ts);  /* also after a failed or cancelled run */
+    sigint_release();           /* signals held while rpm ran take effect now */
     return rc;
 }

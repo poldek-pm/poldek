@@ -44,7 +44,7 @@
 #include "pm_hooks.h"
 #include "sigint/sigint.h"
 
-int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int sudo,
+static int execrpm(const char *cmd, char *const argv[], int ontty, int sudo,
                    int verbose_level)
 {
     struct p_open_st pst;
@@ -97,6 +97,19 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int sudo,
     if (vsaved != -999)
         poldek_set_verbose(vsaved);
 
+    return ec;
+}
+
+int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int sudo,
+                   int verbose_level)
+{
+    int ec;
+
+    /* poldek ending while rpm runs would leave rpm and the scriptlet in
+       progress writing to no one, which may fail the scriptlet */
+    sigint_hold();
+    ec = execrpm(cmd, argv, ontty, sudo, verbose_level);
+    sigint_unhold();
     return ec;
 }
 
