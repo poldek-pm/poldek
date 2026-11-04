@@ -428,7 +428,6 @@ AC_CONFIG_FILES([
         vfile/Makefile
         vfile/vfff/Makefile
         vfile/tests/Makefile
-        python/Makefile
         conf/Makefile
         doc/Makefile
         doc/homepage/Makefile
