@@ -49,10 +49,11 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int sudo,
 {
     struct p_open_st pst;
     int vsaved = -999, ec;
-    /* a ^C reaches rpm too, from the terminal or through sudo, and would
-       kill the scriptlet rpm runs */
-    unsigned p_open_flags = P_OPEN_KEEPSTDIN | P_OPEN_IGNSIGINT;
-
+    /* keys typed on the terminal and its hangup miss rpm in a session of its
+       own; through sudo, which needs the terminal to ask for a password, rpm
+       stays in ours and ignores at least a ^C, which would kill its scriptlet */
+    unsigned p_open_flags = P_OPEN_KEEPSTDIN |
+        (sudo ? P_OPEN_IGNSIGINT : P_OPEN_SETSID);
 
     p_st_init(&pst);
     if (ontty)
