@@ -10,7 +10,8 @@ TESTS = test_vfile test_vopen3 test_valid_path test_p_open
 test_p_open_LDADD = $(LDADD) $(DL_LIBS)
 
 EXTRA_DIST = test.h http_server.py run_http_tests.sh \
-	      ftp_server.py run_ftp_tests.sh test_ssl_verify.sh
+	      ftp_server.py run_ftp_tests.sh test_ssl_verify.sh \
+	      grep.sh
 
 # test_vhttp is run via check-http target with server setup
 check-local: check-http check-ftp check-ssl-verify
