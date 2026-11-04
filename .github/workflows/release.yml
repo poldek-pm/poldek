@@ -1,0 +1,132 @@
+name: release
+
+on:
+  push:
+    tags: [ "v*" ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: write   # required to create a GitHub release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false   # never cancel a release mid-flight
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container: ghcr.io/poldek-pm/pld-devel:latest
+    env:
+      LANG: C
+      LC_ALL: C
+      TERM: xterm
+    steps:
+      - name: resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::error::failed to resolve tag"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: checkout
+        uses: actions/checkout@v4
+        # No `with:` — act will short-circuit this to a local file copy.
+
+      - name: fetch full history and checkout tag
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          # Full history is required for generate_release_notes (diffs against
+          # previous tag). In act, --unshallow fails because the local repo
+          # is already complete; the fallback `--tags` is enough there.
+          if [ -f "$(git rev-parse --git-dir)/shallow" ]; then
+            git fetch --unshallow --tags origin
+          fi
+          git checkout "${{ steps.tag.outputs.tag }}"
+          git describe --tags --exact-match HEAD   # sanity: HEAD is the tag
+
+      - name: verify tag matches configure.ac
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          # Strip optional "v" prefix.
+          TAG_VERSION="${TAG#v}"
+
+          get_macro() {
+            sed -n "s/^m4_define(\[$1\], *\[\([^]]*\)\]).*/\1/p" configure.ac
+          }
+          MAJOR=$(get_macro poldek_major_version)
+          MINOR=$(get_macro poldek_minor_version)
+          MICRO=$(get_macro poldek_micro_version)
+
+          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$MICRO" ]; then
+            echo "::error::failed to parse version from configure.ac"
+            echo "major='$MAJOR' minor='$MINOR' micro='$MICRO'"
+            exit 1
+          fi
+
+          CONFIG_VERSION="${MAJOR}.${MINOR}.${MICRO}"
+          echo "tag:          $TAG (normalized: $TAG_VERSION)"
+          echo "configure.ac: $CONFIG_VERSION"
+
+          if [ "$TAG_VERSION" != "$CONFIG_VERSION" ]; then
+            echo "::error::tag $TAG does not match configure.ac version ($CONFIG_VERSION)"
+            exit 1
+          fi
+
+      - name: autogen
+        run: ./autogen.sh
+
+      - name: make dist
+        run: make dist
+
+      - name: extract tarball
+        id: dist
+        run: |
+          ARCHIVE=$(ls *.tar.xz | head -n1)
+          if [ -z "$ARCHIVE" ]; then
+            echo "::error::make dist did not produce a .tar.xz archive"
+            exit 1
+          fi
+          BASENAME="${ARCHIVE%.tar.xz}"
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "basename=$BASENAME" >> "$GITHUB_OUTPUT"
+          # Extract OUTSIDE the workspace so the build cannot accidentally
+          # pick up files from the checkout instead of the tarball contents.
+          # GNU tar auto-detects compression, so -xf handles .tar.xz.
+          mkdir -p /tmp/dist-test
+          tar -xf "$ARCHIVE" -C /tmp/dist-test
+          ls -la /tmp/dist-test
+
+      - name: verify tarball build
+        run: |
+          cd /tmp/dist-test/${{ steps.dist.outputs.basename }}
+          ./configure
+          make CFLAGS="-O0"
+          make CFLAGS="-O0" check
+          make CFLAGS="-O0" check-sh
+
+      - name: upload tarball as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.dist.outputs.archive }}
+          path: ${{ steps.dist.outputs.archive }}
+          retention-days: 7
+
+      - name: create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: ${{ steps.dist.outputs.archive }}
+          generate_release_notes: true
+          draft: true
