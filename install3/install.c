@@ -221,7 +221,8 @@ static int do_install(struct i3ctx *ictx, tn_array *pkgs)
         n_assert(pkg_cmp_name_evr(n_array_nth(unpkgs, 0), multi_upgrade_pkg) == 0);
 
         ts->setop(ts, POLDEK_OP_FORCE, 0);
-        pm_pmuninstall(ts->db, unpkgs, ts);
+        if (!pm_pmuninstall(ts->db, unpkgs, ts))
+            rc = 0;
     }
 
     /* restore ts flags&force op */
