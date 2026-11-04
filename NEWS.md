@@ -1,5 +1,6 @@
 ## 0.46 (TBD)
 ### Features
+* The predefined macro `%{_arch}` is now available in configuration files; it expands to the canonical machine architecture reported by rpm (e.g. `i686`, `x86_64`), so repository paths can be written as `path = http://.../PLD/%{_arch}/RPMS/`. Explicit `_arch = ...` in a file shadows the predefined value.
 * New `signkey` per-source config option and `--nosignature` install option for per-source GPG signature verification; `signkey` automatically enables signature verification unless `signed = no` is set (rpm.org backend)
 * Public headers now match what the libraries really provide: two functions declared there were missing, and declarations of functions and flags that no library defines are gone (@arekm [#58](https://github.com/poldek-pm/poldek/pull/58), [#59](https://github.com/poldek-pm/poldek/pull/59), [#62](https://github.com/poldek-pm/poldek/pull/62))
 * Boolean (`and`/`or`/`with`/`without`) dependencies are re-evaluated when installing/upgrading, including against installed packages and unlisted paths, so upgrades no longer break such requirements silently (@arekm [#45](https://github.com/poldek-pm/poldek/pull/45), [#47](https://github.com/poldek-pm/poldek/pull/47))

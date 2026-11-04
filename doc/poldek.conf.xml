@@ -100,6 +100,18 @@ path = %{_foo}/dir    # path will be '/bar/dir'
 Macros are local to file beeing declared, they are not visible in
 included files as they are not visible to includer.
 [/para]
+[para]
+The macro [option]_arch[/option] is predefined to the canonical machine
+architecture reported by rpm (the same value as rpm's [option]%{_target_cpu}[/option],
+for example [literal]i686[/literal], [literal]x86_64[/literal]).
+It can be used to write architecture-independent source paths:
+[screen]
+path = http://ftp.example.com/PLD/%{_arch}/RPMS/
+[/screen]
+A macro defined explicitly in a configuration file shadows the predefined
+one, which can be used as an escape hatch for unusual architectures or
+multi-lib setups.
+[/para]
 </description>
 </section>
 

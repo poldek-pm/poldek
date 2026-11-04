@@ -13,6 +13,7 @@ libpm_rpm_la_SOURCES =			\
 	signkey.c			\
 	misc.c				\
 	rpm.c				\
+	arch.h				\
 	pm_rpm.h			\
 	rpmcompat.h			\
 	rpmhdr.c			\

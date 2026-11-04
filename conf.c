@@ -42,6 +42,7 @@
 #include "misc.h"
 #include "poldek_util.h"
 #include "conf_intern.h"
+#include "pm/rpmorg/arch.h"
 
 #define POLDEK_LDCONF_APTSOURCES  (1 << 15)
 
@@ -368,6 +369,35 @@ static int verify_section(const struct poldek_conf_section *sect, tn_hash *ht)
 }
 
 
+static tn_hash *sysmacros = NULL;
+
+static void sysmacros_free(void)
+{
+    if (sysmacros) {
+        n_hash_free(sysmacros);
+        sysmacros = NULL;
+    }
+}
+
+static tn_hash *sysmacros_get(void)
+{
+    if (sysmacros == NULL) {
+        sysmacros = n_hash_new(2, (tn_fn_free)copt_free);
+        n_hash_ctl(sysmacros, TN_HASH_NOCPKEY);
+
+        char *arch = pm_rpm_arch_standalone();
+        if (arch) {
+            struct copt *opt = copt_new("_arch");
+            opt->val = arch;
+            n_hash_insert(sysmacros, opt->name, opt);
+        }
+
+        atexit(sysmacros_free);
+    }
+
+    return sysmacros;
+}
+
 static
 const char *do_expand_value(char *expanded_val, size_t size, const char *val,
                             tn_hash *ht, tn_hash *ht_global)
@@ -379,6 +409,16 @@ const char *do_expand_value(char *expanded_val, size_t size, const char *val,
     if (ht_global && strchr(new_val, '%')) {
         new_val = expand_macros(expand_val2, sizeof(expand_val2),
                                 new_val, ht_global);
+    }
+
+    if (strchr(new_val, '%') && strstr(new_val, "_arch")) {
+        /* ping-pong: write to the buffer that is not the current source */
+        if (new_val == expand_val)
+            new_val = expand_macros(expand_val2, sizeof(expand_val2),
+                                    new_val, sysmacros_get());
+        else
+            new_val = expand_macros(expand_val, sizeof(expand_val),
+                                    new_val, sysmacros_get());
     }
 
     if (val != new_val) {

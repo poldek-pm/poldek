@@ -42,6 +42,7 @@
 #include "capreq.h"
 #include "pkgdir/pkgdir.h"
 #include "pm_rpm.h"
+#include "arch.h"
 
 #define RPM_DEFAULT_DBPATH "/var/lib/rpm"
 
@@ -67,6 +68,20 @@ static void rpmlib_destroy()
 {
     rpmFreeMacros(NULL);
     rpmFreeRpmrc();
+}
+
+char *pm_rpm_arch_standalone(void)
+{
+    if (pm_refcnt == 0 && !rpmlib_init())
+        return NULL;
+
+    const char *rpmarch = pm_rpm_arch();
+    char *arch = rpmarch ? n_strdup(rpmarch) : NULL;
+
+    if (pm_refcnt == 0)
+        rpmlib_destroy();
+
+    return arch;
 }
 
 void pm_rpm_destroy(void *pm_rpm)

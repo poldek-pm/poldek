@@ -285,7 +285,7 @@ static const char *expand_macros(char *dest, int size, const char *str,
     return dest;
 }
 
-const char *get_base_arch();
+const char *metadata__get_base_arch();
 
 static char *parse_repo_file(struct vfile *vf)
 {
@@ -318,10 +318,12 @@ static char *parse_repo_file(struct vfile *vf)
 
             if (strchr(url, '$')) {
                 tn_hash *ht = n_hash_new(8, NULL);
-                const char *arch = get_base_arch();
-                n_hash_insert(ht, "basearch", arch);
-                n_hash_insert(ht, "baseos", "linux");
+                const char *arch = metadata__get_base_arch();
+                if (arch) {
+                    n_hash_insert(ht, "basearch", arch);
+                }
 
+                n_hash_insert(ht, "baseos", "linux");
                 url = expand_macros(urlbuf, sizeof(urlbuf), p, ht);
 
                 n_hash_free(ht);
