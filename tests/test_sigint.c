@@ -1,8 +1,11 @@
 /*
   sigint_init() and sigint_destroy() calls nest: only the outermost pair sets
   up and restores the SIGINT handler. sigint_emit(), which library users call
-  from another thread to cancel, stays safe after sigint_destroy().
+  from another thread to cancel, stays safe after sigint_destroy(). A signal
+  a handler notes with sigint_note_end() is not lost, even while the
+  operation ends.
 */
+#include <dlfcn.h>
 #include <signal.h>
 #include "test.h"
 #include "sigint/sigint.h"
@@ -32,4 +35,52 @@ START_TEST (test_emit_after_destroy) {
 }
 END_TEST
 
-NTEST_RUNNER("sigint", test_nested_init_keeps_handler, test_emit_after_destroy);
+static int hup_at_query = 0;
+
+/* sigint_release() asks for a handler while it reads and resets the
+   signals noted: a SIGHUP comes then */
+int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
+{
+    int (*next)(int, const struct sigaction *, struct sigaction *) =
+        (int (*)(int, const struct sigaction *, struct sigaction *))
+        dlsym(RTLD_NEXT, "sigaction");
+
+    if (hup_at_query && sig == SIGTERM && act == NULL) {
+        hup_at_query = 0;
+        raise(SIGHUP);
+    }
+    return next(sig, act, oact);
+}
+
+static void note_end(int sig)
+{
+    sigint_note_end(sig);
+}
+
+static void caught(int sig)
+{
+    (void)sig;
+}
+
+/* a handler of the library user's own notes a signal as the operation ends */
+START_TEST (test_note_while_ending_kept) {
+    signal(SIGHUP, note_end);
+    signal(SIGTERM, caught);    /* what the operation ends with */
+    sigint_hold();
+    raise(SIGTERM);             /* while rpm runs */
+    sigint_unhold();
+
+    hup_at_query = 1;
+    sigint_release();
+    fail_if(hup_at_query, "sigint_release() asked for no handler");
+    fail_unless(sigint_ending() & (1 << SIGHUP), "SIGHUP noted then was lost");
+
+    signal(SIGHUP, SIG_IGN);    /* the next operation ends with it */
+    sigint_release();
+    signal(SIGHUP, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+}
+END_TEST
+
+NTEST_RUNNER("sigint", test_nested_init_keeps_handler, test_emit_after_destroy,
+             test_note_while_ending_kept);

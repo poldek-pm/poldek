@@ -9,7 +9,8 @@
 # A hangup, a SIGTERM, a ^\ or a broken output while rpm runs lets rpm and
 # the post-install hooks run before poldek ends with the signal; a program
 # using libpoldek that handles the signal itself gets it then, and its next
-# operation runs as usual.
+# operation runs as usual. In poldek's shell a second SIGTERM after one from
+# a pre-install hook ends poldek at once.
 # Hook output keeps its lines on the terminal and in the log file, where
 # each line follows the hook's name.
 # Hooks do not run for rpm test runs, nor with a root other than /.
@@ -245,7 +246,62 @@ testCallerWithoutSigintInitGetsSignalAfterPostHooks()
     assertRuns "pre rpm post caller"
 }
 
+# a SIGTERM or a ^\ to poldek's shell while a pre-install hook runs keeps
+# rpm from starting, and the shell ends after the command
+testShellSignalDuringPreHookEndsShell()
+{
+    skip_if_rpm_testing_off && return
 
+    build hooka
+    build hookb
+
+    for sig_rc in TERM:143 QUIT:131; do
+        sig=${sig_rc%:*}
+        rm -f $HOOKS_LOG
+        printf '#!/bin/sh\necho pre >> %s\nkill -%s $PPID\n' "$HOOKS_LOG" $sig \
+            > $HOOKS/pre-install.d/log
+
+        printf 'install hooka\ninstall hookb\n' | timeout 60 script -qec \
+            "ulimit -c 0; $POLDEK_HOOKS -Ouse_sudo=n --shell" /dev/null >/dev/null 2>&1
+        rc=$?
+        assertEquals "$sig: exit code" "${sig_rc#*:}" "$rc"
+        assertEquals "$sig: ran: '$(runs)'" "pre post" "$(runs)"
+    done
+}
+
+# in poldek's shell a second SIGTERM after one from a pre-install hook ends
+# poldek at once, here in a post-install hook; after one that came while rpm
+# ran, a second one lets the post-install hooks run to their end
+testShellSecondSignalEndsAtOnceUnlessRpmRan()
+{
+    skip_if_rpm_testing_off && return
+
+    build hooka
+    build hookb
+    printf '#!/bin/sh\necho post >> %s\nkill -TERM $PPID\nsleep 1\n' "$HOOKS_LOG" \
+        > $HOOKS/post-install.d/log
+    hook post-install.d log2 post2
+
+    for case in pre-hook rpm; do
+        rm -f $HOOKS_LOG
+        if [ $case = pre-hook ]; then
+            printf '#!/bin/sh\necho pre >> %s\nkill -TERM $PPID\n' "$HOOKS_LOG" \
+                > $HOOKS/pre-install.d/log
+            expected="pre post"
+        else
+            hook pre-install.d log pre
+            printf '#!/bin/sh\necho rpm >> %s\nkill -TERM $PPID\nsleep 1\n' "$HOOKS_LOG" \
+                > $FAKE_RPM
+            expected="pre rpm post post2"
+        fi
+
+        printf 'install hooka\ninstall hookb\n' | timeout 60 script -qec \
+            "ulimit -c 0; $POLDEK_HOOKS -Ouse_sudo=n --shell" /dev/null >/dev/null 2>&1
+        rc=$?
+        assertEquals "$case: exit code" "143" "$rc"
+        assertEquals "$case: ran: '$(runs)'" "$expected" "$(runs)"
+    done
+}
 
 testHookOutputLineByLine()
 {

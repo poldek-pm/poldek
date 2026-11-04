@@ -323,7 +323,7 @@ testShellSignalStopsNextSet()
     build b
     build c
 
-    for sig_rc in HUP:129; do
+    for sig_rc in HUP:129 TERM:143 QUIT:131; do
         sig=${sig_rc%:*}
         rm -f $RUNS $TMPDIR/poldek.log
         signal_rpm $sig poldek > $TERMINAL_RPM
@@ -341,6 +341,26 @@ testShellSignalStopsNextSet()
                      "$(rpm_starts $TMPDIR/poldek.log)"
         assertRpmRanThrough "$sig"
     done
+}
+
+# a ^\ at the prompt of poldek's shell ends the shell, which runs no
+# command typed after it
+testShellQuitKeyAtPromptEndsShell()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    rm -f $TMPDIR/poldek.log
+    { for i in $(seq 100); do grep -qs 'package.* read' $TMPDIR/poldek.log && break; sleep 0.1; done
+      sleep 1; printf '\034'; sleep 1; printf 'install a\n'; sleep 2; } |
+        timeout 60 script -qec "ulimit -c 0; env LC_ALL=C $POLDEK_INSTALL -v \
+            --pmcmd $FAKE_RPM --log $TMPDIR/poldek.log --shell" /dev/null >/dev/null 2>&1
+    rc=$?
+    assertEquals "exit code: $(cat $TMPDIR/poldek.log)" "131" "$rc"
+    assertEquals "rpm runs: $(cat $RUNS 2>/dev/null)" "0" \
+                 "$(cat $RUNS 2>/dev/null | grep -c '^rpm -')"
+    assertEquals "a command ran: $(cat $TMPDIR/poldek.log)" "0" \
+                 "$(grep -c 'Interrupted' $TMPDIR/poldek.log)"
 }
 
 # rpm asked to stop before its transaction begins, as while it waits for the

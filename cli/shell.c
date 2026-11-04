@@ -510,11 +510,13 @@ static void sigint_cb(void)
     }
 }
 
+/* the command running stops and the shell ends after it; back at its
+   default action, a second signal ends poldek at once */
 static void shell_end(int sig)
 {
     if (sig > 0) {
         signal(sig, SIG_DFL);
-        shDone = 1;
+        sigint_note_end(sig);
     }
 }
 
@@ -599,6 +601,11 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         if ((line = readline(prompt)) == NULL)
             break;
 
+        if (sigint_ending()) {  /* a ^\ at the prompt: no more commands */
+            free(line);
+            break;
+        }
+
         /* add to history? */
         char *s = line;
         while (isspace(*s))
@@ -625,14 +632,19 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         signal(SIGTERM, shell_end);
         signal(SIGQUIT, shell_end);
 
-        if (shQuit)
+        if (shQuit || sigint_ending())
             shDone = 1;
     }
 
     if (histfile)
         write_history(histfile);
 
+    /* a signal noted ends poldek, as on the command line */
+    signal(SIGTERM, SIG_DFL);
+    signal(SIGQUIT, SIG_DFL);
+
     sigint_pop();
     msg(0, "\n");
+    sigint_release();
     return 1;
 }

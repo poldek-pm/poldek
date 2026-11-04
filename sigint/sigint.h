@@ -54,6 +54,10 @@ EXPORT void sigint_unhold(void);
 /* the signals noted go back to the handler they had and are raised */
 EXPORT void sigint_release(void);
 
+/* note SIGHUP, SIGTERM, SIGQUIT or SIGPIPE for sigint_release(), as one that
+   came while a command ran; safe in a signal handler */
+EXPORT void sigint_note_end(int sig);
+
 /* nonzero once such a signal came, until sigint_release(); sigint_reset()
    keeps it */
 EXPORT int sigint_ending(void);

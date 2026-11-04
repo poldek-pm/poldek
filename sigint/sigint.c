@@ -37,6 +37,7 @@ static const int held_signals[] = { SIGHUP, SIGTERM, SIGQUIT, SIGPIPE };
 #define NHELD (sizeof(held_signals) / sizeof(held_signals[0]))
 static struct sigaction held_saved[NHELD];
 static int held = 0;            /* between sigint_hold() and sigint_unhold() */
+static int noted_before = 0;    /* ending, as sigint_hold() began */
 static int kept = 0;            /* signals noted, still caught after that */
 
 static void sigint_handler(int sig) 
@@ -121,8 +122,9 @@ static void held_set(sigset_t *set)
         sigaddset(set, held_signals[i]);
 }
 
-static void sigint_note_end(int sig)
+void sigint_note_end(int sig)
 {
+    n_assert(sig == SIGHUP || sig == SIGTERM || sig == SIGQUIT || sig == SIGPIPE);
     ending |= 1 << sig;
     interrupted = 1;
 }
@@ -131,9 +133,13 @@ static void sigint_note_end(int sig)
    the handler they had, and each is raised */
 void sigint_release(void)
 {
-    int noted = ending;
+    sigset_t set, saved;
+    int noted;
     unsigned i;
 
+    held_set(&set);             /* any handler may note: none lost to the reset */
+    sigprocmask(SIG_BLOCK, &set, &saved);
+    noted = ending;
     for (i = 0; i < NHELD; i++) {
         struct sigaction sa;
 
@@ -145,6 +151,8 @@ void sigint_release(void)
     }
 
     ending = kept = 0;
+    sigprocmask(SIG_SETMASK, &saved, NULL);
+
     for (i = 0; i < NHELD; i++)
         if (noted & (1 << held_signals[i]))
             raise(held_signals[i]);
@@ -168,6 +176,7 @@ void sigint_hold(void)
 
     n_assert(!held);
     held = 1;
+    noted_before = ending;
 
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = sigint_note_end;
@@ -199,7 +208,7 @@ void sigint_unhold(void)
     for (i = 0; i < NHELD; i++) {
         int bit = 1 << held_signals[i];
 
-        if (ending & bit)
+        if (ending & ~noted_before & bit)
             kept |= bit;
         else if (!(kept & bit))
             sigaction(held_signals[i], &held_saved[i], NULL);
