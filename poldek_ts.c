@@ -1048,7 +1048,7 @@ static int ts_run_verify(struct poldek_ts *ts)
 int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
 {
     struct ts_run *ts_run = NULL;
-    int i = 0, rc;
+    int i = 0, rc = 0;
 
     poldek_ts_setf(ts, flags);
     n_assert(ts->type);
@@ -1063,13 +1063,13 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
     }
 
     if (!ts_prerun0(ts))
-        return 0;
+        goto l_end;
 
     n_assert(ts_run);
 
     if ((ts_run->flags & NOPRERUN) == 0) {
         if (!ts_prerun(ts))
-            return 0;
+            goto l_end;
     }
 
     rc = ts_run->run(ts);
@@ -1079,6 +1079,8 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
         logn(LOGNOTICE, _("Interrupted"));
 
     poldek__ts_hooks_post(ts);  /* also after a failed or cancelled run */
-    sigint_release();           /* signals held while rpm ran take effect now */
+
+l_end:
+    sigint_release();           /* the signals noted take effect now */
     return rc;
 }
