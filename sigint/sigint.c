@@ -216,7 +216,7 @@ void sigint_unhold(void)
         if (ending & ~noted_before & bit)
             kept |= bit;
         else if (!(kept & bit))
-            sigaction(held_signals[i], &held_saved[i], NULL);
+            restore_held(i);
     }
     sigprocmask(SIG_SETMASK, &saved, NULL);
 }

@@ -4,7 +4,7 @@
   from another thread to cancel, stays safe after sigint_destroy(). A signal
   a handler notes with sigint_note_end() is not lost, even while the
   operation ends, and takes effect at its end, also when it ends before it
-  begins.
+  begins. A handler the library user sets while rpm runs stays.
 */
 #include <dlfcn.h>
 #include <signal.h>
@@ -85,6 +85,22 @@ START_TEST (test_note_while_ending_kept) {
 }
 END_TEST
 
+/* a library user sets a handler of its own while rpm runs */
+START_TEST (test_unhold_keeps_handler_set_meanwhile) {
+    struct sigaction sa;
+
+    signal(SIGTERM, SIG_DFL);
+    sigint_hold();
+    signal(SIGTERM, caught);
+    sigint_unhold();
+
+    sigaction(SIGTERM, NULL, &sa);
+    fail_unless(sa.sa_handler == caught,
+                "the handler set while rpm ran is gone");
+    signal(SIGTERM, SIG_DFL);
+}
+END_TEST
+
 static volatile sig_atomic_t ncaught = 0;
 
 static void count(int sig)
@@ -119,4 +135,6 @@ START_TEST (test_release_after_early_end) {
 END_TEST
 
 NTEST_RUNNER("sigint", test_nested_init_keeps_handler, test_emit_after_destroy,
-             test_note_while_ending_kept, test_release_after_early_end);
+             test_note_while_ending_kept,
+             test_unhold_keeps_handler_set_meanwhile,
+             test_release_after_early_end);

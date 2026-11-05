@@ -45,8 +45,8 @@ EXPORT int sigint_count(void);
  * SIGTERM, a ^\ and a broken output wait for its end instead of ending poldek
  * at once: each interrupts the operation as a ^C does and stays caught until
  * poldek_ts_run() ends the operation with sigint_release(). A signal ignored,
- * as under nohup, stays so. The calls do not nest; other threads should block
- * these signals.
+ * as under nohup, stays so, and a handler the caller sets meanwhile stays.
+ * The calls do not nest; other threads should block these signals.
  */
 EXPORT void sigint_hold(void);
 EXPORT void sigint_unhold(void);
