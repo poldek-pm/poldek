@@ -129,6 +129,17 @@ void sigint_note_end(int sig)
     interrupted = 1;
 }
 
+/* the handler sigint_hold() saved for held_signals[I] goes back, unless the
+   caller has set its own since */
+static void restore_held(unsigned i)
+{
+    struct sigaction sa;
+
+    if (sigaction(held_signals[i], NULL, &sa) == 0 &&
+        sa.sa_handler == sigint_note_end)
+        sigaction(held_signals[i], &held_saved[i], NULL);
+}
+
 /* the signals noted do what they would have done: those held go back to
    the handler they had, and each is raised */
 void sigint_release(void)
@@ -140,15 +151,9 @@ void sigint_release(void)
     held_set(&set);             /* any handler may note: none lost to the reset */
     sigprocmask(SIG_BLOCK, &set, &saved);
     noted = ending;
-    for (i = 0; i < NHELD; i++) {
-        struct sigaction sa;
-
-        /* unless the caller has set its own handler since */
-        if ((kept & (1 << held_signals[i])) &&
-            sigaction(held_signals[i], NULL, &sa) == 0 &&
-            sa.sa_handler == sigint_note_end)
-            sigaction(held_signals[i], &held_saved[i], NULL);
-    }
+    for (i = 0; i < NHELD; i++)
+        if (kept & (1 << held_signals[i]))
+            restore_held(i);
 
     ending = kept = 0;
     sigprocmask(SIG_SETMASK, &saved, NULL);
