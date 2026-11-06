@@ -33,6 +33,7 @@ libpoclidek_la_SOURCES  =  \
 			reload.c	\
 			pull.c		\
 			clean.c		\
+			repo.c		\
 			cd.c            \
 			help.c		\
 			external.c      \

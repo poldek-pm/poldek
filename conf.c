@@ -24,7 +24,7 @@
 #include <fnmatch.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
-#include <dirent.h>
+#include <sys/stat.h>
 
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
@@ -526,6 +526,7 @@ static int poldek_conf_postsetup(tn_hash *ht)
 #define ADD_PARAM_VALIDATE  (1 << 0)
 #define ADD_PARAM_OVERWRITE (1 << 1)
 #define ADD_PARAM_FOREIGN   (1 << 2)
+#define ADD_PARAM_STRICT    (1 << 3)
 
 static int verify_param_presence(tn_hash *ht_sect, const char *section,
                                  const char *name,
@@ -593,6 +594,11 @@ static int add_param(tn_hash *ht_sect, const char *section,
         if (!validate) {
             unknown_tag.name = name;
             tag = &unknown_tag;
+
+        } else if (flags & ADD_PARAM_STRICT) {
+            logn(LOGERR, _("%s: unknown option '%s::%s'"), filemark,
+                 section, name);
+            return 0;
 
         } else {
             logn(LOGWARN, _("%s: unknown option '%s::%s'"), filemark,
@@ -867,7 +873,12 @@ static tn_hash *open_section_ht(tn_hash *htconf,
         char filemark[PATH_MAX];
         struct copt *opt;
 
-        n_snprintf(filemark, sizeof(filemark), "%s:%d", path, nline);
+        int n = n_snprintf(filemark, sizeof(filemark), "%s", path);
+        opt = copt_new("__file");
+        opt->val = n_strdup(filemark);
+        n_hash_insert(ht_sect, opt->name, opt);
+
+        n_snprintf(&filemark[n], sizeof(filemark) - n, ":%d", nline);
         opt = copt_new("__file__line");
         opt->val = n_strdup(filemark);
         n_hash_insert(ht_sect, opt->name, opt);
@@ -914,6 +925,168 @@ int poldek_conf_add_to_section(void *sect, const char *akey, const char *aval)
 int poldek_conf_set(tn_hash *ht_sect, const char *akey, const char *aval)
 {
     return poldek_conf_add_to_section(ht_sect, akey, aval);
+}
+
+const char *conf__expand_value(char *dest, size_t size,
+                               const tn_hash *htconf,
+                               const tn_hash *ht, const char *val)
+{
+    tn_hash *ht_global = NULL;
+
+    if (htconf)
+        ht_global = poldek_conf_get_section(htconf, "global");
+
+    return do_expand_value(dest, size, val, (tn_hash *)ht, ht_global);
+}
+
+static int is_macro_key(const char *key)
+{
+    if (key == NULL || *key != '_')
+        return 0;
+
+    /* metadata keys (including __dirname) are not macros */
+    if (strncmp(key, "__", 2) == 0)
+        return 0;
+
+    return 1;
+}
+
+static int is_metadata_key(const char *key)
+{
+    return key && strncmp(key, "__", 2) == 0;
+}
+
+int conf__save(const tn_hash *htconf, const char *path,
+               const char *header)
+{
+    tn_array *sect_keys, *opt_keys;
+    tn_hash *ht_global;
+    FILE *f = NULL;
+    char tmp[PATH_MAX];
+    int fd, i, j, k;
+    int has_global_opts = 0;
+    int rc = 0;
+
+    n_snprintf(tmp, sizeof(tmp), "%s.XXXXXX", path);
+    fd = mkstemp(tmp);
+    if (fd < 0) {
+        logn(LOGERR, _("%s: mkstemp: %m"), tmp);
+        return 0;
+    }
+
+    if ((f = fdopen(fd, "w")) == NULL) {
+        logn(LOGERR, _("%s: fdopen: %m"), tmp);
+        close(fd);
+        unlink(tmp);
+        return 0;
+    }
+
+    if (header)
+        fputs(header, f);
+
+    ht_global = poldek_conf_get_section(htconf, "global");
+    if (ht_global) {
+        opt_keys = n_hash_keys(ht_global);
+        n_array_sort(opt_keys);
+
+        /* macros/global vars are written before any section */
+        for (i = 0; i < n_array_size(opt_keys); i++) {
+            const char *key = n_array_nth(opt_keys, i);
+            struct copt *opt = n_hash_get(ht_global, key);
+
+            if (opt == NULL || opt->val == NULL)
+                continue;
+
+            if (is_macro_key(key))
+                fprintf(f, "%s = %s\n", key, opt->val);
+        }
+
+        /* regular global options need an explicit [global] section */
+        for (i = 0; i < n_array_size(opt_keys); i++) {
+            const char *key = n_array_nth(opt_keys, i);
+            struct copt *opt = n_hash_get(ht_global, key);
+
+            if (opt == NULL || opt->val == NULL)
+                continue;
+
+            if (!is_macro_key(key) && !is_metadata_key(key)) {
+                has_global_opts = 1;
+                break;
+            }
+        }
+
+        if (has_global_opts) {
+            fprintf(f, "\n[global]\n");
+            for (i = 0; i < n_array_size(opt_keys); i++) {
+                const char *key = n_array_nth(opt_keys, i);
+                struct copt *opt = n_hash_get(ht_global, key);
+
+                if (opt == NULL || opt->val == NULL)
+                    continue;
+
+                if (!is_macro_key(key) && !is_metadata_key(key))
+                    fprintf(f, "%s = %s\n", key, opt->val);
+            }
+        }
+
+        n_array_free(opt_keys);
+    }
+
+    sect_keys = n_hash_keys(htconf);
+    n_array_sort(sect_keys);
+    for (i = 0; i < n_array_size(sect_keys); i++) {
+        const char *sectname = n_array_nth(sect_keys, i);
+        tn_array *sect_list;
+
+        if (strcmp(sectname, "global") == 0)
+            continue;
+
+        sect_list = n_hash_get(htconf, sectname);
+        for (j = 0; j < n_array_size(sect_list); j++) {
+            tn_hash *ht = n_array_nth(sect_list, j);
+
+            fprintf(f, "\n[%s]\n", sectname);
+            opt_keys = n_hash_keys(ht);
+            n_array_sort(opt_keys);
+            for (k = 0; k < n_array_size(opt_keys); k++) {
+                const char *key = n_array_nth(opt_keys, k);
+                struct copt *opt = n_hash_get(ht, key);
+
+                if (opt == NULL || opt->val == NULL)
+                    continue;
+
+                if (is_metadata_key(key))
+                    continue;
+
+                fprintf(f, "%s = %s\n", key, opt->val);
+            }
+            n_array_free(opt_keys);
+        }
+    }
+    n_array_free(sect_keys);
+
+    fflush(f);
+    fsync(fileno(f));
+    if (fclose(f) != 0) {
+        logn(LOGERR, _("%s: write error: %m"), tmp);
+        goto l_end;
+    }
+    f = NULL;
+
+    if (rename(tmp, path) != 0) {
+        logn(LOGERR, _("%s: %m"), path);
+        goto l_end;
+    }
+
+    rc = 1;
+
+l_end:
+    if (f)
+        fclose(f);
+    if (rc == 0)
+        unlink(tmp);
+
+    return rc;
 }
 
 static tn_hash *new_htconf(const char *sectnam, tn_hash **ht_sect_ptr)
@@ -1012,10 +1185,7 @@ void read_continuation(struct afile *af, char *buf, int size, int *nline)
 static tn_array *includedir_files(const char *dirpath, const char *ppath)
 {
     tn_array       *configs = NULL;
-    struct dirent  *ent;
-    DIR            *dir;
-    char           *sep = "/", tmpath[PATH_MAX];
-
+    char           tmpath[PATH_MAX];
 
     if (*dirpath != '/' && strrchr(ppath, '/') != NULL) {
         char *s;
@@ -1029,39 +1199,11 @@ static tn_array *includedir_files(const char *dirpath, const char *ppath)
         dirpath = tmpath;
     }
 
-    if ((dir = opendir(dirpath)) == NULL) {
+    configs = poldek_util_readdir(dirpath, "*.conf");
+    if (configs == NULL) {
         logn(LOGERR, "%%includedir %s: %m", dirpath);
         return NULL;
     }
-
-    configs = n_array_new(32, free, (tn_fn_cmp)strcmp);
-
-    for (;;) {
-        char path[PATH_MAX];
-        int n;
-
-        errno = 0;
-        if ((ent = readdir(dir)) == NULL)
-            break;
-
-        if (fnmatch("*.conf", ent->d_name, 0) != 0)
-            continue;
-
-        n = n_snprintf(path, sizeof(path), "%s%s%s", dirpath, sep, ent->d_name);
-        if (access(path, R_OK) == 0)
-            n_array_push(configs, n_strdupl(path, n));
-    }
-
-    /* readdir() failed: skip the whole directory, as when opendir() fails */
-    if (errno) {
-        logn(LOGERR, "%%includedir %s: %m", dirpath);
-        n_array_clean(configs);
-    }
-    closedir(dir);
-
-    n_array_sort(configs);
-    if (n_array_size(configs) == 0)
-        n_array_cfree(&configs);
 
     return configs;
 }
@@ -1085,6 +1227,9 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
 
     if (flags & POLDEK_LDCONF_NOVALIDATE)
         validate = 0;
+
+    if (flags & POLDEK_LDCONF_STRICT)
+        addparam_flags |= ADD_PARAM_STRICT;
 
     if (flags & POLDEK_LDCONF_UPDATE)
         update = 1;
@@ -1129,6 +1274,12 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
             tn_array *configs;
             int i;
 
+            if (flags & POLDEK_LDCONF_STRICT) {
+                logn(LOGERR, _("%s:%d: %%includedir is not allowed here"),
+                     af->path, nline);
+                is_err = 1;
+                goto l_end;
+            }
 
             if (flags & POLDEK_LDCONF_NOINCLUDE)
                 continue;
@@ -1163,6 +1314,13 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
         if (strncmp(line, include_tag, strlen(include_tag)) == 0) {
             char *section = NULL, ipath[PATH_MAX];
 
+            if (flags & POLDEK_LDCONF_STRICT) {
+                logn(LOGERR, _("%s:%d: %%include is not allowed here"),
+                     af->path, nline);
+                is_err = 1;
+                goto l_end;
+            }
+
             if (flags & POLDEK_LDCONF_NOINCLUDE)
                 continue;
 
@@ -1184,8 +1342,15 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
 
         read_continuation(af, buf, sizeof(buf), &nline);
 
-        if (*line == '%')          /* unknown directive */
+        if (*line == '%') {        /* unknown directive */
+            if (flags & POLDEK_LDCONF_STRICT) {
+                logn(LOGERR, _("%s:%d: unknown directive '%s'"),
+                     af->path, nline, line);
+                is_err++;
+                goto l_end;
+            }
             continue;
+        }
 
         if (*line == '[') {        /* section */
             const struct poldek_conf_section *sect = NULL;
@@ -1216,9 +1381,15 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
             goto l_end;
 
         if (ht_sect) {
+            int add_rc;
+
             addparam_flags |= (validate ? ADD_PARAM_VALIDATE : 0);
-            add_param(ht_sect, sectnam, name, value, addparam_flags,
-                      af->path, nline);
+            add_rc = add_param(ht_sect, sectnam, name, value, addparam_flags,
+                               af->path, nline);
+            if ((flags & POLDEK_LDCONF_STRICT) && !add_rc) {
+                is_err++;
+                goto l_end;
+            }
         } else
             msgn(1, _("%s: skipped %s::%s"), af->path, sectnam, name);
     }
@@ -1280,6 +1451,84 @@ static void merge_htconf(tn_hash *htconf, tn_hash *ht)
     }
 
     n_array_free(keys);
+}
+
+char *poldek_conf_reposd(char *dest, size_t size)
+{
+    const char *dir;
+    char home[512];
+
+    if (poldek__is_in_testing_mode()) {
+        if ((dir = getenv_path("POLDEK_TESTING_REPOSDIR")) != NULL) {
+            n_snprintf(dest, size, "%s", dir);
+            return dest;
+        }
+    }
+
+    if (geteuid() == 0) {
+#ifdef LOCALSTATEDIR
+        n_snprintf(dest, size, "%s/lib/%s/repos.d", LOCALSTATEDIR, PACKAGE_NAME);
+#else
+        n_snprintf(dest, size, "/var/lib/%s/repos.d", PACKAGE_NAME);
+#endif
+        return dest;
+    }
+
+    if ((dir = getenv_path("XDG_CONFIG_HOME")) != NULL) {
+        n_snprintf(dest, size, "%s/%s/repos.d", dir, PACKAGE_NAME);
+        return dest;
+    }
+
+    if (get_homedir(home, sizeof(home))) {
+        n_snprintf(dest, size, "%s/.config/%s/repos.d", home, PACKAGE_NAME);
+        return dest;
+    }
+
+    return NULL;
+}
+
+static int load_reposd(tn_hash *htconf, tn_hash *af_htconf, unsigned flags)
+{
+    char reposd[PATH_MAX];
+    tn_array *configs;
+    int i;
+
+    if ((flags & (POLDEK_LDCONF_FOREIGN | POLDEK_LDCONF_GLOBALONLY |
+                  POLDEK_LDCONF_NOINCLUDE)) != 0)
+        return 1;
+
+    if (poldek_conf_reposd(reposd, sizeof(reposd)) == NULL)
+        return 1;
+
+    if (access(reposd, R_OK | X_OK) != 0) {
+        if (errno != ENOENT)
+            logn(LOGWARN, _("%s: %m"), reposd);
+        return 1;
+    }
+
+    configs = poldek_util_readdir(reposd, "*.conf");
+    if (configs == NULL) {
+        logn(LOGERR, "%s: read directory: %m", reposd);
+        return 1;
+    }
+
+    for (i = 0; i < n_array_size(configs); i++) {
+        const char *cpath = n_array_nth(configs, i);
+        tn_hash *ht;
+
+        if (!do_ldconf(af_htconf, cpath, NULL, "source",
+                       flags | POLDEK_LDCONF_NOINCLUDE)) {
+            n_array_free(configs);
+            return 0;
+        }
+
+        ht = n_hash_get(af_htconf, cpath);
+        if (ht)
+            merge_htconf(htconf, ht);
+    }
+
+    n_array_free(configs);
+    return 1;
 }
 
 tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
@@ -1349,6 +1598,7 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
     tn_hash   *af_htconf, *htconf = NULL;
     //const char *section_to_load = NULL;
     char confpath[PATH_MAX];
+    int is_default_path = (path == NULL);
 
     if (path == NULL && (flags & POLDEK_LDCONF_FOREIGN) == 0) {
         *confpath = '\0';
@@ -1399,6 +1649,11 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
         }
 
         n_array_free(paths);
+
+        if (is_default_path && !load_reposd(htconf, af_htconf, flags)) {
+            n_hash_free(af_htconf);
+            return NULL;
+        }
     }
 
 

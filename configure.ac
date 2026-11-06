@@ -401,6 +401,16 @@ AC_DEFINE_UNQUOTED(SYSCONFDIR, "$SYSCONFDIR",
 AC_SUBST(SYSCONFDIR)
 
 
+LOCALSTATEDIR="`echo $localstatedir`"
+while echo ${LOCALSTATEDIR} | grep '\$' >/dev/null; do
+        LOCALSTATEDIR=$(eval echo ${LOCALSTATEDIR});
+done
+
+AC_DEFINE_UNQUOTED(LOCALSTATEDIR, "$LOCALSTATEDIR",
+        [Full path to system state directory (usually /var)])
+AC_SUBST(LOCALSTATEDIR)
+
+
 AC_ARG_WITH(pkglibdir,
 [  --with-pkglibdir	program executables],
 PKGLIBDIR=$withval, PKGLIBDIR="`echo $libdir/$PACKAGE`")

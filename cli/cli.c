@@ -57,6 +57,7 @@ extern struct poclidek_cmd command_alias;
 extern struct poclidek_cmd command_reload;
 extern struct poclidek_cmd command_clean;
 extern struct poclidek_cmd command_pull;
+extern struct poclidek_cmd command_repo;
 
 static struct poclidek_cmd *commands_tab[] = {
     &command_ls,
@@ -67,6 +68,7 @@ static struct poclidek_cmd *commands_tab[] = {
     &command_get,
     &command_pull,
     &command_clean,
+    &command_repo,
     &command_cd,
     &command_pwd,
     &command_external,

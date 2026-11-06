@@ -895,7 +895,6 @@ void source_printf_w(const struct source *src, int name_width)
 
     printf(fmt, src->name ? src->name : "-", url,
            *optstr ? "  (" : "", optstr, *optstr ? ")" : "");
-
     if (src->pkg_prefix) {
         printf("%-14s prefix => %s\n", "", vf_url_slim_s(src->pkg_prefix, 0));
     }

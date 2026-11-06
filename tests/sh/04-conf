@@ -386,4 +386,70 @@ testHelpShowsBugAddress()
     echo "$out" | grep -q "^Report bugs to " || fail "no bug address in --help: $(echo "$out" | tail -2)"
 }
 
+# A plain %%includedir directive in a regular config is followed.
+testConfIncludedir()
+{
+    local conf=$TMPDIR/includedir.conf
+    local includedir=$TMPDIR/includedir.d
+    rm -rf $includedir
+    mkdir -p $includedir
+
+    cat > $conf <<EOF
+[global]
+%includedir $includedir
+EOF
+
+    cat > $includedir/a.conf <<EOF
+[source]
+name = alpha
+type = pndir
+path = test:///alpha
+EOF
+
+    cat > $includedir/b.conf <<EOF
+[source]
+name = beta
+type = pndir
+path = test:///beta
+EOF
+
+    $POLDEK --conf $conf -q -l > $TMPDIR/includedir-out 2>&1 || true
+
+    grep -q '^alpha ' $TMPDIR/includedir-out || fail "alpha_source_not_loaded"
+    grep -q '^beta ' $TMPDIR/includedir-out || fail "beta_source_not_loaded"
+}
+
+# Files in the built-in repos.d must not follow %%includedir directives.
+testReposdIgnoresIncludedir()
+{
+    local reposd=$TMPDIR/reposd
+    rm -rf $reposd
+    mkdir -p $reposd/include $TMPDIR/home
+
+    cat > $reposd/managed.conf <<EOF
+# remote repository managed by poldek
+[source]
+name = managed
+type = pndir
+path = test:///managed
+
+%includedir $reposd/include
+EOF
+
+    cat > $reposd/include/extra.conf <<EOF
+[source]
+name = extra
+type = pndir
+path = test:///extra
+EOF
+
+    touch $TMPDIR/home/.poldekrc
+    POLDEK_TESTING_REPOSDIR=$reposd HOME=$TMPDIR/home $POLDEK -q -l > $TMPDIR/reposd-out 2>&1 || true
+
+    grep -q '^managed ' $TMPDIR/reposd-out || fail "managed_source_not_loaded"
+    if grep -q '^extra ' $TMPDIR/reposd-out; then
+        fail "includedir_was_followed"
+    fi
+}
+
 . ./sh/lib/shunit2

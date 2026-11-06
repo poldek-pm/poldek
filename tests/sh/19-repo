@@ -1,0 +1,236 @@
+#!/bin/sh
+# $Id$
+
+# repo command tests
+
+. ./sh/lib/setup
+
+POLDEK="$PWD/../cli/poldek"
+$POLDEK --version >/dev/null 2>&1
+
+REPOSD=
+REMOTE_CONF=
+UNMANAGED_CONF=
+INVALID_CONF=
+
+setUp() {
+    local tmp=${TMPDIR:-/tmp}
+    REPOSD=$tmp/reposd-19
+    REMOTE_CONF=$tmp/remote-19.conf
+    UNMANAGED_CONF=$tmp/unmanaged-19.conf
+    INVALID_CONF=$tmp/invalid-19.conf
+
+    rm -rf $REPOSD
+    mkdir -p $REPOSD
+
+    cat > $REMOTE_CONF <<EOF
+[source]
+name = poldekrepo-test-19
+path = http://example.com/poldek
+type = pndir
+EOF
+
+    cat > $UNMANAGED_CONF <<EOF
+[source]
+name = unmanaged-test-19
+path = http://example.com/unmanaged
+type = pndir
+EOF
+
+    cat > $INVALID_CONF <<EOF
+[source]
+name = invalid-test-19
+path = http://example.com/invalid
+foo = bar
+EOF
+}
+
+testRepoAddListDelete()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    $POLDEK repo -a $REMOTE_CONF
+    assertEquals "repo -a failed" "0" "$?"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "one managed .conf expected" "1" "$n"
+
+    out=$($POLDEK repo -l)
+    echo "$out" | grep -q "poldekrepo-test-19" || \
+        fail "repo -l does not show the added source: $out"
+
+    fn=$(basename $(ls $REPOSD/*.conf))
+    $POLDEK repo -d $fn
+    assertEquals "repo -d failed" "0" "$?"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no managed .conf expected after delete" "0" "$n"
+}
+
+testRepoOverwrite()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    $POLDEK repo -a $REMOTE_CONF
+    assertEquals "first repo -a failed" "0" "$?"
+
+    $POLDEK repo -a $REMOTE_CONF
+    if [ "$?" -eq 0 ]; then
+        fail "second repo -a should fail without --overwrite"
+    fi
+
+    $POLDEK repo -a $REMOTE_CONF --force
+    assertEquals "repo -a --force failed" "0" "$?"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "one managed .conf expected after overwrite" "1" "$n"
+}
+
+testRepoInvalidRejected()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    $POLDEK repo -a $INVALID_CONF
+    if [ "$?" -eq 0 ]; then
+        fail "repo -a with invalid config should fail"
+    fi
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no .conf expected after rejected add" "0" "$n"
+}
+
+testRepoForceDeleteUnmanaged()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    cp $UNMANAGED_CONF $REPOSD/unmanaged.conf
+
+    $POLDEK repo -d unmanaged.conf
+    if [ "$?" -eq 0 ]; then
+        fail "repo -d of unmanaged file should fail without --force"
+    fi
+
+    $POLDEK repo -d unmanaged.conf --force
+    assertEquals "repo -d --force failed" "0" "$?"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no .conf expected after force delete" "0" "$n"
+}
+
+testRepoDuplicateNameAcrossFiles()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    cat > $REPOSD/first.conf <<EOF
+# remote repository managed by poldek http://example.com/first
+[source]
+name = duplicate-test-19
+path = http://example.com/first
+type = pndir
+EOF
+
+    cat > $REPOSD/second.conf <<EOF
+# remote repository managed by poldek http://example.com/second
+[source]
+name = duplicate-test-19
+path = http://example.com/second
+type = pndir
+EOF
+
+    $POLDEK repo -l
+    if [ "$?" -eq 0 ]; then
+        fail "duplicate source names across files should be rejected"
+    fi
+}
+
+testRepoDirnameMacro()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+    SHLIBDIR="$PWD/sh/lib"
+    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache-19
+    rm -rf $CACHEDIR
+    mkdir -p $CACHEDIR
+
+    cat > $REMOTE_CONF <<EOF
+[source]
+name = baseurl-test-19
+path = %{_baseurl}/%{_arch}/
+type = pndir
+EOF
+
+    POLDEK_TESTING_PRELOAD_CONF="$SHLIBDIR/vftest-fetch.conf"
+    export POLDEK_TESTING_PRELOAD_CONF
+    PATH="$PATH:$SHLIBDIR"
+    export PATH
+
+    $POLDEK --cachedir $CACHEDIR repo -a test://$REMOTE_CONF
+    assertEquals "repo -a failed" "0" "$?"
+
+    fn=$(ls $REPOSD/*.conf)
+    grep -q "^_baseurl = " $fn || fail "missing _baseurl macro in saved file"
+    grep -q "^_origin = " $fn || fail "missing _origin macro in saved file"
+    grep -q "^__dirname = " $fn && fail "internal __dirname macro leaked into saved file"
+    grep -q '^path = %{_baseurl}' $fn || fail "path should keep %{_baseurl} macro in saved file"
+    grep -qE '^path = /' $fn && fail "path was expanded to absolute local path in saved file"
+    grep -q '^auto = no$' $fn || fail "missing auto = no in saved file"
+
+    out=$($POLDEK --cachedir $CACHEDIR repo -l 2>&1)
+    echo "$out" | grep -q "baseurl-test-19" || fail "source not listed: $out"
+    echo "$out" | grep -q "test:///home/users/mis/tmp/remote-19.conf" || fail "_origin URL not listed: $out"
+    echo "$out" | grep -q "test://home/users/mis/tmp/x86_64/" || fail "expanded path not listed: $out"
+}
+
+testRepoDeleteByUrl()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+    SHLIBDIR="$PWD/sh/lib"
+    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache-19
+    rm -rf $CACHEDIR
+    mkdir -p $CACHEDIR
+
+    cat > $REMOTE_CONF <<EOF
+[source]
+name = del-by-url-test-19
+path = %{_baseurl}/%{_arch}/
+type = pndir
+EOF
+
+    POLDEK_TESTING_PRELOAD_CONF="$SHLIBDIR/vftest-fetch.conf"
+    export POLDEK_TESTING_PRELOAD_CONF
+    PATH="$PATH:$SHLIBDIR"
+    export PATH
+
+    $POLDEK --cachedir $CACHEDIR repo -a test://$REMOTE_CONF
+    assertEquals "repo -a failed" "0" "$?"
+
+    $POLDEK --cachedir $CACHEDIR repo -d test://$REMOTE_CONF
+    assertEquals "repo -d by URL failed" "0" "$?"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no .conf expected after delete by URL" "0" "$n"
+}
+
+testRepoGlobalIgnored()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    cat > $REPOSD/global-poison.conf <<EOF
+# remote repository managed by poldek http://example.com/poison
+[global]
+source = global-hijack,compr=zst /nonexistent/repo/
+
+[source]
+name = managed-test-19
+path = /nonexistent/repo/
+type = pndir
+EOF
+
+    out=$($POLDEK -l 2>&1)
+    echo "$out" | grep -q "global-hijack" && \
+        fail "[global] from repos.d should be ignored, but global-hijack was listed: $out"
+
+    echo "$out" | grep -q "managed-test-19" || \
+        fail "managed-test-19 source not listed: $out"
+}
+
+. ./sh/lib/shunit2

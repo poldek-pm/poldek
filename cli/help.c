@@ -65,7 +65,7 @@ int cmd_help(struct cmdctx *cmdctx)
 
         p = cmd->arg ? cmd->arg : "";
         if (cmd->argp_opts) {
-            snprintf(buf, sizeof(buf), _("[OPTION...] %s"), cmd->arg);
+            snprintf(buf, sizeof(buf), _("[OPTION...] %s"), p);
             p = buf;
         }
         printf("%-9s %-36s %s\n", cmd->name, p, cmd->doc);
