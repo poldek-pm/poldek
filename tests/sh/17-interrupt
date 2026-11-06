@@ -7,8 +7,12 @@
 # A ^C before the first rpm run stops an install, upgrade-dist and removals
 # with an error, and rpm does not run. Started with SIGINT ignored, poldek
 # keeps ignoring it. On a terminal rpm reads from the pty it writes to, not
-# from poldek's terminal, where sudo would take the ^C before poldek. A ^\
-# ends poldek, and rpm run without sudo goes on in a session of its own.
+# from poldek's terminal, where sudo would take the ^C before poldek. A ^\,
+# a hangup, a SIGTERM and a broken output wait for rpm to end, as a ^C does:
+# poldek reads rpm's output to its end, asks rpm run without sudo to stop
+# (not for a broken output), which rpm in a transaction puts off, starts no
+# further set, in the shell either, and ends with the signal once the
+# operation is over. A SIGTERM that comes while poldek starts rpm stops rpm too.
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
@@ -35,6 +39,7 @@ setUp() {
     chmod 755 $FAKE_RPM
 
     SIGINT_AT_INIT="$PWD/.libs/sigint_at_init.so"
+    SIGNAL_AT_FORK="$PWD/.libs/signal_at_fork.so"
     TERMINAL_RPM="$TMPDIR/terminal-rpm"
 }
 
@@ -67,13 +72,22 @@ poldek_on_pty() {
         env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM $*" /dev/null </dev/null 2>&1
 }
 
-# quit_rpm: writes the fake rpm for a ^\ typed on the terminal while rpm
-# runs: SIGQUIT to every process of poldek's group, which ends poldek. The
-# fake rpm logs its run and, a second later, its end.
-quit_rpm() {
-    printf '#!/bin/sh\necho rpm "$@" >> %s\n' "$RUNS"
-    printf 'kill -QUIT -- -$(cut -d" " -f5 /proc/$PPID/stat)\n'
-    printf 'sleep 1\necho rpm done >> %s\n' "$RUNS"
+# signal_rpm SIG group|poldek [stops]: writes the fake rpm for SIG sent while
+# rpm runs, to poldek's process group, as from the terminal, or to poldek
+# alone. The fake rpm logs its run and a SIGTERM; a second later, as rpm in a
+# transaction, it writes a line, logs whether the write went through, and
+# logs its end. With stops, as rpm before its transaction, a SIGTERM ends it.
+signal_rpm() {
+    [ "${3:-}" = stops ] && onterm="; exit 1" || onterm=
+    printf '#!/bin/sh\ntrap "echo TERM >> %s%s" TERM\n' "$RUNS" "$onterm"
+    printf 'echo rpm "$@" >> %s\n' "$RUNS"
+    if [ $2 = group ]; then
+        printf 'kill -%s -- -$(cut -d" " -f5 /proc/$PPID/stat)\n' $1
+    else
+        printf 'kill -%s $PPID\n' $1
+    fi
+    printf 'sleep 1\necho late output\necho "late write $?" >> %s\n' "$RUNS"
+    printf 'echo rpm done >> %s\n' "$RUNS"
 }
 
 # quit_on_pty|quit_on_pipes: poldek installing a with that fake rpm, SIGQUIT
@@ -98,6 +112,21 @@ rpm_done() {
         sleep 0.1
     done
     return 1
+}
+
+# rpm_starts LOG: how many times poldek, run with -v, set out to run rpm; the
+# fake rpm's own log misses a run that poldek stops before it gets anywhere
+rpm_starts() {
+    grep -ac 'Executing' "$1"
+}
+
+# assertRpmRanThrough <what>: the fake rpm of signal_rpm got to its end, its
+# write after the signal went through, and poldek asked it to stop
+assertRpmRanThrough() {
+    assertTrue "$1: rpm did not get to its end: $(cat $RUNS)" rpm_done
+    assertEquals "$1: rpm's output lost: $(cat $RUNS)" "1" \
+                 "$(grep -c '^late write 0$' $RUNS)"
+    assertEquals "$1: rpm not asked to stop: $(cat $RUNS)" "1" "$(grep -c TERM $RUNS)"
 }
 
 # with_sigint DEFAULT|IGNORE <command>: run it with SIGINT so set, whatever
@@ -222,11 +251,11 @@ testQuitKeyLetsRpmRunOnPty()
     skip_if_rpm_testing_off && return
 
     build a
-    quit_rpm > $TERMINAL_RPM
+    signal_rpm QUIT group > $TERMINAL_RPM
 
     quit_on_pty
-    assertEquals "rpm runs" "1" "$(grep -c '^rpm ' $RUNS)"
-    assertTrue "rpm got the ^\\: $(cat $RUNS)" rpm_done
+    assertEquals "rpm runs" "1" "$(grep -c '^rpm -' $RUNS)"
+    assertRpmRanThrough "^\\"
 }
 
 testQuitKeyLetsRpmRunOnPipes()
@@ -234,11 +263,175 @@ testQuitKeyLetsRpmRunOnPipes()
     skip_if_rpm_testing_off && return
 
     build a
-    quit_rpm > $TERMINAL_RPM
+    signal_rpm QUIT group > $TERMINAL_RPM
 
     quit_on_pipes
-    assertEquals "rpm runs" "1" "$(grep -c '^rpm ' $RUNS)"
-    assertTrue "rpm got the ^\\: $(cat $RUNS)" rpm_done
+    assertEquals "rpm runs" "1" "$(grep -c '^rpm -' $RUNS)"
+    assertRpmRanThrough "^\\"
+}
+
+# a hangup of poldek's terminal, or a kill of poldek: rpm in a session of its
+# own misses them; it is asked to stop, and the next set does not start
+testHangupAndKillLetRpmRun()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+
+    for sig in HUP:129 TERM:143; do
+        rm -f $RUNS
+        signal_rpm ${sig%:*} poldek > $TERMINAL_RPM
+
+        out=$(poldek_on_pipes -uv a b)
+        rc=$?
+        assertEquals "$sig: exit code $rc: $out" "${sig#*:}" "$rc"
+        assertEquals "$sig: rpm runs" "1" "$(grep -c '^rpm -' $RUNS)"
+        assertEquals "$sig: rpm started: $out" "1" "$(echo "$out" | rpm_starts -)"
+        assertRpmRanThrough "$sig"
+    done
+}
+
+# a SIGTERM that comes while poldek starts rpm, before it has rpm's pid, and
+# rpm slow to get to its exec: rpm is asked to stop and does not run
+testSignalWhileRpmStartsStopsIt()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    signal_rpm TERM poldek > $TERMINAL_RPM
+    chmod 755 $TERMINAL_RPM
+
+    out=$(env LC_ALL=C LD_PRELOAD=$SIGNAL_AT_FORK $POLDEK_INSTALL -Ouse_sudo=n \
+              --pmcmd $TERMINAL_RPM -uv a 2>&1)
+    rc=$?
+    assertEquals "exit code $rc: $out" "143" "$rc"
+    assertEquals "no SIGTERM from $SIGNAL_AT_FORK: $out" "1" \
+                 "$(echo "$out" | grep -c '^signal_at_fork: SIGTERM')"
+    assertEquals "rpm ran: $(cat $RUNS 2>/dev/null)" "0" \
+                 "$(cat $RUNS 2>/dev/null | grep -c '^rpm -')"
+}
+
+# poldek's shell on a terminal, a signal to it while the rpm of the first of
+# two sets runs: rpm runs to its end, the second set does not start, and the
+# shell ends after the command, with no prompt for the next one
+testShellSignalStopsNextSet()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    build c
+
+    for sig_rc in HUP:129 TERM:143 QUIT:131; do
+        sig=${sig_rc%:*}
+        rm -f $RUNS $TMPDIR/poldek.log
+        signal_rpm $sig poldek > $TERMINAL_RPM
+        chmod 755 $TERMINAL_RPM
+
+        printf 'install a b\ninstall c\n' | timeout 60 script -qec "ulimit -c 0; \
+            env LC_ALL=C $POLDEK_INSTALL -v -Ouse_sudo=n --pmcmd $TERMINAL_RPM \
+            --log $TMPDIR/poldek.log --shell" /dev/null >$TMPDIR/shell.out 2>&1
+        rc=$?
+        assertEquals "$sig: exit code" "${sig_rc#*:}" "$rc"
+        assertEquals "$sig: the shell asked for a further command: $(cat $TMPDIR/shell.out)" \
+                     "1" "$(grep -c 'poldek:/[^ ]*> ' $TMPDIR/shell.out)"
+        assertEquals "$sig: rpm runs: $(cat $RUNS)" "1" "$(grep -c '^rpm -' $RUNS)"
+        assertEquals "$sig: rpm started: $(cat $TMPDIR/poldek.log)" "1" \
+                     "$(rpm_starts $TMPDIR/poldek.log)"
+        assertRpmRanThrough "$sig"
+    done
+}
+
+# a ^\ at the prompt of poldek's shell ends the shell, which runs no
+# command typed after it
+testShellQuitKeyAtPromptEndsShell()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    rm -f $TMPDIR/poldek.log
+    { for i in $(seq 100); do grep -qs 'package.* read' $TMPDIR/poldek.log && break; sleep 0.1; done
+      sleep 1; printf '\034'; sleep 1; printf 'install a\n'; sleep 2; } |
+        timeout 60 script -qec "ulimit -c 0; env LC_ALL=C $POLDEK_INSTALL -v \
+            --pmcmd $FAKE_RPM --log $TMPDIR/poldek.log --shell" /dev/null >/dev/null 2>&1
+    rc=$?
+    assertEquals "exit code: $(cat $TMPDIR/poldek.log)" "131" "$rc"
+    assertEquals "rpm runs: $(cat $RUNS 2>/dev/null)" "0" \
+                 "$(cat $RUNS 2>/dev/null | grep -c '^rpm -')"
+    assertEquals "a command ran: $(cat $TMPDIR/poldek.log)" "0" \
+                 "$(grep -c 'Interrupted' $TMPDIR/poldek.log)"
+}
+
+# rpm asked to stop before its transaction begins, as while it waits for the
+# rpmdb lock, ends there
+testHangupAndKillStopRpmBeforeItsTransaction()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+
+    for sig in HUP TERM; do
+        rm -f $RUNS
+        signal_rpm $sig poldek stops > $TERMINAL_RPM
+
+        out=$(poldek_on_pipes -uv a)
+        assertEquals "$sig: rpm not asked to stop: $out" "1" "$(grep -c TERM $RUNS)"
+        assertEquals "$sig: rpm went on: $(cat $RUNS)" "0" "$(grep -c 'rpm done' $RUNS)"
+    done
+}
+
+# poldek's output through a pipe whose reader ends while rpm runs, as tee
+# does on a ^C: rpm is not asked to stop, and the next set does not start
+testBrokenOutputLetsRpmRun()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    cat > $TERMINAL_RPM <<EOF
+#!/bin/sh
+trap "echo TERM >> $RUNS" TERM
+echo rpm "\$@" >> $RUNS
+echo the reader ends here
+sleep 1
+echo late output
+sleep 1
+echo late output
+echo "late write \$?" >> $RUNS
+echo rpm done >> $RUNS
+EOF
+
+    rm -f $TMPDIR/poldek.log
+    { poldek_on_pipes --log $TMPDIR/poldek.log -uv a b; echo $? > $TMPDIR/rc; } |
+        sed '/the reader ends here/q' >/dev/null
+    assertEquals "exit code $(cat $TMPDIR/rc)" "141" "$(cat $TMPDIR/rc)"
+    assertEquals "rpm runs" "1" "$(grep -c '^rpm -' $RUNS)"
+    assertEquals "rpm started: $(cat $TMPDIR/poldek.log)" "1" \
+                 "$(rpm_starts $TMPDIR/poldek.log)"
+    assertTrue "rpm did not get to its end: $(cat $RUNS)" rpm_done
+    assertEquals "rpm's output lost: $(cat $RUNS)" "1" "$(grep -c '^late write 0$' $RUNS)"
+    assertEquals "rpm asked to stop: $(cat $RUNS)" "0" "$(grep -c TERM $RUNS)"
+    assertEquals "a second ^C asked for, though none came: $(cat $TMPDIR/poldek.log)" \
+                 "0" "$(grep -c 'again stops it' $TMPDIR/poldek.log)"
+}
+
+# started with SIGHUP ignored, as under nohup, poldek keeps ignoring it
+testIgnoredHangupStaysIgnored()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    signal_rpm HUP poldek > $TERMINAL_RPM
+    chmod 755 $TERMINAL_RPM
+
+    perl -e '$SIG{HUP} = "IGNORE"; exec @ARGV' \
+        env LC_ALL=C $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM -uv a b >/dev/null 2>&1
+    rc=$?
+    assertEquals "exit code $rc" "0" "$rc"
+    assertEquals "rpm runs" "2" "$(grep -c '^rpm -' $RUNS)"
+    assertEquals "rpm asked to stop: $(cat $RUNS)" "0" "$(grep -c TERM $RUNS)"
 }
 
 # a ^C is kept from rpm without ignoring SIGINT, which the scriptlets and the

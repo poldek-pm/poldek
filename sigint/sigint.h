@@ -40,4 +40,30 @@ EXPORT int sigint_reached_reset(int reset);
 /* number of SIGINTs since the last reset, to tell a repeated ^C */
 EXPORT int sigint_count(void);
 
+/*
+ * While a command runs, from sigint_hold() to sigint_unhold(), a hangup, a
+ * SIGTERM, a ^\ and a broken output wait for its end instead of ending poldek
+ * at once: each interrupts the operation as a ^C does and stays caught until
+ * poldek_ts_run() ends the operation with sigint_release(). A signal ignored,
+ * as under nohup, stays so. The calls do not nest; other threads should block
+ * these signals.
+ */
+EXPORT void sigint_hold(void);
+EXPORT void sigint_unhold(void);
+
+/* the signals noted go back to the handler they had and are raised */
+EXPORT void sigint_release(void);
+
+/* note SIGHUP, SIGTERM, SIGQUIT or SIGPIPE for sigint_release(), as one that
+   came while a command ran; safe in a signal handler */
+EXPORT void sigint_note_end(int sig);
+
+/* nonzero once such a signal came, until sigint_release(); sigint_reset()
+   keeps it */
+EXPORT int sigint_ending(void);
+
+/* the command running is to stop: a second ^C, or a hangup, a SIGTERM or a
+   ^\; a broken output alone may come from a ^C that ended a reader */
+EXPORT int sigint_stop_asked(void);
+
 #endif
