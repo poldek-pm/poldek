@@ -416,6 +416,9 @@ and [filename]*-source.conf[/filename], file getters are declared in
   <option name="hold" type="string" list="yes" default="" multiple="yes">
     <description>
     Prevent package listed from being upgraded if they are already installed.
+    A mask matches a package's name, name-version-release or
+    name-version-release.arch, each also after the name of the package's
+    source and a colon.
     [screen]
  hold = kernel* foo*.i686 th-test:* *-smp-* th-ready:bar*.x86_64
     [/screen]
@@ -667,9 +670,14 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
-  <option name="hold" type="string" list="yes" default="kernel*" multiple="yes">
+  <option name="hold" type="string" list="yes" default="" multiple="yes">
     <description>
-    Have the same meaning as [ global ] parameter. Example:
+    Hold masks for the packages of this source, added to those of
+    [ global ]: a MASK here is NAME:MASK in [ global ] [option]hold[/option],
+    NAME being this source's name with its glob characters escaped. When
+    this source has the newest version of a package it holds, the package
+    stays as it is, also when another source has a version newer than the
+    installed one. Example:
     [screen]
  hold = kernel* dev
     [/screen]
