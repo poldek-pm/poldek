@@ -611,8 +611,11 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         while (isspace(*s))
             s++;
 
-        if (*s)
+        if (*s) {
             add_history(line);
+            if (histfile)       /* a signal may end poldek during the command */
+                write_history(histfile);
+        }
 
         s = n_str_strip_ws(line);
         if (*s) {
@@ -635,9 +638,6 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         if (shQuit || sigint_ending())
             shDone = 1;
     }
-
-    if (histfile)
-        write_history(histfile);
 
     /* a signal noted ends poldek, as on the command line */
     signal(SIGTERM, SIG_DFL);

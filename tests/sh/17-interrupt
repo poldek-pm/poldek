@@ -13,6 +13,7 @@
 # (not for a broken output), which rpm in a transaction puts off, starts no
 # further set, in the shell either, and ends with the signal once the
 # operation is over. A SIGTERM that comes while poldek starts rpm stops rpm too.
+# The shell's history keeps each command typed, also when a signal ends it.
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
@@ -361,6 +362,27 @@ testShellQuitKeyAtPromptEndsShell()
                  "$(cat $RUNS 2>/dev/null | grep -c '^rpm -')"
     assertEquals "a command ran: $(cat $TMPDIR/poldek.log)" "0" \
                  "$(grep -c 'Interrupted' $TMPDIR/poldek.log)"
+}
+
+# a hangup that ends poldek's shell during a command, as when its terminal
+# closes, leaves the commands typed in the history file
+testShellHistoryKeptAfterHangup()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    rm -rf $TMPDIR/home
+    mkdir $TMPDIR/home
+    signal_rpm HUP poldek > $TERMINAL_RPM
+    chmod 755 $TERMINAL_RPM
+
+    printf 'ls a\ninstall a\n' | timeout 60 script -qec "env LC_ALL=C \
+        HOME=$TMPDIR/home $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $TERMINAL_RPM \
+        --shell" /dev/null >$TMPDIR/shell.out 2>&1
+    rc=$?
+    assertEquals "exit code: $(cat $TMPDIR/shell.out)" "129" "$rc"
+    history=$(paste -sd, $TMPDIR/home/.poldek_history 2>/dev/null | sed 's/,/, /g')
+    assertEquals "history: $history" "ls a, install a" "$history"
 }
 
 # rpm asked to stop before its transaction begins, as while it waits for the
