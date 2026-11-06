@@ -108,10 +108,11 @@ int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
                           int is_hand_marked)
 {
     int cmprc = 0, npkgs, installable = 1, freshen = 0, force;
+    struct pkg *dbpkg;
 
     freshen = ts->getop(ts, POLDEK_OP_FRESHEN);
     force = ts->getop(ts, POLDEK_OP_FORCE);
-    npkgs = i3_is_pkg_installed(ts, pkg, &cmprc, NULL);
+    npkgs = i3_is_pkg_installed(ts, pkg, &cmprc, &dbpkg);
 
     /* if (npkgs > 1 && is_multiple)
            *is_multiple = 1;  */
@@ -163,8 +164,19 @@ int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
             logn(LOGERR, _("%s: refusing to upgrade held package"),
                  pkg_id(pkg));
             installable = 0;
+
+        /* the upgrade replaces the only instance; of several, it keeps
+           all but one (handle_multiinsts()) */
+        } else if (installable > 0 && poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) &&
+                   npkgs == 1 && i3_is_held(ts, dbpkg)) {
+            logn(LOGERR, _("%s: refusing to upgrade held package"),
+                 pkg_id(dbpkg));
+            installable = 0;
         }
     }
+
+    if (dbpkg)
+        pkg_free(dbpkg);
 
     return installable;
 }
