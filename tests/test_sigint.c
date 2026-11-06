@@ -3,12 +3,15 @@
   up and restores the SIGINT handler. sigint_emit(), which library users call
   from another thread to cancel, stays safe after sigint_destroy(). A signal
   a handler notes with sigint_note_end() is not lost, even while the
-  operation ends.
+  operation ends, and takes effect at its end, also when it ends before it
+  begins. A handler the library user sets while rpm runs stays.
 */
 #include <dlfcn.h>
 #include <signal.h>
 #include "test.h"
 #include "sigint/sigint.h"
+#include "poldek.h"
+#include "poldek_ts.h"
 
 /* the shell sets the handler up, then each install or removal again */
 START_TEST (test_nested_init_keeps_handler) {
@@ -82,5 +85,56 @@ START_TEST (test_note_while_ending_kept) {
 }
 END_TEST
 
+/* a library user sets a handler of its own while rpm runs */
+START_TEST (test_unhold_keeps_handler_set_meanwhile) {
+    struct sigaction sa;
+
+    signal(SIGTERM, SIG_DFL);
+    sigint_hold();
+    signal(SIGTERM, caught);
+    sigint_unhold();
+
+    sigaction(SIGTERM, NULL, &sa);
+    fail_unless(sa.sa_handler == caught,
+                "the handler set while rpm ran is gone");
+    signal(SIGTERM, SIG_DFL);
+}
+END_TEST
+
+static volatile sig_atomic_t ncaught = 0;
+
+static void count(int sig)
+{
+    (void)sig;
+    ncaught++;
+}
+
+/* a library user notes a signal for an operation that ends before it
+   begins, on a package list it cannot read */
+START_TEST (test_release_after_early_end) {
+    struct poldek_ctx *ctx;
+    struct poldek_ts *ts;
+
+    poldeklib_init();
+    ctx = poldek_new(0);
+    fail_if(poldek_setup(ctx) == 0, "poldek_setup() failed");
+    ts = poldek_ts_new(ctx, 0);
+    poldek_ts_set_type(ts, POLDEK_TS_TYPE_INSTALL, "install");
+    poldek_ts_add_pkglist(ts, "/nonexistent");
+
+    signal(SIGTERM, count);
+    sigint_note_end(SIGTERM);
+    fail_if(poldek_ts_run(ts, 0), "the operation did not end early");
+    fail_unless(ncaught == 1, "the signal noted took no effect");
+    fail_if(sigint_ending(), "the signal stays noted for the next operation");
+
+    signal(SIGTERM, SIG_DFL);
+    poldek_ts_free(ts);
+    poldek_free(ctx);
+}
+END_TEST
+
 NTEST_RUNNER("sigint", test_nested_init_keeps_handler, test_emit_after_destroy,
-             test_note_while_ending_kept);
+             test_note_while_ending_kept,
+             test_unhold_keeps_handler_set_meanwhile,
+             test_release_after_early_end);
