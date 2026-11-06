@@ -1387,4 +1387,27 @@ testEvrTiebreakRespectsVersionConstraint() {
     try_install_with_ask_allowed req2 "req2-1-1,a-1-1" ""
 }
 
+# the packages --upgrade-dist would install, with sources s1 ($REPO) and
+# s2 ($REPO2) from a config file; $1 goes to [global], $2 to s1's section
+upgrade_dist_conf() {
+    printf '[global]\n%s\n[source]\nname = s1\ntype = dir\npath = %s\n%s\n[source]\nname = s2\ntype = dir\npath = %s\n' \
+           "$1" "$REPO" "${2-}" "$REPO2" > $TMPDIR/sources.conf
+    $POLDEK --conf $TMPDIR/sources.conf --cachedir $CACHEDIR -Ovfile_retries=1 \
+            --dt dir --destination $DESTINATION_REPO --upgrade-dist --test \
+            --parsable-tr-summary 2>&1 | sed -n 's/^%I //p' | sort | paste -sd' '
+}
+
+# a hold mask is a name, a name-version-release or a
+# name-version-release.arch, each also after "source:"
+testUpgradeDistHoldMaskForms() {
+    for p in a abc b c k lib1 m n; do
+        build_installed $p 1-1
+        build $p 2-1
+    done
+
+    out=$(upgrade_dist_conf "hold = s1:a s1:lib[[:digit:]] k-2-1 s1:m-2-1 n-2-1.* c* s2:b")
+    assertEquals "upgraded: $out" "abc-2-1 b-2-1" "$out"
+}
+
+
 . ./sh/lib/shunit2

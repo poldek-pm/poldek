@@ -124,21 +124,43 @@ void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg)
     psc->pkg = pkg;
 }
 
+/* fnmatch() against pkgbuf from start, cut after end for the call */
+static int match_cut(struct pkgscore_s *psc, const char *mask,
+                     size_t start, size_t end)
+{
+    char c;
+    int rc;
 
+    if (end > sizeof(psc->pkgbuf) - 1)  /* n_snprintf() cut it already */
+        end = sizeof(psc->pkgbuf) - 1;
+
+    c = psc->pkgbuf[end];
+    psc->pkgbuf[end] = '\0';
+    rc = fnmatch(mask, &psc->pkgbuf[start], 0) == 0;
+    psc->pkgbuf[end] = c;
+
+    return rc;
+}
+
+/* a mask matches a package's name, name-version-release or
+   name-version-release.arch, each also after "source:"; the forms are cut
+   from pkgbuf, so struct pkgscore_s keeps its size */
 // return 0 if not match
 int pkgscore_match(struct pkgscore_s *psc, const char *mask)
 {
-    // match name
-    if (fnmatch(mask, psc->pkg->name, 0) == 0)
+    const struct pkg *pkg = psc->pkg;
+    size_t off = psc->pkgname_off;
+    size_t name = off + strlen(pkg->name);
+    size_t nvr = name + strlen(pkg->ver) + strlen(pkg->rel) + 2;
+
+    /* pkg->name, which a long source name may cut from pkgbuf */
+    if (fnmatch(mask, pkg->name, 0) == 0 || match_cut(psc, mask, off, nvr) ||
+        fnmatch(mask, &psc->pkgbuf[off], 0) == 0)
         return 1;
 
-    // match name-ver-rel.arch as string
-    if (psc->pkgname_off &&
-        fnmatch(mask, &psc->pkgbuf[psc->pkgname_off], 0) == 0)
-        return 1;
-
-    // match "repo_name:name-ver-rel.arch" as string
-    return fnmatch(mask, psc->pkgbuf, 0) == 0;
+    return off && (match_cut(psc, mask, 0, name) ||
+                   match_cut(psc, mask, 0, nvr) ||
+                   fnmatch(mask, psc->pkgbuf, 0) == 0);
 }
 
 
