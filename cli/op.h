@@ -64,4 +64,7 @@ EXPORT struct poclidek_opgroup_rt *poclidek_opgroup_rt_new(struct poldek_ts *ts,
                                                     struct poclidek_op_ctx *opctx);
 EXPORT void poclidek_opgroup_rt_free(struct poclidek_opgroup_rt *rt);
 
+void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
+                                 int print_groups);
+
 #endif

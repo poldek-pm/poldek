@@ -54,6 +54,7 @@ libpoldek_core_la_SOURCES = \
 	  pkguniq.c			\
 	  arg_packages.c arg_packages.h	\
 	  conf.c conf.h			\
+	  repo.c repo.h			\
 	  conf_intern.h conf_sections.c \
 	  pkgroup.c pkgroup.h	\
 	  pkgscore.c		\

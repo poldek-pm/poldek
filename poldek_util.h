@@ -12,6 +12,7 @@
 
 #ifndef POLDEK_UTIL_H
 
+#include <trurl/narray.h>
 #include <trurl/nhash.h>
 #include <time.h>
 
@@ -44,5 +45,7 @@ EXPORT const char *poldek_util_expand_vars(char *dest, int size, const char *src
 EXPORT const char *poldek_util_expand_env_vars(char *dest, int size, const char *str);
 
 EXPORT int poldek_util_copy_file(const char *src, const char *dst);
+
+EXPORT tn_array *poldek_util_readdir(const char *dirpath, const char *mask);
 
 #endif

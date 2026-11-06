@@ -252,6 +252,32 @@ START_TEST(test_config_undefined_macro) {
     remove(name);
 }
 
+START_TEST(test_config_dirname_macro) {
+    tn_hash *cnf, *s;
+    tn_array *lines;
+    const char *v;
+    const char *name = "poldek_test_dirname_macro.conf";
+
+    /* unknown macro stays literal */
+    lines = n_array_new(16, 0, 0);
+    n_array_push(lines, "__dirname = bar");
+    n_array_push(lines, "[source]");
+    n_array_push(lines, "type = pndir");
+    n_array_push(lines, "path = /repo/%{__dirname}/RPMS");
+    make_conf_file(name, lines);
+
+    cnf = poldek_conf_load(name, 0);
+    fail_if(cnf == NULL, "load config failed");
+
+    s = poldek_conf_get_section(cnf, "source");
+    v = poldek_conf_get(s, "path", NULL);
+    fail_unless(n_str_eq(v, "/repo/bar/RPMS"),
+                "unknown macro should stay literal: %s", v);
+    n_array_free(lines);
+    remove(name);
+}
+
+
 START_TEST(test_config_arch_macro) {
     tn_hash *cnf, *s;
     tn_array *lines;
@@ -343,4 +369,5 @@ NTEST_RUNNER("config",
              test_config_lists,
              test_config_lists_excl,
              test_config_undefined_macro,
+             test_config_dirname_macro,
              test_config_arch_macro);

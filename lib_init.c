@@ -15,10 +15,13 @@
 #endif
 
 #include <stdio.h>
+#include <ctype.h>
 #include <fnmatch.h>
+#include <string.h>
 #include <sys/param.h>          /* for PATH_MAX */
 
 #include <trurl/nmalloc.h>
+#include <trurl/nhash.h>
 #include <trurl/nassert.h>
 #include <trurl/n_snprintf.h>
 #include <trurl/nstr.h>
@@ -156,6 +159,44 @@ int addsource(tn_array *sources, struct source *src,
 }
 
 
+static int validate_source_names(tn_array *htcnf_sources)
+{
+    tn_hash *seen;
+    int i, nerr = 0;
+
+    if (htcnf_sources == NULL || n_array_size(htcnf_sources) == 0)
+        return 1;
+
+    seen = n_hash_new(47, free);
+
+    for (i = 0; i < n_array_size(htcnf_sources); i++) {
+        tn_hash *ht = n_array_nth(htcnf_sources, i);
+        const char *name = poldek_conf_get(ht, "name", NULL);
+        const char *origin = poldek_conf_get(ht, "__file", NULL);
+        const char *path;
+        char *prev_path;
+
+        if (name == NULL)
+            continue;
+
+        path = origin ? origin : "(unknown)";
+
+        prev_path = n_hash_get(seen, name);
+        if (prev_path) {
+            if (strcmp(prev_path, path) != 0) {
+                logn(LOGERR, _("%s: source name defined in %s and %s"),
+                     name, prev_path, path);
+                nerr++;
+            }
+        } else {
+            n_hash_insert(seen, name, n_strdup(path));
+        }
+    }
+
+    n_hash_free(seen);
+    return nerr == 0;
+}
+
 static
 int prepare_sources(struct poldek_ctx *ctx,
                     tn_hash *poldek_cnf, tn_array *sources)
@@ -191,7 +232,10 @@ int prepare_sources(struct poldek_ctx *ctx,
 
         setup_legacy_sources(poldek_cnf);
         htcnf_sources = poldek_conf_get_sections(poldek_cnf, "source");
-        rc = get_conf_sources(ctx, srcs_path, srcs_named, htcnf_sources);
+        if (!validate_source_names(htcnf_sources))
+            rc = 0;
+        else
+            rc = get_conf_sources(ctx, srcs_path, srcs_named, htcnf_sources);
 
     } else if (n_array_size(srcs_named)) {
         for (i=0; i < n_array_size(srcs_named); i++) {

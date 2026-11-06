@@ -32,6 +32,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <utime.h>
+#include <dirent.h>
+#include <fnmatch.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -426,6 +428,59 @@ int util__mkdir_p(const char *path, const char *dn)
     }
     n_str_tokl_free(tl_save);
     return nerr == 0;
+}
+
+tn_array *poldek_util_readdir(const char *dirpath, const char *mask)
+{
+    DIR            *dir;
+    const char     *sep = "/";
+    tn_array       *files;
+
+    if ((dir = opendir(dirpath)) == NULL)
+        return NULL;
+
+    files = n_array_new(32, free, (tn_fn_cmp)strcmp);
+
+    for (;;) {
+        struct dirent  *ent;
+        struct stat    st;
+        char path[PATH_MAX];
+        int n;
+
+        errno = 0;
+        if ((ent = readdir(dir)) == NULL)
+            break;
+
+        if (mask && fnmatch(mask, ent->d_name, 0) != 0)
+            continue;
+
+        n = n_snprintf(path, sizeof(path), "%s%s%s", dirpath, sep, ent->d_name);
+
+        if (stat(path, &st) != 0) {
+            logn(LOGWARN, "%s: %m", path);
+            continue;
+        }
+
+        if (!S_ISREG(st.st_mode))
+            continue;
+
+        if (access(path, R_OK) == 0)
+            n_array_push(files, n_strdupl(path, n));
+    }
+
+    /* readdir() failed: skip the whole directory, as when opendir() fails */
+    if (errno) {
+        n_array_cfree(&files);
+    } else {
+        n_array_sort(files);
+    }
+
+
+    int err = errno;
+    closedir(dir);
+    errno = err;
+
+    return files;
 }
 
 const char *poldek_util_ngettext_n_packages_fmt(int n)
