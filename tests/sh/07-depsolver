@@ -1388,13 +1388,18 @@ testEvrTiebreakRespectsVersionConstraint() {
 }
 
 # the packages --upgrade-dist would install, with sources s1 ($REPO) and
-# s2 ($REPO2) from a config file; $1 goes to [global], $2 to s1's section
+# s2 ($REPO2) from a config file; $1 goes to [global], $2 to s1's section,
+# $3 to the user's ~/.poldek-hold, $4 renames s1
 upgrade_dist_conf() {
-    printf '[global]\n%s\n[source]\nname = s1\ntype = dir\npath = %s\n%s\n[source]\nname = s2\ntype = dir\npath = %s\n' \
-           "$1" "$REPO" "${2-}" "$REPO2" > $TMPDIR/sources.conf
-    $POLDEK --conf $TMPDIR/sources.conf --cachedir $CACHEDIR -Ovfile_retries=1 \
-            --dt dir --destination $DESTINATION_REPO --upgrade-dist --test \
-            --parsable-tr-summary 2>&1 | sed -n 's/^%I //p' | sort | paste -sd' '
+    printf '[global]\n%s\n[source]\nname = %s\ntype = dir\npath = %s\n%s\n[source]\nname = s2\ntype = dir\npath = %s\n' \
+           "$1" "${4:-s1}" "$REPO" "${2-}" "$REPO2" > $TMPDIR/sources.conf
+    rm -rf $TMPDIR/home
+    mkdir $TMPDIR/home
+    [ -n "${3-}" ] && echo "$3" > $TMPDIR/home/.poldek-hold
+    HOME=$TMPDIR/home $POLDEK --conf $TMPDIR/sources.conf --cachedir $CACHEDIR \
+            -Ovfile_retries=1 --dt dir --destination $DESTINATION_REPO \
+            --upgrade-dist --test --parsable-tr-summary 2>&1 |
+        sed -n 's/^%I //p' | sort | paste -sd' '
 }
 
 # a hold mask is a name, a name-version-release or a
@@ -1409,5 +1414,42 @@ testUpgradeDistHoldMaskForms() {
     assertEquals "upgraded: $out" "abc-2-1 b-2-1" "$out"
 }
 
+
+# hold in a source's section holds the packages of that source only
+testUpgradeDistSourceHold() {
+    for p in a b; do
+        build_installed $p 1-1
+        build $p 2-1
+    done
+
+    out=$(upgrade_dist_conf "" "hold = a")
+    assertEquals "upgraded: $out" "b-2-1" "$out"
+
+    build2 a 3-1
+    out=$(upgrade_dist_conf "" "hold = a")
+    assertEquals "upgraded, a-3-1 in s2: $out" "a-3-1 b-2-1" "$out"
+}
+
+# a glob character in the name of a source with hold stands for itself
+testUpgradeDistSourceHoldGlobName() {
+    build_installed a 1-1
+    build a 2-1
+    build2 a 3-1
+
+    out=$(upgrade_dist_conf "" "hold = a" "" "s*")
+    assertEquals "upgraded, a-3-1 in s2: $out" "a-3-1" "$out"
+}
+
+# the user's ~/.poldek-hold applies when [global] holds nothing, also when
+# a source's section does
+testUpgradeDistSourceHoldKeepsUserHoldFile() {
+    for p in a b; do
+        build_installed $p 1-1
+        build $p 2-1
+    done
+
+    out=$(upgrade_dist_conf "" "hold = a" "b")
+    assertEquals "upgraded: $out" "" "$out"
+}
 
 . ./sh/lib/shunit2

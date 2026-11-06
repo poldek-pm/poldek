@@ -40,6 +40,7 @@
 #include "pkgdir/pkgdir.h"
 #include "pkgmisc.h"
 #include "misc.h"
+#include "poldek_intern.h"
 
 static
 tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
@@ -164,6 +165,32 @@ int pkgscore_match(struct pkgscore_s *psc, const char *mask)
 }
 
 
+/* hold = MASK in source NAME's section stands for NAME:MASK in [ global ],
+   with the glob characters of NAME escaped */
+void poldek__add_source_holds(tn_array *holds, const char *source,
+                              const tn_array *masks)
+{
+    char *name = alloca(2 * strlen(source) + 1), *p = name;
+    int i;
+
+    for (; *source; source++) {
+        if (strchr("*?[\\", *source))
+            *p++ = '\\';
+        *p++ = *source;
+    }
+    *p = '\0';
+
+    /* the user's ~/.poldek-hold stands in for no hold in [ global ] */
+    if (n_array_size(holds) == 0)
+        read_patterns(NULL, holds, PKG_HELD);
+
+    for (i=0; i < n_array_size(masks); i++)
+        n_array_push(holds, n_str_concat(name, ":", n_array_nth(masks, i),
+                                         NULL));
+
+    n_array_sort(holds);
+    n_array_uniq(holds);
+}
 
 void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
 {

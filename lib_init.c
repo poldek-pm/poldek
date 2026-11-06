@@ -440,7 +440,7 @@ static int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
     struct source   *src;
     int             i, nerr = 0, getall = 0;
     int             *matches = NULL;
-    tn_array        *expanded_srcs_named = NULL;
+    tn_array        *expanded_srcs_named = NULL, *masks;
     tn_hash         *expanded_h  = NULL;
 
     if (n_array_size(srcs_named) == 0 && n_array_size(sources) == 0)
@@ -470,6 +470,11 @@ static int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
                 nerr++;
             else if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
+            else if ((masks = poldek_conf_get_multi(ht, "hold"))) {
+                poldek__add_source_holds(ctx->ts->hold_patterns, src->name,
+                                         masks);
+                n_array_free(masks);
+            }
         }
     }
 
