@@ -91,14 +91,20 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._handle_auth()
             return
         
-        # Status code: /status/<code>
+        # Status code: /status/<code>, /status/<code>/noreason without a
+        # reason phrase
         if path.startswith("/status/"):
+            code, _, rest = path[8:].partition("/")
             try:
-                code = int(path[8:])
-                self.send_response(code)
-                self.end_headers()
+                code = int(code)
             except ValueError:
                 self.send_error(HTTPStatus.BAD_REQUEST)
+                return
+            if rest == "noreason":
+                self.send_response_only(code, "")
+            else:
+                self.send_response(code)
+            self.end_headers()
             return
         
         # HTTPS downgrade test: /force-http

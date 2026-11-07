@@ -708,9 +708,10 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
             break;
 
         default:
-            if (errno == 0)
-                errno = EINVAL;
-            vfff_set_err(EINVAL, "%s: %m (%s)", path, msg);
+            if (msg)
+                vfff_set_err(EINVAL, "%s: HTTP %d %s", path, status_code, msg);
+            else
+                vfff_set_err(EINVAL, "%s: HTTP %d", path, status_code);
             break;
     }
 
