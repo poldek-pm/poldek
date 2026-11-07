@@ -75,8 +75,16 @@ msgstr "+/space/tab/pgdown) następna strona"
 
 #: ask.c:156
 #, c-format
-msgid "Which one do you want to install ('q' to abort)? [%s]"
-msgstr "Który z nich chcesz zainstalować ('q' anuluje)? [%s]"
+msgid ""
+"Which one do you want to install? (%s - that package, Enter - %s, q - abort, "
+"? - help)"
+msgstr ""
+"Który z nich chcesz zainstalować? (%s - ten pakiet, Enter - %s, q - przerwij, "
+"? - pomoc)"
+
+#: ask.c
+msgid "install that package"
+msgstr "zainstaluj ten pakiet"
 
 #: ask.c:206
 #, c-format
@@ -90,12 +98,119 @@ msgstr[0] "Spróbować go zainstalować?"
 msgstr[1] "Spróbować je zainstalować?"
 msgstr[2] "Spróbować je zainstalować?"
 
-#: ask.c:220
+#: ask.c
+msgid "abort this command; sets installed before stay installed"
+msgstr "przerwij to polecenie; zestawy zainstalowane wcześniej pozostają"
+
+#: ask.c
+msgid "abort this command"
+msgstr "przerwij to polecenie"
+
+#: ask.c
+msgid "help"
+msgstr "pomoc"
+
+#: ask.c
 #, c-format
-msgid "(y - all, n - nothing, s - select some of, r - redo, q - abort)? [%s]"
-msgstr ""
-"(y - wszystkie, n - żaden, s - wybierz z listy, r - powtórz, q - przerwij)? "
-"[%s]"
+msgid "'%c' is not an answer here; ? - help\n"
+msgstr "'%c' nie jest tu odpowiedzią; ? - pomoc\n"
+
+#: ask.c
+msgid "abort"
+msgstr "przerwij"
+
+#: ask.c
+msgid "yes"
+msgstr "tak"
+
+#: ask.c
+msgid "no"
+msgstr "nie"
+
+#: ask.c
+msgid "remove"
+msgstr "usuń"
+
+#: ask.c
+msgid "don't remove"
+msgstr "nie usuwaj"
+
+#: ask.c
+msgid "install"
+msgstr "zainstaluj"
+
+#: ask.c pm/rpmorg/rpminstall.c
+msgid "don't install"
+msgstr "nie instaluj"
+
+#: ask.c
+#, c-format
+msgid "skip the set of %s, go on with the next one"
+msgstr "pomiń zestaw z pakietem %s i przejdź do następnego"
+
+#: ask.c
+msgid "install this set"
+msgstr "zainstaluj ten zestaw"
+
+#: ask.c
+msgid "skip it"
+msgstr "pomiń go"
+
+#: ask.c
+msgid "install it"
+msgstr "zainstaluj go"
+
+#: ask.c
+msgid "don't"
+msgstr "nie"
+
+#: ask.c
+msgid "redo"
+msgstr "powtórz"
+
+#: ask.c
+msgid "start again from the list"
+msgstr "wróć do pytania o całą listę"
+
+#: ask.c
+msgid "all"
+msgstr "wszystkie"
+
+#: ask.c
+msgid "install all of them"
+msgstr "zainstaluj wszystkie"
+
+#: ask.c
+msgid "none"
+msgstr "żaden"
+
+#: ask.c
+msgid "install none of them"
+msgstr "nie instaluj żadnego"
+
+#: ask.c
+msgid "select some"
+msgstr "wybierz niektóre"
+
+#: ask.c
+msgid "ask about each of them"
+msgstr "zapytaj o każdy z osobna"
+
+#: ask.c
+msgid "show the list again"
+msgstr "pokaż listę jeszcze raz"
+
+#: pm/rpmorg/rpminstall.c
+msgid "install anyway"
+msgstr "zainstaluj mimo to"
+
+#: pm/rpmorg/signkey.c
+msgid "import it"
+msgstr "zaimportuj go"
+
+#: pm/rpmorg/signkey.c
+msgid "don't import"
+msgstr "nie importuj"
 
 #: ask.c:245
 #, c-format

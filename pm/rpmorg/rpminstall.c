@@ -436,7 +436,9 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         if (nsignerr) {
             if (!can_ask || poldek__confirm(ts, 0,
                                             _("There were signature verification errors. "
-                                              "Proceed?")) != 1)
+                                              "Proceed?"),
+                                            _("install anyway"),
+                                            _("don't install")) != 1)
                 goto l_err_end;
         }
 
@@ -444,7 +446,9 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         if (ncolorerr) {
             if (!can_ask || poldek__confirm(ts, 0,
                                              _("There were package coloring mismatches. "
-                                               "Proceed?")) != 1)
+                                               "Proceed?"),
+                                             _("install anyway"),
+                                             _("don't install")) != 1)
                 goto l_err_end;
         }
     }

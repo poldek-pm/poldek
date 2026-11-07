@@ -434,6 +434,7 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
 
             n++;
             pkgdb_reopen(ts->db, 0);
+            ts->_set_head = pkg;
         }
         DBGF("mark %s\n", pkg_id(pkg));
 
@@ -457,7 +458,7 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
         nerr = !install_packages(&ictx);
 
  l_end:
-
+    ts->_set_head = NULL;
     i3ctx_destroy(&ictx);
     MEMINF("END");
     if (is_particle)

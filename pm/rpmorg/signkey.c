@@ -384,7 +384,8 @@ int pm_rpm_signkey_import(struct pm_rpm *pm, struct poldek_ts *ts,
         char msg[4096];
 
         signkey_confirm_message(msg, sizeof(msg), sk->keys, sk->url);
-        if (poldek__confirm(ts, 0, msg) != 1) {
+        if (poldek__confirm(ts, 0, msg, _("import it"),
+                            _("don't import")) != 1) {
             sk->import_status = SIGNKEY_IMPORT_DECLINED;
             return 0;
         }

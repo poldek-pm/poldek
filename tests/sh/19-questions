@@ -217,8 +217,61 @@ testProviderPageWithinLetters()
     on_pty -i a
 
     assertEquals "exit code" "0" "$PTY_RC"
+    grep -q "(a-p, r-z, 1-9, 0, A-P, R-Z - that package, " $PTY_OUT ||
+        fail "letters of the first page not named"
     chosen=$(sed -n 's/^a) \(p[0-9]*\)-1-1\.noarch$/\1/p' $PTY_OUT | tail -n 1)
     assertEquals "installed" "a $chosen" "$(installed)"
+}
+
+# Every question names what its keys do; ? explains them at more length,
+# naming the set and what q leaves behind, and asks again
+testHelpExplainsAnswers()
+{
+    skip_if_rpm_testing_off && return
+
+    build c; build d
+    answer "Proceed?" '?'
+    answer "Proceed?" n
+    answer "Proceed?" y
+    on_pty --ask -i c d
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "d" "$(installed)"
+    grep -q "^Proceed? (y - install this set, n - skip it, q - abort, ? - help) \[Y/n/q/?\]" $PTY_OUT ||
+        fail "keys not named"
+    grep -q "^  n - skip the set of c-1-1.noarch, go on with the next one$" $PTY_OUT ||
+        fail "no help for n"
+    grep -q "^  q - abort this command; sets installed before stay installed$" $PTY_OUT ||
+        fail "no help for q"
+}
+
+# A key that is no answer says so, instead of being ignored
+testUnknownKeyHints()
+{
+    skip_if_rpm_testing_off && return
+
+    build c
+    answer "Proceed?" x
+    answer "Proceed?" n
+    on_pty --ask -i c
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "" "$(installed)"
+    grep -q "^'x' is not an answer here; ? - help$" $PTY_OUT || fail "no hint"
+}
+
+# The provider chosen is echoed with its letter
+testProviderChoiceEchoed()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "Which one do you want to install" b
+    on_pty -i a
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "a omega" "$(installed)"
+    grep -q "? - help) b) omega-9-1.noarch$" $PTY_OUT || fail "choice not echoed"
 }
 
 # a requires x, which alpha and omega provide; b requires nothing

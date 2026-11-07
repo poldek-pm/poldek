@@ -46,28 +46,77 @@ static int getkey(void)
     return a == CTRL_C || a == -1 ? 'q' : a;
 }
 
-/* Asks prompt and waits for one of keys, given in lower case and taken in
-   either; Enter gives defkey, ^C q. Echoes the answer and returns it in
-   lower case. */
-static int ask(const char *prompt, const char *keys, int defkey)
-{
-    char valid[32];
-    int i, n = 0, a;
+/* An answer to a question: its key, what it does in a few words, shown in
+   the question, and at more length, shown by ? (NULL: the same) */
+struct answer {
+    int         key;
+    const char  *meaning;
+    const char  *help;
+};
 
-    for (i = 0; keys[i] && n < (int)sizeof(valid) - 3; i++) {
-        valid[n++] = keys[i];
-        valid[n++] = toupper(keys[i]);
-    }
-    valid[n++] = '\n';
-    valid[n] = '\0';
+static int is_answer(const struct answer *answers, int key)
+{
+    int i;
+
+    for (i = 0; answers[i].key; i++)
+        if (answers[i].key == key)
+            return 1;
+
+    return 0;
+}
+
+/* what q does, for ? */
+static const char *abort_help(const struct poldek_ts *ts)
+{
+    if (ts->type != POLDEK_TS_UNINSTALL && ts->getop(ts, POLDEK_OP_PARTICLE))
+        return _("abort this command; sets installed before stay installed");
+
+    return _("abort this command");
+}
+
+/* Asks question with answers (the last with key 0), naming them, and waits
+   for one of their keys, in either case; Enter gives defkey, ? the help, ^C
+   q. Echoes the answer and returns its key. */
+static int ask(const char *question, const struct answer *answers, int defkey)
+{
+    char prompt[4096];
+    const char *again;
+    int i, n, a;
+
+    n_assert(is_answer(answers, 'q'));
+
+    n = n_snprintf(prompt, sizeof(prompt), "%s (", question);
+    for (i = 0; answers[i].key; i++)
+        n += n_snprintf(&prompt[n], sizeof(prompt) - n, "%c - %s, ",
+                        answers[i].key, answers[i].meaning);
+
+    n += n_snprintf(&prompt[n], sizeof(prompt) - n, "? - %s) [", _("help"));
+    for (i = 0; answers[i].key; i++)
+        n += n_snprintf(&prompt[n], sizeof(prompt) - n, "%c/",
+                        answers[i].key == defkey ? toupper(defkey) : answers[i].key);
+    n_snprintf(&prompt[n], sizeof(prompt) - n, "?]");
+
+    /* asked again: the question's last line, not the text above it */
+    again = strrchr(prompt, '\n');
+    again = again ? again + 1 : prompt;
 
     poldek_term__ask_begin(STDIN_FILENO);
     msg_ask("%s", prompt);
 
-    n_assert(strchr(keys, 'q'));
-    do {
-        a = getkey();
-    } while (a == '\0' || strchr(valid, a) == NULL);
+    while ((a = getkey()) != '\n' && !is_answer(answers, tolower(a))) {
+        if (a == '?') {
+            msg_ask("_ ?\n");
+            for (i = 0; answers[i].key; i++)
+                msg_ask("  %c - %s\n", answers[i].key,
+                        answers[i].help ? answers[i].help : answers[i].meaning);
+            msg_ask("%s", again);
+
+        } else if (isprint(a)) {
+            msg_ask("_ %c\n", a);
+            msg_ask(_("'%c' is not an answer here; ? - help\n"), a);
+            msg_ask("%s", again);
+        }
+    }
     poldek_term__ask_end();
 
     a = (a == '\n') ? defkey : tolower(a);
@@ -76,57 +125,100 @@ static int ask(const char *prompt, const char *keys, int defkey)
     return a;
 }
 
-static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
-                        const char *question)
+/* the question with y and n doing what yes and no say, and q; returns 1,
+   0 or POLDEK_ANSWER_ABORT */
+static int ask_yes_no(const struct poldek_ts *ts, const char *question,
+                      int hint, const char *yes, const char *no,
+                      const char *no_help)
 {
-    char prompt[4096];
-
-    foo = foo;
-    ts = ts;
+    struct answer answers[] = {
+        { 'y', yes, NULL },
+        { 'n', no, no_help },
+        { 'q', _("abort"), abort_help(ts) },
+        { 0, NULL, NULL },
+    };
 
     if (!isatty(STDIN_FILENO))
         return hint;
 
-    n_snprintf(prompt, sizeof(prompt), "%s %s", question,
-               hint ? "[Y/n/q]" : "[N/y/q]");
-
-    switch (ask(prompt, "ynq", hint ? 'y' : 'n')) {
+    switch (ask(question, answers, hint ? 'y' : 'n')) {
         case 'y': return 1;
         case 'n': return 0;
         default:  return POLDEK_ANSWER_ABORT;
     }
 }
 
+static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
+                        const char *question)
+{
+    foo = foo;
+    return ask_yes_no(ts, question, hint, _("yes"), _("no"), NULL);
+}
+
 static int term_ts_confirm(void *foo, const struct poldek_ts *ts)
 {
-    int answer = 1;
+    char help[512];
+
     foo = foo;
 
     /* poldek__ts_display_summary(ts); */ /* already displayed */
 
     if (ts->type == POLDEK_TS_UNINSTALL) {
-        if (ts->getop(ts, POLDEK_OP_CONFIRM_UNINST))
-            answer = term_confirm(foo, ts, 0, _("Proceed?"));
+        if (!ts->getop(ts, POLDEK_OP_CONFIRM_UNINST))
+            return 1;
 
-    } else {
-        if (ts->getop(ts, POLDEK_OP_CONFIRM_INST))
-            answer = term_confirm(foo, ts, 1, _("Proceed?"));
-
+        return ask_yes_no(ts, _("Proceed?"), 0, _("remove"), _("don't remove"),
+                          NULL);
     }
 
-    return answer;
+    if (!ts->getop(ts, POLDEK_OP_CONFIRM_INST))
+        return 1;
+
+    if (!ts->getop(ts, POLDEK_OP_PARTICLE))
+        return ask_yes_no(ts, _("Proceed?"), 1, _("install"),
+                          _("don't install"), NULL);
+
+    n_assert(ts->_set_head);
+    n_snprintf(help, sizeof(help), _("skip the set of %s, go on with the next one"),
+               pkg_id(ts->_set_head));
+
+    return ask_yes_no(ts, _("Proceed?"), 1, _("install this set"),
+                      _("skip it"), help);
+}
+
+/* the letters of a page, n of them, as ranges: "a-p, r-z, 1-9, 0, A-C" */
+static void letter_ranges(char *buf, int size, const char *letters, int n)
+{
+    int i = 0, k = 0;
+
+    buf[0] = '\0';
+    while (i < n) {
+        int e = i;
+
+        while (e + 1 < n && letters[e + 1] == letters[e] + 1)
+            e++;
+
+        if (k > 0)
+            k += n_snprintf(&buf[k], size - k, ", ");
+
+        if (e == i)
+            k += n_snprintf(&buf[k], size - k, "%c", letters[i]);
+        else
+            k += n_snprintf(&buf[k], size - k, "%c-%c", letters[i], letters[e]);
+        i = e + 1;
+    }
 }
 
 static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
                              const struct pkg *pkg, const char *capname,
                              tn_array *candidates, int hint)
 {
-    char *validchrs, *p;
+    char validchrs[100], ranges[128], defkey[256], prompt[512], *p;
     int i, j, a, lines;
     /* q and Q abort */
     char choice[] = "abcdefghijklmnoprstuvwxyz1234567890ABCDEFGHIJKLMNOPRSTUVWXYZ";
 
-    foo = foo; ts = ts;
+    foo = foo;
     j = 0, lines = 0;
 
     lines = poldek_term_get_height();
@@ -160,11 +252,7 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
 
     msg_ask("_\n");
 
-    validchrs = alloca(100);
-
-
 onemoretime:
-    memset(validchrs, 0, 100);
     p = validchrs;
     *p++ = '\n';
 
@@ -186,22 +274,53 @@ onemoretime:
 
     *p++ = 'q';
     *p++ = 'Q';
+    *p = '\0';
 
-    msg_ask(_("Which one do you want to install ('q' to abort)? [%s]"),
-            pkg_id(n_array_nth(candidates, hint)));
+    letter_ranges(ranges, sizeof(ranges), choice, i);
+    if (hint >= j && hint < j + i)
+        n_snprintf(defkey, sizeof(defkey), "%c", choice[hint - j]);
+    else
+        n_snprintf(defkey, sizeof(defkey), "%s",
+                   pkg_id(n_array_nth(candidates, hint)));
 
-    do {
+    n_snprintf(prompt, sizeof(prompt),
+               _("Which one do you want to install? (%s - that package, "
+                 "Enter - %s, q - abort, ? - help)"), ranges, defkey);
+    msg_ask("%s", prompt);
+
+    while (1) {
         a = getkey();
-    } while (a == '\0' || strchr(validchrs, a) == NULL);
-    msg_ask("_\n");
+
+        if (a == '?') {
+            msg_ask("_ ?\n");
+            msg_ask("  %s - %s\n", ranges, _("install that package"));
+            msg_ask("  Enter - %s\n",
+                    pkg_id(n_array_nth(candidates, hint)));
+            msg_ask("  q - %s\n", abort_help(ts));
+
+        } else if (a != '\0' && strchr(validchrs, a)) {
+            break;
+
+        } else if (isprint(a)) {
+            msg_ask("_ %c\n", a);
+            msg_ask(_("'%c' is not an answer here; ? - help\n"), a);
+
+        } else {
+            continue;
+        }
+
+        msg_ask("%s", prompt);
+    }
 
     if (a == '-' || a == 0x7f) {
+        msg_ask("_\n");
 	if (j >= lines)
             j -= lines;
         goto onemoretime;
     }
 
     if (a == '+' || a == ' ' || a == '\t' ) {
+        msg_ask("_\n");
 	if (j + lines < n_array_size(candidates))
             j += lines;
         goto onemoretime;
@@ -209,47 +328,65 @@ onemoretime:
 
     poldek_term__ask_end();
 
-    if (a == '\n')
-        return hint;
-
-    if (a == 'q' || a == 'Q')
+    if (a == 'q' || a == 'Q') {
+        msg_ask("_ q\n");
         return POLDEK_ANSWER_ABORT;
+    }
 
-    a = strchr(choice, a) - choice;
-    if (a >= 0 && a < i)
-        return a + j;
+    if (a != '\n')
+        hint = strchr(choice, a) - choice + j;
+
+    if (hint >= j && hint < j + i)
+        msg_ask("_ %c) %s\n", choice[hint - j],
+                pkg_id(n_array_nth(candidates, hint)));
+    else
+        msg_ask("_ %s\n", pkg_id(n_array_nth(candidates, hint)));
 
     return hint;
 }
 
-/* Y/n question of the suggests dialog, Enter taking the dialog's default;
-   returns 'y', 'n', 'r' (redo) or 'q' */
-static int term_confirm_suggest(const char *question, int hint)
+/* y/n question of the suggests dialog about one of them, Enter taking the
+   dialog's default; returns 'y', 'n', 'r' (back to the list) or 'q' */
+static int term_confirm_suggest(const struct poldek_ts *ts,
+                                const char *question, int hint)
 {
-    char prompt[512];
+    struct answer answers[] = {
+        { 'y', _("install it"), NULL },
+        { 'n', _("don't"), NULL },
+        { 'r', _("redo"), _("start again from the list") },
+        { 'q', _("abort"), abort_help(ts) },
+        { 0, NULL, NULL },
+    };
 
-    n_snprintf(prompt, sizeof(prompt), "%s %s", question,
-               hint ? "[Y/n/r/q]" : "[N/y/r/q]");
-    return ask(prompt, "ynrq", hint ? 'y' : 'n');
+    return ask(question, answers, hint ? 'y' : 'n');
 }
 
 static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
                                 const struct pkg *pkg, tn_array *caps,
                                 tn_array *choices, int hint)
 {
-    char message[512], prompt[512], *question;
-    char *yns = "N/y/s/r/q", *yn = "N/y/r/q";
-    int i, n, a;
+    struct answer all[] = {
+        { 'y', _("all"), _("install all of them") },
+        { 'n', _("none"), _("install none of them") },
+        { 's', _("select some"), _("ask about each of them") },
+        { 'r', _("redo"), _("show the list again") },
+        { 'q', _("abort"), abort_help(ts) },
+        { 0, NULL, NULL },
+    };
+    struct answer one[] = {
+        { 'y', _("install it"), NULL },
+        { 'n', _("don't"), NULL },
+        { 'r', _("redo"), _("show the list again") },
+        { 'q', _("abort"), abort_help(ts) },
+        { 0, NULL, NULL },
+    };
+    char message[512], *question;
+    int i, a;
 
-    foo = foo; ts = ts;
+    foo = foo;
 
     if (!isatty(STDIN_FILENO))
         return hint;
-
-    if (hint) {
-        yns = "Y/n/s/r/q";
-        yn = "Y/n/r/q";
-    }
 
     n_snprintf(message, sizeof(message),
                _("Package %s suggests installation of:"), pkg_id(pkg));
@@ -267,18 +404,7 @@ onemoretime:
         msgn(-1, "%d. %s", i + 1, capreq_stra(cap));
     }
 
-    if (n_array_size(caps) > 1) {
-        n = n_snprintf(prompt, sizeof(prompt), "%s ", question);
-        n_snprintf(&prompt[n], sizeof(prompt) - n,
-                   _("(y - all, n - nothing, s - select some of, r - redo, "
-                     "q - abort)? [%s]"), yns);
-
-        a = ask(prompt, "ynsrq", hint ? 'y' : 'n');
-    } else {
-        n_snprintf(prompt, sizeof(prompt), "%s [%s]", question, yn);
-
-        a = ask(prompt, "ynrq", hint ? 'y' : 'n');
-    }
+    a = ask(question, n_array_size(caps) > 1 ? all : one, hint ? 'y' : 'n');
 
     if (a == 'r')
         goto onemoretime;
@@ -300,7 +426,7 @@ onemoretime:
 
             n_snprintf(q, sizeof(q), _("Try to install %s?"), capreq_stra(cap));
 
-            sa = term_confirm_suggest(q, hint);
+            sa = term_confirm_suggest(ts, q, hint);
             if (sa == 'q')
                 return POLDEK_ANSWER_ABORT;
             if (sa == 'r')
@@ -320,14 +446,21 @@ static int aborted(struct poldek_ts *ts)
     return POLDEK_ANSWER_ABORT;
 }
 
-int poldek__confirm(struct poldek_ts *ts, int hint, const char *message)
+int poldek__confirm(struct poldek_ts *ts, int hint, const char *message,
+                    const char *yes, const char *no)
 {
     int answer;
 
     if (ts->ctx->confirm_fn == NULL)
         return hint;
 
-    answer = ts->ctx->confirm_fn(ts->ctx->data_confirm_fn, ts, hint, message);
+    /* ours names what y and n do, which the callback has no arguments for */
+    if (ts->ctx->confirm_fn == term_confirm)
+        answer = ask_yes_no(ts, message, hint, yes, no, NULL);
+    else
+        answer = ts->ctx->confirm_fn(ts->ctx->data_confirm_fn, ts, hint,
+                                     message);
+
     return answer >= 0 ? answer > 0 : aborted(ts);
 }
 
