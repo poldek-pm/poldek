@@ -71,7 +71,7 @@ msgstr "-/backspace/pgup) poprzednia strona"
 
 #: ask.c:148
 msgid "+/space/tab/pgdown) page down"
-msgstr "+/space/tab/pgdown) nastepna strona"
+msgstr "+/space/tab/pgdown) następna strona"
 
 #: ask.c:156
 #, c-format
@@ -2211,11 +2211,11 @@ msgstr "%s: weryfikacja podpisu nie powiodła się"
 
 #: pm/rpm/rpminstall.c:441 pm/rpmorg/rpminstall.c:439
 msgid "There were signature verification errors. Proceed?"
-msgstr "Wystąpiły błędy weryfikacji podpisu. Kontynuować? [y/N]"
+msgstr "Wystąpiły błędy weryfikacji podpisu. Kontynuować?"
 
 #: pm/rpm/rpminstall.c:449 pm/rpmorg/rpminstall.c:447
 msgid "There were package coloring mismatches. Proceed?"
-msgstr "Wystąpiły błędy kolorów pakietów. Kontynuować? [y/N]"
+msgstr "Wystąpiły błędy kolorów pakietów. Kontynuować?"
 
 #: pm/rpm/rpminstall.c:471 pm/rpmorg/rpminstall.c:469
 #, c-format
