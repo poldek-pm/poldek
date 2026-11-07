@@ -16,6 +16,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -338,13 +339,29 @@ void poldek_term__ask_end(void)
     ask_fd = -1;
 }
 
+/* The next byte of an escape sequence: one that comes at once, as a
+   terminal sends the whole sequence; -1 if none does */
+static int seqbyte(void)
+{
+    struct pollfd pfd = { ask_fd, POLLIN, 0 };
+    unsigned char c;
+
+    if (poll(&pfd, 1, 100) == 1 && read(ask_fd, &c, 1) == 1)
+        return c;
+
+    return -1;
+}
+
 /* A key typed on the terminal in raw mode: the byte read, PgUp as backspace
    (0x7f) and PgDn as tab, other escape sequences skipped; -1 when the
-   terminal is gone */
+   terminal is gone. Esc alone is no key; a key typed after it, or into a
+   sequence, ^C too, is one. */
 int poldek_term__getkey(void)
 {
     unsigned char c;
+    char par[2];
     ssize_t n;
+    int k;
 
     while (1) {
         if ((n = read(ask_fd, &c, 1)) != 1) {
@@ -356,12 +373,22 @@ int poldek_term__getkey(void)
         if (c != 0x1b)
             return c;
 
-        if (read(ask_fd, &c, 1) == 1 && c == 0x5b && read(ask_fd, &c, 1) == 1) {
-            unsigned char k = c;
-
-            if ((k == 0x35 || k == 0x36) && read(ask_fd, &c, 1) == 1 && c == 0x7e)
-                return k == 0x35 ? 0x7f : '\t';
+        if ((k = seqbyte()) != '[') {
+            if (k == -1)
+                continue;
+            return k;
         }
+
+        /* Esc [, its parameter bytes (0x20-0x3f) and a final one */
+        for (n = 0; (k = seqbyte()) >= 0x20 && k < 0x40; n++)
+            if (n < (ssize_t)sizeof(par))
+                par[n] = k;
+
+        if (k == '~' && n == 1 && (par[0] == '5' || par[0] == '6'))
+            return par[0] == '5' ? 0x7f : '\t';
+
+        if (k != -1 && (k < 0x40 || k > 0x7e))
+            return k;
     }
 }
 
