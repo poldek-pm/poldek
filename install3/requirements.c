@@ -462,11 +462,9 @@ static int process_orphan_boolreq(int indent, struct i3ctx *ictx,
             struct i3pkg *i3tomark;
 
             if (i3_is_user_choosable_equiv(ts) && n_array_size(cands) > 1) {
-                tomark = i3_choose_equiv(ts, pkg, req, cands, tomark);
-                if (tomark == NULL) { /* user abort */
-                    i3_cancel(ictx);
+                tomark = i3_choose_provider(ictx, pkg, req, cands, tomark);
+                if (tomark == NULL) /* q or n */
                     break;
-                }
             }
 
             i3tomark = i3pkg_new(tomark, 0, pkg, req, I3PKGBY_ORPHAN);
@@ -561,12 +559,9 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         struct i3pkg *i3tomark;
 
         if (i3_is_user_choosable_equiv(ts) && candidates) {
-            real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
-
-            if (real_tomark == NULL) { /* user abort */
-                i3_cancel(ictx);
+            real_tomark = i3_choose_provider(ictx, pkg, req, candidates, tomark);
+            if (real_tomark == NULL) /* q or n */
                 goto l_end;
-            }
         }
 
         i3tomark = i3pkg_new(real_tomark, 0, pkg, req, I3PKGBY_ORPHAN);
@@ -698,10 +693,8 @@ static int process_req(int indent, struct i3ctx *ictx,
         int             i3pkg_flag = 0;
 
         if (i3_is_user_choosable_equiv(ts) && candidates) {
-            real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
-
-            if (real_tomark == NULL) { /* user abort */
-                i3_cancel(ictx);
+            real_tomark = i3_choose_provider(ictx, pkg, req, candidates, tomark);
+            if (real_tomark == NULL) { /* q or n */
                 rc = 0;
                 goto l_end;
             }

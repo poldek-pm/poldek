@@ -226,6 +226,8 @@ void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
     ictx->reqnames = NULL;
     ictx->reqnames_loaded = 0;
     ictx->abort = 0;
+    ictx->skipped = 0;
+    ictx->skipped_reqs = n_hash_new(8, NULL);
 }
 
 void i3ctx_destroy(struct i3ctx *ictx)
@@ -243,6 +245,7 @@ void i3ctx_destroy(struct i3ctx *ictx)
     n_array_cfree(&ictx->db_conflicts);
     if (ictx->reqnames)
         n_hash_free(ictx->reqnames);
+    n_hash_free(ictx->skipped_reqs);
     memset(ictx, 0, sizeof(*ictx));
 }
 
@@ -267,6 +270,7 @@ void i3ctx_reset(struct i3ctx *ictx)
     ictx->reqnames = NULL;
     ictx->reqnames_loaded = 0;
     ictx->abort = 0;
+    ictx->skipped = 0;
 }
 
 int i3_stop_processing(struct i3ctx *ictx, int stop)

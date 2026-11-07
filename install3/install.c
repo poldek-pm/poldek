@@ -270,6 +270,9 @@ static int install_packages(struct i3ctx *ictx)
     }
     n_array_free(toinstall);
 
+    if (ictx->skipped)
+        return 1;
+
     i3_return_zero_if_stoppped(ictx);
 
     i3_report_db_conflicts(ictx);

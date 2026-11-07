@@ -98,7 +98,8 @@ void poldek__ts_display_summary(struct poldek_ts *ts);
 
 /* The question callbacks, their answer checked: POLDEK_ANSWER_ABORT or any
    answer out of the contract (see poldek.h) cancels ts and is returned as
-   POLDEK_ANSWER_ABORT; confirmations return 1 or 0 otherwise. */
+   POLDEK_ANSWER_ABORT; confirmations return 1 or 0 otherwise, the provider
+   choice POLDEK_ANSWER_SKIP too. */
 /* yes and no: what y and n do, for the terminal */
 int poldek__confirm(struct poldek_ts *ts, int default_answer,
                     const char *message, const char *yes, const char *no);

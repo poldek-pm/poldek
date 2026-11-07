@@ -213,10 +213,11 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
                              const struct pkg *pkg, const char *capname,
                              tn_array *candidates, int hint)
 {
-    char validchrs[100], ranges[128], defkey[256], prompt[512], *p;
+    char validchrs[100], ranges[128], defkey[256], prompt[512], none[512], *p;
+    const char *skip;
     int i, j, a, lines;
-    /* q and Q abort */
-    char choice[] = "abcdefghijklmnoprstuvwxyz1234567890ABCDEFGHIJKLMNOPRSTUVWXYZ";
+    /* n and N skip, q and Q abort */
+    char choice[] = "abcdefghijklmoprstuvwxyz1234567890ABCDEFGHIJKLMOPRSTUVWXYZ";
 
     foo = foo;
     j = 0, lines = 0;
@@ -252,6 +253,24 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
 
     msg_ask("_\n");
 
+    if (pkg == NULL) {          /* a capability asked for (--caplookup) */
+        skip = _("leave it out");
+        n_snprintf(none, sizeof(none), _("install none of them, leave \"%s\" out"),
+                   capname);
+
+    } else if (ts->getop(ts, POLDEK_OP_PARTICLE)) {
+        n_assert(ts->_set_head);
+        skip = _("skip this set");
+        n_snprintf(none, sizeof(none), _("install none of them, skip the set "
+                                         "of %s; later sets that need \"%s\" "
+                                         "are skipped too"),
+                   pkg_id(ts->_set_head), capname);
+    } else {
+        skip = _("install nothing");
+        n_snprintf(none, sizeof(none), "%s",
+                   _("install none of them, nor anything else"));
+    }
+
 onemoretime:
     p = validchrs;
     *p++ = '\n';
@@ -272,6 +291,8 @@ onemoretime:
 	*p++ = '\t'; // tab
     }
 
+    *p++ = 'n';
+    *p++ = 'N';
     *p++ = 'q';
     *p++ = 'Q';
     *p = '\0';
@@ -285,7 +306,8 @@ onemoretime:
 
     n_snprintf(prompt, sizeof(prompt),
                _("Which one do you want to install? (%s - that package, "
-                 "Enter - %s, q - abort, ? - help)"), ranges, defkey);
+                 "Enter - %s, n - %s, q - abort, ? - help)"), ranges, defkey,
+               skip);
     msg_ask("%s", prompt);
 
     while (1) {
@@ -296,6 +318,7 @@ onemoretime:
             msg_ask("  %s - %s\n", ranges, _("install that package"));
             msg_ask("  Enter - %s\n",
                     pkg_id(n_array_nth(candidates, hint)));
+            msg_ask("  n - %s\n", none);
             msg_ask("  q - %s\n", abort_help(ts));
 
         } else if (a != '\0' && strchr(validchrs, a)) {
@@ -327,6 +350,11 @@ onemoretime:
     }
 
     poldek_term__ask_end();
+
+    if (a == 'n' || a == 'N') {
+        msg_ask("_ n\n");
+        return POLDEK_ANSWER_SKIP;
+    }
 
     if (a == 'q' || a == 'Q') {
         msg_ask("_ q\n");
@@ -495,6 +523,9 @@ int poldek__choose_equiv(struct poldek_ts *ts,
 
     answer = ts->ctx->choose_equiv_fn(ts->ctx->data_choose_equiv_fn,
                                       ts, pkg, capname, pkgs, inthint);
+    if (answer == POLDEK_ANSWER_SKIP)
+        return answer;
+
     return answer >= 0 && answer < n_array_size(pkgs) ? answer : aborted(ts);
 }
 

@@ -217,7 +217,7 @@ testProviderPageWithinLetters()
     on_pty -i a
 
     assertEquals "exit code" "0" "$PTY_RC"
-    grep -q "(a-p, r-z, 1-9, 0, A-P, R-Z - that package, " $PTY_OUT ||
+    grep -q "(a-m, o-p, r-z, 1-9, 0, A-M, O-P, R-Z - that package, " $PTY_OUT ||
         fail "letters of the first page not named"
     chosen=$(sed -n 's/^a) \(p[0-9]*\)-1-1\.noarch$/\1/p' $PTY_OUT | tail -n 1)
     assertEquals "installed" "a $chosen" "$(installed)"
@@ -416,6 +416,104 @@ EOF
     assertEquals "installed" "" "$(installed)"
 }
 
+# n at a provider choice installs none of them: the set that needs one is
+# skipped, the next ones go on, and the command succeeds
+testProviderChoiceNSkipsSet()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "Which one do you want to install" n
+    on_pty -i a b
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "b" "$(installed)"
+    grep -q '^a-1-1.noarch: "x" left unresolved, set skipped$' $PTY_OUT ||
+        fail "no message"
+}
+
+# n's help names the set it skips by the package asked for, not by the one
+# that needs the provider
+testProviderChoiceHelpNamesSet()
+{
+    skip_if_rpm_testing_off && return
+
+    build root -r dep; build dep -r x; build alpha -p x; build omega -p x
+    build b
+    answer "Which one do you want to install" '?'
+    answer "Which one do you want to install" n
+    on_pty -i root b
+
+    assertEquals "installed" "b" "$(installed)"
+    grep -q '^  n - install none of them, skip the set of root-1-1.noarch; later sets that need "x" are skipped too$' $PTY_OUT ||
+        fail "set not named"
+}
+
+# A requirement skipped is not asked about again: a later set that needs it
+# is skipped too
+testSkippedRequirementRemembered()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    build c -r x
+    answer "Which one do you want to install" n
+    on_pty -i a b c
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "b" "$(installed)"
+    assertEquals "questions" "1" "$(grep -c 'Which one do you want to install' $PTY_OUT)"
+    grep -q '^c-1-1.noarch: "x" skipped earlier, set skipped$' $PTY_OUT ||
+        fail "no message"
+}
+
+# ... for one command: the next one in the shell asks again
+testSkipForgottenByNextShellCommand()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "> " 'install --justdb a\n'
+    answer "Which one do you want to install" n
+    answer "> " 'install --justdb a\n'
+    answer "Which one do you want to install" n
+    answer "> " 'quit\n'
+    on_pty --shell
+
+    assertEquals "questions" "2" "$(grep -c 'Which one do you want to install' $PTY_OUT)"
+    assertEquals "installed" "" "$(installed)"
+}
+
+# With particle install off all the packages are one set: n installs none
+testProviderChoiceNWithoutParticleInstall()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "Which one do you want to install" n
+    on_pty -Oparticle_install=no -i a b
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "" "$(installed)"
+    grep -q '^a-1-1.noarch: "x" left unresolved, nothing installed$' $PTY_OUT ||
+        fail "no message"
+}
+
+# n, N too, at the choice of a requested capability's provider leaves it
+# out
+testCapabilityChoiceNLeavesItOut()
+{
+    skip_if_rpm_testing_off && return
+
+    build alpha 1-1 -p x; build omega 9-1 -p x; build b
+    answer "Which one do you want to install" N
+    on_pty --caplookup -i x b
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "b" "$(installed)"
+    grep -q '^"x" left out$' $PTY_OUT || fail "no message"
+}
+
 # A front end answering the questions itself keeps what its answers meant:
 # confirming a set with 0 skips it, the way PackageKit refuses a plan that
 # changed, 1 installs it
@@ -433,13 +531,19 @@ testFrontEndConfirmsSet()
     assertEquals "installed, 1" "c d" "$(installed)"
 }
 
-# ... chooses a provider by its index, -1 aborts, and so does an index out
-# of the list
+# ... chooses a provider by its index, -2 none of them, -1 aborts, and so
+# does an index out of the list
 testFrontEndChoosesProvider()
 {
     skip_if_rpm_testing_off && return
 
     choice_setup
+    fe_run ANSWER_CHOOSE=-2 $POLDEK_ASK -i a b
+    assertEquals "exit code, -2" "0" "$FE_RC"
+    assertEquals "installed, -2" "b" "$(installed)"
+    $RPM -e --justdb b
+
+
     fe_run ANSWER_CHOOSE=-1 $POLDEK_ASK -i a b
     assertEquals "exit code, -1" "1" "$FE_RC"
     assertEquals "installed, -1" "" "$(installed)"

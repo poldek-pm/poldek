@@ -110,6 +110,9 @@ struct i3ctx {
 
     unsigned           ma_flags;    /* match flags (POLDEK_MA_*) */
     int                abort;       /* abort processing? */
+    int                skipped;     /* the set is skipped (n at a choice) */
+    tn_hash           *skipped_reqs; /* left without a provider, by the
+                                        whole command */
 };
 
 
@@ -244,8 +247,17 @@ int i3_process_orphan(int indent, struct i3ctx *ictx, struct orphan *o);
 
 int i3_is_user_choosable_equiv(struct poldek_ts *ts);
 
+/* the provider of cap among pkgs the user chooses, hint by default; NULL if
+   none: ts is cancelled after q, not after n */
 struct pkg *i3_choose_equiv(struct poldek_ts *ts,
                             const struct pkg *pkg, const struct capreq *cap,
                             tn_array *pkgs, struct pkg *hint);
+
+/* i3_choose_equiv() for a requirement of pkg: NULL with processing stopped
+   after q, or after n, which skips the set, and every later set asking
+   about req */
+struct pkg *i3_choose_provider(struct i3ctx *ictx, const struct pkg *pkg,
+                               const struct capreq *req, tn_array *candidates,
+                               struct pkg *hint);
 
 #endif

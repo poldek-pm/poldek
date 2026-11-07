@@ -76,11 +76,61 @@ msgstr "+/space/tab/pgdown) następna strona"
 #: ask.c:156
 #, c-format
 msgid ""
-"Which one do you want to install? (%s - that package, Enter - %s, q - abort, "
-"? - help)"
+"Which one do you want to install? (%s - that package, Enter - %s, n - %s, q "
+"- abort, ? - help)"
 msgstr ""
-"Który z nich chcesz zainstalować? (%s - ten pakiet, Enter - %s, q - przerwij, "
-"? - pomoc)"
+"Który z nich chcesz zainstalować? (%s - ten pakiet, Enter - %s, n - %s, q - "
+"przerwij, ? - pomoc)"
+
+#: ask.c
+msgid "leave it out"
+msgstr "pomiń"
+
+#: ask.c
+#, c-format
+msgid "install none of them, leave \"%s\" out"
+msgstr "nie instaluj żadnego, pomiń \"%s\""
+
+#: ask.c
+msgid "skip this set"
+msgstr "pomiń ten zestaw"
+
+#: ask.c
+#, c-format
+msgid ""
+"install none of them, skip the set of %s; later sets that need \"%s\" are "
+"skipped too"
+msgstr ""
+"nie instaluj żadnego, pomiń zestaw z pakietem %s; dalsze zestawy wymagające "
+"\"%s\" też zostaną pominięte"
+
+#: ask.c
+msgid "install nothing"
+msgstr "nie instaluj niczego"
+
+#: ask.c
+msgid "install none of them, nor anything else"
+msgstr "nie instaluj żadnego ani niczego innego"
+
+#: install3/misc.c
+#, c-format
+msgid "%s: \"%s\" skipped earlier, set skipped"
+msgstr "%s: \"%s\" pominięto już wcześniej, pominięto zestaw"
+
+#: install3/misc.c
+#, c-format
+msgid "%s: \"%s\" left unresolved, set skipped"
+msgstr "%s: \"%s\" pozostaje niespełnione, pominięto zestaw"
+
+#: install3/misc.c
+#, c-format
+msgid "%s: \"%s\" left unresolved, nothing installed"
+msgstr "%s: \"%s\" pozostaje niespełnione, nic nie zainstalowano"
+
+#: install3/preinstall.c
+#, c-format
+msgid "\"%s\" left out"
+msgstr "pominięto \"%s\""
 
 #: ask.c
 msgid "install that package"
