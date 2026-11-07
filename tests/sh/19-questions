@@ -604,6 +604,21 @@ testRemovalWithoutTerminalFails()
         fail "no reason given"
 }
 
+# Other questions take their default answers without a terminal, as
+# before, and say so
+testAnswerWithoutTerminalShown()
+{
+    skip_if_rpm_testing_off && return
+
+    build c
+    no_tty -Oconfirm_installation=yes -i c
+
+    assertEquals "exit code" "0" "$NOTTY_RC"
+    assertEquals "installed" "c" "$(installed)"
+    grep -q '^Proceed? y - install (no terminal: the default)$' $NOTTY_OUT ||
+        fail "answer not shown"
+}
+
 # A front end answering the questions itself keeps what its answers meant:
 # confirming a set with 0 skips it, the way PackageKit refuses a plan that
 # changed, 1 installs it

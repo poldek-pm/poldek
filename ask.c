@@ -138,8 +138,11 @@ static int ask_yes_no(const struct poldek_ts *ts, const char *question,
         { 0, NULL, NULL },
     };
 
-    if (!isatty(STDIN_FILENO))
+    if (!isatty(STDIN_FILENO)) {
+        msgn(0, _("%s %c - %s (no terminal: the default)"), question,
+             hint ? 'y' : 'n', hint ? yes : no);
         return hint;
+    }
 
     switch (ask(question, answers, hint ? 'y' : 'n')) {
         case 'y': return 1;

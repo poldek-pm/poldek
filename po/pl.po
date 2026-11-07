@@ -92,6 +92,11 @@ msgid "install none of them, leave \"%s\" out"
 msgstr "nie instaluj żadnego, pomiń \"%s\""
 
 #: ask.c
+#, c-format
+msgid "%s %c - %s (no terminal: the default)"
+msgstr "%s %c - %s (brak terminala: odpowiedź domyślna)"
+
+#: ask.c
 msgid ""
 "nothing removed: no terminal to confirm the removal on (--noask removes "
 "without asking)"
