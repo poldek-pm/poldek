@@ -105,4 +105,20 @@ testKeyTypedAsSoonAsAskedAnswers()
     grep -q "Proceed?.* n$" $PTY_OUT || fail "no answer n echoed"
 }
 
+# Enter at a single suggestion takes the dialog's default, as Enter at the
+# list does: none of them.
+testSuggestionEnterIsNo()
+{
+    skip_if_rpm_testing_off && return
+
+    build s1; build s2; build e -s s1 -s s2
+    answer "Try to install them?" s
+    answer "Try to install s1?" '\r'
+    answer "Try to install s2?" y
+    on_pty -i e
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "e s2" "$(installed)"
+}
+
 . ./sh/lib/shunit2

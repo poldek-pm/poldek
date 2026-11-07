@@ -207,16 +207,15 @@ onemoretime:
     return hint;
 }
 
-/* Y/n question of the suggests dialog; returns 'y', 'n', 'r' (redo) or 'q' */
-static int term_confirm_suggest(const char *question)
+/* Y/n question of the suggests dialog, Enter taking the dialog's default;
+   returns 'y', 'n', 'r' (redo) or 'q' */
+static int term_confirm_suggest(const char *question, int hint)
 {
     char prompt[512];
 
-    if (!isatty(STDIN_FILENO))
-        return 'y';
-
-    n_snprintf(prompt, sizeof(prompt), "%s [Y/n/r/Q]", question);
-    return ask(prompt, "ynrq", 'y');
+    n_snprintf(prompt, sizeof(prompt), "%s %s", question,
+               hint ? "[Y/n/r/Q]" : "[N/y/r/Q]");
+    return ask(prompt, "ynrq", hint ? 'y' : 'n');
 }
 
 static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
@@ -286,7 +285,7 @@ onemoretime:
 
             n_snprintf(q, sizeof(q), _("Try to install %s?"), capreq_stra(cap));
 
-            sa = term_confirm_suggest(q);
+            sa = term_confirm_suggest(q, hint);
             if (sa == 'q')
                 return -1;
             if (sa == 'r')
