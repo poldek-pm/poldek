@@ -26,6 +26,7 @@
 #include "compiler.h"
 #include "i18n.h"
 #include "log.h"
+#include "poldek.h"
 #include "poldek_term.h"
 #include "poldek_ts.h"
 #include "poldek_intern.h"
@@ -75,9 +76,13 @@ static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
         return hint;
 
     n_snprintf(prompt, sizeof(prompt), "%s %s", question,
-               hint ? "[Y/n]" : "[N/y]");
+               hint ? "[Y/n/q]" : "[N/y/q]");
 
-    return ask(prompt, "yn", hint ? 'y' : 'n') == 'y';
+    switch (ask(prompt, "ynq", hint ? 'y' : 'n')) {
+        case 'y': return 1;
+        case 'n': return 0;
+        default:  return POLDEK_ANSWER_ABORT;
+    }
 }
 
 static int term_ts_confirm(void *foo, const struct poldek_ts *ts)
@@ -106,7 +111,8 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
 {
     char *validchrs, *p;
     int i, j, a, lines;
-    char choice[] = "abcdefghijklmnopqrtsuvwxyz1234567890ABCDEFGHIJKLMNOPRSTUVWXYZ";
+    /* q and Q abort */
+    char choice[] = "abcdefghijklmnoprstuvwxyz1234567890ABCDEFGHIJKLMNOPRSTUVWXYZ";
 
     foo = foo; ts = ts;
     j = 0, lines = 0;
@@ -166,9 +172,10 @@ onemoretime:
 	*p++ = '\t'; // tab
     }
 
+    *p++ = 'q';
     *p++ = 'Q';
 
-    msg_ask(_("Which one do you want to install ('Q' to abort)? [%s]"),
+    msg_ask(_("Which one do you want to install ('q' to abort)? [%s]"),
             pkg_id(n_array_nth(candidates, hint)));
 
     do {
@@ -194,8 +201,8 @@ onemoretime:
     if (a == '\n')
         return hint;
 
-    if (a == 'Q')
-        return -1;
+    if (a == 'q' || a == 'Q')
+        return POLDEK_ANSWER_ABORT;
 
     a = strchr(choice, a) - choice;
     if (a >= 0 && a < i)
@@ -211,7 +218,7 @@ static int term_confirm_suggest(const char *question, int hint)
     char prompt[512];
 
     n_snprintf(prompt, sizeof(prompt), "%s %s", question,
-               hint ? "[Y/n/r/Q]" : "[N/y/r/Q]");
+               hint ? "[Y/n/r/q]" : "[N/y/r/q]");
     return ask(prompt, "ynrq", hint ? 'y' : 'n');
 }
 
@@ -220,7 +227,7 @@ static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
                                 tn_array *choices, int hint)
 {
     char message[512], prompt[512], *question;
-    char *yns = "N/y/s/r/Q", *yn = "N/y/r/Q";
+    char *yns = "N/y/s/r/q", *yn = "N/y/r/q";
     int i, n, a;
 
     foo = foo; ts = ts;
@@ -229,8 +236,8 @@ static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
         return hint;
 
     if (hint) {
-        yns = "Y/n/s/r/Q";
-        yn = "Y/n/r/Q";
+        yns = "Y/n/s/r/q";
+        yn = "Y/n/r/q";
     }
 
     n_snprintf(message, sizeof(message),
@@ -253,7 +260,7 @@ onemoretime:
         n = n_snprintf(prompt, sizeof(prompt), "%s ", question);
         n_snprintf(&prompt[n], sizeof(prompt) - n,
                    _("(y - all, n - nothing, s - select some of, r - redo, "
-                     "Q - abort)? [%s]"), yns);
+                     "q - abort)? [%s]"), yns);
 
         a = ask(prompt, "ynsrq", hint ? 'y' : 'n');
     } else {
@@ -269,7 +276,7 @@ onemoretime:
         case 'y': a = 1; break;
         case 'n': a = 0; break;
         case 's': a = 2; break;
-        case 'q': a = -1; break;
+        case 'q': a = POLDEK_ANSWER_ABORT; break;
         default:
             n_assert(0);
     }
@@ -284,7 +291,7 @@ onemoretime:
 
             sa = term_confirm_suggest(q, hint);
             if (sa == 'q')
-                return -1;
+                return POLDEK_ANSWER_ABORT;
             if (sa == 'r')
                 goto onemoretime;
             if (sa == 'y')
@@ -295,27 +302,40 @@ onemoretime:
     return a;
 }
 
-int poldek__confirm(const struct poldek_ts *ts, int hint, const char *message)
+/* an answer of POLDEK_ANSWER_ABORT or out of the contract: cancels ts */
+static int aborted(struct poldek_ts *ts)
 {
+    poldek__ts_cancel(ts);
+    return POLDEK_ANSWER_ABORT;
+}
+
+int poldek__confirm(struct poldek_ts *ts, int hint, const char *message)
+{
+    int answer;
+
     if (ts->ctx->confirm_fn == NULL)
         return hint;
 
-    return ts->ctx->confirm_fn(ts->ctx->data_confirm_fn, ts, hint, message);
+    answer = ts->ctx->confirm_fn(ts->ctx->data_confirm_fn, ts, hint, message);
+    return answer >= 0 ? answer > 0 : aborted(ts);
 }
 
-int poldek__ts_confirm(const struct poldek_ts *ts)
+int poldek__ts_confirm(struct poldek_ts *ts)
 {
+    int answer;
+
     if (ts->ctx->ts_confirm_fn == NULL)
         return 1;
 
-    return ts->ctx->ts_confirm_fn(ts->ctx->data_ts_confirm_fn, ts);
+    answer = ts->ctx->ts_confirm_fn(ts->ctx->data_ts_confirm_fn, ts);
+    return answer >= 0 ? answer > 0 : aborted(ts);
 }
 
-int poldek__choose_equiv(const struct poldek_ts *ts,
+int poldek__choose_equiv(struct poldek_ts *ts,
                          const struct pkg *pkg, const char *capname,
                          tn_array *pkgs, struct pkg *hint)
 {
-    int i, inthint = 0;
+    int i, inthint = 0, answer;
 
     if (hint) {
         for (i=0; i < n_array_size(pkgs); i++) {
@@ -329,19 +349,23 @@ int poldek__choose_equiv(const struct poldek_ts *ts,
     if (ts->ctx->choose_equiv_fn == NULL)
         return inthint;
 
-    return ts->ctx->choose_equiv_fn(ts->ctx->data_choose_equiv_fn,
-                                    ts, pkg, capname, pkgs, inthint);
+    answer = ts->ctx->choose_equiv_fn(ts->ctx->data_choose_equiv_fn,
+                                      ts, pkg, capname, pkgs, inthint);
+    return answer >= 0 && answer < n_array_size(pkgs) ? answer : aborted(ts);
 }
 
-int poldek__choose_suggests(const struct poldek_ts *ts,
+int poldek__choose_suggests(struct poldek_ts *ts,
                             const struct pkg *pkg, tn_array *caps,
                             tn_array *choices, int hint)
 {
+    int answer;
+
     if (ts->ctx->choose_suggests_fn == NULL)
         return hint;
 
-    return ts->ctx->choose_suggests_fn(ts->ctx->data_choose_suggests_fn,
-                                       ts, pkg, caps, choices, hint);
+    answer = ts->ctx->choose_suggests_fn(ts->ctx->data_choose_suggests_fn,
+                                         ts, pkg, caps, choices, hint);
+    return answer >= 0 && answer <= 2 ? answer : aborted(ts);
 }
 
 

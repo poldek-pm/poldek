@@ -334,9 +334,17 @@ static int install_packages(struct i3ctx *ictx)
     } else if (!ts->getop(ts, POLDEK_OP_HOLD) || (rc = verify_held_packages(ictx))) {
         int is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
 
-        if (!is_test && !poldek__ts_confirm(ts)) {
-            rc = 1;
-            goto l_end;
+        if (!is_test) {
+            switch (poldek__ts_confirm(ts)) {
+                case 1:
+                    break;
+                case 0:         /* the set is skipped */
+                    rc = 1;
+                    goto l_end;
+                default:        /* aborted */
+                    rc = 0;
+                    goto l_end;
+            }
         }
 
         if (!ts->getop(ts, POLDEK_OP_NOFETCH))
@@ -437,7 +445,7 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
             if (!install_packages(&ictx))
                 nerr++;
 
-            if (ictx.cancelled || poldek__ts_hooks_failed(ts))
+            if (poldek__ts_cancelled(ts) || poldek__ts_hooks_failed(ts))
                 break;
 
             ts_reset(ictx.ts);

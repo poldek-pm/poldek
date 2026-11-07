@@ -363,7 +363,7 @@ int pm_rpm_signkey_import_status(const struct signkey *sk)
   Parsing and the source keyring were done by pm_rpm_signkey_load(); this
   function only checks the target rpmdb and optionally imports the key.
 */
-int pm_rpm_signkey_import(struct pm_rpm *pm, const struct poldek_ts *ts,
+int pm_rpm_signkey_import(struct pm_rpm *pm, struct poldek_ts *ts,
                           struct signkey *sk)
 {
     char *cmd;
@@ -384,7 +384,7 @@ int pm_rpm_signkey_import(struct pm_rpm *pm, const struct poldek_ts *ts,
         char msg[4096];
 
         signkey_confirm_message(msg, sizeof(msg), sk->keys, sk->url);
-        if (!poldek__confirm(ts, 0, msg)) {
+        if (poldek__confirm(ts, 0, msg) != 1) {
             sk->import_status = SIGNKEY_IMPORT_DECLINED;
             return 0;
         }

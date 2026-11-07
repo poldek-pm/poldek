@@ -75,8 +75,8 @@ msgstr "+/space/tab/pgdown) następna strona"
 
 #: ask.c:156
 #, c-format
-msgid "Which one do you want to install ('Q' to abort)? [%s]"
-msgstr "Który z nich chcesz zainstalować ('Q' anuluje)? [%s]"
+msgid "Which one do you want to install ('q' to abort)? [%s]"
+msgstr "Który z nich chcesz zainstalować ('q' anuluje)? [%s]"
 
 #: ask.c:206
 #, c-format
@@ -92,9 +92,9 @@ msgstr[2] "Spróbować je zainstalować?"
 
 #: ask.c:220
 #, c-format
-msgid "(y - all, n - nothing, s - select some of, r - redo, Q - abort)? [%s]"
+msgid "(y - all, n - nothing, s - select some of, r - redo, q - abort)? [%s]"
 msgstr ""
-"(y - wszystkie, n - żaden, s - wybierz z listy, r - powtórz, Q - przerwij)? "
+"(y - wszystkie, n - żaden, s - wybierz z listy, r - powtórz, q - przerwij)? "
 "[%s]"
 
 #: ask.c:245
@@ -1361,6 +1361,10 @@ msgstr "Instalacja #%d pakietu z %d (%s pozostało do pobrania)\n"
 
 #: install-dist.c:170
 msgid "Interrupted"
+msgstr "Przerwano"
+
+#: poldek_ts.c:1091
+msgid "Aborted"
 msgstr "Przerwano"
 
 #: install-dist.c:195

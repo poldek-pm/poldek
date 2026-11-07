@@ -843,8 +843,8 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     choices = n_array_clone(suggests);
     n_array_ctl_set_freefn(choices, NULL); /* 'weak' ref */
 
-    /* autochoice "abort" simulates answering 'Q' */
-    answer = autochoice ? -1 : poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0);
+    /* autochoice "abort" simulates answering 'q' */
+    answer = autochoice ? POLDEK_ANSWER_ABORT : poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0);
     switch (answer) {
 	/* do not install any of suggested packages */
 	case 0:
@@ -852,7 +852,7 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 	    n_array_cfree(&suggests);
 	    break;
 	/* user aborted */
-	case -1:
+	case POLDEK_ANSWER_ABORT:
 	    n_array_free(choices);
 	    n_array_cfree(&suggests);
 	    i3_cancel(ictx);

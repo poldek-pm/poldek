@@ -666,7 +666,7 @@ struct pkg *i3_choose_equiv(struct poldek_ts *ts,
     }
 
     n = poldek__choose_equiv(ts, pkg, capreq_stra(cap), tmp, hint);
-    if (n == -1)
+    if (n == POLDEK_ANSWER_ABORT)
         hint = NULL;
     else
         hint = n_array_nth(tmp, n);

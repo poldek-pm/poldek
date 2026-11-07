@@ -194,8 +194,8 @@ int i3_pre_ts_install(struct poldek_ts *ts, tn_array **pkgs)
     n_assert(*pkgs == NULL);
     n_assert(ts->type == POLDEK_TS_INSTALL);
 
-    if (i3_prepare_icaps(ts) < 0) /* user aborts, no error */
-        return 0;
+    if (i3_prepare_icaps(ts) < 0) /* the user aborted */
+        return -1;
 
     if (unmark_name_duplicates(ts->pms, ts->ctx->ps->pkgs) == 0) {
         msgn(1, _("Nothing to do"));

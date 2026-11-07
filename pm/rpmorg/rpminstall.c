@@ -171,7 +171,7 @@ static int colors_eq(const struct pkg *pkg, const char *path)
 
 
 static tn_hash *import_signkeys(struct pm_rpm *pm,
-                                const struct poldek_ts *ts,
+                                struct poldek_ts *ts,
                                 const tn_array *pkgs)
 {
     tn_hash *signkeys = n_hash_new(4, (tn_fn_free)pm_rpm_signkey_free);
@@ -208,7 +208,8 @@ static tn_hash *import_signkeys(struct pm_rpm *pm,
         pm_rpm_signkey_import(pm, ts, sk);
         n_hash_insert(signkeys, src->signkey, sk);
 
-        if (sigint_reached()) {     /* ^C while rpm imported a key */
+        /* q at the question, or ^C while rpm imported a key */
+        if (poldek__ts_cancelled(ts) || sigint_reached()) {
             n_hash_free(signkeys);
             return NULL;
         }
@@ -433,17 +434,17 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         int can_ask = poldek_ts_is_interactive_on(ts);
 
         if (nsignerr) {
-            if (!can_ask || !poldek__confirm(ts, 0,
+            if (!can_ask || poldek__confirm(ts, 0,
                                             _("There were signature verification errors. "
-                                              "Proceed?")))
+                                              "Proceed?")) != 1)
                 goto l_err_end;
         }
 
 
         if (ncolorerr) {
-            if (!can_ask || !poldek__confirm(ts, 0,
+            if (!can_ask || poldek__confirm(ts, 0,
                                              _("There were package coloring mismatches. "
-                                               "Proceed?")))
+                                               "Proceed?")) != 1)
                 goto l_err_end;
         }
     }

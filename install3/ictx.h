@@ -110,7 +110,6 @@ struct i3ctx {
 
     unsigned           ma_flags;    /* match flags (POLDEK_MA_*) */
     int                abort;       /* abort processing? */
-    int                cancelled;   /* the user answered Q, skip the remaining sets too */
 };
 
 
@@ -123,7 +122,7 @@ extern int poldek_conf_MULTILIB;
 /* set stop flag */
 int i3_stop_processing(struct i3ctx *ictx, int stop);
 
-/* the user answered Q */
+/* the user answered q: stop processing, cancel the command */
 void i3_cancel(struct i3ctx *ictx);
 
 #define i3_return_zero_if_stoppped(i3ctx)        \
