@@ -756,6 +756,17 @@ static int ctl_len(const unsigned char *s)
     return 0;
 }
 
+int vf_has_ctl(const char *str)
+{
+    const unsigned char *s = (const unsigned char *)str;
+
+    for (; *s; s++)
+        if (ctl_len(s))
+            return 1;
+
+    return 0;
+}
+
 /* for text from the network on its way into a message: its control
    characters written out as escapes, dst cut at a whole one */
 void vf_escape_ctl(char *dst, size_t size, const char *src)

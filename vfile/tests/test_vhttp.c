@@ -331,6 +331,26 @@ START_TEST(test_http_server_control_bytes_escaped)
 }
 END_TEST
 
+/* a redirect target with control characters is no URL; it is refused
+   before vfile takes it for the request's URL and prints it unescaped */
+START_TEST(test_http_redirect_control_bytes_refused)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/ctl-redirect", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    ck_assert_str_eq(logged(logged_err),
+                     "vfff: \\x1b[31mRED\\x1b[0m: invalid redirect URI\n");
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+}
+END_TEST
+
 /* Through a proxy vfile sends the absolute request URL in the request line
    (vfffmod.c: vreq.uri = req->proxy_host ? req->url : req->uri).  An explicit
    port in the requested URL must survive vf_request_new(), otherwise the proxy
@@ -783,6 +803,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_redirect_chain);
     tcase_add_test(tc_http, test_http_stat_redirect_failed);
     tcase_add_test(tc_http, test_http_server_control_bytes_escaped);
+    tcase_add_test(tc_http, test_http_redirect_control_bytes_refused);
     tcase_add_test(tc_http, test_http_auth_success);
     tcase_add_test(tc_http, test_http_auth_fail);
     tcase_add_test(tc_http, test_http_upgrade_redirect);

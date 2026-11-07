@@ -839,10 +839,15 @@ int is_redirected_connection(struct http_resp *resp, struct vfff_req *rreq)
 
     if (HTTP_STATUS_IS_REDIR(resp->code)) {
         const char *redirto = http_resp_get_hdr(resp, "location");
-        if (redirto && *redirto != '\0')
-            snprintf(rreq->redirected_to, sizeof(rreq->redirected_to), "%s", redirto);
-        else
+        if (redirto == NULL || *redirto == '\0')
             vfff_set_err(ENOENT, "wrong or empty redirect location");
+
+        /* no URL (RFC 3986); taken for one, vfile would print it unescaped */
+        else if (vf_has_ctl(redirto))
+            vfff_set_err(EPROTO, "%s: invalid redirect URI", CL_URL(redirto));
+
+        else
+            snprintf(rreq->redirected_to, sizeof(rreq->redirected_to), "%s", redirto);
 
         is_redirected = 1;
     }

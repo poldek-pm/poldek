@@ -126,6 +126,14 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.close_connection = True
             return
 
+        # and in a redirect target
+        if path == "/ctl-redirect":
+            self.wfile.write(b"HTTP/1.1 302 Found\r\n"
+                             b"Location: \x1b[31mRED\x1b[0m\r\n"
+                             b"Content-Length: 0\r\nConnection: close\r\n\r\n")
+            self.close_connection = True
+            return
+
         # HTTP->HTTPS upgrade redirect test (should be allowed)
         if path == "/http-upgrade":
             # Redirect HTTP to HTTPS (upgrade - should be allowed)
