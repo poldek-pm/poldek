@@ -370,10 +370,13 @@ int response_complete(struct http_resp *resp)
                 if (isdigit(c)) {
                     resp->code_len++;
 
-                } else if (isblank(c)) {
+                } else if (isblank(c) || is_endl(c)) { /* "HTTP/1.1 200" too */
                     if (resp->code_len != 3 ||
                         sscanf(buf - 4, "%d", &resp->code) != 1) {
                         resp->state = ST_RESP_BAD;
+
+                    } else if (c == '\n') {
+                        resp->state = ST_RESP_NEWL;
 
                     } else {
                         resp->state = ST_RESP_STATUS_MSG;
