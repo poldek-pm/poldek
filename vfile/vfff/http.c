@@ -512,10 +512,8 @@ static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
     }
 
     if (is_err) {
-        if (errno)
-            vfff_errno = errno;
-        else
-            vfff_errno = EIO;
+        if (vfff_errno == 0)
+            vfff_errno = errno ? errno : EIO;
 
         switch (vfff_errno) {
             case EMSGSIZE:

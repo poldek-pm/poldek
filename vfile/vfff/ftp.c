@@ -336,10 +336,8 @@ static int readresp(int sockfd, struct ftp_resp *resp, int readln)
     }
 
     if (is_err) {
-        if (errno)
-            vfff_errno = errno;
-        else
-            vfff_errno = EIO;
+        if (vfff_errno == 0)
+            vfff_errno = errno ? errno : EIO;
 
         switch (vfff_errno) {
             case EMSGSIZE:

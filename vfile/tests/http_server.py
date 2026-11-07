@@ -91,6 +91,14 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._handle_auth()
             return
         
+        # a header line longer than vfff's 4096-byte line buffer
+        if path == "/long-header":
+            self.send_response(HTTPStatus.OK)
+            self.send_header("X-Long", "a" * 5000)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         # Status code: /status/<code>, /status/<code>/noreason without a
         # reason phrase
         if path.startswith("/status/"):
