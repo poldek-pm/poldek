@@ -228,17 +228,6 @@ struct do_fn {
     int (*fn)(struct vcn *, struct vfff_req *);
 };
 
-static __attribute__((format(printf,3,4)))
-void set_err(struct vf_request *req, int err_no, const char *fmt, ...)
-{
-    va_list args;
-
-    va_start(args, fmt);
-    vf_vlog(VFILE_LOG_ERR, fmt, args);
-    va_end(args);
-    req->req_errno = err_no;
-}
-
 static
 int do_vfn(const struct do_fn *dofn, struct vf_request *req,
            int recursion_deep)
@@ -251,7 +240,7 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
     req->req_errno = 0;
 
     if (recursion_deep > 32) {
-        set_err(req, EINVAL, "too many (%d) redirects", recursion_deep);
+        vfff_set_err(EINVAL, "too many (%d) redirects", recursion_deep);
         return 0;
     }
 
@@ -320,7 +309,8 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
 
         /* denied HTTPS => HTTP */
         if (cn->proto == VCN_PROTO_HTTPS && strncmp(topathp, "http://", 7) == 0) {
-            set_err(req, EINVAL, "HTTPS to HTTP downgrade not allowed");
+            vfff_set_err(EINVAL, "redirect to %s: HTTPS to HTTP downgrade not allowed",
+                         CL_URL(topathp));
             rc = 0;
         } else if (topathp && vf_request_redirto(req, topathp)) {
             rc = 0;
@@ -328,7 +318,8 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
                 rc = do_vfn(dofn, req, ++recursion_deep);
 
         } else {
-            set_err(req, EINVAL, "%s: invalid redirect URI", vreq.redirected_to);
+            vfff_set_err(EINVAL, "%s: invalid redirect URI",
+                         CL_URL(vreq.redirected_to));
             rc = 0;
         }
     }

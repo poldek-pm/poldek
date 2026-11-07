@@ -16,6 +16,7 @@
 #include "../vfile.h"
 #include "test.h"
 #include <trurl/nstr.h>
+#include <trurl/nbuf.h>
 
 /* Server configuration from environment or defaults */
 static char server_host[256] = "127.0.0.1";
@@ -89,12 +90,27 @@ static void drop_file(const char *name)
     unlink(dest);
 }
 
+/* what vfile logged, errors apart from the rest */
+static tn_buf *logged_err, *logged_info;
+
+static void log_cb(int pri, const char *fmt, va_list ap)
+{
+    n_buf_vprintf((pri & VFILE_LOG_ERR) ? logged_err : logged_info, fmt, ap);
+}
+
+static const char *logged(const tn_buf *buf)
+{
+    return n_buf_size(buf) ? n_buf_ptr(buf) : "";
+}
+
 /* Setup: Called before each test */
 static void http_setup(void)
 {
     static int verbose = 0;
 
     save_tz();
+    logged_err = n_buf_new(0);
+    logged_info = n_buf_new(0);
 
     if (getenv("VERBOSE"))
         verbose = 2;
@@ -144,6 +160,8 @@ static void http_teardown(void)
     sigaction(SIGPIPE, &sigpipe_old, NULL);
 
     restore_tz();
+    n_buf_free(logged_err);
+    n_buf_free(logged_info);
 
     /* Cleanup temp directory */
     /* Note: vf_fetch deletes files, but we clean up the dir */
@@ -616,6 +634,28 @@ START_TEST(test_https_downgrade_redirect)
 }
 END_TEST
 
+START_TEST(test_https_downgrade_one_error_line)
+{
+    char url[512];
+
+    fail_if(https_port == 0);
+
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 1);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "https://%s:%d/https-downgrade",
+             server_host, https_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    ck_assert_str_eq(logged(logged_err),
+                     "vfff: redirect to http://127.0.0.1/force-http: "
+                     "HTTPS to HTTP downgrade not allowed\n");
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 0);
+}
+END_TEST
+
 START_TEST(test_http_upgrade_redirect)
 {
     char url[512], dest[PATH_MAX];
@@ -709,6 +749,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_https, test_https_get);
     tcase_add_test(tc_https, test_https_noverify);
     tcase_add_test(tc_https, test_https_downgrade_redirect);
+    tcase_add_test(tc_https, test_https_downgrade_one_error_line);
     tcase_add_test(tc_https, test_https_redirect_ok);
     tcase_add_test(tc_https, test_https_keepalive_no_close_notify);
     suite_add_tcase(s, tc_https);
