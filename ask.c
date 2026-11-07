@@ -48,9 +48,15 @@ static int ask(const char *prompt, const char *keys, int defkey)
     valid[n++] = '\n';
     valid[n] = '\0';
 
+    poldek_term__ask_begin(STDIN_FILENO);
     msg_ask("%s", prompt);
 
-    a = poldek_term_ask(STDIN_FILENO, valid, NULL);
+    do {
+        if ((a = poldek_term__getkey()) == -1)
+            a = '\n';          /* the terminal is gone: the default answer */
+    } while (a == '\0' || strchr(valid, a) == NULL);
+    poldek_term__ask_end();
+
     a = (a == '\n') ? defkey : tolower(a);
 
     msg_ask("_ %c\n", a);
@@ -124,6 +130,8 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
     if (!isatty(STDIN_FILENO))
         return hint;
 
+    poldek_term__ask_begin(STDIN_FILENO);
+
     if (pkg) {
         msg_ask(_("%s: required \"%s\" is provided by the following packages:"),
                 pkg_id(pkg), capname);
@@ -166,7 +174,10 @@ onemoretime:
     msg_ask(_("Which one do you want to install ('Q' to abort)? [%s]"),
             pkg_id(n_array_nth(candidates, hint)));
 
-    a = poldek_term_ask(STDIN_FILENO, validchrs, NULL);
+    do {
+        if ((a = poldek_term__getkey()) == -1)
+            a = '\n';          /* the terminal is gone: the default answer */
+    } while (a == '\0' || strchr(validchrs, a) == NULL);
     msg_ask("_\n");
 
     if (a == '-' || a == 0x7f) {
@@ -180,6 +191,8 @@ onemoretime:
             j += lines;
         goto onemoretime;
     }
+
+    poldek_term__ask_end();
 
     if (a == '\n')
         return hint;

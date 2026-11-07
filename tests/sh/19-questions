@@ -1,0 +1,108 @@
+#!/bin/sh
+
+# poldek's questions on a terminal: keys typed into a pty (script(1)) once the
+# question shows, outside testing mode (it answers the provider choice
+# itself), with a real rpm database (--root and --justdb, as in 08-rpm).
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/rpm-setup
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+
+setUp() {
+    is_rpm_testing_off && return
+
+    rpm_up
+    # provide /bin/sh auto requirement
+    rpm_build_installed sh -p /bin/sh
+    POLDEK_ASK=$(echo "$POLDEK_INSTALL" | sed 's/ --noask//')
+    PTY_ANSWERS=$TMPDIR/pty.answers
+    rm -f $PTY_ANSWERS
+}
+
+tearDown() {
+    is_rpm_testing_off && return
+    rpm_down
+}
+
+build() {
+    build_package $REPO "$@"
+}
+
+# names of the installed packages but sh, sorted, space separated
+installed() {
+    $RPM -qa --qf '%{NAME}\n' | grep -v '^sh$' | sort | paste -sd' ' -
+}
+
+# answer PATTERN KEY: on_pty types KEY (a printf format) once PATTERN shows
+# after what the answer before it waited for
+answer() {
+    printf '%s\t%s\n' "$1" "$2" >> $PTY_ANSWERS
+}
+
+# wait_for PATTERN: until PATTERN shows in $PTY_OUT past byte $pty_seen, which
+# then moves past it; 1 if poldek ended or 30 s passed first
+wait_for() {
+    local i=0 off
+
+    while [ $i -lt 300 ]; do
+        off=$(tail -c +$((pty_seen + 1)) $PTY_OUT | grep -aboF -- "$1" | head -1 | cut -d: -f1)
+        if [ -n "$off" ]; then
+            pty_seen=$((pty_seen + off + ${#1}))
+            return 0
+        fi
+        kill -0 $pty_pid 2>/dev/null || return 1
+        sleep 0.1
+        i=$((i + 1))
+    done
+    return 1
+}
+
+# on_pty ARGS: poldek ARGS on a terminal, typing the answers given; its
+# output in $PTY_OUT (\r dropped), exit code in $PTY_RC
+on_pty() {
+    local fifo=$TMPDIR/pty.in pattern key
+
+    PTY_OUT=$TMPDIR/pty.out
+    rm -f $fifo $PTY_OUT
+    mkfifo $fifo || fail "mkfifo failed"
+    timeout 60 script -qfec "env -u POLDEK_TESTING TERM=dumb LC_ALL=C $POLDEK_ASK $*; echo \"[exit \$?]\"" \
+            /dev/null <$fifo >$PTY_OUT 2>&1 &
+    pty_pid=$!
+    exec 7>$fifo                # held open: an EOF would end script's input
+    pty_seen=0
+
+    if [ -f $PTY_ANSWERS ]; then
+        while IFS='	' read -r pattern key; do
+            wait_for "$pattern" || { fail "\"$pattern\" did not show"; break; }
+            printf "$key" >&7
+        done < $PTY_ANSWERS
+    fi
+
+    wait $pty_pid
+    exec 7>&-
+    tr -d '\r' < $PTY_OUT > $PTY_OUT.tmp && mv $PTY_OUT.tmp $PTY_OUT
+    PTY_RC=$(sed -n 's/^\[exit \([0-9]*\)\]$/\1/p' $PTY_OUT)
+    is_verbose_mode && cat $PTY_OUT
+}
+
+# A key typed as soon as the question shows answers it: the terminal is put
+# into raw mode, which drops what was typed earlier, before the question is
+# printed, not after.
+testKeyTypedAsSoonAsAskedAnswers()
+{
+    skip_if_rpm_testing_off && return
+
+    build c
+    answer "Proceed?" n
+    on_pty --ask -i c
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "c installed" "" "$(installed)"
+    grep -q "Proceed?.* n$" $PTY_OUT || fail "no answer n echoed"
+}
+
+. ./sh/lib/shunit2

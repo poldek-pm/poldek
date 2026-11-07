@@ -109,6 +109,11 @@ int poldek__choose_suggests(const struct poldek_ts *ts,
                             tn_array *choices, int hint);
 
 void poldek__setup_default_ask_callbacks(struct poldek_ctx *ctx);
+
+/* poldek_term.c */
+int poldek_term__ask_begin(int fd);
+int poldek_term__getkey(void);
+void poldek_term__ask_end(void);
 int poldek__load_sources_internal(struct poldek_ctx *ctx);
 
 #endif
