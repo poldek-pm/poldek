@@ -38,6 +38,7 @@ int vf_fetcha_ext(tn_array *urls, const char *destdir);
 void vf_log(int pri, const char *fmt, ...)
    __attribute__((format(printf,2,3)));
 void vf_vlog(int pri, const char *fmt, va_list ap);
+void vf_escape_ctl(char *dst, size_t size, const char *src);
 
 #define vf_logerr(fmt, args...) \
        vf_log(VFILE_LOG_ERR, fmt, ## args)

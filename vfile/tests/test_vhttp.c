@@ -90,6 +90,8 @@ static void drop_file(const char *name)
     unlink(dest);
 }
 
+static int verbose = 0;
+
 /* what vfile logged, errors apart from the rest */
 static tn_buf *logged_err, *logged_info;
 
@@ -106,8 +108,6 @@ static const char *logged(const tn_buf *buf)
 /* Setup: Called before each test */
 static void http_setup(void)
 {
-    static int verbose = 0;
-
     save_tz();
     logged_err = n_buf_new(0);
     logged_info = n_buf_new(0);
@@ -303,6 +303,31 @@ START_TEST(test_http_stat_redirect_failed)
              server_host, http_port, TEST_FILE_SMALL);
 
     fail_if(vf_stat(url, tmpdir, &vfst, NULL) != 0);
+}
+END_TEST
+
+/* no byte the terminal would take for a control sequence gets from the
+   server into vfile's messages, errors or -vv lines alike */
+START_TEST(test_http_server_control_bytes_escaped)
+{
+    char url[512];
+    int v = 2;
+
+    fail_if(http_port == 0);
+
+    vfile_configure(VFILE_CONF_VERBOSE, &v);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/ctl-status", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    fail_if(strchr(logged(logged_err), '\x1b') != NULL, "%s", logged(logged_err));
+    fail_if(strchr(logged(logged_info), '\x1b') != NULL, "%s", logged(logged_info));
+    fail_if(strstr(logged(logged_err), "\\x1b[31mRED\\x1b[0m") == NULL,
+            "%s", logged(logged_err));
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
 }
 END_TEST
 
@@ -757,6 +782,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_redirect_302);
     tcase_add_test(tc_http, test_http_redirect_chain);
     tcase_add_test(tc_http, test_http_stat_redirect_failed);
+    tcase_add_test(tc_http, test_http_server_control_bytes_escaped);
     tcase_add_test(tc_http, test_http_auth_success);
     tcase_add_test(tc_http, test_http_auth_fail);
     tcase_add_test(tc_http, test_http_upgrade_redirect);

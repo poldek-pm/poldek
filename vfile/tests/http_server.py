@@ -118,6 +118,14 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             return
 
+        # terminal escape sequences in a status line and a header
+        if path == "/ctl-status":
+            self.wfile.write(b"HTTP/1.1 500 \x1b[31mRED\x1b[0m\r\n"
+                             b"X-Note: \x1b[31mRED\x1b[0m\r\n"
+                             b"Content-Length: 0\r\nConnection: close\r\n\r\n")
+            self.close_connection = True
+            return
+
         # HTTP->HTTPS upgrade redirect test (should be allowed)
         if path == "/http-upgrade":
             # Redirect HTTP to HTTPS (upgrade - should be allowed)
