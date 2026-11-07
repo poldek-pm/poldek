@@ -656,6 +656,30 @@ START_TEST(test_https_downgrade_one_error_line)
 }
 END_TEST
 
+START_TEST(test_https_downgrade_not_retried)
+{
+    char url[512];
+
+    fail_if(https_port == 0);
+
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 1);
+    vfile_configure(VFILE_CONF_STUBBORN_RETR, 1);
+    vfile_configure(VFILE_CONF_STUBBORN_NRETRIES, 2);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "https://%s:%d/https-downgrade",
+             server_host, https_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    fail_if(strstr(logged(logged_info), "Retrying") != NULL,
+            "retried: %s", logged(logged_info));
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    vfile_configure(VFILE_CONF_STUBBORN_RETR, 0);
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 0);
+}
+END_TEST
+
 START_TEST(test_http_upgrade_redirect)
 {
     char url[512], dest[PATH_MAX];
@@ -750,6 +774,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_https, test_https_noverify);
     tcase_add_test(tc_https, test_https_downgrade_redirect);
     tcase_add_test(tc_https, test_https_downgrade_one_error_line);
+    tcase_add_test(tc_https, test_https_downgrade_not_retried);
     tcase_add_test(tc_https, test_https_redirect_ok);
     tcase_add_test(tc_https, test_https_keepalive_no_close_notify);
     suite_add_tcase(s, tc_https);

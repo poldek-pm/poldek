@@ -239,8 +239,9 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
     vfff_verbose = vfile_verbose;
     req->req_errno = 0;
 
+    /* a refused redirect is EPROTO: vf_fetch() would get the same one again */
     if (recursion_deep > 32) {
-        vfff_set_err(EINVAL, "too many (%d) redirects", recursion_deep);
+        vfff_set_err(EPROTO, "too many (%d) redirects", recursion_deep);
         return 0;
     }
 
@@ -309,7 +310,7 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
 
         /* denied HTTPS => HTTP */
         if (cn->proto == VCN_PROTO_HTTPS && strncmp(topathp, "http://", 7) == 0) {
-            vfff_set_err(EINVAL, "redirect to %s: HTTPS to HTTP downgrade not allowed",
+            vfff_set_err(EPROTO, "redirect to %s: HTTPS to HTTP downgrade not allowed",
                          CL_URL(topathp));
             rc = 0;
         } else if (topathp && vf_request_redirto(req, topathp)) {
@@ -318,7 +319,7 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
                 rc = do_vfn(dofn, req, ++recursion_deep);
 
         } else {
-            vfff_set_err(EINVAL, "%s: invalid redirect URI",
+            vfff_set_err(EPROTO, "%s: invalid redirect URI",
                          CL_URL(vreq.redirected_to));
             rc = 0;
         }
