@@ -462,11 +462,9 @@ static int process_orphan_boolreq(int indent, struct i3ctx *ictx,
             struct i3pkg *i3tomark;
 
             if (i3_is_user_choosable_equiv(ts) && n_array_size(cands) > 1) {
-                tomark = i3_choose_equiv(ts, pkg, req, cands, tomark);
-                if (tomark == NULL) { /* user abort */
-                    i3_cancel(ictx);
+                tomark = i3_choose_provider(ictx, pkg, req, cands, tomark);
+                if (tomark == NULL) /* q or n */
                     break;
-                }
             }
 
             i3tomark = i3pkg_new(tomark, 0, pkg, req, I3PKGBY_ORPHAN);
@@ -561,12 +559,9 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         struct i3pkg *i3tomark;
 
         if (i3_is_user_choosable_equiv(ts) && candidates) {
-            real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
-
-            if (real_tomark == NULL) { /* user abort */
-                i3_cancel(ictx);
+            real_tomark = i3_choose_provider(ictx, pkg, req, candidates, tomark);
+            if (real_tomark == NULL) /* q or n */
                 goto l_end;
-            }
         }
 
         i3tomark = i3pkg_new(real_tomark, 0, pkg, req, I3PKGBY_ORPHAN);
@@ -698,10 +693,8 @@ static int process_req(int indent, struct i3ctx *ictx,
         int             i3pkg_flag = 0;
 
         if (i3_is_user_choosable_equiv(ts) && candidates) {
-            real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
-
-            if (real_tomark == NULL) { /* user abort */
-                i3_cancel(ictx);
+            real_tomark = i3_choose_provider(ictx, pkg, req, candidates, tomark);
+            if (real_tomark == NULL) { /* q or n */
                 rc = 0;
                 goto l_end;
             }
@@ -843,8 +836,8 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     choices = n_array_clone(suggests);
     n_array_ctl_set_freefn(choices, NULL); /* 'weak' ref */
 
-    /* autochoice "abort" simulates answering 'Q' */
-    answer = autochoice ? -1 : poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0);
+    /* autochoice "abort" simulates answering 'q' */
+    answer = autochoice ? POLDEK_ANSWER_ABORT : poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0);
     switch (answer) {
 	/* do not install any of suggested packages */
 	case 0:
@@ -852,7 +845,7 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 	    n_array_cfree(&suggests);
 	    break;
 	/* user aborted */
-	case -1:
+	case POLDEK_ANSWER_ABORT:
 	    n_array_free(choices);
 	    n_array_cfree(&suggests);
 	    i3_cancel(ictx);

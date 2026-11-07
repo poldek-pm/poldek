@@ -110,8 +110,22 @@ struct i3ctx {
 
     unsigned           ma_flags;    /* match flags (POLDEK_MA_*) */
     int                abort;       /* abort processing? */
-    int                cancelled;   /* the user answered Q, skip the remaining sets too */
+    int                skipped;     /* the set is skipped (n at a choice) */
+    tn_hash           *skipped_reqs; /* left without a provider, by the
+                                        whole command */
+    tn_array          *icaps;       /* struct i3icap, the whole command's */
 };
+
+/* a provider chosen at a question for a capability asked for (--caplookup) */
+struct i3icap {
+    struct pkg  *chosen;        /* NULL once left out */
+    tn_array    *candidates;
+    int         on_terminal;    /* chosen there */
+    char        cap[0];
+};
+
+void i3_add_icap(struct i3ctx *ictx, const char *cap, tn_array *candidates,
+                 struct pkg *chosen, int on_terminal);
 
 
 void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts);
@@ -123,7 +137,7 @@ extern int poldek_conf_MULTILIB;
 /* set stop flag */
 int i3_stop_processing(struct i3ctx *ictx, int stop);
 
-/* the user answered Q */
+/* the user answered q: stop processing, cancel the command */
 void i3_cancel(struct i3ctx *ictx);
 
 #define i3_return_zero_if_stoppped(i3ctx)        \
@@ -245,8 +259,17 @@ int i3_process_orphan(int indent, struct i3ctx *ictx, struct orphan *o);
 
 int i3_is_user_choosable_equiv(struct poldek_ts *ts);
 
+/* the provider of cap among pkgs the user chooses, hint by default; NULL if
+   none: ts is cancelled after q, not after n */
 struct pkg *i3_choose_equiv(struct poldek_ts *ts,
                             const struct pkg *pkg, const struct capreq *cap,
                             tn_array *pkgs, struct pkg *hint);
+
+/* i3_choose_equiv() for a requirement of pkg: NULL with processing stopped
+   after q, or after n, which skips the set, and every later set asking
+   about req */
+struct pkg *i3_choose_provider(struct i3ctx *ictx, const struct pkg *pkg,
+                               const struct capreq *req, tn_array *candidates,
+                               struct pkg *hint);
 
 #endif

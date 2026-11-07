@@ -71,12 +71,83 @@ msgstr "-/backspace/pgup) poprzednia strona"
 
 #: ask.c:148
 msgid "+/space/tab/pgdown) page down"
-msgstr "+/space/tab/pgdown) nastepna strona"
+msgstr "+/space/tab/pgdown) następna strona"
 
 #: ask.c:156
 #, c-format
-msgid "Which one do you want to install ('Q' to abort)? [%s]"
-msgstr "Który z nich chcesz zainstalować ('Q' anuluje)? [%s]"
+msgid ""
+"Which one do you want to install? (%s - that package, Enter - %s, n - %s, q "
+"- abort, ? - help)"
+msgstr ""
+"Który z nich chcesz zainstalować? (%s - ten pakiet, Enter - %s, n - %s, q - "
+"przerwij, ? - pomoc)"
+
+#: ask.c
+msgid "leave it out"
+msgstr "pomiń"
+
+#: ask.c
+#, c-format
+msgid "install none of them, leave \"%s\" out"
+msgstr "nie instaluj żadnego, pomiń \"%s\""
+
+#: ask.c
+#, c-format
+msgid "%s %c - %s (no terminal: the default)"
+msgstr "%s %c - %s (brak terminala: odpowiedź domyślna)"
+
+#: ask.c
+msgid ""
+"nothing removed: no terminal to confirm the removal on (--noask removes "
+"without asking)"
+msgstr ""
+"nic nie usunięto: brak terminala do potwierdzenia usunięcia (--noask usuwa "
+"bez pytania)"
+
+#: ask.c
+msgid "skip this set"
+msgstr "pomiń ten zestaw"
+
+#: ask.c
+#, c-format
+msgid ""
+"install none of them, skip the set of %s; later sets that need \"%s\" are "
+"skipped too"
+msgstr ""
+"nie instaluj żadnego, pomiń zestaw z pakietem %s; dalsze zestawy wymagające "
+"\"%s\" też zostaną pominięte"
+
+#: ask.c
+msgid "install nothing"
+msgstr "nie instaluj niczego"
+
+#: ask.c
+msgid "install none of them, nor anything else"
+msgstr "nie instaluj żadnego ani niczego innego"
+
+#: install3/misc.c
+#, c-format
+msgid "%s: \"%s\" skipped earlier, set skipped"
+msgstr "%s: \"%s\" pominięto już wcześniej, pominięto zestaw"
+
+#: install3/misc.c
+#, c-format
+msgid "%s: \"%s\" left unresolved, set skipped"
+msgstr "%s: \"%s\" pozostaje niespełnione, pominięto zestaw"
+
+#: install3/misc.c
+#, c-format
+msgid "%s: \"%s\" left unresolved, nothing installed"
+msgstr "%s: \"%s\" pozostaje niespełnione, nic nie zainstalowano"
+
+#: install3/preinstall.c
+#, c-format
+msgid "\"%s\" left out"
+msgstr "pominięto \"%s\""
+
+#: ask.c
+msgid "install that package"
+msgstr "zainstaluj ten pakiet"
 
 #: ask.c:206
 #, c-format
@@ -90,12 +161,127 @@ msgstr[0] "Spróbować go zainstalować?"
 msgstr[1] "Spróbować je zainstalować?"
 msgstr[2] "Spróbować je zainstalować?"
 
-#: ask.c:220
+#: ask.c
+msgid "abort this command; sets installed before stay installed"
+msgstr "przerwij to polecenie; zestawy zainstalowane wcześniej pozostają"
+
+#: ask.c
+msgid "abort this command"
+msgstr "przerwij to polecenie"
+
+#: ask.c
+msgid "help"
+msgstr "pomoc"
+
+#: ask.c
 #, c-format
-msgid "(y - all, n - nothing, s - select some of, r - redo, Q - abort)? [%s]"
-msgstr ""
-"(y - wszystkie, n - żaden, s - wybierz z listy, r - powtórz, Q - przerwij)? "
-"[%s]"
+msgid "'%c' is not an answer here; ? - help\n"
+msgstr "'%c' nie jest tu odpowiedzią; ? - pomoc\n"
+
+#: ask.c
+msgid "abort"
+msgstr "przerwij"
+
+#: ask.c
+msgid "yes"
+msgstr "tak"
+
+#: ask.c
+msgid "no"
+msgstr "nie"
+
+#: ask.c
+msgid "remove"
+msgstr "usuń"
+
+#: ask.c
+msgid "don't remove"
+msgstr "nie usuwaj"
+
+#: ask.c
+msgid "install"
+msgstr "zainstaluj"
+
+#: ask.c pm/rpmorg/rpminstall.c
+msgid "don't install"
+msgstr "nie instaluj"
+
+#: ask.c
+#, c-format
+msgid "skip the set of %s, go on with the next one"
+msgstr "pomiń zestaw z pakietem %s i przejdź do następnego"
+
+#: ask.c
+msgid "choose again"
+msgstr "wybierz ponownie"
+
+#: ask.c
+msgid "forget the providers chosen and ask again"
+msgstr "zapomnij o wybranych dostawcach i zapytaj ponownie"
+
+#: ask.c
+msgid "install this set"
+msgstr "zainstaluj ten zestaw"
+
+#: ask.c
+msgid "skip it"
+msgstr "pomiń go"
+
+#: ask.c
+msgid "install it"
+msgstr "zainstaluj go"
+
+#: ask.c
+msgid "don't"
+msgstr "nie"
+
+#: ask.c
+msgid "redo"
+msgstr "powtórz"
+
+#: ask.c
+msgid "start again from the list"
+msgstr "wróć do pytania o całą listę"
+
+#: ask.c
+msgid "all"
+msgstr "wszystkie"
+
+#: ask.c
+msgid "install all of them"
+msgstr "zainstaluj wszystkie"
+
+#: ask.c
+msgid "none"
+msgstr "żaden"
+
+#: ask.c
+msgid "install none of them"
+msgstr "nie instaluj żadnego"
+
+#: ask.c
+msgid "select some"
+msgstr "wybierz niektóre"
+
+#: ask.c
+msgid "ask about each of them"
+msgstr "zapytaj o każdy z osobna"
+
+#: ask.c
+msgid "show the list again"
+msgstr "pokaż listę jeszcze raz"
+
+#: pm/rpmorg/rpminstall.c
+msgid "install anyway"
+msgstr "zainstaluj mimo to"
+
+#: pm/rpmorg/signkey.c
+msgid "import it"
+msgstr "zaimportuj go"
+
+#: pm/rpmorg/signkey.c
+msgid "don't import"
+msgstr "nie importuj"
 
 #: ask.c:245
 #, c-format
@@ -1363,6 +1549,10 @@ msgstr "Instalacja #%d pakietu z %d (%s pozostało do pobrania)\n"
 msgid "Interrupted"
 msgstr "Przerwano"
 
+#: poldek_ts.c:1091
+msgid "Aborted"
+msgstr "Przerwano"
+
 #: install-dist.c:195
 #, c-format
 msgid "Done, %d packages were installed.\n"
@@ -2211,11 +2401,11 @@ msgstr "%s: weryfikacja podpisu nie powiodła się"
 
 #: pm/rpm/rpminstall.c:441 pm/rpmorg/rpminstall.c:439
 msgid "There were signature verification errors. Proceed?"
-msgstr "Wystąpiły błędy weryfikacji podpisu. Kontynuować? [y/N]"
+msgstr "Wystąpiły błędy weryfikacji podpisu. Kontynuować?"
 
 #: pm/rpm/rpminstall.c:449 pm/rpmorg/rpminstall.c:447
 msgid "There were package coloring mismatches. Proceed?"
-msgstr "Wystąpiły błędy kolorów pakietów. Kontynuować? [y/N]"
+msgstr "Wystąpiły błędy kolorów pakietów. Kontynuować?"
 
 #: pm/rpm/rpminstall.c:471 pm/rpmorg/rpminstall.c:469
 #, c-format

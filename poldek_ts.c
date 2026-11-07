@@ -1045,11 +1045,22 @@ static int ts_run_verify(struct poldek_ts *ts)
     return nerr == 0;
 }
 
+void poldek__ts_cancel(struct poldek_ts *ts)
+{
+    ts->_iflags |= TS_CANCELLED;
+}
+
+int poldek__ts_cancelled(const struct poldek_ts *ts)
+{
+    return (ts->_iflags & TS_CANCELLED) != 0;
+}
+
 int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
 {
     struct ts_run *ts_run = NULL;
     int i = 0, rc = 0;
 
+    ts->_iflags &= ~TS_CANCELLED;
     poldek_ts_setf(ts, flags);
     n_assert(ts->type);
 
@@ -1074,9 +1085,15 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
 
     rc = ts_run->run(ts);
 
+    /* q at any question fails the command, whatever was done before it */
+    if (poldek__ts_cancelled(ts)) {
+        rc = 0;
+        logn(LOGNOTICE, _("Aborted"));
+
     /* ^C stops a run at many points; say so once, for all of them */
-    if (rc == 0 && sigint_reached())
+    } else if (rc == 0 && sigint_reached()) {
         logn(LOGNOTICE, _("Interrupted"));
+    }
 
     poldek__ts_hooks_post(ts);  /* also after a failed or cancelled run */
 

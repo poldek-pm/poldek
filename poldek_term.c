@@ -14,7 +14,9 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <limits.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +35,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "poldek_term.h"
+#include "poldek_intern.h"
 
 /* argp loops or crashes when its right margin is narrower */
 #define ARGP_MIN_WIDTH 40
@@ -303,55 +306,107 @@ int poldek_term_get_height(void)
 }
 
 
-int poldek_term_ask(int fd, const char *validchrs, const char *msg)
+static struct termios ask_saved; /* the mode to go back to */
+static int ask_fd = -1;          /* the terminal in raw mode for a question */
+
+/* Puts terminal fd into raw mode for poldek_term__getkey(), dropping what was
+   typed before. A question calls it before it is printed: a key typed as soon
+   as the question shows is kept. Returns 0 if fd is not a terminal. */
+int poldek_term__ask_begin(int fd)
 {
-    struct termios t, tmp;
-    unsigned char c = 0;
+    struct termios t;
 
-    if (!isatty(fd))
-        return '\n';            /* no terminal: the default answer, as Enter */
+    if (!isatty(fd) || tcgetattr(fd, &ask_saved) != 0)
+        return 0;
 
-    tcgetattr(fd, &t);
-    memcpy(&tmp, &t, sizeof(tmp));
-
+    t = ask_saved;
     t.c_lflag &= ~(ICANON | ISIG | IEXTEN | ECHO);
     t.c_lflag &= ~(ECHOE | ECHOK | ECHONL|ECHOCTL|ECHOPRT|ECHOKE);
     t.c_iflag &= ~(IXON | IXANY | BRKINT);
     t.c_cc[VTIME] = 0;
     t.c_cc[VMIN] = 1;
-    tcsetattr(0, TCSAFLUSH, &t);
+    tcsetattr(fd, TCSAFLUSH, &t);
+    ask_fd = fd;
+    return 1;
+}
+
+void poldek_term__ask_end(void)
+{
+    if (ask_fd < 0)
+        return;
+
+    tcsetattr(ask_fd, TCSAFLUSH, &ask_saved);
+    ask_fd = -1;
+}
+
+/* The next byte of an escape sequence: one that comes at once, as a
+   terminal sends the whole sequence; -1 if none does */
+static int seqbyte(void)
+{
+    struct pollfd pfd = { ask_fd, POLLIN, 0 };
+    unsigned char c;
+
+    if (poll(&pfd, 1, 100) == 1 && read(ask_fd, &c, 1) == 1)
+        return c;
+
+    return -1;
+}
+
+/* A key typed on the terminal in raw mode: the byte read, PgUp as backspace
+   (0x7f) and PgDn as tab, other escape sequences skipped; -1 when the
+   terminal is gone. Esc alone is no key; a key typed after it, or into a
+   sequence, ^C too, is one. */
+int poldek_term__getkey(void)
+{
+    unsigned char c;
+    char par[2];
+    ssize_t n;
+    int k;
 
     while (1) {
-        /* strchr() also matches the terminating NUL */
-        if ((read(fd, &c, sizeof(c)) == 1) && c != '\0' && strchr(validchrs, c))
-            break;
+        if ((n = read(ask_fd, &c, 1)) != 1) {
+            if (n < 0 && errno == EINTR && isatty(ask_fd))
+                continue;
+            return -1;
+        }
 
-	// map pgup/pgdown to backspace/tab
-	if (c == 0x1b && (read(fd, &c, sizeof(c)) == 1) &&
-	    c == 0x5b && (read(fd, &c, sizeof(c)) == 1)) {
-	    if (c == 0x35 && (read(fd, &c, sizeof(c)) == 1) &&
-		c == 0x7e && strchr(validchrs, 0x7f)) {
-		    c = 0x7f;
-		    break;
-	    }
-	    if (c == 0x36 && (read(fd, &c, sizeof(c)) == 1) &&
-		c == 0x7e && strchr(validchrs, '\t')) {
-		    c = '\t';
-		    break;
-	    }
-	}
+        if (c != 0x1b)
+            return c;
 
+        if ((k = seqbyte()) != '[') {
+            if (k == -1)
+                continue;
+            return k;
+        }
 
-        // terminal lost - so prevent loop
-        if (!isatty(fd))
-            return '\n';
+        /* Esc [, its parameter bytes (0x20-0x3f) and a final one */
+        for (n = 0; (k = seqbyte()) >= 0x20 && k < 0x40; n++)
+            if (n < (ssize_t)sizeof(par))
+                par[n] = k;
 
+        if (k == '~' && n == 1 && (par[0] == '5' || par[0] == '6'))
+            return par[0] == '5' ? 0x7f : '\t';
+
+        if (k != -1 && (k < 0x40 || k > 0x7e))
+            return k;
+    }
+}
+
+int poldek_term_ask(int fd, const char *validchrs, const char *msg)
+{
+    int c;
+
+    if (!poldek_term__ask_begin(fd))
+        return '\n';            /* no terminal: the default answer, as Enter */
+
+    /* strchr() also matches the terminating NUL */
+    while ((c = poldek_term__getkey()) != -1 && (c == '\0' || !strchr(validchrs, c))) {
         if (msg)
             printf("%s\n", msg);
     }
 
-    tcsetattr(fd, TCSAFLUSH, &tmp);
-    return c;
+    poldek_term__ask_end();
+    return c == -1 ? '\n' : c;   /* terminal lost: the default answer */
 }
 
 

@@ -247,6 +247,38 @@ static tn_array *iset_packages_in_install_order(struct i3ctx *ictx)
 int poldek_log__get_last_error_distance();
 int poldek_term_get_height(void);
 
+#define CHOOSE_AGAIN (-1)       /* install_packages(): r at Proceed? */
+
+/* the --caplookup choices whose package the set took */
+static tn_array *set_icaps(struct i3ctx *ictx)
+{
+    tn_array *icaps = n_array_new(2, NULL, NULL);
+    int i;
+
+    for (i = 0; i < n_array_size(ictx->icaps); i++) {
+        struct i3icap *icap = n_array_nth(ictx->icaps, i);
+
+        if (icap->chosen &&
+            iset_ismarkedf(ictx->inset, icap->chosen, PKGMARK_INTERNAL))
+            n_array_push(icaps, icap);
+    }
+
+    return icaps;
+}
+
+static int icap_chosen_on_terminal(struct i3ctx *ictx)
+{
+    tn_array *icaps = set_icaps(ictx);
+    int i, yes = 0;
+
+    for (i = 0; i < n_array_size(icaps); i++)
+        if (((struct i3icap *)n_array_nth(icaps, i))->on_terminal)
+            yes = 1;
+
+    n_array_free(icaps);
+    return yes;
+}
+
 static int install_packages(struct i3ctx *ictx)
 {
     tn_array *toinstall;
@@ -269,6 +301,9 @@ static int install_packages(struct i3ctx *ictx)
             break;
     }
     n_array_free(toinstall);
+
+    if (ictx->skipped)
+        return 1;
 
     i3_return_zero_if_stoppped(ictx);
 
@@ -334,9 +369,23 @@ static int install_packages(struct i3ctx *ictx)
     } else if (!ts->getop(ts, POLDEK_OP_HOLD) || (rc = verify_held_packages(ictx))) {
         int is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
 
-        if (!is_test && !poldek__ts_confirm(ts)) {
-            rc = 1;
-            goto l_end;
+        if (!is_test) {
+            if (icap_chosen_on_terminal(ictx))
+                ts->_iflags |= TS_CHOSEN;
+
+            switch (poldek__ts_confirm(ts)) {
+                case 1:
+                    break;
+                case 0:         /* the set is skipped */
+                    rc = 1;
+                    goto l_end;
+                case POLDEK_ANSWER_REDO:
+                    rc = CHOOSE_AGAIN;
+                    goto l_end;
+                default:        /* aborted */
+                    rc = 0;
+                    goto l_end;
+            }
         }
 
         if (!ts->getop(ts, POLDEK_OP_NOFETCH))
@@ -367,7 +416,123 @@ static void ts_reset(struct poldek_ts *ts)
     n_hash_clean(ts->ts_summary);
 }
 
-extern int i3_pre_ts_install(struct poldek_ts *ts, tn_array **pkgs);
+extern int i3_pre_ts_install(struct i3ctx *ictx, tn_array **pkgs);
+
+/* Undoes the set processed, for r at its Proceed?: the requested packages
+   it took are marked again and its --caplookup choices, put into icaps,
+   asked again. Returns 0 after q. */
+static int choose_again(struct i3ctx *ictx, tn_array *icaps)
+{
+    struct poldek_ts *ts = ictx->ts;
+    const tn_array *inpkgs = iset_packages(ictx->inset);
+    tn_array *set = set_icaps(ictx);
+    int i, rc = 1;
+
+    for (i = 0; i < n_array_size(inpkgs); i++) {
+        struct pkg *pkg = n_array_nth(inpkgs, i);
+
+        if (iset_ismarkedf(ictx->inset, pkg, PKGMARK_INTERNAL))
+            pkg_mark_i(ts->pms, pkg);
+    }
+
+    ts_reset(ts);
+    i3ctx_reset(ictx);
+    ts->_iflags &= ~TS_CHOSEN;
+    pkgdb_reopen(ts->db, 0);
+
+    /* all asked, then the answers marked: a provider chosen for two
+       capabilities stays while one keeps it (a package named on the
+       command line is no candidate, see verify_package_caps()) */
+    for (i = 0; i < n_array_size(set); i++) {
+        struct i3icap *icap = n_array_nth(set, i);
+        struct capreq *cap;
+        struct pkg *pkg;
+
+        capreq_new_name_a(icap->cap, cap);
+        pkg = i3_choose_equiv(ts, NULL, cap, icap->candidates, icap->chosen);
+        if (pkg == NULL && poldek__ts_cancelled(ts)) { /* q */
+            rc = 0;
+            break;
+        }
+
+        if (pkg == NULL)
+            msgn(0, _("\"%s\" left out"), icap->cap);
+
+        pkg_unmark_i(ts->pms, icap->chosen);
+        icap->chosen = pkg;
+        n_array_push(icaps, icap);
+    }
+
+    for (i = 0; rc && i < n_array_size(icaps); i++) {
+        struct i3icap *icap = n_array_nth(icaps, i);
+
+        if (icap->chosen == NULL || pkg_is_marked_i(ts->pms, icap->chosen))
+            continue;
+
+        if (i3_is_pkg_installable(ts, icap->chosen, 1) > 0)
+            pkg_mark_i(ts->pms, icap->chosen);
+        else
+            icap->chosen = NULL;
+    }
+
+    n_array_free(set);
+    return rc;
+}
+
+/* marks the set again after choose_again(): head and its name group with
+   particle install, else every package requested; and the providers of
+   the set's --caplookup choices */
+static void mark_set_again(struct i3ctx *ictx, struct pkg *head,
+                           tn_array *pkgs, tn_array *icaps)
+{
+    struct poldek_ts *ts = ictx->ts;
+    int i;
+
+    if (ts->getop(ts, POLDEK_OP_PARTICLE)) {
+        if (pkg_is_marked_i(ts->pms, head))
+            i3_mark_package(ictx, head, PKGMARK_MARK);
+        i3_mark_namegroup(ictx, head, ts->ctx->ps->pkgs);
+
+    } else {
+        for (i = 0; i < n_array_size(pkgs); i++) {
+            struct pkg *pkg = n_array_nth(pkgs, i);
+
+            if (pkg_is_marked_i(ts->pms, pkg) && !i3_is_marked(ictx, pkg))
+                i3_mark_package(ictx, pkg, PKGMARK_MARK);
+        }
+    }
+
+    for (i = 0; i < n_array_size(icaps); i++) {
+        struct pkg *pkg = ((struct i3icap *)n_array_nth(icaps, i))->chosen;
+
+        if (pkg && pkg_is_marked_i(ts->pms, pkg) && !i3_is_marked(ictx, pkg))
+            i3_mark_package(ictx, pkg, PKGMARK_MARK);
+    }
+}
+
+/* installs the set marked, which head begins, again for every r */
+static int install_set(struct i3ctx *ictx, struct pkg *head, tn_array *pkgs)
+{
+    tn_array *icaps = n_array_new(2, NULL, NULL);
+    int rc;
+
+    while ((rc = install_packages(ictx)) == CHOOSE_AGAIN) {
+        n_array_clean(icaps);
+        if (!choose_again(ictx, icaps)) {
+            rc = 0;
+            break;
+        }
+
+        mark_set_again(ictx, head, pkgs, icaps);
+        if (n_array_size(iset_packages(ictx->inset)) == 0) {
+            rc = 1;             /* all left out */
+            break;
+        }
+    }
+
+    n_array_free(icaps);
+    return rc;
+}
 
 int i3_do_poldek_ts_install(struct poldek_ts *ts)
 {
@@ -377,8 +542,11 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
 
     n_assert(ts->type == POLDEK_TS_INSTALL);
 
-    if ((n = i3_pre_ts_install(ts, &pkgs)) <= 0) {
+    i3ctx_init(&ictx, ts);      /* keeps --caplookup's choices too */
+
+    if ((n = i3_pre_ts_install(&ictx, &pkgs)) <= 0) {
         n_assert(pkgs == NULL);
+        i3ctx_destroy(&ictx);
         return n == 0 ? 1 : 0;    /* report success(1) if 'nothing to do' */
     }
     n_assert(pkgs);
@@ -400,8 +568,6 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
 
     if (poldek__is_in_testing_mode())
         ts->setop(ts, POLDEK_OP_PARTICLE, 1);
-
-    i3ctx_init(&ictx, ts);
 
     for (i = 0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
@@ -426,6 +592,8 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
 
             n++;
             pkgdb_reopen(ts->db, 0);
+            ts->_iflags &= ~TS_CHOSEN;
+            ts->_set_head = pkg;
         }
         DBGF("mark %s\n", pkg_id(pkg));
 
@@ -434,10 +602,10 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
         if (ts->getop(ts, POLDEK_OP_PARTICLE)) {
             i3_mark_namegroup(&ictx, pkg, ts->ctx->ps->pkgs);
 
-            if (!install_packages(&ictx))
+            if (!install_set(&ictx, pkg, pkgs))
                 nerr++;
 
-            if (ictx.cancelled || poldek__ts_hooks_failed(ts))
+            if (poldek__ts_cancelled(ts) || poldek__ts_hooks_failed(ts))
                 break;
 
             ts_reset(ictx.ts);
@@ -445,11 +613,13 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
         }
     }
 
-    if (!ts->getop(ts, POLDEK_OP_PARTICLE))
-        nerr = !install_packages(&ictx);
+    if (!ts->getop(ts, POLDEK_OP_PARTICLE)) {
+        ts->_iflags &= ~TS_CHOSEN;
+        nerr = !install_set(&ictx, NULL, pkgs);
+    }
 
  l_end:
-
+    ts->_set_head = NULL;
     i3ctx_destroy(&ictx);
     MEMINF("END");
     if (is_particle)

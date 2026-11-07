@@ -163,12 +163,10 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
 
         /* tomark == NULL ? req satsfied by already installed set */
         if (tomark && candidates && n_array_size(candidates) > 1) {
-            real_tomark = i3_choose_equiv(ictx->ts, pkg, req, candidates, tomark);
+            real_tomark = i3_choose_provider(ictx, pkg, req, candidates, tomark);
             n_array_cfree(&candidates);
-            if (real_tomark == NULL) { /* user aborts */
-                i3_cancel(ictx);
+            if (real_tomark == NULL) /* q or n */
                 found = 0;
-            }
         }
 
         if (real_tomark != tomark) {
@@ -183,7 +181,7 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
     if (!found)
         goto l_end;
 
-    if (tomark == NULL)   /* already in inset or user aborts */
+    if (tomark == NULL)   /* already in inset, or q or n */
         goto l_end;
 
     found = 0;
