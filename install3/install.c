@@ -22,33 +22,21 @@
 
 static int verify_held_packages(struct i3ctx *ictx)
 {
-    int i, j, rc = 1;
+    int i, rc = 1;
     const tn_array *unpkgs;
 
     if (poldek_ts_issetf(ictx->ts, POLDEK_TS_UPGRADE) == 0)
         return 1;
 
-    if (ictx->ts->hold_patterns == NULL ||
-        !ictx->ts->getop(ictx->ts, POLDEK_OP_HOLD))
-        return 1;
-
     unpkgs = iset_packages(ictx->unset);
 
     for (i=0; i < n_array_size(unpkgs); i++) {
-        struct pkg *dbpkg;
-        struct pkgscore_s psc;
+        struct pkg *dbpkg = n_array_nth(unpkgs, i);
 
-        dbpkg = n_array_nth(unpkgs, i);
-        pkgscore_match_init(&psc, dbpkg);
-
-        for (j=0; j < n_array_size(ictx->ts->hold_patterns); j++) {
-            const char *mask = n_array_nth(ictx->ts->hold_patterns, j);
-            if (pkgscore_match(&psc, mask)) {
-                logn(LOGERR, _("%s: refusing to uninstall held package"),
-                     pkg_id(dbpkg));
-                rc = 0;
-                break;
-            }
+        if (i3_is_held(ictx->ts, dbpkg)) {
+            logn(LOGERR, _("%s: refusing to uninstall held package"),
+                 pkg_id(dbpkg));
+            rc = 0;
         }
     }
 
@@ -116,7 +104,7 @@ static void update_iinf(struct i3ctx *ictx, int vrfy)
         if (vrfy) {
             int cmprc = 0;
 
-            is_installed = i3_is_pkg_installed(ictx->ts, pkg, &cmprc);
+            is_installed = i3_is_pkg_installed(ictx->ts, pkg, &cmprc, NULL);
             if (is_installed && cmprc != 0)
                 is_installed = 0;
         }
@@ -136,7 +124,7 @@ static void update_iinf(struct i3ctx *ictx, int vrfy)
         if (vrfy) {
             int cmprc = 0;
 
-            is_installed = i3_is_pkg_installed(ictx->ts, pkg, &cmprc);
+            is_installed = i3_is_pkg_installed(ictx->ts, pkg, &cmprc, NULL);
             if (is_installed && cmprc != 0)
                 is_installed = 0;
         }

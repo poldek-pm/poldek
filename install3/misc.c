@@ -16,10 +16,16 @@
 
 #include "ictx.h"
 
-int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc)
+/* *dbpkgp, when given, gets the newest installed instance (NULL when none),
+   to pkg_free() */
+int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc,
+                        struct pkg **dbpkgp)
 {
     tn_array *dbpkgs = NULL;
     int n = 0, freshen = 0;
+
+    if (dbpkgp)
+        *dbpkgp = NULL;
 
     freshen = ts->getop(ts, POLDEK_OP_FRESHEN)
 	    || poldek_ts_issetf(ts, POLDEK_TS_UPGRADE)
@@ -71,6 +77,8 @@ int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc)
 
         struct pkg *dbpkg = n_array_nth(dbpkgs, 0);
         *cmprc = pkg_cmp_evr(pkg, dbpkg);
+        if (dbpkgp)
+            *dbpkgp = pkg_link(dbpkg);
     }
 
     n_array_free(dbpkgs);
@@ -78,15 +86,33 @@ int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc)
     return n;
 }
 
+/* RET: 1 when holding is on and a hold mask matches pkg */
+int i3_is_held(const struct poldek_ts *ts, struct pkg *pkg)
+{
+    struct pkgscore_s psc;
+    int i;
+
+    if (ts->hold_patterns == NULL || !ts->getop(ts, POLDEK_OP_HOLD))
+        return 0;
+
+    pkgscore_match_init(&psc, pkg);
+    for (i=0; i < n_array_size(ts->hold_patterns); i++)
+        if (pkgscore_match(&psc, n_array_nth(ts->hold_patterns, i)))
+            return 1;
+
+    return 0;
+}
+
 /* RET: 0 - not installable,  1 - installable,  -1 - something wrong */
 int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
                           int is_hand_marked)
 {
     int cmprc = 0, npkgs, installable = 1, freshen = 0, force;
+    struct pkg *dbpkg;
 
     freshen = ts->getop(ts, POLDEK_OP_FRESHEN);
     force = ts->getop(ts, POLDEK_OP_FORCE);
-    npkgs = i3_is_pkg_installed(ts, pkg, &cmprc);
+    npkgs = i3_is_pkg_installed(ts, pkg, &cmprc, &dbpkg);
 
     /* if (npkgs > 1 && is_multiple)
            *is_multiple = 1;  */
@@ -138,8 +164,19 @@ int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
             logn(LOGERR, _("%s: refusing to upgrade held package"),
                  pkg_id(pkg));
             installable = 0;
+
+        /* the upgrade replaces the only instance; of several, it keeps
+           all but one (handle_multiinsts()) */
+        } else if (installable > 0 && poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) &&
+                   npkgs == 1 && i3_is_held(ts, dbpkg)) {
+            logn(LOGERR, _("%s: refusing to upgrade held package"),
+                 pkg_id(dbpkg));
+            installable = 0;
         }
     }
+
+    if (dbpkg)
+        pkg_free(dbpkg);
 
     return installable;
 }
@@ -271,7 +308,7 @@ static void score_candidate(int indent, struct i3ctx *ictx,
     }
 
     int cmprc = 0;
-    if (i3_is_pkg_installed(ictx->ts, pkg, &cmprc) && cmprc > 0) {
+    if (i3_is_pkg_installed(ictx->ts, pkg, &cmprc, NULL) && cmprc > 0) {
         if (!iset_has_kind_of_pkg(ictx->unset, pkg)) {
             sc->upgrade = true; /* already installed and upgradeable - sweet */
         }
