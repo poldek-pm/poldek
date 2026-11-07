@@ -157,6 +157,7 @@ static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
 
 static int term_ts_confirm(void *foo, const struct poldek_ts *ts)
 {
+    const char *yes, *no, *no_help;
     char help[512];
 
     foo = foo;
@@ -171,19 +172,46 @@ static int term_ts_confirm(void *foo, const struct poldek_ts *ts)
                           NULL);
     }
 
-    if (!ts->getop(ts, POLDEK_OP_CONFIRM_INST))
+    /* a provider chosen here may be chosen again, confirmed or not */
+    if (!ts->getop(ts, POLDEK_OP_CONFIRM_INST) && !(ts->_iflags & TS_CHOSEN))
         return 1;
 
-    if (!ts->getop(ts, POLDEK_OP_PARTICLE))
-        return ask_yes_no(ts, _("Proceed?"), 1, _("install"),
-                          _("don't install"), NULL);
+    if (!ts->getop(ts, POLDEK_OP_PARTICLE)) {
+        yes = _("install");
+        no = _("don't install");
+        no_help = NULL;
 
-    n_assert(ts->_set_head);
-    n_snprintf(help, sizeof(help), _("skip the set of %s, go on with the next one"),
-               pkg_id(ts->_set_head));
+    } else {
+        n_assert(ts->_set_head);
+        n_snprintf(help, sizeof(help),
+                   _("skip the set of %s, go on with the next one"),
+                   pkg_id(ts->_set_head));
 
-    return ask_yes_no(ts, _("Proceed?"), 1, _("install this set"),
-                      _("skip it"), help);
+        yes = _("install this set");
+        no = _("skip it");
+        no_help = help;
+    }
+
+    if (!(ts->_iflags & TS_CHOSEN))
+        return ask_yes_no(ts, _("Proceed?"), 1, yes, no, no_help);
+
+    {
+        struct answer answers[] = {
+            { 'y', yes, NULL },
+            { 'n', no, no_help },
+            { 'r', _("choose again"),
+              _("forget the providers chosen and ask again") },
+            { 'q', _("abort"), abort_help(ts) },
+            { 0, NULL, NULL },
+        };
+
+        switch (ask(_("Proceed?"), answers, 'y')) {
+            case 'y': return 1;
+            case 'n': return 0;
+            case 'r': return POLDEK_ANSWER_REDO;
+            default:  return POLDEK_ANSWER_ABORT;
+        }
+    }
 }
 
 /* the letters of a page, n of them, as ranges: "a-p, r-z, 1-9, 0, A-C" */
@@ -500,6 +528,9 @@ int poldek__ts_confirm(struct poldek_ts *ts)
         return 1;
 
     answer = ts->ctx->ts_confirm_fn(ts->ctx->data_ts_confirm_fn, ts);
+    if (answer == POLDEK_ANSWER_REDO && ts->type != POLDEK_TS_UNINSTALL)
+        return answer;
+
     return answer >= 0 ? answer > 0 : aborted(ts);
 }
 
@@ -520,6 +551,10 @@ int poldek__choose_equiv(struct poldek_ts *ts,
 
     if (ts->ctx->choose_equiv_fn == NULL)
         return inthint;
+
+    /* ours asks on a terminal only */
+    if (ts->ctx->choose_equiv_fn == term_choose_equiv && isatty(STDIN_FILENO))
+        ts->_iflags |= TS_CHOSEN;
 
     answer = ts->ctx->choose_equiv_fn(ts->ctx->data_choose_equiv_fn,
                                       ts, pkg, capname, pkgs, inthint);

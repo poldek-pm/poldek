@@ -204,6 +204,24 @@ void i3pkg_register_candidates(struct i3pkg *i3pkg, const struct capreq *req,
 #endif
 
 
+static void icap_free(struct i3icap *icap)
+{
+    n_array_free(icap->candidates);
+    free(icap);
+}
+
+void i3_add_icap(struct i3ctx *ictx, const char *cap, tn_array *candidates,
+                 struct pkg *chosen, int on_terminal)
+{
+    struct i3icap *icap = n_malloc(sizeof(*icap) + strlen(cap) + 1);
+
+    icap->chosen = chosen;
+    icap->candidates = n_ref(candidates);
+    icap->on_terminal = on_terminal;
+    strcpy(icap->cap, cap);
+    n_array_push(ictx->icaps, icap);
+}
+
 void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
 {
     ictx->i3pkg_stack = n_array_new(32, (tn_fn_free)i3pkg_free, NULL);
@@ -228,6 +246,7 @@ void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
     ictx->abort = 0;
     ictx->skipped = 0;
     ictx->skipped_reqs = n_hash_new(8, NULL);
+    ictx->icaps = n_array_new(2, (tn_fn_free)icap_free, NULL);
 }
 
 void i3ctx_destroy(struct i3ctx *ictx)
@@ -246,6 +265,7 @@ void i3ctx_destroy(struct i3ctx *ictx)
     if (ictx->reqnames)
         n_hash_free(ictx->reqnames);
     n_hash_free(ictx->skipped_reqs);
+    n_array_free(ictx->icaps);
     memset(ictx, 0, sizeof(*ictx));
 }
 

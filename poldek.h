@@ -65,12 +65,14 @@ EXPORT struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
   positive number for yes and 0 for no, CHOOSEEQUIV_CB the index of the
   package chosen or POLDEK_ANSWER_SKIP for none of them (the set that needs
   one is not installed, the next ones are), CHOOSESUGGESTS_CB 1 (all), 0
-  (none) or 2 (those put into choices). Any of them may answer
-  POLDEK_ANSWER_ABORT: the command stops there and fails. Any other answer
-  aborts too.
+  (none) or 2 (those put into choices). TSCONFIRM_CB may answer
+  POLDEK_ANSWER_REDO for a set to install: its providers are chosen again.
+  Any of them may answer POLDEK_ANSWER_ABORT: the command stops there and
+  fails. Any other answer aborts too.
 */
 #define POLDEK_ANSWER_ABORT  (-1)
 #define POLDEK_ANSWER_SKIP   (-2)
+#define POLDEK_ANSWER_REDO   (-3)
 #define POLDEK_CONF_VFILEPROGRESS      27
 
 EXPORT int poldek_configure(struct poldek_ctx *ctx, int param, ...);

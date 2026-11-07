@@ -67,8 +67,9 @@ static int unmark_name_duplicates(struct pkgmark_set *pms, tn_array *pkgs)
 }
 
 static
-int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
+int prepare_icap(struct i3ctx *ictx, const char *capname, tn_array *pkgs)
 {
+    struct poldek_ts *ts = ictx->ts;
     int i, found = 0;
     tn_array *dbpkgs = NULL;
     struct capreq *cap;
@@ -83,6 +84,7 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
             return 0;
 
         if (i3_is_user_choosable_equiv(ts) && n_array_size(pkgs) > 1) {
+            ts->_iflags &= ~TS_CHOSEN;
             pkg = i3_choose_equiv(ts, NULL, cap, pkgs, NULL);
             if (pkg == NULL) {
                 if (poldek__ts_cancelled(ts)) /* q */
@@ -91,6 +93,7 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
                     msgn(0, _("\"%s\" left out"), capname);
                 goto l_end;
             }
+            i3_add_icap(ictx, capname, pkgs, pkg, ts->_iflags & TS_CHOSEN);
         }
 
         if (pkg == NULL) {
@@ -165,8 +168,9 @@ l_end:
 }
 
 /* handles  --caplookup */
-static int i3_prepare_icaps(struct poldek_ts *ts)
+static int i3_prepare_icaps(struct i3ctx *ictx)
 {
+    struct poldek_ts *ts = ictx->ts;
     tn_array *keys;
     tn_hash *icaps;
     int i, rc = 1;
@@ -177,7 +181,7 @@ static int i3_prepare_icaps(struct poldek_ts *ts)
         const char *cap = n_array_nth(keys, i);
         tn_array *pkgs = n_hash_get(icaps, cap);
 
-        if (prepare_icap(ts, cap, pkgs) == -1) {
+        if (prepare_icap(ictx, cap, pkgs) == -1) {
             rc = -1;
             break;
         }
@@ -189,15 +193,16 @@ static int i3_prepare_icaps(struct poldek_ts *ts)
 }
 
 /* -1 -> error, 0 - ok, but don't continue, 1 - ok and go */
-int i3_pre_ts_install(struct poldek_ts *ts, tn_array **pkgs)
+int i3_pre_ts_install(struct i3ctx *ictx, tn_array **pkgs)
 {
+    struct poldek_ts *ts = ictx->ts;
     int i;
 
     tracef(0, "start");
     n_assert(*pkgs == NULL);
     n_assert(ts->type == POLDEK_TS_INSTALL);
 
-    if (i3_prepare_icaps(ts) < 0) /* the user aborted */
+    if (i3_prepare_icaps(ictx) < 0) /* the user aborted */
         return -1;
 
     if (unmark_name_duplicates(ts->pms, ts->ctx->ps->pkgs) == 0) {

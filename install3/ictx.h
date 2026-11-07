@@ -113,7 +113,19 @@ struct i3ctx {
     int                skipped;     /* the set is skipped (n at a choice) */
     tn_hash           *skipped_reqs; /* left without a provider, by the
                                         whole command */
+    tn_array          *icaps;       /* struct i3icap, the whole command's */
 };
+
+/* a provider chosen at a question for a capability asked for (--caplookup) */
+struct i3icap {
+    struct pkg  *chosen;        /* NULL once left out */
+    tn_array    *candidates;
+    int         on_terminal;    /* chosen there */
+    char        cap[0];
+};
+
+void i3_add_icap(struct i3ctx *ictx, const char *cap, tn_array *candidates,
+                 struct pkg *chosen, int on_terminal);
 
 
 void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts);

@@ -150,6 +150,7 @@ testProviderPageKeys()
     answer "Which one do you want to install" '\033[6~'
     answer "page up" '\033[5~'
     answer "page down" a
+    answer "Proceed?" y
     on_pty -i a
 
     assertEquals "exit code" "0" "$PTY_RC"
@@ -214,6 +215,7 @@ testProviderPageWithinLetters()
     PTY_ROWS=80
     answer "Which one do you want to install" ' '
     answer "Which one do you want to install" a
+    answer "Proceed?" y
     on_pty -i a
 
     assertEquals "exit code" "0" "$PTY_RC"
@@ -267,6 +269,7 @@ testProviderChoiceEchoed()
 
     choice_setup
     answer "Which one do you want to install" b
+    answer "Proceed?" y
     on_pty -i a
 
     assertEquals "exit code" "0" "$PTY_RC"
@@ -512,6 +515,68 @@ testCapabilityChoiceNLeavesItOut()
     assertEquals "exit code" "0" "$PTY_RC"
     assertEquals "installed" "b" "$(installed)"
     grep -q '^"x" left out$' $PTY_OUT || fail "no message"
+}
+
+# A set whose provider was chosen on the terminal ends with Proceed?, which
+# offers r to choose again: the first answer is forgotten, so neither that
+# provider nor what it needs is installed, nor is removed what it obsoletes
+# (on upgrade)
+testChooseAgain()
+{
+    skip_if_rpm_testing_off && return
+
+    rpm_build_installed c
+    build a -r x; build p1 -p x -r dep1 -o c; build p2 -p x; build dep1
+    answer "Which one do you want to install" a
+    answer "Proceed?" r
+    answer "Which one do you want to install" b
+    answer "Proceed?" y
+    on_pty -u a
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "a c p2" "$(installed)"
+}
+
+# ... the provider of a capability asked for too
+testChooseAgainCapability()
+{
+    skip_if_rpm_testing_off && return
+
+    build alpha 1-1 -p x; build omega 9-1 -p x; build b
+    answer "Which one do you want to install" a
+    answer "Proceed?" r
+    answer "Which one do you want to install" b
+    answer "Proceed?" y
+    on_pty --caplookup -i x b
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "b omega" "$(installed)"
+}
+
+# ... a provider chosen for two capabilities stays while one of them keeps
+# it, also through another r
+testChooseAgainSharedProvider()
+{
+    skip_if_rpm_testing_off && return
+
+    local second
+
+    build alpha -p x -p y; build xonly -p x; build yonly -p y
+    answer "Which one do you want to install" a
+    answer "Which one do you want to install" a
+    answer "Proceed?" r
+    answer "Which one do you want to install" a
+    answer "Which one do you want to install" b
+    answer "Proceed?" r
+    answer "Which one do you want to install" '\r'
+    answer "Which one do you want to install" '\r'
+    answer "Proceed?" y
+    on_pty --caplookup -i x y
+
+    # the capabilities are asked about in no set order
+    second=$(sed -n 's/^Required "\(.\)" is provided .*/\1/p' $PTY_OUT | sed -n 2p)
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "alpha ${second}only" "$(installed)"
 }
 
 # A front end answering the questions itself keeps what its answers meant:

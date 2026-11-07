@@ -199,6 +199,14 @@ msgid "skip the set of %s, go on with the next one"
 msgstr "pomiń zestaw z pakietem %s i przejdź do następnego"
 
 #: ask.c
+msgid "choose again"
+msgstr "wybierz ponownie"
+
+#: ask.c
+msgid "forget the providers chosen and ask again"
+msgstr "zapomnij o wybranych dostawcach i zapytaj ponownie"
+
+#: ask.c
 msgid "install this set"
 msgstr "zainstaluj ten zestaw"
 
