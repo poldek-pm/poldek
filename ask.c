@@ -121,8 +121,8 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
     if (lines < 6)
         lines = 6;
 
-    if (lines > (int)sizeof(choice))
-        lines = sizeof(choice);
+    if (lines > (int)sizeof(choice) - 1)
+        lines = sizeof(choice) - 1;
 
     if (hint >= lines)     /* over ascii */
         j = (hint/lines)*lines; // first show page with hint
@@ -155,12 +155,9 @@ onemoretime:
 	*p++ = '-';
 	*p++ = 0x7f; // backspace
     }
-    for (i = 0; i+j < n_array_size(candidates); i++) {
+    for (i = 0; i < lines && i+j < n_array_size(candidates); i++) {
         msgn(-1, "%c) %s", choice[i], pkg_id(n_array_nth(candidates, i+j)));
         *p++ = choice[i];
-
-        if (i > lines - 1)
-            break;
     }
     if (i+j < n_array_size(candidates)) {
 	msgn(-1, _("+/space/tab/pgdown) page down"));
@@ -201,7 +198,7 @@ onemoretime:
         return -1;
 
     a = strchr(choice, a) - choice;
-    if (a >= 0 && a <= i)
+    if (a >= 0 && a < i)
         return a + j;
 
     return hint;

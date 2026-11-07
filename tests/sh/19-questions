@@ -21,6 +21,7 @@ setUp() {
     POLDEK_ASK=$(echo "$POLDEK_INSTALL" | sed 's/ --noask//')
     PTY_ANSWERS=$TMPDIR/pty.answers
     rm -f $PTY_ANSWERS
+    PTY_ROWS=
 }
 
 tearDown() {
@@ -62,14 +63,15 @@ wait_for() {
 }
 
 # on_pty ARGS: poldek ARGS on a terminal, typing the answers given; its
-# output in $PTY_OUT (\r dropped), exit code in $PTY_RC
+# output in $PTY_OUT (\r dropped), exit code in $PTY_RC. The terminal is
+# $PTY_ROWS lines high, if set.
 on_pty() {
     local fifo=$TMPDIR/pty.in pattern key
 
     PTY_OUT=$TMPDIR/pty.out
     rm -f $fifo $PTY_OUT
     mkfifo $fifo || fail "mkfifo failed"
-    timeout 60 script -qfec "env -u POLDEK_TESTING TERM=dumb LC_ALL=C $POLDEK_ASK $*; echo \"[exit \$?]\"" \
+    timeout 60 script -qfec "${PTY_ROWS:+stty rows $PTY_ROWS; }env -u POLDEK_TESTING TERM=dumb LC_ALL=C $POLDEK_ASK $*; echo \"[exit \$?]\"" \
             /dev/null <$fifo >$PTY_OUT 2>&1 &
     pty_pid=$!
     exec 7>$fifo                # held open: an EOF would end script's input
@@ -119,6 +121,29 @@ testSuggestionEnterIsNo()
 
     assertEquals "exit code" "0" "$PTY_RC"
     assertEquals "installed" "e s2" "$(installed)"
+}
+
+# A page of providers holds as many as there are letters: on a terminal
+# taller than that the letters' terminating NUL was taken for one, after
+# which neither paging nor aborting worked
+testProviderPageWithinLetters()
+{
+    skip_if_rpm_testing_off && return
+
+    local i chosen
+
+    build a -r x
+    for i in $(seq -w 1 62); do
+        build p$i -p x
+    done
+    PTY_ROWS=80
+    answer "Which one do you want to install" ' '
+    answer "Which one do you want to install" a
+    on_pty -i a
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    chosen=$(sed -n 's/^a) \(p[0-9]*\)-1-1\.noarch$/\1/p' $PTY_OUT | tail -n 1)
+    assertEquals "installed" "a $chosen" "$(installed)"
 }
 
 . ./sh/lib/shunit2
