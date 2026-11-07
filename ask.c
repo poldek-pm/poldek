@@ -34,11 +34,33 @@
 
 #define msg_ask(fmt, args...) poldek_log(LOGTTY|LOGINFO, fmt, ## args)
 
+/* Asks prompt and waits for one of keys, given in lower case and taken in
+   either; Enter gives defkey. Echoes the answer and returns it in lower case. */
+static int ask(const char *prompt, const char *keys, int defkey)
+{
+    char valid[32];
+    int i, n = 0, a;
+
+    for (i = 0; keys[i] && n < (int)sizeof(valid) - 3; i++) {
+        valid[n++] = keys[i];
+        valid[n++] = toupper(keys[i]);
+    }
+    valid[n++] = '\n';
+    valid[n] = '\0';
+
+    msg_ask("%s", prompt);
+
+    a = poldek_term_ask(STDIN_FILENO, valid, NULL);
+    a = (a == '\n') ? defkey : tolower(a);
+
+    msg_ask("_ %c\n", a);
+    return a;
+}
+
 static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
                         const char *question)
 {
-    const char *yn = "[Y/n]";
-    int a;
+    char prompt[4096];
 
     foo = foo;
     ts = ts;
@@ -46,22 +68,10 @@ static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
     if (!isatty(STDIN_FILENO))
         return hint;
 
-    if (hint == 0)    /* no */
-        yn = "[N/y]";
+    n_snprintf(prompt, sizeof(prompt), "%s %s", question,
+               hint ? "[Y/n]" : "[N/y]");
 
-    msg_ask("%s %s", question, yn);
-
-    a = poldek_term_ask(STDIN_FILENO, "YyNn\n", NULL);
-    a = toupper(a);
-    switch(a) {
-        case 'Y': a = 1; break;
-        case 'N': a = 0; break;
-        case '\n': a = hint; break;
-        default:
-            n_assert(0);
-    }
-    msg_ask("_ %c\n", a ? 'y' : 'n');
-    return a;
+    return ask(prompt, "yn", hint ? 'y' : 'n') == 'y';
 }
 
 static int term_ts_confirm(void *foo, const struct poldek_ts *ts)
@@ -184,31 +194,25 @@ onemoretime:
     return hint;
 }
 
-/* Y/n question of the suggests dialog; returns 'Y', 'N', 'R' (redo) or 'Q' */
+/* Y/n question of the suggests dialog; returns 'y', 'n', 'r' (redo) or 'q' */
 static int term_confirm_suggest(const char *question)
 {
-    int a;
+    char prompt[512];
 
     if (!isatty(STDIN_FILENO))
-        return 'Y';
+        return 'y';
 
-    msg_ask("%s [Y/n/r/Q]", question);
-
-    a = toupper(poldek_term_ask(STDIN_FILENO, "YyNnRrQq\n", NULL));
-    if (a == '\n')
-        a = 'Y';
-
-    msg_ask("_ %c\n", tolower(a));
-    return a;
+    n_snprintf(prompt, sizeof(prompt), "%s [Y/n/r/Q]", question);
+    return ask(prompt, "ynrq", 'y');
 }
 
 static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
                                 const struct pkg *pkg, tn_array *caps,
                                 tn_array *choices, int hint)
 {
-    char message[512], *question;
+    char message[512], prompt[512], *question;
     char *yns = "N/y/s/r/Q", *yn = "N/y/r/Q";
-    int i, a, ac;
+    int i, n, a;
 
     foo = foo; ts = ts;
 
@@ -237,35 +241,29 @@ onemoretime:
     }
 
     if (n_array_size(caps) > 1) {
-        msg_ask("%s ", question);
-        msg_ask(_("(y - all, n - nothing, s - select some of, r - redo, "
-                  "Q - abort)? [%s]"), yns);
+        n = n_snprintf(prompt, sizeof(prompt), "%s ", question);
+        n_snprintf(&prompt[n], sizeof(prompt) - n,
+                   _("(y - all, n - nothing, s - select some of, r - redo, "
+                     "Q - abort)? [%s]"), yns);
 
-        a = poldek_term_ask(STDIN_FILENO, "YyNnSsRrQq\n", NULL);
+        a = ask(prompt, "ynsrq", hint ? 'y' : 'n');
     } else {
-        msg_ask("%s [%s]", question, yn);
+        n_snprintf(prompt, sizeof(prompt), "%s [%s]", question, yn);
 
-        a = poldek_term_ask(STDIN_FILENO, "YyNnRrQq\n", NULL);
+        a = ask(prompt, "ynrq", hint ? 'y' : 'n');
     }
 
-    a = toupper(a);
-    switch(a) {
-        case 'Y': a = 1; ac = 'y'; break;
-        case 'N': a = 0; ac = 'n'; break;
-        case 'S': a = 2; ac = 's'; break;
-        case 'R': ac = 'r'; break;
-        case 'Q': a = -1; ac = 'q'; break;
-        case '\n': a = hint; ac = hint ? 'y':'n'; break;
-        default:
-            a = 0;
-            ac = 'n';
-            n_assert(0);
-            break;
-    }
-    msg_ask("_ %c\n", ac);
-
-    if (ac == 'r')
+    if (a == 'r')
         goto onemoretime;
+
+    switch (a) {
+        case 'y': a = 1; break;
+        case 'n': a = 0; break;
+        case 's': a = 2; break;
+        case 'q': a = -1; break;
+        default:
+            n_assert(0);
+    }
 
     if (a == 2) {
         for (i=0; i < n_array_size(caps); i++) {
@@ -276,11 +274,11 @@ onemoretime:
             n_snprintf(q, sizeof(q), _("Try to install %s?"), capreq_stra(cap));
 
             sa = term_confirm_suggest(q);
-            if (sa == 'Q')
+            if (sa == 'q')
                 return -1;
-            if (sa == 'R')
+            if (sa == 'r')
                 goto onemoretime;
-            if (sa == 'Y')
+            if (sa == 'y')
                 n_array_push(choices, cap);
         }
     }
