@@ -351,6 +351,30 @@ START_TEST(test_http_redirect_control_bytes_refused)
 }
 END_TEST
 
+/* the progress label shows the URL decoded, where %1b is an ESC */
+START_TEST(test_http_label_control_bytes_escaped)
+{
+    char url[512];
+    int v = 1;
+
+    fail_if(http_port == 0);
+
+    vfile_configure(VFILE_CONF_VERBOSE, &v);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/label/%%1b%%5b31mRED%%1b%%5b0m",
+             server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    fail_if(strchr(logged(logged_info), '\x1b') != NULL, "%s", logged(logged_info));
+    fail_if(strstr(logged(logged_info), "\\x1b[31mRED\\x1b[0m") == NULL,
+            "%s", logged(logged_info));
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
+}
+END_TEST
+
 /* Through a proxy vfile sends the absolute request URL in the request line
    (vfffmod.c: vreq.uri = req->proxy_host ? req->url : req->uri).  An explicit
    port in the requested URL must survive vf_request_new(), otherwise the proxy
@@ -804,6 +828,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_stat_redirect_failed);
     tcase_add_test(tc_http, test_http_server_control_bytes_escaped);
     tcase_add_test(tc_http, test_http_redirect_control_bytes_refused);
+    tcase_add_test(tc_http, test_http_label_control_bytes_escaped);
     tcase_add_test(tc_http, test_http_auth_success);
     tcase_add_test(tc_http, test_http_auth_fail);
     tcase_add_test(tc_http, test_http_upgrade_redirect);

@@ -230,14 +230,18 @@ static int make_url_label(char *buf, size_t size,
         purl = vf_url_slim_s(url_unescaped, w);
     }
 
-    int n = n_snprintf(buf, size, "%s%s%s%s",
-                       counter ? counter : "",
-                       label ? label : "",
-                       label ? "::" : "",
-                       label ? n_basenam(url_unescaped) : purl);
+    char tmp[PATH_MAX];
+    n_snprintf(tmp, sizeof(tmp), "%s%s%s%s",
+               counter ? counter : "",
+               label ? label : "",
+               label ? "::" : "",
+               label ? n_basenam(url_unescaped) : purl);
 
     free(url_unescaped);
-    return n;
+
+    /* decoded, a valid URL may carry control characters (%1b) */
+    vf_escape_ctl(buf, size, tmp);
+    return strlen(buf);
 }
 
 int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,

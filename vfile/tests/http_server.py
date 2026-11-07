@@ -134,6 +134,16 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.close_connection = True
             return
 
+        # 4 KiB under any name, enough for the progress bar: /label/<name>
+        if path.startswith("/label/"):
+            body = b"x" * 4096
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         # HTTP->HTTPS upgrade redirect test (should be allowed)
         if path == "/http-upgrade":
             # Redirect HTTP to HTTPS (upgrade - should be allowed)
