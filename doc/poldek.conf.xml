@@ -403,7 +403,8 @@ and [filename]*-source.conf[/filename], file getters are declared in
 
   <option name="confirm removal" type="boolean" default="yes" op="CONFIRM_UNINST">
     <description>
-    Confirm packages removal.
+    Confirm packages removal. Without a terminal to ask on nothing is
+    removed and the command fails.
     </description>
   </option>
 

@@ -168,6 +168,13 @@ static int term_ts_confirm(void *foo, const struct poldek_ts *ts)
         if (!ts->getop(ts, POLDEK_OP_CONFIRM_UNINST))
             return 1;
 
+        /* no one to confirm it: removing nothing is a failure, not an n */
+        if (!isatty(STDIN_FILENO)) {
+            logn(LOGERR, _("nothing removed: no terminal to confirm the removal "
+                           "on (--noask removes without asking)"));
+            return POLDEK_ANSWER_ABORT;
+        }
+
         return ask_yes_no(ts, _("Proceed?"), 0, _("remove"), _("don't remove"),
                           NULL);
     }

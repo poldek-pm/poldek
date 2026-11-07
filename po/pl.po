@@ -92,6 +92,14 @@ msgid "install none of them, leave \"%s\" out"
 msgstr "nie instaluj żadnego, pomiń \"%s\""
 
 #: ask.c
+msgid ""
+"nothing removed: no terminal to confirm the removal on (--noask removes "
+"without asking)"
+msgstr ""
+"nic nie usunięto: brak terminala do potwierdzenia usunięcia (--noask usuwa "
+"bez pytania)"
+
+#: ask.c
 msgid "skip this set"
 msgstr "pomiń ten zestaw"
 
