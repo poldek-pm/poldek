@@ -478,6 +478,23 @@ START_TEST(test_http_cut_body_fails)
 }
 END_TEST
 
+/* a header may have an empty value (RFC 9110, 5.5) */
+START_TEST(test_http_empty_header_value)
+{
+    char url[512], dest[PATH_MAX];
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/empty-header/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest))
+        ck_abort_msg("path truncated");
+    fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
+}
+END_TEST
+
 START_TEST(test_http_auth_success)
 {
     char url[512];
@@ -701,6 +718,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_keepalive_dropped);
     tcase_add_test(tc_http, test_http_keepalive_reset);
     tcase_add_test(tc_http, test_http_cut_body_fails);
+    tcase_add_test(tc_http, test_http_empty_header_value);
     suite_add_tcase(s, tc_http);
 
     /* HTTPS tests */

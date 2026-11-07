@@ -614,11 +614,6 @@ static int http_resp_parse(struct http_resp *resp)
         while (*p && isspace(*p))
             p++;
 
-        if (*p == '\0') {
-            is_err = 1;
-            break;
-        }
-
         val = q = p;
 
         if (!n_hash_exists(resp->hdr, nam))
