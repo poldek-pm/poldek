@@ -101,7 +101,8 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         # Status code: /status/<code>, /status/<code>/noreason without a
         # reason phrase, /status/<code>/nospace without the space before it
-        # either and with "ok\n" for a body
+        # either and with "ok\n" for a body, /status/<code>/codeinreason
+        # with a reason phrase that starts with the code
         if path.startswith("/status/"):
             code, _, rest = path[8:].partition("/")
             try:
@@ -117,6 +118,8 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 return
             if rest == "noreason":
                 self.send_response_only(code, "")
+            elif rest == "codeinreason":
+                self.send_response_only(code, "%d %s" % (code, HTTPStatus(code).phrase))
             else:
                 self.send_response(code)
             self.end_headers()

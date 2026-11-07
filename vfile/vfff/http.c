@@ -570,10 +570,14 @@ static int http_resp_parse(struct http_resp *resp)
                 resp->http_ver = http_ver;
         }
 
-        if (i == 2) {
-            const char *p = strstr(*tl, *status_tl);
-            if (p == NULL)      /* should not happen */
-                p = *status_tl;
+        if (i == 2) {           /* the reason: the rest of the line */
+            const char *p = *tl + strspn(*tl, " \t");
+            int n;
+
+            for (n = 0; n < 2; n++) {   /* past the version and the code */
+                p += strcspn(p, " \t");
+                p += strspn(p, " \t");
+            }
 
             resp->msg = n_strdup(p);
             break;
