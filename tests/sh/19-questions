@@ -1,0 +1,642 @@
+#!/bin/sh
+
+# poldek's questions on a terminal: keys typed into a pty (script(1)) once the
+# question shows, outside testing mode (it answers the provider choice
+# itself), with a real rpm database (--root and --justdb, as in 08-rpm).
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/rpm-setup
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+FRONT_END_SO="$PWD/.libs/front_end.so"
+
+setUp() {
+    is_rpm_testing_off && return
+
+    rpm_up
+    # provide /bin/sh auto requirement
+    rpm_build_installed sh -p /bin/sh
+    POLDEK_ASK=$(echo "$POLDEK_INSTALL" | sed 's/ --noask//')
+    PTY_ANSWERS=$TMPDIR/pty.answers
+    rm -f $PTY_ANSWERS
+    PTY_POLDEK=
+    PTY_NOHUP=
+    PTY_ROWS=
+}
+
+tearDown() {
+    is_rpm_testing_off && return
+    rpm_down
+}
+
+build() {
+    build_package $REPO "$@"
+}
+
+# names of the installed packages but sh and keys, sorted, space separated
+installed() {
+    $RPM -qa --qf '%{NAME}\n' | grep -v '^sh$\|^gpg-pubkey$' | sort | paste -sd' ' -
+}
+
+# answer PATTERN KEY: on_pty types KEY (a printf format) once PATTERN shows
+# after what the answer before it waited for; KEY HANGUP takes the terminal
+# away instead
+answer() {
+    printf '%s\t%s\n' "$1" "$2" >> $PTY_ANSWERS
+}
+
+# wait_for PATTERN: until PATTERN shows in $PTY_OUT past byte $pty_seen, which
+# then moves past it; 1 if poldek ended or 30 s passed first
+wait_for() {
+    local i=0 off
+
+    while [ $i -lt 300 ]; do
+        off=$(tail -c +$((pty_seen + 1)) $PTY_OUT | grep -aboF -- "$1" | head -1 | cut -d: -f1)
+        if [ -n "$off" ]; then
+            pty_seen=$((pty_seen + off + ${#1}))
+            return 0
+        fi
+        kill -0 $pty_pid 2>/dev/null || return 1
+        sleep 0.1
+        i=$((i + 1))
+    done
+    return 1
+}
+
+# on_pty ARGS: poldek ARGS on a terminal, typing the answers given; its
+# output in $PTY_OUT (\r dropped), exit code in $PTY_RC. poldek is
+# $POLDEK_ASK or, if set, $PTY_POLDEK; with $PTY_NOHUP set it ignores SIGHUP,
+# so it outlives its terminal. The terminal is $PTY_ROWS lines high, if set.
+on_pty() {
+    local fifo=$TMPDIR/pty.in rcfile=$TMPDIR/pty.rc pattern key i=0
+
+    PTY_OUT=$TMPDIR/pty.out
+    rm -f $fifo $PTY_OUT $rcfile
+    mkfifo $fifo || fail "mkfifo failed"
+    timeout 60 script -qfec "${PTY_NOHUP:+trap '' HUP; }${PTY_ROWS:+stty rows $PTY_ROWS; }env -u POLDEK_TESTING TERM=dumb LC_ALL=C ${PTY_POLDEK:-$POLDEK_ASK} $*; rc=\$?; echo \$rc > $rcfile; echo \"[exit \$rc]\"" \
+            /dev/null <$fifo >$PTY_OUT 2>&1 &
+    pty_pid=$!
+    exec 7>$fifo                # held open: an EOF would end script's input
+    pty_seen=0
+
+    if [ -f $PTY_ANSWERS ]; then
+        while IFS='	' read -r pattern key; do
+            wait_for "$pattern" || { fail "\"$pattern\" did not show"; break; }
+            if [ "$key" = HANGUP ]; then
+                pkill -KILL -P $pty_pid    # script, holding the terminal
+            else
+                printf "$key" >&7
+            fi
+        done < $PTY_ANSWERS
+    fi
+
+    wait $pty_pid
+    exec 7>&-
+    while [ ! -s $rcfile ] && [ $i -lt 300 ]; do    # poldek may outlive script
+        sleep 0.1
+        i=$((i + 1))
+    done
+    tr -d '\r' < $PTY_OUT > $PTY_OUT.tmp && mv $PTY_OUT.tmp $PTY_OUT
+    PTY_RC=$(cat $rcfile 2>/dev/null)
+    is_verbose_mode && cat $PTY_OUT
+}
+
+# A key typed as soon as the question shows answers it: the terminal is put
+# into raw mode, which drops what was typed earlier, before the question is
+# printed, not after.
+testKeyTypedAsSoonAsAskedAnswers()
+{
+    skip_if_rpm_testing_off && return
+
+    build c
+    answer "Proceed?" n
+    on_pty --ask -i c
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "c installed" "" "$(installed)"
+    grep -q "Proceed?.* n$" $PTY_OUT || fail "no answer n echoed"
+}
+
+# A key typed right after Esc answers the question: Esc took it as the
+# rest of an escape sequence
+testKeyAfterEscAnswers()
+{
+    skip_if_rpm_testing_off && return
+
+    build c; build d
+    answer "Proceed?" '\033n'
+    answer "Proceed?" y
+    on_pty --ask -i c d
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "d" "$(installed)"
+}
+
+# PgDn and PgUp, escape sequences, turn the pages of the provider choice
+testProviderPageKeys()
+{
+    skip_if_rpm_testing_off && return
+
+    local i
+
+    build a -r x
+    for i in 1 2 3 4 5 6 7 8; do
+        build p$i -p x
+    done
+    PTY_ROWS=12
+    answer "Which one do you want to install" '\033[6~'
+    answer "page up" '\033[5~'
+    answer "page down" a
+    answer "Proceed?" y
+    on_pty -i a
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "a p1" "$(installed)"
+}
+
+# Enter at a single suggestion takes the dialog's default, as Enter at the
+# list does: none of them.
+testSuggestionEnterIsNo()
+{
+    skip_if_rpm_testing_off && return
+
+    build s1; build s2; build e -s s1 -s s2
+    answer "Try to install them?" s
+    answer "Try to install s1?" '\r'
+    answer "Try to install s2?" y
+    on_pty -i e
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "e s2" "$(installed)"
+}
+
+# fe_run [VAR=VALUE...] ARGS: poldek ARGS with questions answered by the
+# preloaded front end (tests/front_end.c), as VAR say; output in $FE_OUT, exit
+# code in $FE_RC
+fe_run() {
+    FE_OUT=$TMPDIR/fe.out
+    env -u POLDEK_TESTING LD_PRELOAD=$FRONT_END_SO LC_ALL=C "$@" > $FE_OUT 2>&1
+    FE_RC=$?
+    is_verbose_mode && cat $FE_OUT
+}
+
+# signed_poldek: poldek on the source signkey_test_prepare signed, with the
+# options of $POLDEK_INSTALL
+signed_poldek() {
+    local conf=$TMPDIR/signkey.conf
+
+    cat > $conf <<EOF
+[source]
+name = signed
+type = dir
+path = $REPO
+signed = yes
+signkey = $SIGNKEY_TEST_KEY
+EOF
+    echo "$POLDEK --conf $conf --cachedir $CACHEDIR --root $DESTINATION_REPO --justdb --nodeps"
+}
+
+# A page of providers holds as many as there are letters: on a terminal
+# taller than that the letters' terminating NUL was taken for one, after
+# which neither paging nor aborting worked
+testProviderPageWithinLetters()
+{
+    skip_if_rpm_testing_off && return
+
+    local i chosen
+
+    build a -r x
+    for i in $(seq -w 1 62); do
+        build p$i -p x
+    done
+    PTY_ROWS=80
+    answer "Which one do you want to install" ' '
+    answer "Which one do you want to install" a
+    answer "Proceed?" y
+    on_pty -i a
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    grep -q "(a-m, o-p, r-z, 1-9, 0, A-M, O-P, R-Z - that package, " $PTY_OUT ||
+        fail "letters of the first page not named"
+    chosen=$(sed -n 's/^a) \(p[0-9]*\)-1-1\.noarch$/\1/p' $PTY_OUT | tail -n 1)
+    assertEquals "installed" "a $chosen" "$(installed)"
+}
+
+# Every question names what its keys do; ? explains them at more length,
+# naming the set and what q leaves behind, and asks again
+testHelpExplainsAnswers()
+{
+    skip_if_rpm_testing_off && return
+
+    build c; build d
+    answer "Proceed?" '?'
+    answer "Proceed?" n
+    answer "Proceed?" y
+    on_pty --ask -i c d
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "d" "$(installed)"
+    grep -q "^Proceed? (y - install this set, n - skip it, q - abort, ? - help) \[Y/n/q/?\]" $PTY_OUT ||
+        fail "keys not named"
+    grep -q "^  n - skip the set of c-1-1.noarch, go on with the next one$" $PTY_OUT ||
+        fail "no help for n"
+    grep -q "^  q - abort this command; sets installed before stay installed$" $PTY_OUT ||
+        fail "no help for q"
+}
+
+# A key that is no answer says so, instead of being ignored
+testUnknownKeyHints()
+{
+    skip_if_rpm_testing_off && return
+
+    build c
+    answer "Proceed?" x
+    answer "Proceed?" n
+    on_pty --ask -i c
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "" "$(installed)"
+    grep -q "^'x' is not an answer here; ? - help$" $PTY_OUT || fail "no hint"
+}
+
+# The provider chosen is echoed with its letter
+testProviderChoiceEchoed()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "Which one do you want to install" b
+    answer "Proceed?" y
+    on_pty -i a
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "a omega" "$(installed)"
+    grep -q "? - help) b) omega-9-1.noarch$" $PTY_OUT || fail "choice not echoed"
+}
+
+# a requires x, which alpha and omega provide; b requires nothing
+choice_setup() {
+    build a -r x; build alpha 1-1 -p x; build omega 9-1 -p x; build b
+}
+
+# assert_aborted: poldek stopped at q, said so and failed
+assert_aborted() {
+    assertEquals "exit code" "1" "$PTY_RC"
+    grep -q "Aborted" $PTY_OUT || fail "no Aborted"
+}
+
+# q at a provider choice stops the command: the sets after it are not
+# installed
+testProviderChoiceQAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "Which one do you want to install" q
+    on_pty -i a b
+
+    assert_aborted
+    assertEquals "installed" "" "$(installed)"
+}
+
+# q at Proceed? stops the command, unlike n, which skips the set
+testProceedQAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    build c; build d
+    answer "Proceed?" q
+    on_pty --ask -i c d
+
+    assert_aborted
+    assertEquals "installed" "" "$(installed)"
+}
+
+# ^C at a question stops the command, as q does
+testCtrlCAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    build c; build d
+    answer "Proceed?" '\003'
+    on_pty --ask -i c d
+
+    assert_aborted
+    assertEquals "installed" "" "$(installed)"
+}
+
+# A question whose terminal went away stops the command too: its default
+# answer here would install
+testLostTerminalAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    build c
+    PTY_NOHUP=1
+    answer "Proceed?" HANGUP
+    on_pty --ask -i c
+
+    assertEquals "exit code" "1" "$PTY_RC"
+    assertEquals "installed" "" "$(installed)"
+}
+
+testRemovalQAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    rpm_build_installed c
+    answer "Proceed?" q
+    on_pty -e c
+
+    assert_aborted
+    assertEquals "installed" "c" "$(installed)"
+}
+
+# Q, still taken for q, at the choice of a requested capability's provider
+# fails the command too
+testCapabilityChoiceQAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    build alpha 1-1 -p x; build omega 9-1 -p x; build b
+    answer "Which one do you want to install" Q
+    on_pty --caplookup -i x b
+
+    assert_aborted
+    assertEquals "installed" "" "$(installed)"
+}
+
+# q at a question rpm's side asks, here whether to import a signing key,
+# stops the sets after it too
+testKeyImportQAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    build z
+    PTY_POLDEK=$(signed_poldek)
+    answer "Import into rpm keyring?" q
+    on_pty -i poldek-signkey-test z
+
+    assert_aborted
+    assertEquals "installed" "" "$(installed)"
+    if $RPM -q gpg-pubkey >/dev/null 2>&1; then
+        fail "key imported"
+    fi
+}
+
+# ... at the first of two keys one set needs too: the second is not asked
+# about
+testKeyImportQAbortsBeforeSecondKey()
+{
+    skip_if_rpm_testing_off && return
+
+    local repo2=$TMPDIR/repo2
+
+    signkey_test_prepare
+    rm -rf $repo2 && mkdir -p $repo2
+    build_package $repo2 z
+    rpmsign --addsign --define "_gpg_name test@poldek.invalid" \
+        $repo2/z-1-1.noarch.rpm >/dev/null 2>&1 || fail "rpmsign failed"
+    cp $SIGNKEY_TEST_KEY $TMPDIR/key2.asc
+    PTY_POLDEK=$(signed_poldek)
+    cat >> $TMPDIR/signkey.conf <<EOF
+[source]
+name = signed2
+type = dir
+path = $repo2
+signed = yes
+signkey = $TMPDIR/key2.asc
+EOF
+    answer "Import into rpm keyring?" q
+    on_pty -Oparticle_install=no -i poldek-signkey-test z
+
+    assert_aborted
+    assertEquals "questions" "1" "$(grep -c 'Import into rpm keyring?' $PTY_OUT)"
+    assertEquals "installed" "" "$(installed)"
+}
+
+# n at a provider choice installs none of them: the set that needs one is
+# skipped, the next ones go on, and the command succeeds
+testProviderChoiceNSkipsSet()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "Which one do you want to install" n
+    on_pty -i a b
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "b" "$(installed)"
+    grep -q '^a-1-1.noarch: "x" left unresolved, set skipped$' $PTY_OUT ||
+        fail "no message"
+}
+
+# n's help names the set it skips by the package asked for, not by the one
+# that needs the provider
+testProviderChoiceHelpNamesSet()
+{
+    skip_if_rpm_testing_off && return
+
+    build root -r dep; build dep -r x; build alpha -p x; build omega -p x
+    build b
+    answer "Which one do you want to install" '?'
+    answer "Which one do you want to install" n
+    on_pty -i root b
+
+    assertEquals "installed" "b" "$(installed)"
+    grep -q '^  n - install none of them, skip the set of root-1-1.noarch; later sets that need "x" are skipped too$' $PTY_OUT ||
+        fail "set not named"
+}
+
+# A requirement skipped is not asked about again: a later set that needs it
+# is skipped too
+testSkippedRequirementRemembered()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    build c -r x
+    answer "Which one do you want to install" n
+    on_pty -i a b c
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "b" "$(installed)"
+    assertEquals "questions" "1" "$(grep -c 'Which one do you want to install' $PTY_OUT)"
+    grep -q '^c-1-1.noarch: "x" skipped earlier, set skipped$' $PTY_OUT ||
+        fail "no message"
+}
+
+# ... for one command: the next one in the shell asks again
+testSkipForgottenByNextShellCommand()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "> " 'install --justdb a\n'
+    answer "Which one do you want to install" n
+    answer "> " 'install --justdb a\n'
+    answer "Which one do you want to install" n
+    answer "> " 'quit\n'
+    on_pty --shell
+
+    assertEquals "questions" "2" "$(grep -c 'Which one do you want to install' $PTY_OUT)"
+    assertEquals "installed" "" "$(installed)"
+}
+
+# With particle install off all the packages are one set: n installs none
+testProviderChoiceNWithoutParticleInstall()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    answer "Which one do you want to install" n
+    on_pty -Oparticle_install=no -i a b
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "" "$(installed)"
+    grep -q '^a-1-1.noarch: "x" left unresolved, nothing installed$' $PTY_OUT ||
+        fail "no message"
+}
+
+# n, N too, at the choice of a requested capability's provider leaves it
+# out
+testCapabilityChoiceNLeavesItOut()
+{
+    skip_if_rpm_testing_off && return
+
+    build alpha 1-1 -p x; build omega 9-1 -p x; build b
+    answer "Which one do you want to install" N
+    on_pty --caplookup -i x b
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "b" "$(installed)"
+    grep -q '^"x" left out$' $PTY_OUT || fail "no message"
+}
+
+# A set whose provider was chosen on the terminal ends with Proceed?, which
+# offers r to choose again: the first answer is forgotten, so neither that
+# provider nor what it needs is installed, nor is removed what it obsoletes
+# (on upgrade)
+testChooseAgain()
+{
+    skip_if_rpm_testing_off && return
+
+    rpm_build_installed c
+    build a -r x; build p1 -p x -r dep1 -o c; build p2 -p x; build dep1
+    answer "Which one do you want to install" a
+    answer "Proceed?" r
+    answer "Which one do you want to install" b
+    answer "Proceed?" y
+    on_pty -u a
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "a c p2" "$(installed)"
+}
+
+# ... the provider of a capability asked for too
+testChooseAgainCapability()
+{
+    skip_if_rpm_testing_off && return
+
+    build alpha 1-1 -p x; build omega 9-1 -p x; build b
+    answer "Which one do you want to install" a
+    answer "Proceed?" r
+    answer "Which one do you want to install" b
+    answer "Proceed?" y
+    on_pty --caplookup -i x b
+
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "b omega" "$(installed)"
+}
+
+# ... a provider chosen for two capabilities stays while one of them keeps
+# it, also through another r
+testChooseAgainSharedProvider()
+{
+    skip_if_rpm_testing_off && return
+
+    local second
+
+    build alpha -p x -p y; build xonly -p x; build yonly -p y
+    answer "Which one do you want to install" a
+    answer "Which one do you want to install" a
+    answer "Proceed?" r
+    answer "Which one do you want to install" a
+    answer "Which one do you want to install" b
+    answer "Proceed?" r
+    answer "Which one do you want to install" '\r'
+    answer "Which one do you want to install" '\r'
+    answer "Proceed?" y
+    on_pty --caplookup -i x y
+
+    # the capabilities are asked about in no set order
+    second=$(sed -n 's/^Required "\(.\)" is provided .*/\1/p' $PTY_OUT | sed -n 2p)
+    assertEquals "exit code" "0" "$PTY_RC"
+    assertEquals "installed" "alpha ${second}only" "$(installed)"
+}
+
+# A front end answering the questions itself keeps what its answers meant:
+# confirming a set with 0 skips it, the way PackageKit refuses a plan that
+# changed, 1 installs it
+testFrontEndConfirmsSet()
+{
+    skip_if_rpm_testing_off && return
+
+    build c; build d
+    fe_run ANSWER_TSCONFIRM=0 $POLDEK_ASK -i c d
+    assertEquals "exit code, 0" "0" "$FE_RC"
+    assertEquals "installed, 0" "" "$(installed)"
+
+    fe_run ANSWER_TSCONFIRM=1 $POLDEK_ASK -i c d
+    assertEquals "exit code, 1" "0" "$FE_RC"
+    assertEquals "installed, 1" "c d" "$(installed)"
+}
+
+# ... chooses a provider by its index, -2 none of them, -1 aborts, and so
+# does an index out of the list
+testFrontEndChoosesProvider()
+{
+    skip_if_rpm_testing_off && return
+
+    choice_setup
+    fe_run ANSWER_CHOOSE=-2 $POLDEK_ASK -i a b
+    assertEquals "exit code, -2" "0" "$FE_RC"
+    assertEquals "installed, -2" "b" "$(installed)"
+    $RPM -e --justdb b
+
+
+    fe_run ANSWER_CHOOSE=-1 $POLDEK_ASK -i a b
+    assertEquals "exit code, -1" "1" "$FE_RC"
+    assertEquals "installed, -1" "" "$(installed)"
+
+    fe_run ANSWER_CHOOSE=7 $POLDEK_ASK -i a b
+    assertEquals "exit code, 7" "1" "$FE_RC"
+    assertEquals "installed, 7" "" "$(installed)"
+
+    fe_run ANSWER_CHOOSE=1 $POLDEK_ASK -i a b
+    assertEquals "exit code, 1" "0" "$FE_RC"
+    assertEquals "installed, 1" "a b omega" "$(installed)"
+}
+
+# ... and answers rpm's side: 0 refuses a signing key, 1 imports it
+testFrontEndConfirmsKeyImport()
+{
+    skip_if_rpm_testing_off && return
+
+    signkey_test_prepare
+    local poldek=$(signed_poldek)
+
+    fe_run ANSWER_CONFIRM=0 $poldek -i poldek-signkey-test
+    assertEquals "exit code, 0" "1" "$FE_RC"
+    assertEquals "installed, 0" "" "$(installed)"
+
+    fe_run ANSWER_CONFIRM=1 $poldek -i poldek-signkey-test
+    assertEquals "exit code, 1" "0" "$FE_RC"
+    assertEquals "installed, 1" "poldek-signkey-test" "$(installed)"
+}
+
+. ./sh/lib/shunit2
