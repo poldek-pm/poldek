@@ -35,8 +35,20 @@
 
 #define msg_ask(fmt, args...) poldek_log(LOGTTY|LOGINFO, fmt, ## args)
 
+#define CTRL_C 0x03             /* a key, as the terminal is in raw mode */
+
+/* A key typed at a question; q for ^C and when the terminal is gone (a
+   read with SIGHUP ignored) */
+static int getkey(void)
+{
+    int a = poldek_term__getkey();
+
+    return a == CTRL_C || a == -1 ? 'q' : a;
+}
+
 /* Asks prompt and waits for one of keys, given in lower case and taken in
-   either; Enter gives defkey. Echoes the answer and returns it in lower case. */
+   either; Enter gives defkey, ^C q. Echoes the answer and returns it in
+   lower case. */
 static int ask(const char *prompt, const char *keys, int defkey)
 {
     char valid[32];
@@ -52,9 +64,9 @@ static int ask(const char *prompt, const char *keys, int defkey)
     poldek_term__ask_begin(STDIN_FILENO);
     msg_ask("%s", prompt);
 
+    n_assert(strchr(keys, 'q'));
     do {
-        if ((a = poldek_term__getkey()) == -1)
-            a = '\n';          /* the terminal is gone: the default answer */
+        a = getkey();
     } while (a == '\0' || strchr(valid, a) == NULL);
     poldek_term__ask_end();
 
@@ -179,8 +191,7 @@ onemoretime:
             pkg_id(n_array_nth(candidates, hint)));
 
     do {
-        if ((a = poldek_term__getkey()) == -1)
-            a = '\n';          /* the terminal is gone: the default answer */
+        a = getkey();
     } while (a == '\0' || strchr(validchrs, a) == NULL);
     msg_ask("_\n");
 

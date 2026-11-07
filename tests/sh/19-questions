@@ -23,6 +23,7 @@ setUp() {
     PTY_ANSWERS=$TMPDIR/pty.answers
     rm -f $PTY_ANSWERS
     PTY_POLDEK=
+    PTY_NOHUP=
     PTY_ROWS=
 }
 
@@ -41,7 +42,8 @@ installed() {
 }
 
 # answer PATTERN KEY: on_pty types KEY (a printf format) once PATTERN shows
-# after what the answer before it waited for
+# after what the answer before it waited for; KEY HANGUP takes the terminal
+# away instead
 answer() {
     printf '%s\t%s\n' "$1" "$2" >> $PTY_ANSWERS
 }
@@ -66,15 +68,15 @@ wait_for() {
 
 # on_pty ARGS: poldek ARGS on a terminal, typing the answers given; its
 # output in $PTY_OUT (\r dropped), exit code in $PTY_RC. poldek is
-# $POLDEK_ASK or, if set, $PTY_POLDEK. The terminal is $PTY_ROWS lines high,
-# if set.
+# $POLDEK_ASK or, if set, $PTY_POLDEK; with $PTY_NOHUP set it ignores SIGHUP,
+# so it outlives its terminal. The terminal is $PTY_ROWS lines high, if set.
 on_pty() {
-    local fifo=$TMPDIR/pty.in pattern key
+    local fifo=$TMPDIR/pty.in rcfile=$TMPDIR/pty.rc pattern key i=0
 
     PTY_OUT=$TMPDIR/pty.out
-    rm -f $fifo $PTY_OUT
+    rm -f $fifo $PTY_OUT $rcfile
     mkfifo $fifo || fail "mkfifo failed"
-    timeout 60 script -qfec "${PTY_ROWS:+stty rows $PTY_ROWS; }env -u POLDEK_TESTING TERM=dumb LC_ALL=C ${PTY_POLDEK:-$POLDEK_ASK} $*; echo \"[exit \$?]\"" \
+    timeout 60 script -qfec "${PTY_NOHUP:+trap '' HUP; }${PTY_ROWS:+stty rows $PTY_ROWS; }env -u POLDEK_TESTING TERM=dumb LC_ALL=C ${PTY_POLDEK:-$POLDEK_ASK} $*; rc=\$?; echo \$rc > $rcfile; echo \"[exit \$rc]\"" \
             /dev/null <$fifo >$PTY_OUT 2>&1 &
     pty_pid=$!
     exec 7>$fifo                # held open: an EOF would end script's input
@@ -83,14 +85,22 @@ on_pty() {
     if [ -f $PTY_ANSWERS ]; then
         while IFS='	' read -r pattern key; do
             wait_for "$pattern" || { fail "\"$pattern\" did not show"; break; }
-            printf "$key" >&7
+            if [ "$key" = HANGUP ]; then
+                pkill -KILL -P $pty_pid    # script, holding the terminal
+            else
+                printf "$key" >&7
+            fi
         done < $PTY_ANSWERS
     fi
 
     wait $pty_pid
     exec 7>&-
+    while [ ! -s $rcfile ] && [ $i -lt 300 ]; do    # poldek may outlive script
+        sleep 0.1
+        i=$((i + 1))
+    done
     tr -d '\r' < $PTY_OUT > $PTY_OUT.tmp && mv $PTY_OUT.tmp $PTY_OUT
-    PTY_RC=$(sed -n 's/^\[exit \([0-9]*\)\]$/\1/p' $PTY_OUT)
+    PTY_RC=$(cat $rcfile 2>/dev/null)
     is_verbose_mode && cat $PTY_OUT
 }
 
@@ -246,6 +256,34 @@ testProceedQAborts()
     on_pty --ask -i c d
 
     assert_aborted
+    assertEquals "installed" "" "$(installed)"
+}
+
+# ^C at a question stops the command, as q does
+testCtrlCAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    build c; build d
+    answer "Proceed?" '\003'
+    on_pty --ask -i c d
+
+    assert_aborted
+    assertEquals "installed" "" "$(installed)"
+}
+
+# A question whose terminal went away stops the command too: its default
+# answer here would install
+testLostTerminalAborts()
+{
+    skip_if_rpm_testing_off && return
+
+    build c
+    PTY_NOHUP=1
+    answer "Proceed?" HANGUP
+    on_pty --ask -i c
+
+    assertEquals "exit code" "1" "$PTY_RC"
     assertEquals "installed" "" "$(installed)"
 }
 
