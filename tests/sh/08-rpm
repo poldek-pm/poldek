@@ -94,37 +94,6 @@ testRPMformat6() {
     try_install fmt6 "fmt6-1-1" ""
 }
 
-signkey_test_prepare() {
-    local rpmformat="${1:-}"
-    local keydir="$TMPDIR/signkey-test"
-    local gpglog="$TMPDIR/signkey-gpg.log"
-    export GNUPGHOME="$keydir/gnupg"
-    export XDG_RUNTIME_DIR="$keydir/run"
-
-    rm -rf "$keydir"
-    mkdir -p "$GNUPGHOME" "$XDG_RUNTIME_DIR"
-    chmod 700 "$GNUPGHOME" "$XDG_RUNTIME_DIR"
-    gpgconf --launch gpg-agent
-
-    gpg --batch --no-tty --pinentry-mode loopback --passphrase '' \
-        --quick-generate-key 'Poldek test key <test@poldek.invalid>' \
-        rsa2048 sign 0 >>"$gpglog" 2>&1 ||
-        fail "gpg key generation failed (see $gpglog)"
-
-    gpg --armor --export 'Poldek test key' > "$keydir/key.asc" 2>>"$gpglog"
-
-    build_package "$REPO" poldek-signkey-test 1-1 \
-        -f /usr/share/poldek-signkey-test/README ${rpmformat:+-F $rpmformat}
-
-    local fp=$(gpg --list-keys --with-colons 2>>"$gpglog" |
-                 awk -F: '$1 == "fpr" { print $10; exit }')
-    rpmsign --addsign --define "_gpg_name $fp" \
-        "$REPO/poldek-signkey-test-1-1.noarch.rpm" >>"$gpglog" 2>&1 ||
-        fail "rpmsign failed (see $gpglog)"
-
-    SIGNKEY_TEST_KEY="$keydir/key.asc"
-}
-
 # signkey: a key already present in the target rpmdb must not be imported
 # again, even in a fresh poldek process
 testRPMsignkeyAlreadyPresent() {
