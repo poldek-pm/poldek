@@ -512,10 +512,8 @@ static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
     }
 
     if (is_err) {
-        if (errno)
-            vfff_errno = errno;
-        else
-            vfff_errno = EIO;
+        if (vfff_errno == 0)
+            vfff_errno = errno ? errno : EIO;
 
         switch (vfff_errno) {
             case EMSGSIZE:
@@ -708,9 +706,10 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
             break;
 
         default:
-            if (errno == 0)
-                errno = EINVAL;
-            vfff_set_err(EINVAL, "%s: %m (%s)", path, msg);
+            if (msg)
+                vfff_set_err(EINVAL, "%s: HTTP %d %s", path, status_code, msg);
+            else
+                vfff_set_err(EINVAL, "%s: HTTP %d", path, status_code);
             break;
     }
 
