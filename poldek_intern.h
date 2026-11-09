@@ -111,4 +111,8 @@ int poldek__choose_suggests(const struct poldek_ts *ts,
 void poldek__setup_default_ask_callbacks(struct poldek_ctx *ctx);
 int poldek__load_sources_internal(struct poldek_ctx *ctx);
 
+/* pkgscore.c */
+void poldek__add_source_holds(tn_array *holds, const char *source,
+                              const tn_array *masks);
+
 #endif
