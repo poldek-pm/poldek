@@ -76,6 +76,11 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._serve_cut(path[len("/cut/"):])
             return
 
+        # a file with a header of an empty value: /empty-header/<filename>
+        if path.startswith("/empty-header/"):
+            self._serve_file(path[len("/empty-header/"):], [("X-Empty", "")])
+            return
+
         # File serving: /file/<filename>
         if path.startswith("/file/"):
             self._serve_file(path[6:])
@@ -223,7 +228,7 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         else:
             self.send_error(HTTPStatus.NOT_FOUND)
 
-    def _serve_file(self, filename):
+    def _serve_file(self, filename, headers=()):
         """Serve file from data directory"""
         # Security: prevent path traversal
         filename = os.path.basename(filename)
@@ -245,6 +250,8 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Last-Modified", email.utils.formatdate(
                 os.stat(filepath).st_mtime_ns // 10**9, usegmt=True))
             self.send_header("Connection", "close")
+            for name, value in headers:
+                self.send_header(name, value)
             self.end_headers()
             self.wfile.write(content)
         except Exception as e:
