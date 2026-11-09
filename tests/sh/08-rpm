@@ -900,6 +900,24 @@ EOF
     rpm_state_check "a" ""
 }
 
+# a parent that ignores SIGCHLD, as a Perl daemon with $SIG{CHLD} = 'IGNORE',
+# passes it on to poldek; a failed rpm run still fails the install
+testInstallRpmFailureWithSigchldIgnored() {
+    skip_if_rpm_testing_off && return
+    local rpm=$TMPDIR/rpm-fails runs=$TMPDIR/rpm-runs rc
+
+    build a 1-1
+    printf '#!/bin/sh\necho rpm >> %s\nexit 1\n' "$runs" > $rpm
+    chmod 755 $rpm
+    rm -f $runs
+
+    perl -e '$SIG{CHLD} = "IGNORE"; exec @ARGV' \
+         $POLDEK_INSTALL -Ouse_sudo=n --pmcmd $rpm -uv a >/dev/null 2>&1
+    rc=$?
+    assertTrue "rpm not run" "[ -s $runs ]"
+    assertEquals "exit code $rc" "1" "$rc"
+}
+
 # desc -L and ls -S take as new the changelog entries dated after the day
 # the installed version was built: entries carry their date only, and rpm
 # stores it as noon, later than a build made that morning

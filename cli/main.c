@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
@@ -700,6 +701,9 @@ int main(int argc, char **argv)
     struct poldek_ts     *ts;
     int  rc = 1, rrc, mode = RUNMODE_POLDEK;
     const char *bn;
+
+    /* an inherited SIG_IGN would lose the exit status of the commands run */
+    signal(SIGCHLD, SIG_DFL);
 
     if (!poldeklib_init())
         return 1;
