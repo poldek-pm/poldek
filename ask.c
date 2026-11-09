@@ -138,8 +138,11 @@ static int ask_yes_no(const struct poldek_ts *ts, const char *question,
         { 0, NULL, NULL },
     };
 
-    if (!isatty(STDIN_FILENO))
+    if (!isatty(STDIN_FILENO)) {
+        msgn(0, _("%s %c - %s (no terminal: the default)"), question,
+             hint ? 'y' : 'n', hint ? yes : no);
         return hint;
+    }
 
     switch (ask(question, answers, hint ? 'y' : 'n')) {
         case 'y': return 1;
@@ -167,6 +170,13 @@ static int term_ts_confirm(void *foo, const struct poldek_ts *ts)
     if (ts->type == POLDEK_TS_UNINSTALL) {
         if (!ts->getop(ts, POLDEK_OP_CONFIRM_UNINST))
             return 1;
+
+        /* no one to confirm it: removing nothing is a failure, not an n */
+        if (!isatty(STDIN_FILENO)) {
+            logn(LOGERR, _("nothing removed: no terminal to confirm the removal "
+                           "on (--noask removes without asking)"));
+            return POLDEK_ANSWER_ABORT;
+        }
 
         return ask_yes_no(ts, _("Proceed?"), 0, _("remove"), _("don't remove"),
                           NULL);

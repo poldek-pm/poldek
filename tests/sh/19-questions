@@ -2,7 +2,8 @@
 
 # poldek's questions on a terminal: keys typed into a pty (script(1)) once the
 # question shows, outside testing mode (it answers the provider choice
-# itself), with a real rpm database (--root and --justdb, as in 08-rpm).
+# itself), with a real rpm database (--root and --justdb, as in 08-rpm); and
+# what they take without a terminal (stdin /dev/null).
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
@@ -102,6 +103,15 @@ on_pty() {
     tr -d '\r' < $PTY_OUT > $PTY_OUT.tmp && mv $PTY_OUT.tmp $PTY_OUT
     PTY_RC=$(cat $rcfile 2>/dev/null)
     is_verbose_mode && cat $PTY_OUT
+}
+
+# no_tty ARGS: poldek ARGS with no terminal (stdin /dev/null); its output in
+# $NOTTY_OUT, exit code in $NOTTY_RC
+no_tty() {
+    NOTTY_OUT=$TMPDIR/notty.out
+    env -u POLDEK_TESTING LC_ALL=C $POLDEK_ASK "$@" </dev/null >$NOTTY_OUT 2>&1
+    NOTTY_RC=$?
+    is_verbose_mode && cat $NOTTY_OUT
 }
 
 # A key typed as soon as the question shows answers it: the terminal is put
@@ -577,6 +587,36 @@ testChooseAgainSharedProvider()
     second=$(sed -n 's/^Required "\(.\)" is provided .*/\1/p' $PTY_OUT | sed -n 2p)
     assertEquals "exit code" "0" "$PTY_RC"
     assertEquals "installed" "alpha ${second}only" "$(installed)"
+}
+
+# Without a terminal no one can confirm a removal: removing nothing is a
+# failure, not an answer n
+testRemovalWithoutTerminalFails()
+{
+    skip_if_rpm_testing_off && return
+
+    rpm_build_installed c
+    no_tty -e c
+
+    assertEquals "exit code" "1" "$NOTTY_RC"
+    assertEquals "installed" "c" "$(installed)"
+    grep -q '^error: nothing removed: no terminal to confirm the removal on (--noask removes without asking)$' $NOTTY_OUT ||
+        fail "no reason given"
+}
+
+# Other questions take their default answers without a terminal, as
+# before, and say so
+testAnswerWithoutTerminalShown()
+{
+    skip_if_rpm_testing_off && return
+
+    build c
+    no_tty -Oconfirm_installation=yes -i c
+
+    assertEquals "exit code" "0" "$NOTTY_RC"
+    assertEquals "installed" "c" "$(installed)"
+    grep -q '^Proceed? y - install (no terminal: the default)$' $NOTTY_OUT ||
+        fail "answer not shown"
 }
 
 # A front end answering the questions itself keeps what its answers meant:
