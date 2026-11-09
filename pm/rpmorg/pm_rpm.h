@@ -85,7 +85,7 @@ enum signkey_import_status {
 struct signkey *pm_rpm_signkey_load(const char *signkey_url);
 void pm_rpm_signkey_free(struct signkey *sk);
 rpmKeyring pm_rpm_signkey_keyring(const struct signkey *sk);
-int pm_rpm_signkey_import(struct pm_rpm *pm, const struct poldek_ts *ts,
+int pm_rpm_signkey_import(struct pm_rpm *pm, struct poldek_ts *ts,
                           struct signkey *sk);
 int pm_rpm_signkey_import_status(const struct signkey *sk);
 

@@ -165,6 +165,8 @@ struct poldek_ts {
 
     unsigned           _hooks;       /* state of the pre/post-install hooks */
     const char         *_hooks_sudo; /* how the pre-install hooks were run */
+    const struct pkg   *_set_head;   /* the requested package the set being
+                                        installed starts with (particle) */
 
 };
 #endif

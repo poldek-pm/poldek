@@ -71,6 +71,9 @@ int poldek__is_setup_done(struct poldek_ctx *ctx);
 
 /* ts->_iflags: created before setup, poldek_setup() will apply postconf */
 #define TS_CONFIG_LATER (1 << 0)
+#define TS_CANCELLED    (1 << 1) /* the user answered q (abort) at a question */
+#define TS_CHOSEN       (1 << 2) /* a provider of the set being installed was
+                                    chosen on the terminal */
 
 void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
@@ -95,20 +98,34 @@ void poldek__ts_display_summary(struct poldek_ts *ts);
 
 /* ask.c */
 
-int poldek__confirm(const struct poldek_ts *ts,
-                    int default_answer, const char *message);
+/* The question callbacks, their answer checked: POLDEK_ANSWER_ABORT or any
+   answer out of the contract (see poldek.h) cancels ts and is returned as
+   POLDEK_ANSWER_ABORT; confirmations return 1 or 0 otherwise, the provider
+   choice POLDEK_ANSWER_SKIP too, the set's confirmation POLDEK_ANSWER_REDO. */
+/* yes and no: what y and n do, for the terminal */
+int poldek__confirm(struct poldek_ts *ts, int default_answer,
+                    const char *message, const char *yes, const char *no);
 
-int poldek__ts_confirm(const struct poldek_ts *ts);
+int poldek__ts_confirm(struct poldek_ts *ts);
 
-int poldek__choose_equiv(const struct poldek_ts *ts,
+int poldek__choose_equiv(struct poldek_ts *ts,
                          const struct pkg *pkg, const char *capname,
                          tn_array *pkgs, struct pkg *hint);
 
-int poldek__choose_suggests(const struct poldek_ts *ts,
+int poldek__choose_suggests(struct poldek_ts *ts,
                             const struct pkg *pkg, tn_array *caps,
                             tn_array *choices, int hint);
 
+/* the user stopped the command at a question: it ends there and fails */
+void poldek__ts_cancel(struct poldek_ts *ts);
+int poldek__ts_cancelled(const struct poldek_ts *ts);
+
 void poldek__setup_default_ask_callbacks(struct poldek_ctx *ctx);
+
+/* poldek_term.c */
+int poldek_term__ask_begin(int fd);
+int poldek_term__getkey(void);
+void poldek_term__ask_end(void);
 int poldek__load_sources_internal(struct poldek_ctx *ctx);
 
 /* pkgscore.c */

@@ -204,6 +204,24 @@ void i3pkg_register_candidates(struct i3pkg *i3pkg, const struct capreq *req,
 #endif
 
 
+static void icap_free(struct i3icap *icap)
+{
+    n_array_free(icap->candidates);
+    free(icap);
+}
+
+void i3_add_icap(struct i3ctx *ictx, const char *cap, tn_array *candidates,
+                 struct pkg *chosen, int on_terminal)
+{
+    struct i3icap *icap = n_malloc(sizeof(*icap) + strlen(cap) + 1);
+
+    icap->chosen = chosen;
+    icap->candidates = n_ref(candidates);
+    icap->on_terminal = on_terminal;
+    strcpy(icap->cap, cap);
+    n_array_push(ictx->icaps, icap);
+}
+
 void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
 {
     ictx->i3pkg_stack = n_array_new(32, (tn_fn_free)i3pkg_free, NULL);
@@ -226,7 +244,9 @@ void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
     ictx->reqnames = NULL;
     ictx->reqnames_loaded = 0;
     ictx->abort = 0;
-    ictx->cancelled = 0;
+    ictx->skipped = 0;
+    ictx->skipped_reqs = n_hash_new(8, NULL);
+    ictx->icaps = n_array_new(2, (tn_fn_free)icap_free, NULL);
 }
 
 void i3ctx_destroy(struct i3ctx *ictx)
@@ -244,6 +264,8 @@ void i3ctx_destroy(struct i3ctx *ictx)
     n_array_cfree(&ictx->db_conflicts);
     if (ictx->reqnames)
         n_hash_free(ictx->reqnames);
+    n_hash_free(ictx->skipped_reqs);
+    n_array_free(ictx->icaps);
     memset(ictx, 0, sizeof(*ictx));
 }
 
@@ -268,8 +290,7 @@ void i3ctx_reset(struct i3ctx *ictx)
     ictx->reqnames = NULL;
     ictx->reqnames_loaded = 0;
     ictx->abort = 0;
-    /* ictx->cancelled is intentionally preserved: once the user answered Q,
-       all remaining particle sets must be skipped (see install.c). */
+    ictx->skipped = 0;
 }
 
 int i3_stop_processing(struct i3ctx *ictx, int stop)
@@ -281,5 +302,5 @@ int i3_stop_processing(struct i3ctx *ictx, int stop)
 void i3_cancel(struct i3ctx *ictx)
 {
     ictx->abort = 1;
-    ictx->cancelled = 1;
+    poldek__ts_cancel(ictx->ts);
 }

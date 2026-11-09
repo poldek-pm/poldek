@@ -703,13 +703,46 @@ struct pkg *i3_choose_equiv(struct poldek_ts *ts,
     }
 
     n = poldek__choose_equiv(ts, pkg, capreq_stra(cap), tmp, hint);
-    if (n == -1)
+    if (n < 0)                  /* q or n */
         hint = NULL;
     else
         hint = n_array_nth(tmp, n);
 
     n_array_free(tmp);
     return hint;
+}
+
+struct pkg *i3_choose_provider(struct i3ctx *ictx, const struct pkg *pkg,
+                               const struct capreq *req, tn_array *candidates,
+                               struct pkg *hint)
+{
+    const char *strreq = capreq_stra(req);
+    struct pkg *chosen;
+
+    if (n_hash_exists(ictx->skipped_reqs, strreq)) {
+        msgn(0, _("%s: \"%s\" skipped earlier, set skipped"), pkg_id(pkg),
+             strreq);
+
+    } else if ((chosen = i3_choose_equiv(ictx->ts, pkg, req, candidates, hint))) {
+        return chosen;
+
+    } else if (poldek__ts_cancelled(ictx->ts)) {
+        i3_cancel(ictx);
+        return NULL;
+
+    } else {
+        n_hash_insert(ictx->skipped_reqs, strreq, NULL);
+        if (ictx->ts->getop(ictx->ts, POLDEK_OP_PARTICLE))
+            msgn(0, _("%s: \"%s\" left unresolved, set skipped"),
+                 pkg_id(pkg), strreq);
+        else
+            msgn(0, _("%s: \"%s\" left unresolved, nothing installed"),
+                 pkg_id(pkg), strreq);
+    }
+
+    ictx->skipped = 1;
+    i3_stop_processing(ictx, 1);
+    return NULL;
 }
 
 int i3_is_user_choosable_equiv(struct poldek_ts *ts)

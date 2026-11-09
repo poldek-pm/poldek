@@ -898,7 +898,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts)
 
     run_uninstall = 1;
     if (!ts->getop(ts, POLDEK_OP_RPMTEST)) {
-        run_uninstall = poldek__ts_confirm(ts);
+        run_uninstall = (poldek__ts_confirm(ts) == 1);
     }
 
     if (run_uninstall) {
