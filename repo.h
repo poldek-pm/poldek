@@ -22,7 +22,6 @@ struct poldek_ctx;
 #define POLDEK_REPO_FORCE           (1 << 0)
 
 EXPORT int poldek_repo_add(struct poldek_ctx *ctx, const char *url, unsigned flags);
-EXPORT int poldek_repo_del(struct poldek_ctx *ctx, const char *filename,
-                           unsigned flags);
+EXPORT int poldek_repo_del(struct poldek_ctx *ctx, const char *url);
 
 #endif

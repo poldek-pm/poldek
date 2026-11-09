@@ -654,6 +654,9 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
     if (vs)
         src->config_origin = n_strdup(vs);
 
+    if (poldek_conf_get(htcnf, "__managed", NULL))
+        src->flags |= PKGSOURCE_MANAGED;
+
     get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
     get_conf_opt_list(htcnf, "ignore", src->ign_patterns);
     return src;
@@ -785,6 +788,12 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
 
     if (!src->type || n_str_ne(src->type, source_TYPE_GROUP)) {
         if ((src->flags & PKGSOURCE_GROUP) == 0) {
+            if ((src->flags & PKGSOURCE_MANAGED)) {
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", "managed");
+                n += n_snprintf(&str[n], size - n, ",");
+            }
+
             if ((src->flags & PKGSOURCE_NOAUTO) == 0) {
                 n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
                                             "%s", "auto");

@@ -10,14 +10,12 @@ $POLDEK --version >/dev/null 2>&1
 
 REPOSD=
 REMOTE_CONF=
-UNMANAGED_CONF=
 INVALID_CONF=
 
 setUp() {
     local tmp=${TMPDIR:-/tmp}
     REPOSD=$tmp/reposd-19
     REMOTE_CONF=$tmp/remote-19.conf
-    UNMANAGED_CONF=$tmp/unmanaged-19.conf
     INVALID_CONF=$tmp/invalid-19.conf
 
     rm -rf $REPOSD
@@ -27,13 +25,6 @@ setUp() {
 [source]
 name = poldekrepo-test-19
 path = http://example.com/poldek
-type = pndir
-EOF
-
-    cat > $UNMANAGED_CONF <<EOF
-[source]
-name = unmanaged-test-19
-path = http://example.com/unmanaged
 type = pndir
 EOF
 
@@ -99,24 +90,6 @@ testRepoInvalidRejected()
     assertEquals "no .conf expected after rejected add" "0" "$n"
 }
 
-testRepoForceDeleteUnmanaged()
-{
-    export POLDEK_TESTING_REPOSDIR=$REPOSD
-
-    cp $UNMANAGED_CONF $REPOSD/unmanaged.conf
-
-    $POLDEK repo -d unmanaged.conf
-    if [ "$?" -eq 0 ]; then
-        fail "repo -d of unmanaged file should fail without --force"
-    fi
-
-    $POLDEK repo -d unmanaged.conf --force
-    assertEquals "repo -d --force failed" "0" "$?"
-
-    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
-    assertEquals "no .conf expected after force delete" "0" "$n"
-}
-
 testRepoDuplicateNameAcrossFiles()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
@@ -143,7 +116,7 @@ EOF
     fi
 }
 
-testRepoDirnameMacro()
+testRepoBaseUrlMacro()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
     SHLIBDIR="$PWD/sh/lib"
@@ -163,7 +136,7 @@ EOF
     PATH="$PATH:$SHLIBDIR"
     export PATH
 
-    $POLDEK --cachedir $CACHEDIR repo -a test://$REMOTE_CONF
+    $POLDEK --cachedir $CACHEDIR repo -a test:/$REMOTE_CONF
     assertEquals "repo -a failed" "0" "$?"
 
     fn=$(ls $REPOSD/*.conf)
@@ -175,9 +148,12 @@ EOF
     grep -q '^auto = no$' $fn || fail "missing auto = no in saved file"
 
     out=$($POLDEK --cachedir $CACHEDIR repo -l 2>&1)
+
     echo "$out" | grep -q "baseurl-test-19" || fail "source not listed: $out"
-    echo "$out" | grep -q "test:///home/users/mis/tmp/remote-19.conf" || fail "_origin URL not listed: $out"
-    echo "$out" | grep -q "test://home/users/mis/tmp/x86_64/" || fail "expanded path not listed: $out"
+    echo "$out" | grep -q "test:/$REMOTE_CONF" || fail "_origin URL not listed: $out"
+
+    local arch=$(rpm --eval '%{_target_cpu}')
+    echo "$out" | grep -q "test:/$(dirname $REMOTE_CONF)/$arch/" || fail "expanded path not listed: $out"
 }
 
 testRepoDeleteByUrl()
@@ -208,6 +184,146 @@ EOF
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "no .conf expected after delete by URL" "0" "$n"
+}
+
+# repos.d is poldek's own directory: a file there without the marker is
+# removed as well
+testRepoDeleteUnmarkedFile()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    cat > $REPOSD/unmarked.conf <<EOF
+[source]
+name = unmarked-test-19
+path = http://example.com/unmarked
+type = pndir
+EOF
+
+    $POLDEK repo -d unmarked.conf
+    assertEquals "repo -d of an unmarked repos.d file" "0" "$?"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "unmarked .conf expected to be removed" "0" "$n"
+}
+
+# Nothing to remove from repos.d: say so and fail, do not crash
+testRepoDeleteMissingReposd()
+{
+    local tmp=${TMPDIR:-/tmp}
+    export POLDEK_TESTING_REPOSDIR=$tmp/no-reposd-19
+    rm -rf $POLDEK_TESTING_REPOSDIR
+
+    out=$($POLDEK repo -d anything 2>&1)
+    rc=$?
+
+    assertEquals "repo -d without repos.d fails" "1" "$rc"
+    echo "$out" | grep -q "no such repo" || fail "no reason given: $out"
+}
+
+# A URL that matches no repository leaves the repositories alone
+testRepoDeleteUnknownUrl()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    $POLDEK repo -a $REMOTE_CONF
+    assertEquals "repo -a failed" "0" "$?"
+
+    $POLDEK repo -d http://example.com/not-there-19
+    if [ "$?" -eq 0 ]; then
+        fail "repo -d of an unknown URL should fail"
+    fi
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "the repository expected to stay" "1" "$n"
+}
+
+# One action at a time: -a, -d and -l are mutually exclusive
+testRepoActionsMutuallyExclusive()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    out=$($POLDEK repo -a $REMOTE_CONF -d foo.conf 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "repo -a -d should fail"
+    fi
+    echo "$out" | grep -q "mutually exclusive" || \
+        fail "no reason given: $out"
+
+    out=$($POLDEK repo -l -a $REMOTE_CONF 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "repo -l -a should fail"
+    fi
+    echo "$out" | grep -q "mutually exclusive" || \
+        fail "no reason given: $out"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no repository expected" "0" "$n"
+}
+
+# Local policy is the user's: ignore, hold and auto are not taken from
+# the downloaded configuration
+testRepoAddStripsLocalPolicy()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    cat > $REMOTE_CONF <<EOF
+[source]
+name = policy-test-19
+path = http://example.com/policy
+type = pndir
+ignore = *
+hold = *
+auto = yes
+noauto = yes
+EOF
+
+    $POLDEK repo -a $REMOTE_CONF
+    assertEquals "repo -a failed" "0" "$?"
+
+    fn=$(ls $REPOSD/*.conf)
+    grep -q '^ignore' $fn && fail "ignore was saved"
+    grep -q '^hold' $fn && fail "hold was saved"
+    grep -q '^noauto' $fn && fail "noauto was saved"
+    grep -q '^auto = no$' $fn || fail "auto = no was not forced"
+    return 0
+}
+
+# Sources from the built-in repos.d are listed after the user's and
+# flagged as managed
+testRepoManagedSourcesListed()
+{
+    local tmp=${TMPDIR:-/tmp}
+    local home=$tmp/home-19
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    rm -rf $home
+    mkdir -p $home
+
+    cat > $home/.poldekrc <<EOF
+[global]
+cachedir = $home/cache
+
+[source]
+name = plain-test-19
+path = $tmp/plain-19/
+type = pndir
+EOF
+
+    $POLDEK repo -a $REMOTE_CONF
+    assertEquals "repo -a failed" "0" "$?"
+
+    out=$(HOME=$home $POLDEK up -l 2>&1)
+    assertEquals "up -l failed" "0" "$?"
+
+    echo "$out" | grep -q '^plain-test-19 ' || fail "user source not listed: $out"
+    echo "$out" | grep -q 'poldekrepo-test-19.*(managed' || \
+        fail "managed source not flagged: $out"
+
+    plain=$(echo "$out" | grep -n 'plain-test-19' | cut -d: -f1)
+    managed=$(echo "$out" | grep -n 'poldekrepo-test-19' | cut -d: -f1)
+    if [ -n "$plain" ] && [ -n "$managed" ] && [ "$managed" -le "$plain" ]; then
+        fail "managed sources should be listed last: $out"
+    fi
 }
 
 testRepoGlobalIgnored()

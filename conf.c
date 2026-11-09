@@ -961,7 +961,7 @@ int conf__save(const tn_hash *htconf, const char *path,
 {
     tn_array *sect_keys, *opt_keys;
     tn_hash *ht_global;
-    FILE *f = NULL;
+    FILE *file = NULL;
     char tmp[PATH_MAX];
     int fd, i, j, k;
     int has_global_opts = 0;
@@ -974,7 +974,7 @@ int conf__save(const tn_hash *htconf, const char *path,
         return 0;
     }
 
-    if ((f = fdopen(fd, "w")) == NULL) {
+    if ((file = fdopen(fd, "w")) == NULL) {
         logn(LOGERR, _("%s: fdopen: %m"), tmp);
         close(fd);
         unlink(tmp);
@@ -982,7 +982,7 @@ int conf__save(const tn_hash *htconf, const char *path,
     }
 
     if (header)
-        fputs(header, f);
+        fputs(header, file);
 
     ht_global = poldek_conf_get_section(htconf, "global");
     if (ht_global) {
@@ -998,7 +998,7 @@ int conf__save(const tn_hash *htconf, const char *path,
                 continue;
 
             if (is_macro_key(key))
-                fprintf(f, "%s = %s\n", key, opt->val);
+                fprintf(file, "%s = %s\n", key, opt->val);
         }
 
         /* regular global options need an explicit [global] section */
@@ -1016,7 +1016,7 @@ int conf__save(const tn_hash *htconf, const char *path,
         }
 
         if (has_global_opts) {
-            fprintf(f, "\n[global]\n");
+            fprintf(file, "\n[global]\n");
             for (i = 0; i < n_array_size(opt_keys); i++) {
                 const char *key = n_array_nth(opt_keys, i);
                 struct copt *opt = n_hash_get(ht_global, key);
@@ -1025,7 +1025,7 @@ int conf__save(const tn_hash *htconf, const char *path,
                     continue;
 
                 if (!is_macro_key(key) && !is_metadata_key(key))
-                    fprintf(f, "%s = %s\n", key, opt->val);
+                    fprintf(file, "%s = %s\n", key, opt->val);
             }
         }
 
@@ -1045,7 +1045,7 @@ int conf__save(const tn_hash *htconf, const char *path,
         for (j = 0; j < n_array_size(sect_list); j++) {
             tn_hash *ht = n_array_nth(sect_list, j);
 
-            fprintf(f, "\n[%s]\n", sectname);
+            fprintf(file, "\n[%s]\n", sectname);
             opt_keys = n_hash_keys(ht);
             n_array_sort(opt_keys);
             for (k = 0; k < n_array_size(opt_keys); k++) {
@@ -1058,20 +1058,22 @@ int conf__save(const tn_hash *htconf, const char *path,
                 if (is_metadata_key(key))
                     continue;
 
-                fprintf(f, "%s = %s\n", key, opt->val);
+                fprintf(file, "%s = %s\n", key, opt->val);
             }
             n_array_free(opt_keys);
         }
     }
     n_array_free(sect_keys);
 
-    fflush(f);
-    fsync(fileno(f));
-    if (fclose(f) != 0) {
+    fflush(file);
+    fsync(fileno(file));
+
+    if (fclose(file) != 0) {
+        file = NULL;
         logn(LOGERR, _("%s: write error: %m"), tmp);
         goto l_end;
     }
-    f = NULL;
+    file = NULL;
 
     if (rename(tmp, path) != 0) {
         logn(LOGERR, _("%s: %m"), path);
@@ -1081,8 +1083,7 @@ int conf__save(const tn_hash *htconf, const char *path,
     rc = 1;
 
 l_end:
-    if (f)
-        fclose(f);
+
     if (rc == 0)
         unlink(tmp);
 
@@ -1523,8 +1524,16 @@ static int load_reposd(tn_hash *htconf, tn_hash *af_htconf, unsigned flags)
         }
 
         ht = n_hash_get(af_htconf, cpath);
-        if (ht)
+        if (ht) {
+            tn_array *sources = poldek_conf_get_sections(ht, "source");
+            if (sources) {
+                for (int j = 0; j < n_array_size(sources); j++) {
+                    tn_hash *src = n_array_nth(sources, j);
+                    poldek_conf_set(src, "__managed", "yes");
+                }
+            }
             merge_htconf(htconf, ht);
+        }
     }
 
     n_array_free(configs);

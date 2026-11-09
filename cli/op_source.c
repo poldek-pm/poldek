@@ -330,6 +330,7 @@ void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
     tn_hash *htcnf;
     tn_array *htcnf_sources;
     tn_array *toprint = n_array_new(32, NULL, NULL);
+    tn_array *toprint_managed = n_array_new(32, NULL, NULL);
     int maxlen = 0;
 
     n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_name);
@@ -340,8 +341,10 @@ void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
             if (maxlen < n)
                 maxlen = n;
         }
-
-        n_array_push(toprint, src);
+        if (src->flags & PKGSOURCE_MANAGED)
+            n_array_push(toprint_managed, src);
+        else
+            n_array_push(toprint, src);
     }
 
     n_array_sort(sources);
@@ -350,6 +353,12 @@ void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
         source_printf_w(src, maxlen);
     }
     n_array_cfree(&toprint);
+
+    for (i=0; i < n_array_size(toprint_managed); i++) {
+        struct source *src = n_array_nth(toprint_managed, i);
+        source_printf_w(src, maxlen);
+    }
+    n_array_cfree(&toprint_managed);
 
     if (print_groups == 0)
         return;

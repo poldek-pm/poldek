@@ -91,29 +91,6 @@ static int reposd_filename_from_url(char *buf, size_t size, const char *url)
     return n;
 }
 
-static int is_managed_reposd_file(const char *path)
-{
-    FILE *f;
-    char buf[1024];
-    static const char prefix[] = "# remote repository managed by poldek";
-    size_t len;
-    int rc = 0;
-
-    if ((f = fopen(path, "r")) == NULL)
-        return 0;
-
-    if (fgets(buf, sizeof(buf), f)) {
-        len = strlen(buf);
-        if (len > 0 && buf[len - 1] == '\n')
-            buf[len - 1] = '\0';
-        if (strncmp(buf, prefix, sizeof(prefix) - 1) == 0)
-            rc = 1;
-    }
-
-    fclose(f);
-    return rc;
-}
-
 static int validate_managed_sources(const char *url, tn_hash *htconf)
 {
     tn_array *sources = poldek_conf_get_sections(htconf, "source");
@@ -202,10 +179,26 @@ static tn_hash *load_repo_conf(const char *url)
         logn(LOGERR, _("%s: downloaded configuration is invalid"), url);
         return NULL;
     }
+    tn_array *sources_ht = poldek_conf_get_sections(htconf, "source");
+    if (!sources_ht) {
+        logn(LOGERR, _("%s: downloaded configuration is invalid"), url);
+        n_hash_free(htconf);
+        return NULL;
+    }
+
+    for (int i = 0; i < n_array_size(sources_ht); i++) {
+        tn_hash *ht = n_array_nth(sources_ht, i);
+        n_hash_remove(ht, "ignore");
+        n_hash_remove(ht, "hold");
+        n_hash_remove(ht, "auto");
+        n_hash_remove(ht, "noauto");
+    }
 
     ht_global = poldek_conf_get_section(htconf, "global");
-    if (ht_global == NULL)
+    if (ht_global == NULL) {
         ht_global = poldek_conf_add_section(htconf, "global");
+    }
+
     if (ht_global == NULL) {
         logn(LOGERR, _("%s: cannot create [global] section"), url);
         n_hash_free(htconf);
@@ -332,52 +325,73 @@ l_end:
     return rc;
 }
 
-int poldek_repo_del(struct poldek_ctx *ctx, const char *filename,
-                    unsigned flags)
+static char *find_repo_file_by_origin(const char *reposd, const char *origin)
 {
-    char reposd[PATH_MAX], path[PATH_MAX];
-    size_t len;
+    const char *found = NULL;
+
+    tn_array *files = poldek_util_readdir(reposd, "*.conf");
+    if (files == NULL)
+        return NULL;
+
+    for (int i = 0; i < n_array_size(files); i++) {
+        const char *path = n_array_nth(files, i);
+        tn_hash *htconf;
+        tn_hash *ht_global;
+
+        htconf = poldek_conf_load(path, POLDEK_LDCONF_NOVALIDATE |
+                                  POLDEK_LDCONF_NOINCLUDE);
+        if (htconf == NULL)
+            continue;
+
+        ht_global = poldek_conf_get_section(htconf, "global");
+        const char *o = ht_global ? poldek_conf_get(ht_global, "_origin", NULL) : NULL;
+        if (o && strcmp(o, origin) == 0) {
+            found = path;
+        } else if (strcmp(n_basenam(path), origin) == 0) {
+            found = path;
+        }
+
+        n_hash_free(htconf);
+        if (found)
+            break;
+    }
+
+    char *re = found ? n_strdup(found) : NULL;
+    n_array_free(files);
+
+    return re;
+}
+
+int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
+{
+    char reposd[PATH_MAX];
     (void) ctx;
 
-    if (filename == NULL || *filename == '\0') {
-        logn(LOGERR, _("rmrepo: empty filename"));
-        return 0;
-    }
-
-    if (strchr(filename, '/') != NULL) {
-        logn(LOGERR, _("rmrepo: %s: filename must not contain '/'"), filename);
-        return 0;
-    }
-
-    len = strlen(filename);
-    if (len < 5 || strcmp(filename + len - 5, ".conf") != 0) {
-        logn(LOGERR, _("rmrepo: %s: not a .conf filename"), filename);
-        return 0;
-    }
-
     if (poldek_conf_reposd(reposd, sizeof(reposd)) == NULL) {
-        logn(LOGERR, _("rmrepo: cannot determine repos.d directory"));
+        logn(LOGERR, _("cannot determine repos.d directory"));
         return 0;
     }
 
-    n_snprintf(path, sizeof(path), "%s/%s", reposd, filename);
+    char *path = find_repo_file_by_origin(reposd, url);
+    if (path == NULL) {
+        logn(LOGERR, _("%s: no such repo"), url);
+        return 0;
+    }
 
     if (access(path, F_OK) != 0) {
         logn(LOGERR, _("%s: no such file"), path);
-        return 0;
-    }
-
-    if ((flags & POLDEK_REPO_FORCE) == 0 && !is_managed_reposd_file(path)) {
-        logn(LOGERR, _("%s: not a managed repository file (use --force to remove it anyway)"),
-             path);
+        n_free(path);
         return 0;
     }
 
     if (unlink(path) != 0) {
         logn(LOGERR, _("%s: %m"), path);
+        n_free(path);
         return 0;
     }
 
-    logn(LOGNOTICE, _("%s: removed"), path);
+    logn(LOGNOTICE, _("%s repo has been removed"), url);
+    n_free(path);
+
     return 1;
 }
