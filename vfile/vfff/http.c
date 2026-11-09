@@ -422,9 +422,7 @@ int response_complete(struct http_resp *resp)
         case ST_RESP_EOR:
             return 1;
 
-        case ST_RESP_BAD:
-            vfff_set_err(EIO, _("%s: response parse error"),
-                         (char*)n_buf_ptr(resp->buf));
+        case ST_RESP_BAD:       /* the caller names the request */
             return -1;
 
         default:
@@ -638,7 +636,7 @@ static int http_resp_parse(struct http_resp *resp)
 
 
 static
-struct http_resp *do_http_read_resp(struct vcn *cn)
+struct http_resp *do_http_read_resp(struct vcn *cn, const char *path)
 {
     struct http_resp *resp;
     int is_err = 0;
@@ -654,8 +652,19 @@ struct http_resp *do_http_read_resp(struct vcn *cn)
         }
 
         if ((n = readresp(cn, resp, 1)) > 0) {
-            if (response_complete(resp))
+            if ((n = response_complete(resp)) > 0)
                 break;
+
+            if (n < 0) {        /* only the status line is refused */
+                const char *s = n_buf_ptr(resp->buf);
+                char line[PATH_MAX];
+
+                n_snprintf(line, sizeof(line), "%s: %.*s", path,
+                           (int)strcspn(s, "\r\n"), s);
+                vfff_set_err(EIO, _("%s: response parse error"), line);
+                is_err = 1;
+                break;
+            }
         } else {
             is_err = 1;
             break;
@@ -723,7 +732,7 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
     return is_err == 0;
 }
 
-int httpcn_get_resp(struct vcn *cn)
+int httpcn_get_resp(struct vcn *cn, const char *path)
 {
     int rc = 1;
 
@@ -733,7 +742,7 @@ int httpcn_get_resp(struct vcn *cn)
     if (cn->resp)
         http_resp_free(cn->resp);
 
-    if ((cn->resp = do_http_read_resp(cn)) == NULL) {
+    if ((cn->resp = do_http_read_resp(cn, path)) == NULL) {
         cn->state = VCN_DEAD;
         rc = 0;
     }
@@ -885,7 +894,7 @@ int vhttp_vcn_stat(struct vcn *cn, struct vfff_req *rreq)
     if (!httpcn_req(cn, req_line, NULL))
         return 0;
 
-    if (!httpcn_get_resp(cn))
+    if (!httpcn_get_resp(cn, rreq->uri))
         return 0;
 
     resp = cn->resp;
@@ -953,7 +962,7 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
     else
         httpcn_req(cn, req_line, NULL);
 
-    if (!httpcn_get_resp(cn))
+    if (!httpcn_get_resp(cn, rreq->uri))
         goto l_err_end;
 
     resp = cn->resp;

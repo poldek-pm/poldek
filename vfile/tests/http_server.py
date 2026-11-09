@@ -91,6 +91,11 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._handle_auth()
             return
         
+        # a status line with a code of two digits
+        if path == "/bad-status-line":
+            self.wfile.write(b"HTTP/1.0 20 OK\r\nContent-Length: 0\r\n\r\n")
+            return
+
         # a header line longer than vfff's 4096-byte line buffer
         if path == "/long-header":
             self.send_response(HTTPStatus.OK)
