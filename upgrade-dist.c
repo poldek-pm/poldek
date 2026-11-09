@@ -40,8 +40,9 @@
 #include "poldek_intern.h"
 #include "pm/pm.h"
 #include "install3/install.h"
+#include "install3/ictx.h"
 
-int process_pkg(const struct pkg *dbpkg, struct poldek_ts *ts,
+int process_pkg(struct pkg *dbpkg, struct poldek_ts *ts,
                 tn_hash *marked_h, int *nmarked)
 {
     struct pkg *pkg = NULL, *tmpkg;
@@ -113,6 +114,12 @@ int process_pkg(const struct pkg *dbpkg, struct poldek_ts *ts,
     if (cmprc > 0) {
         if (pkg_is_scored(pkg, PKG_HELD) && ts->getop(ts, POLDEK_OP_HOLD)) {
             msgn(1, _("%s: skip held package"), pkg_id(pkg));
+
+        /* with several instances installed the check above skips the
+           package; a held one skipped here would hide from it */
+        } else if (i3_is_held(ts, dbpkg) &&
+                   i3_is_pkg_installed(ts, pkg, &cmprc, NULL) == 1) {
+            msgn(1, _("%s: skip held package"), pkg_id(dbpkg));
 
         } else {
             n_hash_insert(marked_h, pkgkey, pkg);

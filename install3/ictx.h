@@ -151,9 +151,11 @@ int i3_mark_namegroup(struct i3ctx *ictx,
 /* misc.c */
 int i3_pkgdb_match_req(struct i3ctx *ictx, const struct capreq *req);
 
-int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc);
+int i3_is_pkg_installed(struct poldek_ts *ts, const struct pkg *pkg, int *cmprc,
+                        struct pkg **dbpkgp);
 int i3_is_pkg_installable(struct poldek_ts *ts, const struct pkg *pkg,
                           int is_hand_marked);
+int i3_is_held(const struct poldek_ts *ts, struct pkg *pkg);
 
 int i3_select_best_pkg(int indent, struct i3ctx *ictx,
                        const struct pkg *marker, tn_array *candidates);

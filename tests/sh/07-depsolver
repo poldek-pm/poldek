@@ -1045,6 +1045,47 @@ testUpgradeMultipleInstalled() {
     try_install a "a-1.1.1k-1" "a-1.1.1j-1"
 }
 
+# the packages installed in $DESTINATION_REPO, as name-version-release
+installed() {
+    ls $DESTINATION_REPO | sed 's/\.[^.]*\.rpm$//' | grep -v '^sh-' | paste -sd' '
+}
+
+# a package whose installed version is held stays as it is, and the rest of
+# the upgrade goes on (a real run: --test stops before the installed check)
+testUpgradeHeldInstalledVersion() {
+    for p in a b; do
+        build_installed $p 1-1
+        build $p 2-1
+    done
+
+    # skipped as a held newer version is, with no error
+    out=$($POLDEK_INSTALL --hold a-1-1.noarch --upgrade-dist 2>&1) ||
+        fail "--upgrade-dist failed: $out"
+    echo "$out" | grep -q 'error' && fail "--upgrade-dist reported an error: $out"
+    assertEquals "after --upgrade-dist" "a-1-1 b-2-1" "$(installed)"
+
+    rm -f $DESTINATION_REPO/b-*
+    build_installed b 1-1
+    runpoldek --hold a-1-1.noarch -u a b
+    assertEquals "after -u a b" "a-1-1 b-2-1" "$(installed)"
+}
+
+# with several instances installed --upgrade-dist skips the package, also
+# when one of them is held, whichever comes first from the database
+testUpgradeDistHeldOneOfSeveral() {
+    build a 2-1
+    for hold in a-1-1.noarch a-1.5-1.noarch; do
+        rm -f $DESTINATION_REPO/a-*
+        build_installed a 1-1
+        build_installed a 1.5-1
+        out=$($POLDEK_INSTALL --hold $hold --upgrade-dist 2>&1) ||
+            fail "--hold $hold: --upgrade-dist failed: $out"
+        echo "$out" | grep -q 'error' &&
+            fail "--hold $hold: --upgrade-dist reported an error: $out"
+        assertEquals "--hold $hold" "a-1-1 a-1.5-1" "$(installed)"
+    done
+}
+
 # https://github.com/poldek-pm/poldek/issues/15
 # https://github.com/poldek-pm/poldek/issues/24
 testMultilibCrash() {
