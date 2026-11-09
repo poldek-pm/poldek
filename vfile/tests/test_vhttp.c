@@ -286,6 +286,44 @@ START_TEST(test_http_error_status_without_reason)
 }
 END_TEST
 
+START_TEST(test_http_reason_phrase_as_sent)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/status/500/codeinreason",
+             server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    ck_assert_str_eq(logged(logged_err), "vfff: /status/500/codeinreason: "
+                     "HTTP 500 500 Internal Server Error\n");
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+}
+END_TEST
+
+/* a status line may end right after the code, without the space before an
+   empty reason phrase (curl and Python's http.client take it too) */
+START_TEST(test_http_status_line_without_space)
+{
+    char url[512], dest[PATH_MAX], buf[16] = "";
+    FILE *f;
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/status/200/nospace", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/nospace", tmpdir) >= sizeof(dest)) ck_abort_msg("path truncated");
+    fail_if((f = fopen(dest, "r")) == NULL);
+    fail_if(fgets(buf, sizeof(buf), f) == NULL);
+    fclose(f);
+    ck_assert_str_eq(buf, "ok\n");
+}
+END_TEST
+
 START_TEST(test_http_response_line_too_long)
 {
     char url[512];
@@ -806,6 +844,8 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_404);
     tcase_add_test(tc_http, test_http_error_status_named);
     tcase_add_test(tc_http, test_http_error_status_without_reason);
+    tcase_add_test(tc_http, test_http_reason_phrase_as_sent);
+    tcase_add_test(tc_http, test_http_status_line_without_space);
     tcase_add_test(tc_http, test_http_response_line_too_long);
     tcase_add_test(tc_http, test_http_redirect_302);
     tcase_add_test(tc_http, test_http_redirect_chain);
