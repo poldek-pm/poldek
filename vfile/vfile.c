@@ -743,6 +743,67 @@ int vf_localunlink(const char *path)
 }
 
 
+/* bytes of the control character at s, as a terminal takes it (C0, DEL,
+   C1 in UTF-8), or 0 */
+static int ctl_len(const unsigned char *s)
+{
+    if (*s < 0x20 || *s == 0x7f)
+        return 1;
+
+    if (*s == 0xc2 && s[1] >= 0x80 && s[1] <= 0x9f)
+        return 2;
+
+    return 0;
+}
+
+int vf_has_ctl(const char *str)
+{
+    const unsigned char *s = (const unsigned char *)str;
+
+    for (; *s; s++)
+        if (ctl_len(s))
+            return 1;
+
+    return 0;
+}
+
+/* for text from the network on its way into a message: its control
+   characters written out as escapes, dst cut at a whole one */
+void vf_escape_ctl(char *dst, size_t size, const char *src)
+{
+    const unsigned char *s = (const unsigned char *)src;
+    size_t n = 0;
+
+    while (*s) {
+        char e[16];
+        int len, skip = ctl_len(s);
+
+        if (skip == 0) {
+            e[0] = *s;
+            len = skip = 1;
+
+        } else if (*s == '\t' || *s == '\r' || *s == '\n') {
+            len = snprintf(e, sizeof(e), "\\%c",
+                           *s == '\t' ? 't' : *s == '\r' ? 'r' : 'n');
+
+        } else if (skip == 2) {
+            len = snprintf(e, sizeof(e), "\\x%02x\\x%02x", s[0], s[1]);
+
+        } else {
+            len = snprintf(e, sizeof(e), "\\x%02x", *s);
+        }
+
+        if (n + len >= size)    /* no escape cut in half */
+            break;
+
+        memcpy(&dst[n], e, len);
+        n += len;
+        s += skip;
+    }
+
+    dst[n] = '\0';
+}
+
 void vf_vlog(int pri, const char *fmt, va_list ap)
 {
     if (vfile_conf.log)

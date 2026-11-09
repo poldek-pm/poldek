@@ -67,12 +67,14 @@ const char *vfff_errmsg(void)
 
 void vfff_set_err(int err_no, const char *fmt, ...)
 {
+    char buf[sizeof(errmsg)];
     va_list args;
 
     va_start(args, fmt);
-    vsnprintf(errmsg, sizeof(errmsg), fmt, args);
+    vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
 
+    vf_escape_ctl(errmsg, sizeof(errmsg), buf);
     vfff_errno = err_no;
 }
 
@@ -85,18 +87,45 @@ int vfff_sigint_reached(void)
     return v;
 }
 
-void vfff_log(const char *fmt, ...)
+static void log_cb(const char *fmt, ...)
 {
     va_list args;
 
     va_start(args, fmt);
+    vfff_vlog_cb(fmt, args);
+    va_end(args);
+}
+
+void vfff_log(const char *fmt, ...)
+{
+    char buf[8192], line[8192];
+    va_list args;
+    size_t n;
+    int eol = 0;
+
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+
+    /* the line end is vfff's own */
+    n = strlen(buf);
+    if (n > 0 && buf[n - 1] == '\n') {
+        buf[--n] = '\0';
+        if (n > 0 && buf[n - 1] == '\r')
+            buf[--n] = '\0';
+        eol = 1;
+    }
+
+    vf_escape_ctl(line, sizeof(line) - 1, buf);
+    if (eol)
+        strcat(line, "\n");
+
     if (vfff_vlog_cb)
-        vfff_vlog_cb(fmt, args);
+        log_cb("%s", line);
     else {
-        vfprintf(stdout, fmt, args);
+        fputs(line, stdout);
         fflush(stdout);
     }
-    va_end(args);
 }
 
 static sig_atomic_t alarm_reached = 0;
