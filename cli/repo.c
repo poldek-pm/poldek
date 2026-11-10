@@ -16,6 +16,7 @@
 
 #include <ctype.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fnmatch.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,16 +49,25 @@
 #define ACTION_LIST     3
 
 static struct argp_option options[] = {
-    { 0, 'a', "URL", 0, N_("Add repository from remote URL conf"), 0 },
-    { 0, 'd', "URL", 0, N_("Remove managed repo"), 0 },
-    { 0, 'l', 0, 0, N_("List managed repositories"), 0 },
-    { "force", OPT_FORCE, 0, 0, N_("Overwrite existing file"), 0 },
+    { "force", OPT_FORCE, 0, 0, N_("Overwrite an existing .conf file"), 0 },
     { 0, 0, 0, 0, 0, 0 }
+};
+
+static struct {
+    const char  *name;
+    unsigned    action;
+} subcommands[] = {
+    { "add",    ACTION_ADD },
+    { "del",    ACTION_DEL },
+    { "rm",     ACTION_DEL },
+    { "ls",     ACTION_LIST },
+    { "list",   ACTION_LIST },
+    { NULL,     ACTION_NONE },
 };
 
 struct arg_s {
     unsigned    action;
-    tn_array    *urls;
+    char        *url;
     int         force;
 };
 
@@ -65,16 +75,28 @@ static void arg_s_free(void *ptr)
 {
     struct arg_s *arg_s = ptr;
 
-    if (arg_s->urls)
-        n_array_free(arg_s->urls);
+    if (arg_s->url)
+        n_free(arg_s->url);
+
     free(arg_s);
+}
+
+static const char *action_name(unsigned action)
+{
+    switch (action) {
+        case ACTION_ADD: return "add";
+        case ACTION_DEL: return "del";
+        case ACTION_LIST: return "ls";
+    }
+
+    return "?";
 }
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdctx *cmdctx = state->input;
     struct arg_s *arg_s;
-    unsigned action = ACTION_NONE;
+    int i;
 
     if (cmdctx->_data) {
         arg_s = cmdctx->_data;
@@ -86,32 +108,73 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     }
 
     switch (key) {
-        case 'a': action = ACTION_ADD; break;
-        case 'd': action = ACTION_DEL; break;
-        case 'l': action = ACTION_LIST; break;
+        case ARGP_KEY_ARG:
+            if (arg_s->action == ACTION_NONE) {     /* the first word */
+                for (i = 0; subcommands[i].name; i++)
+                    if (strcmp(arg, subcommands[i].name) == 0)
+                        break;
+
+                if (subcommands[i].name == NULL) {
+                    logn(LOGERR, _("repo: unknown command '%s'"), arg);
+                    goto l_err;
+                }
+
+                arg_s->action = subcommands[i].action;
+                return 0;
+            }
+
+            if (arg_s->action == ACTION_LIST) {
+                logn(LOGERR, _("repo: %s takes no arguments"), action_name(arg_s->action));
+                goto l_err;
+            }
+
+            if (arg_s->url) {
+                logn(LOGERR, _("repo: %s takes one URL"),
+                     action_name(arg_s->action));
+                goto l_err;
+            }
+
+            arg_s->url = n_strdup(arg);
+            return 0;
+
+        case ARGP_KEY_END:
+            if (cmdctx->rtflags & CMDCTX_ISHELP)
+                break;
+
+            if (arg_s->action == ACTION_NONE)   /* repo == repo ls */
+                arg_s->action = ACTION_LIST;
+
+            if (arg_s->force && arg_s->action != ACTION_ADD) {
+                logn(LOGERR, _("repo: --force is only for add"));
+                goto l_err;
+            }
+
+            if (arg_s->action == ACTION_LIST) {
+                if (arg_s->url) {
+                    logn(LOGERR, _("repo: ls takes no arguments"));
+                    goto l_err;
+                }
+
+            } else if (arg_s->url == NULL) {
+                logn(LOGERR, _("repo: %s: a URL is required"),
+                     action_name(arg_s->action));
+                goto l_err;
+            }
+            break;
+
         case OPT_FORCE:
             arg_s->force = 1;
-            return 0;
+            break;
 
         default:
             return ARGP_ERR_UNKNOWN;
     }
 
-    if (arg_s->action != ACTION_NONE && arg_s->action != action) {
-        logn(LOGERR, _("repo: -a, -d and -l are mutually exclusive"));
-        cmdctx->rtflags |= CMDCTX_ERR;
-        return EINVAL;
-    }
-    arg_s->action = action;
-
-    if (action == ACTION_LIST)
-        return 0;
-
-    if (arg_s->urls == NULL)
-        arg_s->urls = n_array_new(4, free, (tn_fn_cmp) strcmp);
-    n_array_push(arg_s->urls, n_strdup(arg));
-
     return 0;
+
+ l_err:
+    cmdctx->rtflags |= CMDCTX_ERR;
+    return EINVAL;
 }
 
 static int list_repos(struct poldek_ctx *ctx)
@@ -181,10 +244,10 @@ static int list_repos(struct poldek_ctx *ctx)
 static int repo(struct cmdctx *cmdctx)
 {
     struct arg_s *arg_s = cmdctx->_data;
-    int i, rc = 1;
+    int rc = 1;
 
-    if (arg_s == NULL || arg_s->action == ACTION_NONE) {
-        logn(LOGERR, _("repo: missing action (-a, -d or -l)"));
+    if (arg_s == NULL || arg_s->action == ACTION_NONE) { /* not reached */
+        logn(LOGERR, _("repo: no command"));
         return 0;
     }
 
@@ -193,21 +256,15 @@ static int repo(struct cmdctx *cmdctx)
 
     if (arg_s->action == ACTION_ADD) {
         unsigned flags = arg_s->force ? POLDEK_REPO_FORCE : 0;
-        for (i = 0; i < n_array_size(arg_s->urls); i++) {
-            const char *url = n_array_nth(arg_s->urls, i);
-            if (!poldek_repo_add(cmdctx->cctx->ctx, url, flags))
-                rc = 0;
-        }
+        if (!poldek_repo_add(cmdctx->cctx->ctx, arg_s->url, flags))
+            rc = 0;
 
         return rc;
     }
 
     if (arg_s->action == ACTION_DEL) {
-        for (i = 0; i < n_array_size(arg_s->urls); i++) {
-            const char *url = n_array_nth(arg_s->urls, i);
-            if (!poldek_repo_del(cmdctx->cctx->ctx, url))
-                rc = 0;
-        }
+        if (!poldek_repo_del(cmdctx->cctx->ctx, arg_s->url))
+            rc = 0;
 
         return rc;
     }
@@ -217,8 +274,14 @@ static int repo(struct cmdctx *cmdctx)
 
 struct poclidek_cmd command_repo = {
     COMMAND_SELFARGS | COMMAND_EMPTYARGS | COMMAND_HASVERBOSE | COMMAND_BATCH,
-    "repo", NULL, N_("Manage built-in repos.d repositories"),
+    "repo", N_("COMMAND [URL]"),
+    N_("Manage built-in repos.d repositories"),
     options, parse_opt,
-    NULL, repo, NULL, arg_s_free, NULL, NULL, NULL, 0, 0,
+    NULL, repo, NULL, arg_s_free,
+    N_("Commands:\n"
+       "  add URL      add a repository from a remote configuration\n"
+       "  del URL      remove a repository added with add\n"
+       "  ls           list the repositories"),
+    NULL, NULL, 0, 0,
     NULL
 };
