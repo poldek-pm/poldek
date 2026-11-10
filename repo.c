@@ -325,18 +325,45 @@ l_end:
     return rc;
 }
 
-static char *find_repo_file_by_origin(const char *reposd, const char *origin)
-{
-    const char *found = NULL;
+/* a repository file found in repos.d and the _origin saved in it */
+struct repo_match {
+    char    *origin;            /* NULL when the file has no _origin */
+    char    *path;
+};
 
+static struct repo_match *repo_match_new(const char *origin, const char *path)
+{
+    struct repo_match *m = n_malloc(sizeof(*m));
+
+    m->origin = origin ? n_strdup(origin) : NULL;
+    m->path = n_strdup(path);
+    return m;
+}
+
+static void repo_match_free(void *ptr)
+{
+    struct repo_match *m = ptr;
+
+    n_free(m->origin);
+    n_free(m->path);
+    free(m);
+}
+
+/* RET: the repositories the origin names: one whose _origin (or file name)
+   is origin, else those whose _origin contains it */
+static tn_array *find_repos_by_origin(const char *reposd, const char *origin)
+{
+    tn_array *matches = n_array_new(2, repo_match_free, NULL);
     tn_array *files = poldek_util_readdir(reposd, "*.conf");
+
     if (files == NULL)
-        return NULL;
+        return matches;
 
     for (int i = 0; i < n_array_size(files); i++) {
         const char *path = n_array_nth(files, i);
         tn_hash *htconf;
         tn_hash *ht_global;
+        const char *o;
 
         htconf = poldek_conf_load(path, POLDEK_LDCONF_NOVALIDATE |
                                   POLDEK_LDCONF_NOINCLUDE);
@@ -344,27 +371,33 @@ static char *find_repo_file_by_origin(const char *reposd, const char *origin)
             continue;
 
         ht_global = poldek_conf_get_section(htconf, "global");
-        const char *o = ht_global ? poldek_conf_get(ht_global, "_origin", NULL) : NULL;
-        if (o && strcmp(o, origin) == 0) {
-            found = path;
-        } else if (strcmp(n_basenam(path), origin) == 0) {
-            found = path;
+        o = ht_global ? poldek_conf_get(ht_global, "_origin", NULL) : NULL;
+
+        if ((o && strcmp(o, origin) == 0) || strcmp(n_basenam(path), origin) == 0) {
+            n_array_clean(matches);
+            n_array_push(matches, repo_match_new(o, path));
+            n_hash_free(htconf);
+            break;
+
+        } else if (o && strstr(o, origin)) {
+            n_array_push(matches, repo_match_new(o, path));
         }
 
         n_hash_free(htconf);
-        if (found)
-            break;
     }
 
-    char *re = found ? n_strdup(found) : NULL;
     n_array_free(files);
 
-    return re;
+    return matches;
 }
 
 int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
 {
     char reposd[PATH_MAX];
+    struct repo_match *m;
+    tn_array *matches;
+    int i;
+
     (void) ctx;
 
     if (poldek_conf_reposd(reposd, sizeof(reposd)) == NULL) {
@@ -372,26 +405,45 @@ int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
         return 0;
     }
 
-    char *path = find_repo_file_by_origin(reposd, url);
-    if (path == NULL) {
+    matches = find_repos_by_origin(reposd, url);
+
+    if (n_array_size(matches) == 0) {
         logn(LOGERR, _("%s: no such repo"), url);
+        n_array_free(matches);
         return 0;
     }
 
-    if (access(path, F_OK) != 0) {
-        logn(LOGERR, _("%s: no such file"), path);
-        n_free(path);
+    if (n_array_size(matches) > 1) {
+        logn(LOGERR, _("%s: ambiguous name, matches %d repositories:"), url,
+             n_array_size(matches));
+
+        for (i = 0; i < n_array_size(matches); i++) {
+            m = n_array_nth(matches, i);
+            msgn(0, "  %s", m->origin ? m->origin : m->path);
+        }
+
+        n_array_free(matches);
         return 0;
     }
 
-    if (unlink(path) != 0) {
-        logn(LOGERR, _("%s: %m"), path);
-        n_free(path);
-        return 0;
+    m = n_array_nth(matches, 0);
+
+    if (access(m->path, F_OK) != 0) {
+        logn(LOGERR, _("%s: no such file"), m->path);
+        goto l_err;
     }
 
-    logn(LOGNOTICE, _("%s repo has been removed"), url);
-    n_free(path);
+    if (unlink(m->path) != 0) {
+        logn(LOGERR, _("%s: %m"), m->path);
+        goto l_err;
+    }
 
+    logn(LOGNOTICE, _("%s repo has been removed"), m->origin ? m->origin : m->path);
+
+    n_array_free(matches);
     return 1;
+
+ l_err:
+    n_array_free(matches);
+    return 0;
 }
