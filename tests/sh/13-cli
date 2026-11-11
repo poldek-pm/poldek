@@ -124,6 +124,24 @@ testIndexWithoutPackageInfo()
     assertEquals "desc -L failed ($out)" "$?" "0"
 }
 
+# an alias with a parameter passes its argument whole, a long one too
+testAliasParameterLongArgument()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\np1 = ls %%1\n' > $TMPDIR/home/.poclidekrc
+    arg=$(printf 'x%.0s' $(seq 1 2000))
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd "p1 $arg" 2>&1)
+    got=$(echo "$out" | cut -c1-80)
+    assertEquals "ls did not get the argument ($got)" \
+                 "error: $arg: no such package or directory" "$out"
+}
+
 # a quoted argument may begin with | or ;
 testCmdQuotedPipeOrSemicolon()
 {
