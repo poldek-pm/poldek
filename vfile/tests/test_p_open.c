@@ -315,11 +315,13 @@ static int wait_for_file(const char *path, int ms)
     return access(path, F_OK) == 0;
 }
 
+enum event { QUIT_KEY, HANGUP };
+
 /* a stand-in for poldek, in a session of its own on a fresh terminal, runs a
-   command with p_open(FLAGS); once the command has started, KEY is typed on
-   the terminal, or the terminal hangs up when KEY is 0; returns whether the
-   command ran to its end */
-static int command_runs_to_end(unsigned flags, char key)
+   command with p_open(FLAGS); once the command has started, ^\ is typed on
+   the terminal (QUIT_KEY) or the terminal hangs up (HANGUP); returns whether
+   the command ran to its end */
+static int command_runs_to_end(unsigned flags, enum event event)
 {
     const char *tmpdir = getenv("TMPDIR");
     char dir[PATH_MAX], started[PATH_MAX], done[PATH_MAX];
@@ -358,13 +360,17 @@ static int command_runs_to_end(unsigned flags, char key)
     close(slave);
 
     fail_unless(wait_for_file(started, 2000), "the command did not start");
-    if (key)
-        fail_unless(write(master, &key, 1) == 1, "write: %m");
-    else
+    switch (event) {
+    case QUIT_KEY:
+        fail_unless(write(master, "\034", 1) == 1, "write: %m");
+        break;
+    case HANGUP:
         close(master);
+        break;
+    }
 
     ran = wait_for_file(done, 1500);
-    if (key)
+    if (event != HANGUP)
         close(master);
     waitpid(pid, &st, 0);
 
@@ -374,19 +380,21 @@ static int command_runs_to_end(unsigned flags, char key)
     return ran;
 }
 
-#define QUIT_KEY '\034'           /* ^\ */
-
 START_TEST(test_quit_key_misses_command)
 {
     fail_unless(command_runs_to_end(P_OPEN_SETSID, QUIT_KEY),
-                "the command did not run to its end");
+                "on pipes, the command did not run to its end");
+    fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, QUIT_KEY),
+                "on a pty, the command did not run to its end");
 }
 END_TEST
 
 START_TEST(test_hangup_misses_command)
 {
-    fail_unless(command_runs_to_end(P_OPEN_SETSID, 0),
-                "the command did not run to its end");
+    fail_unless(command_runs_to_end(P_OPEN_SETSID, HANGUP),
+                "on pipes, the command did not run to its end");
+    fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, HANGUP),
+                "on a pty, the command did not run to its end");
 }
 END_TEST
 
@@ -478,22 +486,7 @@ START_TEST(test_signals_before_exec_act_as_after_it)
 }
 END_TEST
 
-START_TEST(test_pty_quit_key_misses_command)
-{
-    fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, QUIT_KEY),
-                "the command did not run to its end");
-}
-END_TEST
-
-START_TEST(test_pty_hangup_misses_command)
-{
-    fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, 0),
-                "the command did not run to its end");
-}
-END_TEST
-
 NTEST_RUNNER("p_open", test_start_fails, test_exec_fails,
              test_wait_sees_end_with_sigchld_ignored, test_quit_key_misses_command,
              test_hangup_misses_command, test_pty_output_ends_with_command,
-             test_pty_quit_key_misses_command, test_pty_hangup_misses_command,
              test_signals_before_exec_act_as_after_it);
