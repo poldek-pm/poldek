@@ -101,12 +101,6 @@ static void check_fdopen_failure(unsigned flags)
     rmdir(dir);
 }
 
-START_TEST(test_pipe_fdopen_fails)
-{
-    check_fdopen_failure(0);
-}
-END_TEST
-
 /* with SIGCHLD ignored, as poldek may inherit it, the kernel reaps the
    command at its end and waitpid() finds no child: p_wait() still sees
    the end */
@@ -337,50 +331,45 @@ START_TEST(test_pty_output_ends_with_command)
 }
 END_TEST
 
-/* the same with a pty; stdout is a pty slave, as above */
-START_TEST(test_pty_fdopen_fails)
+/* CHECK on pipes, then on a pty: p_open() uses a pty only when its own
+   stdout is a terminal, so stdout is a pty slave meanwhile */
+static void check_on_pipes_and_pty(void (*check)(unsigned flags))
 {
     int master, slave, saved_stdout;
+
+    check(0);
 
     fail_unless(openpty(&master, &slave, NULL, NULL, NULL) == 0, "openpty: %m");
     saved_stdout = dup(STDOUT_FILENO);
     dup2(slave, STDOUT_FILENO);
 
-    check_fdopen_failure(P_OPEN_OUTPTYS);
+    check(P_OPEN_OUTPTYS);
 
     dup2(saved_stdout, STDOUT_FILENO);
     close(saved_stdout);
     close(slave);
     close(master);
 }
+
+START_TEST(test_fdopen_fails)
+{
+    check_on_pipes_and_pty(check_fdopen_failure);
+}
 END_TEST
 
-/* on pipes, and on a pty with stdout a pty slave, as above */
 /* before its exec a command has the signal actions it has after it */
+static void check_signal_actions_before_exec(unsigned flags)
+{
+    check_signal_before_exec(flags, &term_at_exec, 0);
+    check_signal_before_exec(flags, &term_after_fork, 0);
+    check_signal_before_exec(flags, &term_at_exec, 1);
+    check_ignored_stays_ignored(flags, 0);
+    check_ignored_stays_ignored(flags, SA_SIGINFO);
+}
+
 START_TEST(test_signals_before_exec_act_as_after_it)
 {
-    int master, slave, saved_stdout;
-
-    check_signal_before_exec(0, &term_at_exec, 0);
-    check_signal_before_exec(0, &term_after_fork, 0);
-    check_signal_before_exec(0, &term_at_exec, 1);
-    check_ignored_stays_ignored(0, 0);
-    check_ignored_stays_ignored(0, SA_SIGINFO);
-
-    fail_unless(openpty(&master, &slave, NULL, NULL, NULL) == 0, "openpty: %m");
-    saved_stdout = dup(STDOUT_FILENO);
-    dup2(slave, STDOUT_FILENO);
-
-    check_signal_before_exec(P_OPEN_OUTPTYS, &term_at_exec, 0);
-    check_signal_before_exec(P_OPEN_OUTPTYS, &term_after_fork, 0);
-    check_signal_before_exec(P_OPEN_OUTPTYS, &term_at_exec, 1);
-    check_ignored_stays_ignored(P_OPEN_OUTPTYS, 0);
-    check_ignored_stays_ignored(P_OPEN_OUTPTYS, SA_SIGINFO);
-
-    dup2(saved_stdout, STDOUT_FILENO);
-    close(saved_stdout);
-    close(slave);
-    close(master);
+    check_on_pipes_and_pty(check_signal_actions_before_exec);
 }
 END_TEST
 
@@ -398,8 +387,8 @@ START_TEST(test_pty_hangup_misses_command)
 }
 END_TEST
 
-NTEST_RUNNER("p_open", test_pipe_fdopen_fails,
+NTEST_RUNNER("p_open", test_fdopen_fails,
              test_wait_sees_end_with_sigchld_ignored, test_quit_key_misses_command,
              test_hangup_misses_command, test_pty_output_ends_with_command,
-             test_pty_fdopen_fails, test_pty_quit_key_misses_command,
-             test_pty_hangup_misses_command, test_signals_before_exec_act_as_after_it);
+             test_pty_quit_key_misses_command, test_pty_hangup_misses_command,
+             test_signals_before_exec_act_as_after_it);
