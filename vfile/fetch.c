@@ -468,10 +468,9 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         if ((ec = p_close(&pst)) != 0)
             vf_logerr("%s\n", pst.errmsg ? pst.errmsg :
                       _("program exited with non-zero value"));
-
-        p_st_destroy(&pst);
     }
 
+    p_st_destroy(&pst);
     *vfile_verbose = verbose;
     if (vflock)
         vf_lock_release(vflock);
