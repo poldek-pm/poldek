@@ -317,10 +317,10 @@ static int wait_for_file(const char *path, int ms)
 
 enum event { QUIT_KEY, HANGUP };
 
-/* a stand-in for poldek, in a session of its own on a fresh terminal, runs a
-   command with p_open(FLAGS); once the command has started, ^\ is typed on
-   the terminal (QUIT_KEY) or the terminal hangs up (HANGUP); returns whether
-   the command ran to its end */
+/* a stand-in for poldek, the job of a shell that leads the session of a fresh
+   terminal, runs a command with p_open(FLAGS); once the command has started,
+   ^\ is typed on the terminal (QUIT_KEY) or the terminal hangs up (HANGUP);
+   returns whether the command ran to its end */
 static int command_runs_to_end(unsigned flags, enum event event)
 {
     const char *tmpdir = getenv("TMPDIR");
@@ -340,9 +340,9 @@ static int command_runs_to_end(unsigned flags, enum event event)
     if ((pid = fork()) == 0) {
         struct rlimit nocore = { 0, 0 };
         struct p_open_st pst;
+        pid_t poldek;
 
-        /* poldek's own handler, which the command does not inherit */
-        signal(SIGQUIT, on_signal);
+        /* the shell: a hangup ends it, and its end sends its job a SIGHUP */
         setrlimit(RLIMIT_CORE, &nocore);
         close(master);
         setsid();
@@ -351,7 +351,16 @@ static int command_runs_to_end(unsigned flags, enum event event)
         dup2(slave, STDOUT_FILENO);
         dup2(slave, STDERR_FILENO);
         close(slave);
+        signal(SIGQUIT, SIG_IGN);
+        if ((poldek = fork()) != 0) {
+            waitpid(poldek, &st, 0);
+            _exit(0);
+        }
 
+        /* poldek's own handlers while rpm runs, which the command does not
+           inherit */
+        signal(SIGQUIT, on_signal);
+        signal(SIGHUP, on_signal);
         p_st_init(&pst);
         if (p_open(&pst, flags, "/bin/sh", argv) == NULL)
             _exit(2);
