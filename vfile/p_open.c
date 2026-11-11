@@ -124,12 +124,34 @@ static pid_t fork_command(sigset_t *mask)
     return 0;
 }
 
-static void exec_command(const char *cmd, char *const argv[],
-                         const sigset_t *mask)
+/* the child ends here: pp_open() and pty_open() go on as the parent */
+static __attribute__((noreturn))
+void exec_command(const char *cmd, char *const argv[], const sigset_t *mask)
 {
     sigprocmask(SIG_SETMASK, mask, NULL);
     execv(cmd, argv);
     exit(EXIT_FAILURE);
+}
+
+/* the parent's side of fork_command(): PST reads the command's output from
+   FD, or, with no command started, has no stream and says why */
+static FILE *command_started(struct p_open_st *pst, pid_t pid, int fd,
+                             const char *cmd)
+{
+    char errmsg[1024];
+
+    if (pid < 0) {
+        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
+        pst->errmsg = n_strdup(errmsg);
+        fclose(pst->stream);
+        pst->stream = NULL;
+        return NULL;
+    }
+
+    pst->fd = fd;
+    pst->pid = pid;
+    pst->cmd = n_strdup(cmd);
+    return pst->stream;
 }
 
 static void p_dupnull(int fdno, unsigned p_open_flags)
@@ -199,22 +221,10 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 	close(pp[1]);
 
         exec_command(cmd, argv, &mask);
-
-    } else if (pid < 0) {
-        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
-        pst->errmsg = n_strdup(errmsg);
-        fclose(pst->stream);
-        pst->stream = NULL;
-        close(pp[1]);
-
-    } else {
-        close(pp[1]);
-        pst->fd = pp[0];
-        pst->pid = pid;
-        pst->cmd = n_strdup(cmd);
     }
 
-    return pst->stream;
+    close(pp[1]);
+    return command_started(pst, pid, pp[0], cmd);
 }
 
 
@@ -361,18 +371,7 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         if (flags & P_OPEN_IGNSIGINT)
             signal(SIGINT, SIG_IGN);
         exec_command(cmd, argv, &mask);
-
-    } else if (pid < 0) {
-        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
-        pst->errmsg = n_strdup(errmsg);
-        fclose(pst->stream);
-        pst->stream = NULL;
-
-    } else {
-        pst->fd = fd;
-        pst->pid = pid;
-        pst->cmd = n_strdup(cmd);
     }
 
-    return pst->stream;
+    return command_started(pst, pid, fd, cmd);
 }
