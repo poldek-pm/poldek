@@ -101,6 +101,55 @@ static void check_fdopen_failure(unsigned flags)
     rmdir(dir);
 }
 
+/* with a command execv() refuses, p_open() returns NULL, leaves no child
+   and says why; the child writes nothing poldek buffered a second time */
+static void check_exec_failure(unsigned flags)
+{
+    const char *tmpdir = getenv("TMPDIR");
+    char dir[PATH_MAX], path[PATH_MAX], out[PATH_MAX], buf[64];
+    char *argv[] = { "script", NULL };
+    struct p_open_st pst;
+    FILE *stream, *f;
+    size_t n;
+    int st;
+
+    n_snprintf(dir, sizeof(dir), "%s/poldek-p_open-XXXXXX",
+               tmpdir && *tmpdir ? tmpdir : "/tmp");
+    fail_if(mkdtemp(dir) == NULL, "mkdtemp %s: %s", dir, strerror(errno));
+
+    /* access() lets it through as executable, execv() refuses it (ENOEXEC) */
+    n_snprintf(path, sizeof(path), "%s/script", dir);
+    fail_if((f = fopen(path, "w")) == NULL, "fopen %s: %m", path);
+    fputs("echo ran\n", f);
+    fclose(f);
+    fail_if(chmod(path, 0755) != 0, "chmod %s: %m", path);
+
+    n_snprintf(out, sizeof(out), "%s/out", dir);
+    fail_if((f = fopen(out, "w")) == NULL, "fopen %s: %m", out);
+    fputs("buffered\n", f);
+
+    p_st_init(&pst);
+    stream = p_open(&pst, flags, path, argv);
+    fail_unless(stream == NULL, "p_open() succeeded, its command not started");
+    fail_unless(waitpid(-1, &st, WNOHANG) == -1 && errno == ECHILD,
+                "a child was left");
+    fail_unless(pst.errmsg && strstr(pst.errmsg, path) &&
+                strstr(pst.errmsg, strerror(ENOEXEC)),
+                "error message: %s", pst.errmsg ? pst.errmsg : "(none)");
+    p_st_destroy(&pst);
+
+    fclose(f);
+    fail_if((f = fopen(out, "r")) == NULL, "fopen %s: %m", out);
+    n = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    buf[n] = '\0';
+    fail_unless(strcmp(buf, "buffered\n") == 0, "%s has: %s", out, buf);
+
+    unlink(out);
+    unlink(path);
+    rmdir(dir);
+}
+
 /* with SIGCHLD ignored, as poldek may inherit it, the kernel reaps the
    command at its end and waitpid() finds no child: p_wait() still sees
    the end */
@@ -357,6 +406,12 @@ START_TEST(test_fdopen_fails)
 }
 END_TEST
 
+START_TEST(test_exec_fails)
+{
+    check_on_pipes_and_pty(check_exec_failure);
+}
+END_TEST
+
 /* before its exec a command has the signal actions it has after it */
 static void check_signal_actions_before_exec(unsigned flags)
 {
@@ -387,7 +442,7 @@ START_TEST(test_pty_hangup_misses_command)
 }
 END_TEST
 
-NTEST_RUNNER("p_open", test_fdopen_fails,
+NTEST_RUNNER("p_open", test_fdopen_fails, test_exec_fails,
              test_wait_sees_end_with_sigchld_ignored, test_quit_key_misses_command,
              test_hangup_misses_command, test_pty_output_ends_with_command,
              test_pty_quit_key_misses_command, test_pty_hangup_misses_command,
