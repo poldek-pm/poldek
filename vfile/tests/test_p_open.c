@@ -9,6 +9,9 @@
 #include <sys/ioctl.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#if HAVE_SYS_PRCTL_H
+# include <sys/prctl.h>
+#endif
 
 #if HAVE_PTY_H
 # include <pty.h>
@@ -315,12 +318,13 @@ static int wait_for_file(const char *path, int ms)
     return access(path, F_OK) == 0;
 }
 
-enum event { QUIT_KEY, HANGUP };
+enum event { QUIT_KEY, HANGUP, POLDEK_KILLED };
 
 /* a stand-in for poldek, the job of a shell that leads the session of a fresh
    terminal, runs a command with p_open(FLAGS); once the command has started,
-   ^\ is typed on the terminal (QUIT_KEY) or the terminal hangs up (HANGUP);
-   returns whether the command ran to its end */
+   ^\ is typed on the terminal (QUIT_KEY), the terminal hangs up (HANGUP) or
+   poldek and its shell get a SIGKILL (POLDEK_KILLED); returns whether the
+   command ran to its end */
 static int command_runs_to_end(unsigned flags, enum event event)
 {
     const char *tmpdir = getenv("TMPDIR");
@@ -376,6 +380,9 @@ static int command_runs_to_end(unsigned flags, enum event event)
     case HANGUP:
         close(master);
         break;
+    case POLDEK_KILLED:
+        kill(-pid, SIGKILL);
+        break;
     }
 
     ran = wait_for_file(done, 1500);
@@ -404,6 +411,19 @@ START_TEST(test_hangup_misses_command)
                 "on pipes, the command did not run to its end");
     fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, HANGUP),
                 "on a pty, the command did not run to its end");
+}
+END_TEST
+
+/* as after an OOM kill, with its terminal still there; p_open() ties a
+   command to poldek with PR_SET_PDEATHSIG, so on Linux only */
+START_TEST(test_command_ends_with_poldek)
+{
+#ifdef PR_SET_PDEATHSIG
+    fail_if(command_runs_to_end(P_OPEN_SETSID, POLDEK_KILLED),
+            "on pipes, the command outlived poldek");
+    fail_if(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, POLDEK_KILLED),
+            "on a pty, the command outlived poldek");
+#endif
 }
 END_TEST
 
@@ -497,5 +517,6 @@ END_TEST
 
 NTEST_RUNNER("p_open", test_start_fails, test_exec_fails,
              test_wait_sees_end_with_sigchld_ignored, test_quit_key_misses_command,
-             test_hangup_misses_command, test_pty_output_ends_with_command,
+             test_hangup_misses_command, test_command_ends_with_poldek,
+             test_pty_output_ends_with_command,
              test_signals_before_exec_act_as_after_it);

@@ -33,6 +33,9 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#if HAVE_SYS_PRCTL_H
+# include <sys/prctl.h>
+#endif
 
 #if HAVE_PTY_H
 # include <pty.h>
@@ -112,6 +115,9 @@ static pid_t fork_command(sigset_t *mask, int *execfd)
 {
     sigset_t all;
     pid_t pid;
+#ifdef PR_SET_PDEATHSIG
+    pid_t parent = getpid();
+#endif
     int sig, ep[2];
 
     if (pipe2(ep, O_CLOEXEC) != 0)
@@ -135,6 +141,13 @@ static pid_t fork_command(sigset_t *mask, int *execfd)
 
     close(ep[0]);
     *execfd = ep[1];
+
+#ifdef PR_SET_PDEATHSIG
+    /* the command ends with poldek, a SIGKILL or an OOM kill included;
+       a SIGTERM lets rpm stop where it can */
+    if (prctl(PR_SET_PDEATHSIG, SIGTERM) == 0 && getppid() != parent)
+        _exit(EXIT_FAILURE);        /* poldek ended before prctl() */
+#endif
 
     for (sig = 1; sig < NSIG; sig++) {
         struct sigaction sa;

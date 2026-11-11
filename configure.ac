@@ -204,7 +204,7 @@ dnl Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([fcntl.h limits.h malloc.h locale.h])
-AC_CHECK_HEADERS([sys/file.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([sys/file.h sys/prctl.h sys/time.h syslog.h unistd.h])
 
 AC_CHECK_HEADER([stdint.h],,AC_MSG_ERROR(["C9X compiler is needed by $PACKAGE"]))
 AC_CHECK_HEADER([argp.h],,AC_MSG_ERROR(["missing required argp.h"]))
