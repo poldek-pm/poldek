@@ -246,12 +246,14 @@ struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name, i
     return selected;
 }
 
-static const char *apply_params(const char *cmdline, tn_array *a_argv)
+/* returns the alias line with the arguments put in, to be freed */
+static char *apply_params(const char *cmdline, tn_array *a_argv)
 {
     tn_hash *vars;
     tn_array *new_a_argv = NULL;
-    char newline[1024];
-    int i;
+    const char *line, *p;
+    char *newline;
+    int i, size, maxlen = 0;
 
     n_assert(n_array_size(a_argv) > 0);
 
@@ -259,20 +261,30 @@ static const char *apply_params(const char *cmdline, tn_array *a_argv)
                       NULL);
 
     for (i=0; i < n_array_size(a_argv); i++) {
-        char no[64];
+        char no[64], *arg = n_array_nth(a_argv, i);
         n_snprintf(no, sizeof(no), "%d", i);
 
-        n_hash_insert(vars, no, n_array_nth(a_argv, i));
+        n_hash_insert(vars, no, arg);
+        if ((int)strlen(arg) > maxlen)
+            maxlen = strlen(arg);
     }
 
-    cmdline = poldek_util_expand_vars(newline, sizeof(newline),
-                                      cmdline, '%', vars,
-                                      POLDEK_UTIL_EXPANDVARS_RMUSED);
+    /* each % may become the longest argument */
+    size = strlen(cmdline) + 1;
+    for (p = cmdline; (p = strchr(p, '%')) != NULL; p++)
+        size += maxlen;
 
-    if (strchr(cmdline, '%')) {/* still unexpanded vars */
-        cmdline = NULL;
+    newline = n_malloc(size);
+    line = poldek_util_expand_vars(newline, size, cmdline, '%', vars,
+                                   POLDEK_UTIL_EXPANDVARS_RMUSED);
+
+    if (strchr(line, '%')) {/* still unexpanded vars */
+        n_cfree(&newline);
         goto l_end;
     }
+
+    if (line != newline)        /* nothing to expand, line is cmdline */
+        n_snprintf(newline, size, "%s", line);
 
     /* remove used args from a_argv  */
     new_a_argv = n_array_clone(a_argv);
@@ -296,7 +308,7 @@ static const char *apply_params(const char *cmdline, tn_array *a_argv)
 
  l_end:
     n_hash_free(vars);
-    return cmdline;
+    return newline;
 }
 
 static
@@ -327,6 +339,8 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
 
     } else {                    /* alias */
         const char *cmdline;
+        char *expanded = NULL;
+        int ok;
 
         n_assert(cmd->cmdline);
         cmdline = cmd->cmdline;
@@ -337,12 +351,13 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
                 return NULL;
             }
 
-            if ((cmdline = apply_params(cmdline, a_argv)) == NULL) {
+            if ((expanded = apply_params(cmdline, a_argv)) == NULL) {
                 logn(LOGERR,
                      _("%s: apply arguments failed (not enough arguments?)"),
                      acmd);
                 return NULL;
             }
+            cmdline = expanded;
         }
         msgn(2, "%s => %s\n", acmd, cmdline);
 
@@ -366,7 +381,9 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
             cmdline = line;
         }
 
-        if (prepare_cmdline(cctx, cmd_chain, cmdline) == NULL)
+        ok = prepare_cmdline(cctx, cmd_chain, cmdline) != NULL;
+        free(expanded);
+        if (!ok)
             return NULL;
     }
 
