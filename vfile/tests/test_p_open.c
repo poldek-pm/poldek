@@ -101,11 +101,101 @@ static void check_fdopen_failure(unsigned flags)
     rmdir(dir);
 }
 
-START_TEST(test_pipe_fdopen_fails)
+/* pipe2() in fork_command() fails, so the command is not forked at all and
+   the message names no syscall that did not fail */
+static void check_pipe2_failure(void)
 {
-    check_fdopen_failure(0);
+    char *argv[] = { "sh", "-c", ":", NULL };
+    struct p_open_st pst;
+    struct rlimit rl, nofd;
+    FILE *stream;
+    int fd, st;
+
+    /* the lowest free descriptor: pipe(pp) takes fd and fd + 1, so pipe2()
+       cannot have fd + 2 */
+    fail_if(getrlimit(RLIMIT_NOFILE, &rl) != 0, "getrlimit: %m");
+    fail_if((fd = dup(STDIN_FILENO)) < 0, "dup: %m");
+    close(fd);
+    nofd = rl;
+    nofd.rlim_cur = fd + 2;
+    fail_if(setrlimit(RLIMIT_NOFILE, &nofd) != 0, "setrlimit: %m");
+
+    p_st_init(&pst);
+    stream = p_open(&pst, 0, "/bin/sh", argv);
+    fail_if(setrlimit(RLIMIT_NOFILE, &rl) != 0, "setrlimit: %m");
+
+    fail_unless(stream == NULL, "p_open() succeeded with a failing pipe2()");
+    fail_unless(waitpid(-1, &st, WNOHANG) == -1 && errno == ECHILD,
+                "a child was started");
+    fail_unless(pst.errmsg && strstr(pst.errmsg, "cannot start") &&
+                strstr(pst.errmsg, strerror(EMFILE)),
+                "error message: %s", pst.errmsg ? pst.errmsg : "(none)");
+    p_st_destroy(&pst);
 }
-END_TEST
+
+/* with a command execv() refuses, p_open() returns NULL, leaves no child
+   and says why; the child writes nothing poldek buffered a second time */
+static void check_exec_failure(unsigned flags, const char *script, int xerrno)
+{
+    const char *tmpdir = getenv("TMPDIR");
+    char dir[PATH_MAX], path[PATH_MAX], out[PATH_MAX], buf[64];
+    char *argv[] = { "script", NULL };
+    struct p_open_st pst;
+    FILE *stream, *f;
+    size_t n;
+    int st;
+
+    n_snprintf(dir, sizeof(dir), "%s/poldek-p_open-XXXXXX",
+               tmpdir && *tmpdir ? tmpdir : "/tmp");
+    fail_if(mkdtemp(dir) == NULL, "mkdtemp %s: %s", dir, strerror(errno));
+
+    /* access() lets it through as executable, execv() refuses it */
+    n_snprintf(path, sizeof(path), "%s/script", dir);
+    fail_if((f = fopen(path, "w")) == NULL, "fopen %s: %m", path);
+    fputs(script, f);
+    fclose(f);
+    fail_if(chmod(path, 0755) != 0, "chmod %s: %m", path);
+
+    n_snprintf(out, sizeof(out), "%s/out", dir);
+    fail_if((f = fopen(out, "w")) == NULL, "fopen %s: %m", out);
+    fputs("buffered\n", f);
+
+    p_st_init(&pst);
+    stream = p_open(&pst, flags, path, argv);
+    fail_unless(stream == NULL,
+                "p_open() started a command whose exec fails with %s",
+                strerror(xerrno));
+    fail_unless(waitpid(-1, &st, WNOHANG) == -1 && errno == ECHILD,
+                "a child was left");
+    fail_unless(pst.errmsg && strstr(pst.errmsg, path) &&
+                strstr(pst.errmsg, strerror(xerrno)),
+                "error message: %s", pst.errmsg ? pst.errmsg : "(none)");
+    p_st_destroy(&pst);
+
+    fclose(f);
+    fail_if((f = fopen(out, "r")) == NULL, "fopen %s: %m", out);
+    n = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    buf[n] = '\0';
+    fail_unless(strcmp(buf, "buffered\n") == 0, "%s has: %s", out, buf);
+
+    unlink(out);
+    unlink(path);
+    rmdir(dir);
+}
+
+/* no #!: the kernel refuses the script itself */
+static void check_exec_failure_enoexec(unsigned flags)
+{
+    check_exec_failure(flags, "echo ran\n", ENOEXEC);
+}
+
+/* #! names an interpreter that is not installed, so execv() fails after the
+   kernel has opened the script */
+static void check_exec_failure_enoent(unsigned flags)
+{
+    check_exec_failure(flags, "#!/nonexistent/interpreter\n", ENOENT);
+}
 
 /* with SIGCHLD ignored, as poldek may inherit it, the kernel reaps the
    command at its end and waitpid() finds no child: p_wait() still sees
@@ -337,50 +427,54 @@ START_TEST(test_pty_output_ends_with_command)
 }
 END_TEST
 
-/* the same with a pty; stdout is a pty slave, as above */
-START_TEST(test_pty_fdopen_fails)
+/* CHECK on pipes, then on a pty: p_open() uses a pty only when its own
+   stdout is a terminal, so stdout is a pty slave meanwhile */
+static void check_on_pipes_and_pty(void (*check)(unsigned flags))
 {
     int master, slave, saved_stdout;
+
+    check(0);
 
     fail_unless(openpty(&master, &slave, NULL, NULL, NULL) == 0, "openpty: %m");
     saved_stdout = dup(STDOUT_FILENO);
     dup2(slave, STDOUT_FILENO);
 
-    check_fdopen_failure(P_OPEN_OUTPTYS);
+    check(P_OPEN_OUTPTYS);
 
     dup2(saved_stdout, STDOUT_FILENO);
     close(saved_stdout);
     close(slave);
     close(master);
 }
+
+/* failures before a command is forked: fdopen() and pipe2() */
+START_TEST(test_start_fails)
+{
+    check_on_pipes_and_pty(check_fdopen_failure);
+    check_pipe2_failure();
+}
 END_TEST
 
-/* on pipes, and on a pty with stdout a pty slave, as above */
+START_TEST(test_exec_fails)
+{
+    check_on_pipes_and_pty(check_exec_failure_enoexec);
+    check_on_pipes_and_pty(check_exec_failure_enoent);
+}
+END_TEST
+
 /* before its exec a command has the signal actions it has after it */
+static void check_signal_actions_before_exec(unsigned flags)
+{
+    check_signal_before_exec(flags, &term_at_exec, 0);
+    check_signal_before_exec(flags, &term_after_fork, 0);
+    check_signal_before_exec(flags, &term_at_exec, 1);
+    check_ignored_stays_ignored(flags, 0);
+    check_ignored_stays_ignored(flags, SA_SIGINFO);
+}
+
 START_TEST(test_signals_before_exec_act_as_after_it)
 {
-    int master, slave, saved_stdout;
-
-    check_signal_before_exec(0, &term_at_exec, 0);
-    check_signal_before_exec(0, &term_after_fork, 0);
-    check_signal_before_exec(0, &term_at_exec, 1);
-    check_ignored_stays_ignored(0, 0);
-    check_ignored_stays_ignored(0, SA_SIGINFO);
-
-    fail_unless(openpty(&master, &slave, NULL, NULL, NULL) == 0, "openpty: %m");
-    saved_stdout = dup(STDOUT_FILENO);
-    dup2(slave, STDOUT_FILENO);
-
-    check_signal_before_exec(P_OPEN_OUTPTYS, &term_at_exec, 0);
-    check_signal_before_exec(P_OPEN_OUTPTYS, &term_after_fork, 0);
-    check_signal_before_exec(P_OPEN_OUTPTYS, &term_at_exec, 1);
-    check_ignored_stays_ignored(P_OPEN_OUTPTYS, 0);
-    check_ignored_stays_ignored(P_OPEN_OUTPTYS, SA_SIGINFO);
-
-    dup2(saved_stdout, STDOUT_FILENO);
-    close(saved_stdout);
-    close(slave);
-    close(master);
+    check_on_pipes_and_pty(check_signal_actions_before_exec);
 }
 END_TEST
 
@@ -398,8 +492,8 @@ START_TEST(test_pty_hangup_misses_command)
 }
 END_TEST
 
-NTEST_RUNNER("p_open", test_pipe_fdopen_fails,
+NTEST_RUNNER("p_open", test_start_fails, test_exec_fails,
              test_wait_sees_end_with_sigchld_ignored, test_quit_key_misses_command,
              test_hangup_misses_command, test_pty_output_ends_with_command,
-             test_pty_fdopen_fails, test_pty_quit_key_misses_command,
-             test_pty_hangup_misses_command, test_signals_before_exec_act_as_after_it);
+             test_pty_quit_key_misses_command, test_pty_hangup_misses_command,
+             test_signals_before_exec_act_as_after_it);

@@ -91,6 +91,13 @@ void p_st_destroy(struct p_open_st *pst)
 FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
              char *const argv[])
 {
+    /* a caller must p_st_destroy() and p_st_init() before it opens again:
+       a stream, a command name or a message here is left over from an
+       earlier attempt and would be lost or written over */
+    n_assert(pst->stream == NULL);
+    n_assert(pst->cmd == NULL);
+    n_assert(pst->errmsg == NULL);
+
     if (flags & P_OPEN_OUTPTYS)
         return pty_open(pst, flags, cmd, argv);
 
@@ -99,19 +106,35 @@ FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 
 
 /* the child runs none of poldek's handlers, so a SIGTERM before its exec
-   ends it; exec_command() lets the signals in after the child's setup */
-static pid_t fork_command(sigset_t *mask)
+   ends it; exec_command() lets the signals in after the child's setup.
+   *EXECFD gets the child's or the parent's end of a pipe the exec closes */
+static pid_t fork_command(sigset_t *mask, int *execfd)
 {
     sigset_t all;
     pid_t pid;
-    int sig;
+    int sig, ep[2];
+
+    if (pipe2(ep, O_CLOEXEC) != 0)
+        return -1;
 
     sigfillset(&all);
     sigprocmask(SIG_BLOCK, &all, mask);
     if ((pid = fork()) != 0) {
+        int err = errno;
+
         sigprocmask(SIG_SETMASK, mask, NULL);
+        close(ep[1]);
+        if (pid < 0) {
+            close(ep[0]);
+            errno = err;        /* a failed close() would clobber it */
+        } else {
+            *execfd = ep[0];
+        }
         return pid;
     }
+
+    close(ep[0]);
+    *execfd = ep[1];
 
     for (sig = 1; sig < NSIG; sig++) {
         struct sigaction sa;
@@ -124,12 +147,69 @@ static pid_t fork_command(sigset_t *mask)
     return 0;
 }
 
-static void exec_command(const char *cmd, char *const argv[],
-                         const sigset_t *mask)
+/* the child ends here: pp_open() and pty_open() go on as the parent.
+   A failed exec writes its errno to EXECFD; _exit(), as exit() would flush
+   the stdio buffers the child got from poldek and write them again */
+static __attribute__((noreturn))
+void exec_command(const char *cmd, char *const argv[], const sigset_t *mask,
+                  int execfd)
 {
+    ssize_t n;
+    int err;
+
     sigprocmask(SIG_SETMASK, mask, NULL);
     execv(cmd, argv);
-    exit(EXIT_FAILURE);
+    err = errno;
+    n = write(execfd, &err, sizeof(err));
+    (void)n;                    /* if it fails, the exit code still tells */
+    _exit(EXIT_FAILURE);
+}
+
+/* whether the command's exec failed; if so, its child is reaped and errmsg
+   says why */
+static int exec_failed(struct p_open_st *pst, int execfd, pid_t pid,
+                       const char *cmd)
+{
+    char errmsg[1024];
+    ssize_t n;
+    int err;
+
+    while ((n = read(execfd, &err, sizeof(err))) < 0 && errno == EINTR)
+        ;
+    close(execfd);
+    if (n != sizeof(err))
+        return 0;
+
+    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR)
+        ;
+    errno = err;
+    snprintf(errmsg, sizeof(errmsg), "execv %s: %m", cmd);
+    pst->errmsg = n_strdup(errmsg);
+    return 1;
+}
+
+/* the parent's side of fork_command(): PST reads the command's output from
+   FD, or, with no command started, has no stream and says why */
+static FILE *command_started(struct p_open_st *pst, pid_t pid, int execfd,
+                             int fd, const char *cmd)
+{
+    char errmsg[1024];
+
+    if (pid < 0) {
+        snprintf(errmsg, sizeof(errmsg), "cannot start %s: %m", cmd);
+        pst->errmsg = n_strdup(errmsg);
+    }
+
+    if (pid < 0 || exec_failed(pst, execfd, pid, cmd)) {
+        fclose(pst->stream);
+        pst->stream = NULL;
+        return NULL;
+    }
+
+    pst->fd = fd;
+    pst->pid = pid;
+    pst->cmd = n_strdup(cmd);
+    return pst->stream;
 }
 
 static void p_dupnull(int fdno, unsigned p_open_flags)
@@ -157,7 +237,7 @@ static
 FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
              char *const argv[])
 {
-    int    pp[2];
+    int    pp[2], execfd = -1;
     pid_t  pid;
     sigset_t mask;
     char   errmsg[1024];
@@ -186,7 +266,7 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     }
     setvbuf(pst->stream, NULL, _IONBF, 0);
 
-    if ((pid = fork_command(&mask)) == 0) {
+    if ((pid = fork_command(&mask, &execfd)) == 0) {
         p_dupnull(STDIN_FILENO, flags);
         if (flags & P_OPEN_SETSID)
             setsid();
@@ -198,23 +278,11 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 	dup2(pp[1], STDERR_FILENO);
 	close(pp[1]);
 
-        exec_command(cmd, argv, &mask);
-
-    } else if (pid < 0) {
-        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
-        pst->errmsg = n_strdup(errmsg);
-        fclose(pst->stream);
-        pst->stream = NULL;
-        close(pp[1]);
-
-    } else {
-        close(pp[1]);
-        pst->fd = pp[0];
-        pst->pid = pid;
-        pst->cmd = n_strdup(cmd);
+        exec_command(cmd, argv, &mask, execfd);
     }
 
-    return pst->stream;
+    close(pp[1]);
+    return command_started(pst, pid, execfd, pp[0], cmd);
 }
 
 
@@ -283,11 +351,11 @@ int p_close(struct p_open_st *pst)
 }
 
 
-pid_t forkptys(int master, int slave, sigset_t *mask)
+static pid_t forkptys(int master, int slave, sigset_t *mask, int *execfd)
 {
     pid_t pid;
 
-    if ((pid = fork_command(mask)) == 0) {
+    if ((pid = fork_command(mask, execfd)) == 0) {
         close(master);
         /* poldek's terminal on stdin would make sudo with use_pty read it,
            a ^C too; rpm only needs a terminal there to wait for its lock */
@@ -310,7 +378,7 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 {
     struct termios  termios;
     struct winsize  winsize;
-    int             fd, slave;
+    int             fd, slave, execfd = -1;
     pid_t           pid;
     sigset_t        mask;
     char            errmsg[1024];
@@ -355,24 +423,13 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     }
     setvbuf(pst->stream, NULL, _IONBF, 0);
 
-    if ((pid = forkptys(fd, slave, &mask)) == 0) {
+    if ((pid = forkptys(fd, slave, &mask, &execfd)) == 0) {
         if (flags & P_OPEN_SETSID)
             setsid();
         if (flags & P_OPEN_IGNSIGINT)
             signal(SIGINT, SIG_IGN);
-        exec_command(cmd, argv, &mask);
-
-    } else if (pid < 0) {
-        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
-        pst->errmsg = n_strdup(errmsg);
-        fclose(pst->stream);
-        pst->stream = NULL;
-
-    } else {
-        pst->fd = fd;
-        pst->pid = pid;
-        pst->cmd = n_strdup(cmd);
+        exec_command(cmd, argv, &mask, execfd);
     }
 
-    return pst->stream;
+    return command_started(pst, pid, execfd, fd, cmd);
 }
