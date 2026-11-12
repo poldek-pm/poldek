@@ -14,6 +14,11 @@ check_PROGRAMS += test_relay_output
 
 TESTS = $(check_PROGRAMS)
 
+# MALLOC_PERTURB_ overwrites freed memory, but not a block glibc keeps in its
+# thread cache; with the cache off a test that reads freed memory gets garbage
+AM_TESTS_ENVIRONMENT = GLIBC_TUNABLES=glibc.malloc.tcache_count=0; \
+	export GLIBC_TUNABLES; MALLOC_PERTURB_=165; export MALLOC_PERTURB_;
+
 # pndir.h includes its siblings by name
 test_pndir_CPPFLAGS = -I$(top_srcdir)/pkgdir
 

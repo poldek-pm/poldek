@@ -583,11 +583,10 @@ static int capreq_store(struct capreq *cr, tn_buf *nbuf)
         n_assert(n_array_size(parts));
 
         /* take short name from first part */
-        struct capreq *cap = n_array_shift(parts);
+        const struct capreq *cap = n_array_nth(parts, 0);
         cr_name = cap->name;
         cr_namelen = cap->namelen;
         cr_buf[0] |= __SPLITTED; /* mark as splitted */
-        capreq_free(cap);
     }
 
     size += cr_namelen + 1;       /* +1 for leading '\0' */
@@ -626,7 +625,7 @@ static int capreq_store(struct capreq *cr, tn_buf *nbuf)
         cr->cr_relflags = cr_relflags;
 
     if (parts) {
-        for (i = 0; i < n_array_size(parts); i++) {
+        for (i = 1; i < n_array_size(parts); i++) {
             struct capreq *cap = n_array_nth(parts, i);
             cap->cr_relflags |= __PART;
             capreq_store(cap, nbuf);
