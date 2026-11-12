@@ -400,6 +400,46 @@ sources do:
 
 </sect2>
 
+<sect2 id="repositories.repo"> <title>Adding repositories with <command>repo</command></title>
+<para>
+Besides editing the configuration files, a repository can be added from
+a configuration file stored on an URL, a dnf (<filename>*.repo</filename>)
+or a &poldek; one. The <command>repo</command> command downloads the file
+once, converts it and stores it as a <quote>[source]</quote> section in
+a managed <filename>.conf</filename> file in the built-in repositories
+directory, so that later reads need no network access:
+
+<screen>
+&prompt; <command>poldek repo add</command> <replaceable>URL</replaceable>
+&prompt; <command>poldek repo del</command> <replaceable>URL</replaceable>
+&prompt; <command>poldek repo ls</command>
+</screen>
+
+A repository is identified by the URL it was added with;
+<command>repo del</command> takes that URL, or a fragment of it as long
+as the fragment is unambiguous. <command>repo ls</command> lists the
+added repositories and <command>repo</command> alone does the same.
+A source added this way is listed after the user's own sources.
+</para>
+
+<para>
+A dnf repository file is converted at add time: the section id becomes
+the source name, the first <option>baseurl</option> the path, and
+<option>gpgcheck</option>, <option>gpgkey</option> and
+<option>priority</option> are mapped to <option>signed</option>,
+<option>signkey</option> and <option>pri</option>. A relative
+<option>baseurl</option> is resolved against the <filename>.repo</filename>
+location, and macro variables such as <option>$basearch</option> or
+<option>$releasever</option> are expanded. Local policy a downloaded
+file must not set for the user (<option>ignore</option>,
+<option>hold</option>, <option>auto</option>, <option>noauto</option>)
+is dropped and <option>auto</option> is forced off, dnf keys with no
+&poldek; equivalent (<option>exclude</option>, <option>includepkgs</option>,
+credentials, ...) are reported and ignored, and <option>%include</option>
+directives are skipped with a warning.
+</para>
+</sect2>
+
 <sect2 id="repositories.using"> <title>Using repositories</title>
 
 <sect3 id="repositories.using.select"> <title>Selection</title>
