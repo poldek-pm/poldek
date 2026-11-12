@@ -627,8 +627,9 @@ EOF
         fail "a relative baseurl with an escaped space not resolved: $(cat $fn)"
     grep -q '^path = http://example.com/%{_HOME}/%{_nosuchvar19}/' $fn || \
         fail "an unknown variable not left as a macro: $(cat $fn)"
-    grep -q "$HOME" $fn && \
+    if grep '^path = http://example.com/' $fn | grep -F -q "$HOME"; then
         fail "an unknown variable was taken from the environment: $(cat $fn)"
+    fi
     grep -q '^path = http://example.com/plus19//repo/$' $fn || \
         fail "\${var:+word} not expanded: $(cat $fn)"
     grep -q "^path = $tmp/dnf-macros-19/repo%20dir/linux/$" $fn || \
@@ -655,6 +656,25 @@ testRepoAddDnfRepoFixture()
     grep -q "^path = $PWD/metadata/repo_02zst$" $REPOSD/*.conf || \
         fail "a relative baseurl not resolved: $(cat $REPOSD/*.conf)"
     grep -q '^type = metadata$' $REPOSD/*.conf || fail "type not metadata"
+}
+
+# a URL whose first component starts with '_' used to give a .conf name
+# starting with a dot: hidden from ls and from the *.conf glob
+testRepoAddHiddenName()
+{
+    local tmp=${TMPDIR:-/tmp}
+    local out
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    rm -rf $tmp/upath-19
+    mkdir -p $tmp/upath-19/_x
+    cp $PWD/metadata/02.repo $tmp/upath-19/_x/ || fail "cp failed"
+
+    ( cd $tmp/upath-19 && $POLDEK repo add _x/02.repo ) || fail "repo add failed"
+
+    out=$(ls -A $REPOSD)
+    grep -q '^name = repo02$' $REPOSD/*.conf || \
+        fail "the .conf is hidden or missing: $out"
 }
 
 # A .repo without an enabled baseurl, or a broken one, is refused

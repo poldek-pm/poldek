@@ -84,6 +84,15 @@ static int reposd_filename_from_url(char *buf, size_t size, const char *url)
         if (*p == '/')
             *p = '.';
 
+    /* a leading dot would make the file hidden from ls and from *.conf
+       globs, although our own readdir() would still load it */
+    for (p = buf; *p == '.'; p++)
+        ;
+    if (p != buf) {
+        n -= p - buf;
+        memmove(buf, p, n + 1);
+    }
+
     while (n > 0 && buf[n - 1] == '.')
         buf[--n] = '\0';
 
