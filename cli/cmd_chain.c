@@ -34,9 +34,19 @@
 #include "cmd_chain.h"
 #include "cmd_pipe.h"
 
+/* the alias being expanded and the ones that led to it */
+struct alias_path {
+    const struct poclidek_cmd *alias;
+    const struct alias_path   *up;
+};
+
+/* an argument can end an alias's way back into itself (run = %1: run 'run ls'),
+   so only coming back more often than this is taken for a loop */
+#define ALIAS_COMEBACK_MAX 16
+
 static
 tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line);
+                          const char *line, const struct alias_path *path);
 
 static
 struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
@@ -313,7 +323,7 @@ static char *apply_params(const char *cmdline, tn_array *a_argv)
 
 static
 tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                         tn_array *a_argv)
+                         tn_array *a_argv, const struct alias_path *path)
 {
     struct poclidek_cmd *cmd;
     const char          *acmd;
@@ -338,9 +348,17 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         n_array_push(cmd_chain, ent);
 
     } else {                    /* alias */
+        struct alias_path here = { cmd, path };
+        const struct alias_path *p;
         const char *cmdline;
         char *expanded = NULL;
-        int ok;
+        int ok, comebacks = 0;
+
+        for (p = path; p; p = p->up)
+            if (p->alias == cmd && ++comebacks > ALIAS_COMEBACK_MAX) {
+                logn(LOGERR, _("%s: alias refers to itself"), cmd->name);
+                return NULL;
+            }
 
         n_assert(cmd->cmdline);
         cmdline = cmd->cmdline;
@@ -381,7 +399,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
             cmdline = line;
         }
 
-        ok = prepare_cmdline(cctx, cmd_chain, cmdline) != NULL;
+        ok = prepare_cmdline(cctx, cmd_chain, cmdline, &here) != NULL;
         free(expanded);
         if (!ok)
             return NULL;
@@ -392,7 +410,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
 
 static
 tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line)
+                          const char *line, const struct alias_path *path)
 {
     tn_array  *arr = NULL, *tl = NULL;
     int       i, is_err = 0;
@@ -439,7 +457,7 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
                         printf("tl[%d][%d] = %s\n", i, j,
                                (char*)n_array_nth(ent->a_argv, j));
 #endif
-                    if (prepare_a_argv(cctx, cmd_chain, ent->a_argv) == NULL) {
+                    if (prepare_a_argv(cctx, cmd_chain, ent->a_argv, path) == NULL) {
                         is_err = 1;
                         goto l_end;
                     }
@@ -544,7 +562,7 @@ tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
     int       is_err = 0;
 
     cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
-    if (prepare_cmdline(cctx, cmd_chain, line) == NULL)
+    if (prepare_cmdline(cctx, cmd_chain, line, NULL) == NULL)
         is_err = 1;
 
     if (is_err) {

@@ -360,6 +360,11 @@ msgstr "%s: nie ma takiej komendy"
 msgid "%s: ambiguous command"
 msgstr "%s: niejednoznaczna komenda"
 
+#: cli/cmd_chain.c
+#, c-format
+msgid "%s: alias refers to itself"
+msgstr "%s: alias odwołuje się do samego siebie"
+
 #: cli/cmd_chain.c:300
 #, c-format
 msgid "%s: alias needs an arguments"

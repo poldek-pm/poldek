@@ -142,6 +142,61 @@ testAliasParameterLongArgument()
                  "error: $arg: no such package or directory" "$out"
 }
 
+# an alias that leads back to itself is refused, not expanded without end,
+# also when the way back goes through an alias with a parameter
+testAliasLoop()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nself = self a\nloopa = loopb\nloopb = loopa\nrun = %%1\nrl = run rl\n' \
+           > $TMPDIR/home/.poclidekrc
+
+    for alias in self loopa rl; do
+        out=$(HOME=$TMPDIR/home $POLDEK -q --cmd "$alias" 2>&1)
+        assertEquals "$alias: exit code ($out)" "1" "$?"
+        echo "$out" | grep -qx "error: $alias: alias refers to itself"
+        assertEquals "$alias: no loop error ($out)" "0" "$?"
+    done
+}
+
+# an alias may use another alias more than once
+testAliasUsedTwice()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nla = ls a\ntwice = la; la\n' > $TMPDIR/home/.poclidekrc
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd "twice" 2>&1)
+    assertEquals "twice failed ($out)" "0" "$?"
+    n=$(echo "$out" | grep -c '^a-1-1')
+    assertEquals "a-1-1 not listed twice ($out)" "2" "$n"
+}
+
+# an alias may come back in its own expansion through an argument
+testAliasBackThroughArgument()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nrun = %%1\n' > $TMPDIR/home/.poclidekrc
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd "run 'run ls'" 2>&1)
+    assertEquals "run 'run ls' failed ($out)" "0" "$?"
+    echo "$out" | grep -q '^a-1-1'
+    assertEquals "a-1-1 not listed ($out)" "0" "$?"
+}
+
 # a quoted argument may begin with | or ;
 testCmdQuotedPipeOrSemicolon()
 {
