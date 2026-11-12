@@ -135,6 +135,7 @@ int vf_do_compr(struct uncompr *uncompr, const char *param,
     verbose = *vfile_verbose;
     if (p_open(&pst, p_open_flags, uncompr->cmd, argv) == NULL) {
         vf_logerr("p_open: %s\n", pst.errmsg);
+        p_st_destroy(&pst);
         return 0;
     }
     
