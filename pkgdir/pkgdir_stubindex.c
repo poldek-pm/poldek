@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -139,6 +140,7 @@ tn_array *load_stubindex(const char *path)
     tn_stream *st;
     tn_array *pkgs;
     char *buf;
+    size_t size;
     int n;
 
     st = n_stream_open(path, "r", TN_STREAM_UNKNOWN);
@@ -146,19 +148,23 @@ tn_array *load_stubindex(const char *path)
         return NULL;
 
     pkgs = pkgs_array_new(512);
-    buf = n_malloc(128);
+    buf = NULL;
+    size = 0;
 
-    while ((n = n_stream_getline(st, &buf, 128)) > 0) {
-        char *b = n_str_strip_ws(buf);
-        char *csb = strrchr(b, '^');
+    while ((n = n_stream_getline(st, &buf, &size)) > 0) {
+        while (n > 0 && isspace((unsigned char)buf[n - 1]))
+            buf[--n] = '\0';
+
+        char *csb = strrchr(buf, '^');
         if (csb != NULL) {
             *csb = '\0';
             csb++;
         }
 
-        struct pkg *pkg = pndir_parse_pkgkey(b, n, NULL);
+        struct pkg *pkg = pndir_parse_pkgkey(buf, (int)strlen(buf), NULL);
         if (pkg) {
-            sscanf(csb, "%u:%u:%u", &pkg->color, &pkg->size, &pkg->btime);
+            if (csb != NULL)
+                sscanf(csb, "%u:%u:%u", &pkg->color, &pkg->size, &pkg->btime);
             n_array_push(pkgs, pkg);
         }
     }
