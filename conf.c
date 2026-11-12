@@ -114,6 +114,19 @@ static void copt_free(struct copt *opt)
     free(opt);
 }
 
+/* remember which section's tags validate the options of ht_sect */
+static void section_set_name(tn_hash *ht_sect, const char *sectnam)
+{
+    struct copt *opt;
+
+    if (n_hash_exists(ht_sect, "__section_name"))
+        return;
+
+    opt = copt_new("__section_name");
+    opt->val = n_strdup(sectnam);
+    n_hash_insert(ht_sect, opt->name, opt);
+}
+
 static int parse_val_list(tn_hash *ht, char *name, char *vstr, const char *sep,
                           const char *path, int nline)
 {
@@ -884,11 +897,7 @@ static tn_hash *open_section_ht(tn_hash *htconf,
         n_hash_insert(ht_sect, opt->name, opt);
     }
 
-    if (!n_hash_exists(ht_sect, "__section_name")) {
-        struct copt *opt = copt_new("__section_name");
-        opt->val = n_strdup(sectnam);
-        n_hash_insert(ht_sect, opt->name, opt);
-    }
+    section_set_name(ht_sect, sectnam);
 
     return ht_sect;
 }
@@ -956,6 +965,22 @@ static int is_metadata_key(const char *key)
     return key && strncmp(key, "__", 2) == 0;
 }
 
+static void fprint_param(FILE *file, const char *key, const struct copt *opt)
+{
+    int i;
+
+    if (opt->flags & COPT_MULTIPLE) {
+        fprintf(file, "%s =", key);
+        for (i = 0; i < n_array_size(opt->vals); i++)
+            fprintf(file, "%s%s", i > 0 ? "," : " ",
+                    (const char *)n_array_nth(opt->vals, i));
+        fputc('\n', file);
+
+    } else {
+        fprintf(file, "%s = %s\n", key, opt->val);
+    }
+}
+
 int conf__save(const tn_hash *htconf, const char *path,
                const char *header)
 {
@@ -998,7 +1023,7 @@ int conf__save(const tn_hash *htconf, const char *path,
                 continue;
 
             if (is_macro_key(key))
-                fprintf(file, "%s = %s\n", key, opt->val);
+                fprint_param(file, key, opt);
         }
 
         /* regular global options need an explicit [global] section */
@@ -1025,7 +1050,7 @@ int conf__save(const tn_hash *htconf, const char *path,
                     continue;
 
                 if (!is_macro_key(key) && !is_metadata_key(key))
-                    fprintf(file, "%s = %s\n", key, opt->val);
+                    fprint_param(file, key, opt);
             }
         }
 
@@ -1058,7 +1083,7 @@ int conf__save(const tn_hash *htconf, const char *path,
                 if (is_metadata_key(key))
                     continue;
 
-                fprintf(file, "%s = %s\n", key, opt->val);
+                fprint_param(file, key, opt);
             }
             n_array_free(opt_keys);
         }
@@ -1090,7 +1115,8 @@ l_end:
     return rc;
 }
 
-static tn_hash *new_htconf(const char *sectnam, tn_hash **ht_sect_ptr)
+/* a fresh configuration with a single, empty `sectnam` section */
+tn_hash *conf__new_htconf(const char *sectnam)
 {
     tn_hash   *ht, *ht_sect;
     tn_array  *arr_sect;
@@ -1106,8 +1132,7 @@ static tn_hash *new_htconf(const char *sectnam, tn_hash **ht_sect_ptr)
     n_array_push(arr_sect, ht_sect);
 
     n_hash_insert(ht, sectnam, arr_sect);
-    if (ht_sect_ptr)
-        *ht_sect_ptr = ht_sect;
+    section_set_name(ht_sect, sectnam);
     return ht;
 }
 
@@ -1210,6 +1235,17 @@ static tn_array *includedir_files(const char *dirpath, const char *ppath)
 }
 
 
+/* An ignored include is worth a warning, except in the GLOBALONLY
+   pre-pass: it only reads the global section for the cachedir, and the
+   real load follows the includes */
+static void warn_include_ignored(const char *path, int nline,
+                                 const char *tag, unsigned flags)
+{
+    if ((flags & POLDEK_LDCONF_QUIET) == 0)
+        logn(LOGWARN, _("%s:%d: %s is ignored"), path, nline, tag);
+}
+
+
 static tn_hash *do_ldconf(tn_hash *af_htconf,
                    const char *path, const char *parent_path,
                    const char *section_to_load, unsigned flags)
@@ -1241,7 +1277,8 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
     }
 
     sectnam = (char*)global_tag;
-    ht = new_htconf(global_tag, &ht_sect);
+    ht = conf__new_htconf(global_tag);
+    ht_sect = poldek_conf_get_section(ht, global_tag);
     //ht_global_sect = ht_sect; // unused
 
     // set __dirname macro
@@ -1275,15 +1312,10 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
             tn_array *configs;
             int i;
 
-            if (flags & POLDEK_LDCONF_STRICT) {
-                logn(LOGERR, _("%s:%d: %%includedir is not allowed here"),
-                     af->path, nline);
-                is_err = 1;
-                goto l_end;
-            }
-
-            if (flags & POLDEK_LDCONF_NOINCLUDE)
+            if (flags & POLDEK_LDCONF_NOINCLUDE) {
+                warn_include_ignored(af->path, nline, includedir_tag, flags);
                 continue;
+            }
 
             line = prepare_include_path(includedir_tag, ipath, sizeof(ipath), line,
                                         NULL, ht_sect, ht);
@@ -1315,15 +1347,10 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
         if (strncmp(line, include_tag, strlen(include_tag)) == 0) {
             char *section = NULL, ipath[PATH_MAX];
 
-            if (flags & POLDEK_LDCONF_STRICT) {
-                logn(LOGERR, _("%s:%d: %%include is not allowed here"),
-                     af->path, nline);
-                is_err = 1;
-                goto l_end;
-            }
-
-            if (flags & POLDEK_LDCONF_NOINCLUDE)
+            if (flags & POLDEK_LDCONF_NOINCLUDE) {
+                warn_include_ignored(af->path, nline, include_tag, flags);
                 continue;
+            }
 
             line = prepare_include_path(include_tag, ipath, sizeof(ipath),
                                         line, &section, ht_sect, ht);
@@ -1488,15 +1515,15 @@ char *poldek_conf_reposd(char *dest, size_t size)
     return NULL;
 }
 
+/* Load the *.conf files of the built-in repos.d. The caller decides
+   whether they apply (the default configuration only): this function
+   does not check the load flags itself, and always skips includes in
+   the files it reads. */
 static int load_reposd(tn_hash *htconf, tn_hash *af_htconf, unsigned flags)
 {
     char reposd[PATH_MAX];
     tn_array *configs;
     int i;
-
-    if ((flags & (POLDEK_LDCONF_FOREIGN | POLDEK_LDCONF_GLOBALONLY |
-                  POLDEK_LDCONF_NOINCLUDE)) != 0)
-        return 1;
 
     if (poldek_conf_reposd(reposd, sizeof(reposd)) == NULL)
         return 1;
@@ -1550,7 +1577,10 @@ tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
         sectnam = global_tag;
 
     if (htconf == NULL) {
-        htconf = new_htconf(sectnam, &ht_sect);
+        htconf = conf__new_htconf(sectnam);
+        if (htconf == NULL)
+            return NULL;
+        ht_sect = poldek_conf_get_section(htconf, sectnam);
 
     } else {
         ht_sect = poldek_conf_get_section(htconf, sectnam);
@@ -1626,7 +1656,7 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
 
     if (flags & POLDEK_LDCONF_GLOBALONLY) {
         //section_to_load = global_tag;
-        flags |= POLDEK_LDCONF_NOINCLUDE;
+        flags |= POLDEK_LDCONF_NOINCLUDE | POLDEK_LDCONF_QUIET;
     }
 
     af_htconf = n_hash_new(23, (tn_fn_free)n_hash_free);
@@ -1659,12 +1689,15 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
 
         n_array_free(paths);
 
-        if (is_default_path && !load_reposd(htconf, af_htconf, flags)) {
-            n_hash_free(af_htconf);
-            return NULL;
+        /* repos.d belongs to the default configuration only: a foreign
+           or global-only pre-pass load must not pick it up */
+        if (is_default_path && (flags & POLDEK_LDCONF_FOREIGN) == 0) {
+            if (!load_reposd(htconf, af_htconf, flags)) {
+                n_hash_free(af_htconf);
+                return NULL;
+            }
         }
     }
-
 
     DBGF("ret htconf %s %p\n", path, htconf);
     if (htconf) {

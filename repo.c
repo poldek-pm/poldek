@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <fnmatch.h>
 #include <sys/param.h>          /* for PATH_MAX */
@@ -46,6 +47,10 @@
 #include "poldek_util.h"
 #include "repo.h"
 #include "pkgdir/source.h"
+
+/* repo-dnf.c */
+int repo_is_dnf(const char *url);
+tn_hash *repo_dnf_to_conf(const char *url, const char *localpath);
 
 static int reposd_filename_from_url(char *buf, size_t size, const char *url)
 {
@@ -81,6 +86,9 @@ static int reposd_filename_from_url(char *buf, size_t size, const char *url)
 
     while (n > 0 && buf[n - 1] == '.')
         buf[--n] = '\0';
+
+    if (n >= 5 && strcasecmp(buf + n - 5, ".repo") == 0)
+        memcpy(buf + n - 5, ".conf", 5);
 
     //n += n_snprintf(&buf[n], size - n, ".conf");
     if (n >= (int) size || n > NAME_MAX) {
@@ -207,8 +215,25 @@ static tn_hash *load_repo_conf(const char *url)
 
     n_snprintf(url_dir, sizeof(url_dir), "%s", url);
     const char *base = n_dirname(url_dir);
-    poldek_conf_set(ht_global, "_baseurl", base);
+    poldek_conf_set(ht_global, "_baseurl", base ? base : ".");
     poldek_conf_set(ht_global, "_origin", url);
+
+    return htconf;
+}
+
+static tn_hash *load_dnf_repo_conf(const char *url)
+{
+    struct vfile *vf;
+    tn_hash *htconf;
+
+    vf = vfile_open(url, VFT_TRURLIO, VFM_RO | VFM_NOEMPTY);
+    if (vf == NULL) {
+        logn(LOGERR, _("%s: cannot open"), url);
+        return NULL;
+    }
+
+    htconf = repo_dnf_to_conf(url, vfile_localpath(vf));
+    vfile_close(vf);
 
     return htconf;
 }
@@ -301,7 +326,11 @@ int poldek_repo_add(struct poldek_ctx *ctx, const char *url, unsigned flags)
         return 0;
     }
 
-    htconf = load_repo_conf(url);
+    if (repo_is_dnf(url))
+        htconf = load_dnf_repo_conf(url);
+    else
+        htconf = load_repo_conf(url);
+
     if (htconf == NULL)
         goto l_end;
 

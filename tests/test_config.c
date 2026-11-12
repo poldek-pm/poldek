@@ -1,4 +1,5 @@
 #include <trurl/nhash.h>
+#include <trurl/nstr.h>
 
 #include "test.h"
 #include "conf_intern.h"
@@ -357,6 +358,70 @@ START_TEST(test_config_arch_macro) {
 END_TEST
 
 
+/* conf__new_htconf() creates a section whose options are validated
+   against that section's tags */
+START_TEST(test_new_htconf) {
+    tn_hash *cnf, *sect;
+
+    cnf = conf__new_htconf("source");
+    fail_if(cnf == NULL, "conf__new_htconf failed");
+
+    sect = poldek_conf_get_section(cnf, "source");
+    fail_if(sect == NULL, "no source section?");
+    fail_if(n_str_ne(poldek_conf_get(sect, "__section_name", NULL), "source"),
+            "the section is not marked with its name");
+
+    n_hash_free(cnf);
+}
+END_TEST
+
+
+/* conf__save() writes every value of a multi-valued option, not only
+   the first one */
+START_TEST(test_config_save_multi) {
+    tn_hash *cnf;
+    tn_array *lines;
+    const char *name = "poldek_test_save_multi.conf";
+    const char *saved = "poldek_test_save_multi.saved";
+    char buf[1024];
+    FILE *f;
+    int found = 0;
+
+    lines = n_array_new(8, 0, 0);
+    n_array_push(lines, "[source]");
+    n_array_push(lines, "name = t");
+    n_array_push(lines, "path = /repo/");
+    n_array_push(lines, "type = pndir");
+    n_array_push(lines, "ignore = foo, bar, baz");
+    make_conf_file(name, lines);
+
+    cnf = poldek_conf_load(name, 0);
+    fail_if(cnf == NULL, "load config failed");
+
+    fail_if(!conf__save(cnf, saved, NULL), "conf__save failed");
+    n_hash_free(cnf);
+
+    f = fopen(saved, "r");
+    fail_if(f == NULL, "saved config missing");
+    while (fgets(buf, sizeof(buf), f)) {
+        char *p = n_str_strip_ws(buf);
+
+        if (strncmp(p, "ignore", 6) == 0) {
+            found = 1;
+            fail_unless(n_str_eq(p, "ignore = foo,bar,baz"),
+                        "multi-valued option saved as '%s'", p);
+        }
+    }
+    fclose(f);
+    fail_unless(found, "the ignore list was not saved at all");
+
+    remove(name);
+    remove(saved);
+    n_array_free(lines);
+}
+END_TEST
+
+
 START_TEST(setup) {
     int ec = system("make " TEST_POLDEK_CONFIG);
     fail_if(ec != 0, "make " TEST_POLDEK_CONFIG " failed");
@@ -370,4 +435,6 @@ NTEST_RUNNER("config",
              test_config_lists_excl,
              test_config_undefined_macro,
              test_config_dirname_macro,
-             test_config_arch_macro);
+             test_config_arch_macro,
+             test_new_htconf,
+             test_config_save_multi);

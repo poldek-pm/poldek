@@ -55,6 +55,7 @@ libpoldek_core_la_SOURCES = \
 	  arg_packages.c arg_packages.h	\
 	  conf.c conf.h			\
 	  repo.c repo.h			\
+	  repo-dnf.c			\
 	  conf_intern.h conf_sections.c \
 	  pkgroup.c pkgroup.h	\
 	  pkgscore.c		\

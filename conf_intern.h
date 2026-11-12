@@ -49,6 +49,7 @@ struct poldek_conf_section {
 
 extern struct poldek_conf_section poldek_conf_sections[];
 
+tn_hash *conf__new_htconf(const char *sectnam);
 int conf__save(const tn_hash *htconf, const char *path, const char *header);
 const char *conf__expand_value(char *dest, size_t size, const tn_hash *htconf,
                                const tn_hash *ht, const char *val);
