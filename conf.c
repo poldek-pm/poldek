@@ -44,8 +44,6 @@
 #include "conf_intern.h"
 #include "pm/rpmorg/arch.h"
 
-#define POLDEK_LDCONF_APTSOURCES  (1 << 15)
-
 static const char *global_tag = "global";
 static const char *include_tag = "%include";
 static const char *includedir_tag = "%includedir";
@@ -83,8 +81,6 @@ struct afile {
     char          *section_to_load; /* load only this sections */
     char          path[0];
 };
-
-static void load_apt_sources_list(tn_hash *htconf, const char *path);
 
 static struct copt *copt_new(const char *name)
 {
@@ -1700,22 +1696,8 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
     }
 
     DBGF("ret htconf %s %p\n", path, htconf);
-    if (htconf) {
+    if (htconf)
         htconf = n_ref(htconf);
-
-        if ((flags & (POLDEK_LDCONF_NOINCLUDE | POLDEK_LDCONF_FOREIGN)) == 0) {
-            tn_hash *global;
-
-            global = poldek_conf_get_section(htconf, "global");
-
-            if (poldek_conf_get_bool(global, "load apt sources list", 0))
-                flags |= POLDEK_LDCONF_APTSOURCES;
-
-            if (flags & POLDEK_LDCONF_APTSOURCES)
-                load_apt_sources_list(htconf, "/etc/apt/sources.list");
-        }
-    }
-
 
     n_hash_free(af_htconf);
     return htconf;
@@ -1853,95 +1835,4 @@ tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name)
     }
 
     return list;
-}
-
-static void load_apt_sources_list(tn_hash *htconf, const char *path)
-{
-    const struct poldek_conf_section *sect = NULL;
-    const char **tl, **tl_save, *sectnam;
-    char buf[1024];
-    FILE *stream;
-    int nline = 0;
-
-    if (access(path, R_OK) != 0)
-        return;
-
-    sectnam = "source";
-    sect = find_section(sectnam);
-    n_assert(sect);
-
-    if ((stream = fopen(path, "r")) == NULL) {
-        logn(LOGERR, "fopen %s: %m", path);
-        return;
-    }
-
-    nline = 0;
-    while (fgets(buf, sizeof(buf) - 1, stream)) {
-        char *p = buf;
-        const char *uri = NULL, *distribution = NULL;
-
-        nline++;
-
-        p = buf;
-        while (isspace(*p))
-            p++;
-
-        if (*p == '#' || *p == '\0')
-            continue;
-
-        if (strncasecmp(p, "rpm ", 4) != 0)
-            continue;
-
-        p += 4;                 /* skip "rpm " */
-        while (isspace(*p))
-            p++;
-
-        tl = tl_save = n_str_tokl(p, " \t\n\r");
-        uri = *tl;
-        if (uri) {
-            tl++;
-            distribution = *tl;
-            tl++;
-        }
-
-        if (uri && distribution && *tl) {
-            while (*tl) {
-                char name[PATH_MAX], url[PATH_MAX], pkg_prefix[PATH_MAX];
-                const char *component;
-                tn_hash *ht_sect;
-
-                component = *tl;
-                tl++;
-                if (*component == '\0')
-                    continue;
-
-                n_snprintf(url, sizeof(url), "%s/%s/base/pkglist.%s.bz2",
-                           uri, distribution, component);
-
-                n_snprintf(pkg_prefix, sizeof(pkg_prefix), "%s/%s/RPMS.%s",
-                           uri, distribution, component);
-
-                n_snprintf(name, sizeof(name), "%s-%s", distribution, component);
-                p = name;
-                while (*p) {
-                    if (*p == '/') *p = '-';
-                    else if (!isalnum(*p) && strchr("-+", *p) == NULL) *p = '.';
-                    p++;
-                }
-
-                ht_sect = open_section_ht(htconf, sect, sectnam, path, -1);
-                add_param(ht_sect, sectnam, "type", "apt", ADD_PARAM_VALIDATE,
-                          path, nline);
-                add_param(ht_sect, sectnam, "name", name, ADD_PARAM_VALIDATE,
-                          path, nline);
-                add_param(ht_sect, sectnam, "url", url, ADD_PARAM_VALIDATE,
-                          path, nline);
-                add_param(ht_sect, sectnam, "prefix", pkg_prefix,
-                          ADD_PARAM_VALIDATE, path, nline);
-            }
-            n_str_tokl_free(tl_save);
-        }
-    }
-
-    fclose(stream);
 }
