@@ -19,10 +19,23 @@ tearDown() {
 
 testLoad()
 {
-    msg $POLDEK -s ../metadata/02.repo ls
-    local n=$($POLDEK -s metadata/02.repo ls | grep fake_bash | wc -l)
+    local src="m,type=metadata metadata/repo_02/"
+
+    msg $POLDEK -s "$src" ls
+    local n=$($POLDEK -s "$src" ls | grep fake_bash | wc -l)
     assertEquals "load failed" "$n" "1"
 }
+
+# a .repo file names a configuration to add, it is not an index
+testRepoNotReadDirectly()
+{
+    local out
+
+    out=$($POLDEK -s metadata/02.repo ls 2>&1)
+    echo "$out" | grep -q "a .repo file is not read directly; use 'poldek repo add" || \
+        fail "no hint about repo add: $out"
+}
+
 
 # sizes of 4 GiB and more become the largest size poldek keeps, as from rpm headers
 testLoadLargeSizes()
@@ -39,9 +52,7 @@ testLoadLargeSizes()
     mv $dir/primary.gz $primary
     new=$(sha256sum < $primary | cut -d' ' -f1)
     sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
-    printf '[r]\nname=R\nenabled=1\nbaseurl=repo\n' > $dir/r.repo
-
-    n=$($POLDEK -s $dir/r.repo desc fake_bash | grep -E '^(Size|Package size): +4096.0 MB' | wc -l)
+    n=$($POLDEK -s "m,type=metadata $dir/repo/" desc fake_bash | grep -E '^(Size|Package size): +4096.0 MB' | wc -l)
     assertEquals "sizes should be 4096.0 MB" "$n" "2"
 }
 
@@ -60,31 +71,17 @@ testLoadSha1Checksums()
             new=$(sha1sum < $f | cut -d' ' -f1)
             sed -i "s|<checksum type=\"sha256\">$old<|<checksum type=\"$type\">$new<|" $dir/repo/repodata/repomd.xml
         done
-        printf '[r]\nname=R\nenabled=1\nbaseurl=repo\n' > $dir/r.repo
-
-        n=$($POLDEK -s $dir/r.repo ls | grep fake_bash | wc -l)
+        n=$($POLDEK -s "m,type=metadata $dir/repo/" ls | grep fake_bash | wc -l)
         assertEquals "repository with $type checksums not loaded" "1" "$n"
     done
 }
 
 testLoadZst()
 {
-    msg $POLDEK -s ../metadata/02zst.repo ls
-    local n=$($POLDEK -s metadata/02zst.repo ls | grep fake_bash | wc -l)
-    assertEquals "load failed" "$n" "1"
-}
+    local src="m,type=metadata metadata/repo_02zst/"
 
-# the baseurl text around a $variable is used as is, '%' included
-testLoadPercentInBaseurl()
-{
-    local dir="$TMPDIR/meta"
-
-    rm -rf $dir
-    mkdir -p "$dir/repo%20dir/linux"
-    cp -r metadata/repo_02/repodata "$dir/repo%20dir/linux/" || fail "cp failed"
-    printf '[r]\nname=R\nenabled=1\nbaseurl=repo%%20dir/$baseos/\n' > $dir/r.repo
-
-    local n=$($POLDEK -s $dir/r.repo ls | grep fake_bash | wc -l)
+    msg $POLDEK -s "$src" ls
+    local n=$($POLDEK -s "$src" ls | grep fake_bash | wc -l)
     assertEquals "load failed" "$n" "1"
 }
 

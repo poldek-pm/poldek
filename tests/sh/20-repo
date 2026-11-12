@@ -604,6 +604,9 @@ baseurl=http://example.com/$HOME/${nosuchvar19}/$basearch/repo/
 
 [alt-19]
 baseurl=http://example.com/${arch:+plus19}/${nosuchvar19:+never19}/repo/
+
+[pct-19]
+baseurl=repo%20dir/$baseos/
 EOF
 
     out=$($POLDEK repo add $tmp/dnf-macros-19/macros.repo 2>&1)
@@ -628,6 +631,30 @@ EOF
         fail "an unknown variable was taken from the environment: $(cat $fn)"
     grep -q '^path = http://example.com/plus19//repo/$' $fn || \
         fail "\${var:+word} not expanded: $(cat $fn)"
+    grep -q "^path = $tmp/dnf-macros-19/repo%20dir/linux/$" $fn || \
+        fail "a '%' in a baseurl expanded or \$baseos not expanded: $(cat $fn)"
+}
+
+# the .repo files of the metadata fixtures, converted like any other
+testRepoAddDnfRepoFixture()
+{
+    local out
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    out=$($POLDEK repo add $PWD/metadata/02.repo 2>&1)
+    assertEquals "repo add of 02.repo failed: $out" "0" "$?"
+    out=$($POLDEK repo add $PWD/metadata/02zst.repo 2>&1)
+    assertEquals "repo add of 02zst.repo failed: $out" "0" "$?"
+
+    grep -q '^name = repo02$' $REPOSD/*.conf || \
+        fail "name not mapped: $(cat $REPOSD/*.conf)"
+    grep -q "^path = $PWD/metadata/repo_02$" $REPOSD/*.conf || \
+        fail "a relative baseurl not resolved: $(cat $REPOSD/*.conf)"
+    grep -q '^name = repo02zst$' $REPOSD/*.conf || \
+        fail "name not mapped: $(cat $REPOSD/*.conf)"
+    grep -q "^path = $PWD/metadata/repo_02zst$" $REPOSD/*.conf || \
+        fail "a relative baseurl not resolved: $(cat $REPOSD/*.conf)"
+    grep -q '^type = metadata$' $REPOSD/*.conf || fail "type not metadata"
 }
 
 # A .repo without an enabled baseurl, or a broken one, is refused

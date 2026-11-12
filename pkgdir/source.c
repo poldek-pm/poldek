@@ -126,6 +126,9 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
     return v;
 }
 
+/* A .repo file names a repository, it is not an index: send it to the
+   metadata module, which asks for `poldek repo add` instead of failing as
+   a missing native index */
 const char *source_guess_type(const char *path)
 {
     const char *p;
