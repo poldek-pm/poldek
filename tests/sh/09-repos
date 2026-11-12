@@ -151,5 +151,28 @@ testInvalidateStubindexForLocalRepo()
     expect_count 2
 }
 
+# several pndir sources are loaded each in a thread of its own, which also
+# writes the source's stub index; poldek's messages after the load must stay
+testThreadedLoadKeepsMessages()
+{
+    local i sources="" missing=0
+
+    msgn "Preparing repositories..."
+    for i in 1 2 3 4 5 6 7 8; do
+        mkdir -p $ORIGREPO/r$i || fail "mkdir $ORIGREPO/r$i failed"
+        build_package $ORIGREPO/r$i p$i 1-1
+        mkidx $ORIGREPO/r$i
+        sources="$sources -s $ORIGREPO/r$i"
+    done
+
+    msgn "Testing..."
+    for i in 1 2 3; do
+        rm -f $CACHEDIR/*/stubindex.pndir.zst # each load writes them again
+        LC_ALL=C $RAW_POLDEK $sources --cmd ls 2>&1 | grep -qx '8 packages read' ||
+            missing=$((missing + 1))
+    done
+    assertEquals "no '8 packages read' after the load in $missing of 3 runs" "0" "$missing"
+}
+
 
 . ./sh/lib/shunit2
