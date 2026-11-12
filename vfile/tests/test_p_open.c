@@ -9,6 +9,9 @@
 #include <sys/ioctl.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#if HAVE_SYS_PRCTL_H
+# include <sys/prctl.h>
+#endif
 
 #if HAVE_PTY_H
 # include <pty.h>
@@ -315,11 +318,14 @@ static int wait_for_file(const char *path, int ms)
     return access(path, F_OK) == 0;
 }
 
-/* a stand-in for poldek, in a session of its own on a fresh terminal, runs a
-   command with p_open(FLAGS); once the command has started, KEY is typed on
-   the terminal, or the terminal hangs up when KEY is 0; returns whether the
+enum event { QUIT_KEY, HANGUP, POLDEK_KILLED };
+
+/* a stand-in for poldek, the job of a shell that leads the session of a fresh
+   terminal, runs a command with p_open(FLAGS); once the command has started,
+   ^\ is typed on the terminal (QUIT_KEY), the terminal hangs up (HANGUP) or
+   poldek and its shell get a SIGKILL (POLDEK_KILLED); returns whether the
    command ran to its end */
-static int command_runs_to_end(unsigned flags, char key)
+static int command_runs_to_end(unsigned flags, enum event event)
 {
     const char *tmpdir = getenv("TMPDIR");
     char dir[PATH_MAX], started[PATH_MAX], done[PATH_MAX];
@@ -338,9 +344,9 @@ static int command_runs_to_end(unsigned flags, char key)
     if ((pid = fork()) == 0) {
         struct rlimit nocore = { 0, 0 };
         struct p_open_st pst;
+        pid_t poldek;
 
-        /* poldek's own handler, which the command does not inherit */
-        signal(SIGQUIT, on_signal);
+        /* the shell: a hangup ends it, and its end sends its job a SIGHUP */
         setrlimit(RLIMIT_CORE, &nocore);
         close(master);
         setsid();
@@ -349,7 +355,16 @@ static int command_runs_to_end(unsigned flags, char key)
         dup2(slave, STDOUT_FILENO);
         dup2(slave, STDERR_FILENO);
         close(slave);
+        signal(SIGQUIT, SIG_IGN);
+        if ((poldek = fork()) != 0) {
+            waitpid(poldek, &st, 0);
+            _exit(0);
+        }
 
+        /* poldek's own handlers while rpm runs, which the command does not
+           inherit */
+        signal(SIGQUIT, on_signal);
+        signal(SIGHUP, on_signal);
         p_st_init(&pst);
         if (p_open(&pst, flags, "/bin/sh", argv) == NULL)
             _exit(2);
@@ -358,13 +373,20 @@ static int command_runs_to_end(unsigned flags, char key)
     close(slave);
 
     fail_unless(wait_for_file(started, 2000), "the command did not start");
-    if (key)
-        fail_unless(write(master, &key, 1) == 1, "write: %m");
-    else
+    switch (event) {
+    case QUIT_KEY:
+        fail_unless(write(master, "\034", 1) == 1, "write: %m");
+        break;
+    case HANGUP:
         close(master);
+        break;
+    case POLDEK_KILLED:
+        kill(-pid, SIGKILL);
+        break;
+    }
 
     ran = wait_for_file(done, 1500);
-    if (key)
+    if (event != HANGUP)
         close(master);
     waitpid(pid, &st, 0);
 
@@ -374,19 +396,34 @@ static int command_runs_to_end(unsigned flags, char key)
     return ran;
 }
 
-#define QUIT_KEY '\034'           /* ^\ */
-
 START_TEST(test_quit_key_misses_command)
 {
     fail_unless(command_runs_to_end(P_OPEN_SETSID, QUIT_KEY),
-                "the command did not run to its end");
+                "on pipes, the command did not run to its end");
+    fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, QUIT_KEY),
+                "on a pty, the command did not run to its end");
 }
 END_TEST
 
 START_TEST(test_hangup_misses_command)
 {
-    fail_unless(command_runs_to_end(P_OPEN_SETSID, 0),
-                "the command did not run to its end");
+    fail_unless(command_runs_to_end(P_OPEN_SETSID, HANGUP),
+                "on pipes, the command did not run to its end");
+    fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, HANGUP),
+                "on a pty, the command did not run to its end");
+}
+END_TEST
+
+/* as after an OOM kill, with its terminal still there; p_open() ties a
+   command to poldek with PR_SET_PDEATHSIG, so on Linux only */
+START_TEST(test_command_ends_with_poldek)
+{
+#ifdef PR_SET_PDEATHSIG
+    fail_if(command_runs_to_end(P_OPEN_SETSID, POLDEK_KILLED),
+            "on pipes, the command outlived poldek");
+    fail_if(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, POLDEK_KILLED),
+            "on a pty, the command outlived poldek");
+#endif
 }
 END_TEST
 
@@ -478,22 +515,8 @@ START_TEST(test_signals_before_exec_act_as_after_it)
 }
 END_TEST
 
-START_TEST(test_pty_quit_key_misses_command)
-{
-    fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, QUIT_KEY),
-                "the command did not run to its end");
-}
-END_TEST
-
-START_TEST(test_pty_hangup_misses_command)
-{
-    fail_unless(command_runs_to_end(P_OPEN_OUTPTYS | P_OPEN_SETSID, 0),
-                "the command did not run to its end");
-}
-END_TEST
-
 NTEST_RUNNER("p_open", test_start_fails, test_exec_fails,
              test_wait_sees_end_with_sigchld_ignored, test_quit_key_misses_command,
-             test_hangup_misses_command, test_pty_output_ends_with_command,
-             test_pty_quit_key_misses_command, test_pty_hangup_misses_command,
+             test_hangup_misses_command, test_command_ends_with_poldek,
+             test_pty_output_ends_with_command,
              test_signals_before_exec_act_as_after_it);
