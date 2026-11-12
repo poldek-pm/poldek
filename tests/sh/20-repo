@@ -8,6 +8,17 @@
 POLDEK="$PWD/../cli/poldek"
 $POLDEK --version >/dev/null 2>&1
 
+# poldek's own notices, and the errors these tests provoke on purpose, are
+# noise on the screen; -v shows them
+run_poldek()
+{
+    if is_verbose_mode; then
+        "$@" $QUIET
+    else
+        "$@" >/dev/null 2>&1
+    fi
+}
+
 REPOSD=
 REMOTE_CONF=
 INVALID_CONF=
@@ -40,7 +51,7 @@ testRepoAddListDelete()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    $POLDEK repo add $REMOTE_CONF
+    run_poldek $POLDEK repo add $REMOTE_CONF
     assertEquals "repo add failed" "0" "$?"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
@@ -51,7 +62,7 @@ testRepoAddListDelete()
         fail "repo ls does not show the added source: $out"
 
     fn=$(basename $(ls $REPOSD/*.conf))
-    $POLDEK repo del $fn
+    run_poldek $POLDEK repo del $fn
     assertEquals "repo del failed" "0" "$?"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
@@ -62,18 +73,18 @@ testRepoOverwrite()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    $POLDEK repo add $REMOTE_CONF
+    run_poldek $POLDEK repo add $REMOTE_CONF
     assertEquals "first repo add failed" "0" "$?"
 
-    $POLDEK repo add $REMOTE_CONF
+    run_poldek $POLDEK repo add $REMOTE_CONF
     if [ "$?" -eq 0 ]; then
         fail "second repo add should fail without --force"
     fi
 
-    $POLDEK repo add $REMOTE_CONF --force
+    run_poldek $POLDEK repo add $REMOTE_CONF --force
     assertEquals "repo add --force failed" "0" "$?"
 
-    $POLDEK repo --force add $REMOTE_CONF
+    run_poldek $POLDEK repo --force add $REMOTE_CONF
     assertEquals "repo --force add failed" "0" "$?"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
@@ -84,7 +95,7 @@ testRepoInvalidRejected()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    $POLDEK repo add $INVALID_CONF
+    run_poldek $POLDEK repo add $INVALID_CONF
     if [ "$?" -eq 0 ]; then
         fail "repo add with invalid config should fail"
     fi
@@ -113,7 +124,7 @@ path = http://example.com/second
 type = pndir
 EOF
 
-    $POLDEK repo ls
+    run_poldek $POLDEK repo ls
     if [ "$?" -eq 0 ]; then
         fail "duplicate source names across files should be rejected"
     fi
@@ -139,8 +150,8 @@ EOF
     PATH="$PATH:$SHLIBDIR"
     export PATH
 
-    echo $POLDEK --cachedir $CACHEDIR repo add test:/$REMOTE_CONF
-    $POLDEK --cachedir $CACHEDIR repo add test:/$REMOTE_CONF
+    msg $POLDEK --cachedir $CACHEDIR repo add test:/$REMOTE_CONF
+    run_poldek $POLDEK --cachedir $CACHEDIR repo add test:/$REMOTE_CONF
     assertEquals "repo add failed" "0" "$?"
 
     fn=$(ls $REPOSD/*.conf)
@@ -180,10 +191,10 @@ EOF
     PATH="$PATH:$SHLIBDIR"
     export PATH
 
-    $POLDEK --cachedir $CACHEDIR repo add test://$REMOTE_CONF
+    run_poldek $POLDEK --cachedir $CACHEDIR repo add test://$REMOTE_CONF
     assertEquals "repo add failed" "0" "$?"
 
-    $POLDEK --cachedir $CACHEDIR repo del test://$REMOTE_CONF
+    run_poldek $POLDEK --cachedir $CACHEDIR repo del test://$REMOTE_CONF
     assertEquals "repo del by URL failed" "0" "$?"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
@@ -211,9 +222,9 @@ path = http://example.com/frag/b
 type = pndir
 EOF
 
-    $POLDEK repo add $tmp/repo-frag-a-19.conf
+    run_poldek $POLDEK repo add $tmp/repo-frag-a-19.conf
     assertEquals "repo add a failed" "0" "$?"
-    $POLDEK repo add $tmp/repo-frag-b-19.conf
+    run_poldek $POLDEK repo add $tmp/repo-frag-b-19.conf
     assertEquals "repo add b failed" "0" "$?"
 
     out=$($POLDEK repo del repo-frag- 2>&1)
@@ -257,7 +268,7 @@ path = http://example.com/unmarked
 type = pndir
 EOF
 
-    $POLDEK repo del unmarked.conf
+    run_poldek $POLDEK repo del unmarked.conf
     assertEquals "repo del of an unmarked repos.d file" "0" "$?"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
@@ -283,10 +294,10 @@ testRepoDeleteUnknownUrl()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    $POLDEK repo add $REMOTE_CONF
+    run_poldek $POLDEK repo add $REMOTE_CONF
     assertEquals "repo add failed" "0" "$?"
 
-    $POLDEK repo del http://example.com/not-there-19
+    run_poldek $POLDEK repo del http://example.com/not-there-19
     if [ "$?" -eq 0 ]; then
         fail "repo del of an unknown URL should fail"
     fi
@@ -351,7 +362,7 @@ testRepoWithoutCommandLists()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    $POLDEK repo add $REMOTE_CONF
+    run_poldek $POLDEK repo add $REMOTE_CONF
     assertEquals "repo add failed" "0" "$?"
 
     out=$($POLDEK repo 2>&1)
@@ -382,7 +393,7 @@ auto = yes
 noauto = yes
 EOF
 
-    $POLDEK repo add $REMOTE_CONF
+    run_poldek $POLDEK repo add $REMOTE_CONF
     assertEquals "repo add failed" "0" "$?"
 
     fn=$(ls $REPOSD/*.conf)
@@ -534,7 +545,7 @@ EOF
     echo "$out" | grep -q 'one-19' || fail "the source not listed: $out"
     echo "$out" | grep -q 'disabled-19' && fail "disabled source listed: $out"
 
-    $POLDEK repo del $tmp/dnf-19/my-19.repo
+    run_poldek $POLDEK repo del $tmp/dnf-19/my-19.repo
     assertEquals "repo del by the .repo URL failed" "0" "$?"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
@@ -579,7 +590,7 @@ testRepoAddDnfRepoWhitespace()
     grep -q '^name = empty-19$' $fn || \
         fail "an empty enabled value should not disable the repo: $(cat $fn)"
 
-    $POLDEK repo del $tmp/dnf-ws-19/ws.repo
+    run_poldek $POLDEK repo del $tmp/dnf-ws-19/ws.repo
 }
 
 # dnf repository variables are expanded when the file is added
@@ -670,7 +681,8 @@ testRepoAddHiddenName()
     mkdir -p $tmp/upath-19/_x
     cp $PWD/metadata/02.repo $tmp/upath-19/_x/ || fail "cp failed"
 
-    ( cd $tmp/upath-19 && $POLDEK repo add _x/02.repo ) || fail "repo add failed"
+    ( cd $tmp/upath-19 && run_poldek $POLDEK repo add _x/02.repo ) || \
+        fail "repo add failed"
 
     out=$(ls -A $REPOSD)
     grep -q '^name = repo02$' $REPOSD/*.conf || \
@@ -816,7 +828,7 @@ path = $tmp/plain-19/
 type = pndir
 EOF
 
-    $POLDEK repo add $REMOTE_CONF
+    run_poldek $POLDEK repo add $REMOTE_CONF
     assertEquals "repo add failed" "0" "$?"
 
     out=$(HOME=$home $POLDEK up -l 2>&1)
