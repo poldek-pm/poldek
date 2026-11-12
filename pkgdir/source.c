@@ -55,8 +55,8 @@ struct src_option {
     unsigned  flag;
 };
 
-#define PKGSRC_OPTION_SUBOPT  (1 << 15)
-#define PKGSRC_OPTION_STRING  (1 << 16)
+#define PKGSRC_OPTION_SUBOPT  (1 << 30)
+#define PKGSRC_OPTION_STRING  (1 << 29)
 #define PKGSRC_OPTION_OPTMASK (PKGSRC_OPTION_SUBOPT | PKGSRC_OPTION_STRING)
 
 static struct src_option source_options[] = {

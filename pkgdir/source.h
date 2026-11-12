@@ -38,7 +38,7 @@ EXPORT const char source_TYPE_GROUP[]; /* "group" */
 #define PKGSOURCE_AUTOUPA    (1 << 13) /* do --upa if --up said "desynchronized"
                                           index */
 #define PKGSOURCE_SIGNKEY    (1 << 14) /* signkey URL set */
-#define PKGSOURCE_MANAGED    (1 << 17) /* loaded from built-in repos.d */
+#define PKGSOURCE_MANAGED    (1 << 15) /* loaded from built-in repos.d */
 
 struct source {
     unsigned  flags;
