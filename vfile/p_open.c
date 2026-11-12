@@ -91,6 +91,13 @@ void p_st_destroy(struct p_open_st *pst)
 FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
              char *const argv[])
 {
+    /* a caller must p_st_destroy() and p_st_init() before it opens again:
+       a stream, a command name or a message here is left over from an
+       earlier attempt and would be lost or written over */
+    n_assert(pst->stream == NULL);
+    n_assert(pst->cmd == NULL);
+    n_assert(pst->errmsg == NULL);
+
     if (flags & P_OPEN_OUTPTYS)
         return pty_open(pst, flags, cmd, argv);
 
@@ -113,12 +120,16 @@ static pid_t fork_command(sigset_t *mask, int *execfd)
     sigfillset(&all);
     sigprocmask(SIG_BLOCK, &all, mask);
     if ((pid = fork()) != 0) {
+        int err = errno;
+
         sigprocmask(SIG_SETMASK, mask, NULL);
         close(ep[1]);
-        if (pid < 0)
+        if (pid < 0) {
             close(ep[0]);
-        else
+            errno = err;        /* a failed close() would clobber it */
+        } else {
             *execfd = ep[0];
+        }
         return pid;
     }
 
@@ -185,7 +196,7 @@ static FILE *command_started(struct p_open_st *pst, pid_t pid, int execfd,
     char errmsg[1024];
 
     if (pid < 0) {
-        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
+        snprintf(errmsg, sizeof(errmsg), "cannot start %s: %m", cmd);
         pst->errmsg = n_strdup(errmsg);
     }
 
@@ -340,7 +351,7 @@ int p_close(struct p_open_st *pst)
 }
 
 
-pid_t forkptys(int master, int slave, sigset_t *mask, int *execfd)
+static pid_t forkptys(int master, int slave, sigset_t *mask, int *execfd)
 {
     pid_t pid;
 
