@@ -110,6 +110,48 @@ START_TEST (test_url_hidepasswd_short_buffer) {
 END_TEST
 
 
+/* %D together with a multi-URL %Pn: there is no single basename, but the
+   fetcher must not dereference the NULL one */
+START_TEST (test_fetcha_ext_multi_dirbn) {
+    int verbose = 0;
+    tn_array *protos, *urls;
+
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
+
+    protos = n_array_new(2, NULL, NULL);
+    n_array_push(protos, "testfetch");
+    fail_unless(vfile_register_ext_handler("testfetch", protos,
+                                           "/bin/true %D %Pn"),
+                "cannot register the test fetcher");
+    n_array_free(protos);
+
+    urls = n_array_new(2, NULL, NULL);
+    n_array_push(urls, "testfetch://host/a.rpm");
+    n_array_push(urls, "testfetch://host/b.rpm");
+
+    fail_unless(vf_fetcha(urls, NTEST_TMPPATH("vfile-fetcha"),
+                          VF_FETCH_NOPROGRESS, NULL, 1, 2) == 1,
+                "vf_fetcha failed");
+
+    n_array_free(urls);
+}
+END_TEST
+
+
+/* "://" makes a URL only when what precedes it looks like a scheme; a path
+   that happens to contain "://" is still a path */
+START_TEST (test_url_type_scheme) {
+    fail_unless(vf_url_type("/abs/path") == VFURL_PATH);
+    fail_unless(vf_url_type("relative/path") == VFURL_PATH);
+    fail_unless(vf_url_type("http://host/x") == VFURL_HTTP);
+    fail_unless(vf_url_type("custom://host/x") == VFURL_UNKNOWN);
+    fail_unless(vf_url_type("./dir/a://b") == VFURL_PATH,
+                "a path containing '://' is not a URL");
+}
+END_TEST
+
+
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_as_path_percent, test_url_hidepasswd,
-             test_url_hidepasswd_short_buffer);
+             test_url_hidepasswd_short_buffer, test_fetcha_ext_multi_dirbn,
+             test_url_type_scheme);
