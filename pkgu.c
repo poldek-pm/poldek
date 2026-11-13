@@ -440,7 +440,7 @@ static tn_array *parse_changelog(tn_alloc *na, tn_array *lines)
 
             //* [rREV] YYYY-MM-DD HH:MM:SS rest
             ts = strchr(line, ' ');
-            while (*ts && isspace(*ts))
+            while (ts && *ts && isspace(*ts))
                 ts++;
 
             if (ts && *ts == 'r')
