@@ -83,7 +83,7 @@ void printf_nbuf(tn_buf *nbuf)
 
         memcpy(line, p, n);
         line[n] = '\0';
-        printf("  %.2d: %s\n", i++, line);
+        printf("  %.2u: %s\n", i++, line);
     }
 }
 

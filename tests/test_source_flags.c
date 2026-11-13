@@ -12,7 +12,7 @@ START_TEST (test_source_flags) {
             "name = testsrc\n"
             "type = pndir\n"
             "url  = file:///tmp/poldek-test-nonexistent\n"
-            "pri  = 5\n"
+            "pri  = -5\n"
             "compr = zst\n");
     fclose(f);
 
@@ -31,6 +31,7 @@ START_TEST (test_source_flags) {
         PKGSOURCE_COMPR | PKGSOURCE_AUTOUPA;
     fail_unless(src->flags == expected, "flags 0x%x, expected 0x%x",
                 src->flags, expected);
+    fail_unless(src->pri == -5, "pri %d, expected -5", src->pri);
 
     n_array_free(sources);
     poldek_free(ctx);

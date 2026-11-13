@@ -1644,6 +1644,7 @@ static void __setup_multilib(struct poldek_ctx *ctx)
 {
     struct default_op_map_ent *ent, tmp;
     char     scolor[64];
+    unsigned ucolor;
     int      color;
     int      multilib = 2; /* 'auto' */
 
@@ -1651,8 +1652,10 @@ static void __setup_multilib(struct poldek_ctx *ctx)
     if (!pm_conf_get(ctx->pmctx, "%{_transaction_color}", scolor, sizeof(scolor)))
         return;
 
-    if (sscanf(scolor, "%u", &color) != 1)
+    if (sscanf(scolor, "%u", &ucolor) != 1)
         return;
+
+    color = ucolor;
 
     if (ctx->htconf) {
         tn_hash *htcnf = poldek_conf_get_section(ctx->htconf, "global");

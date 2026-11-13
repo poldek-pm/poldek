@@ -70,7 +70,7 @@ int test_02(void)
                 len = 1023;
             memcpy(line, p, len);
             line[len] = '\0';
-            printf("%d: %s\n", n++, line);
+            printf("%u: %s\n", n++, line);
         }
 
     }

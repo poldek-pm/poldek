@@ -29,7 +29,7 @@
 
 static void capreq_ent_free(struct capreq_idx_ent *ent)
 {
-    DBGF("ent %p, %p %d, %d\n", ent, ent->pkgs, ent->_size, ent->items);
+    DBGF("ent %p, %p %u, %u\n", ent, ent->pkgs, ent->_size, ent->items);
     if (ent->_size > 1)
         free(ent->pkgs);
 }
@@ -310,7 +310,7 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
 
     FILE *f = fopen(path, "w");
     while ((ent = n_oash_it_get(&it, &key)) != NULL) {
-        fprintf(f, "%d %s %s\n", ent->items, key, prefix);
+        fprintf(f, "%u %s %s\n", ent->items, key, prefix);
     }
     fclose(f);
 

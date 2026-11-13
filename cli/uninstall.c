@@ -186,7 +186,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     v++;
                 ts->setop(ts, POLDEK_OP_GREEDY, v);
             } else {
-                int v, val;
+                unsigned v;
+                int val;
 
                 if (sscanf(arg, "%u", &v) == 1) {
                     val = v;

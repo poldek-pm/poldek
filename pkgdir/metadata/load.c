@@ -269,7 +269,11 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
             char *v;
 
             if ((v = (char *) xmlGetProp(node, (const xmlChar *) "build"))) {
-                sscanf(v, "%d", &pkg.btime);
+                unsigned btime;
+
+                if (sscanf(v, "%u", &btime) == 1)
+                    pkg.btime = btime;
+
                 xmlFree(v);
             }
 
