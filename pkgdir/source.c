@@ -613,6 +613,8 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
         char tmp[PATH_MAX], *p;
         int i, nt = 0;
 
+        *tmp = '\0';
+
         tn_array *arr = poldek_conf_get_multi(htcnf, "sources");
         n_array_sort(arr);
         for (i=0; i<n_array_size(arr); i++)
