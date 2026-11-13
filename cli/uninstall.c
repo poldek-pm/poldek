@@ -16,6 +16,7 @@
 
 #include <limits.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
@@ -33,6 +34,32 @@
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int uninstall(struct cmdctx *cmdctx);
+
+/* Parse the optional argument of --greedy: a boolean, or a non-negative level
+   that fits an int.  Returns 1 and stores the value in *VAL on success, 0 for
+   an invalid or out-of-range value; "4294967296" must not wrap, and a level
+   must not become a negative depth. */
+int poclidek__parse_greedy(const char *arg, int *val)
+{
+    char *end;
+    unsigned long v;
+    int b;
+
+    errno = 0;
+    v = strtoul(arg, &end, 10);
+
+    if (arg != end && *end == '\0' && errno == 0 && v <= INT_MAX) {
+        *val = (int)v;
+        return 1;
+    }
+
+    if ((b = poldek_util_parse_bool(arg)) != -1) {
+        *val = b;
+        return 1;
+    }
+
+    return 0;
+}
 
 #define OPT_GID             OPT_GID_OP_UNINSTALL
 #define OPT_INST_NOASK      'y'
@@ -186,13 +213,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     v++;
                 ts->setop(ts, POLDEK_OP_GREEDY, v);
             } else {
-                unsigned v;
                 int val;
 
-                if (sscanf(arg, "%u", &v) == 1) {
-                    val = v;
-
-                } else if ((val = poldek_util_parse_bool(arg)) == -1) {
+                if (!poclidek__parse_greedy(arg, &val)) {
                     logn(LOGERR, _("invalid value ('%s') of option 'greedy'"),
                          arg);
                     return EINVAL;

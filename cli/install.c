@@ -31,6 +31,8 @@
 #include "cli.h"
 #include "op.h"
 
+extern int poclidek__parse_greedy(const char *arg, int *val);
+
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state);
 static int install(struct cmdctx *cmdctx);
@@ -452,13 +454,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 ts->setop(ts, POLDEK_OP_GREEDY, v);
 
             } else {            /* = */
-                unsigned v;
                 int val;
 
-                if (sscanf(arg, "%u", &v) == 1) {
-                    val = v;
-
-                } else if ((val = poldek_util_parse_bool(arg)) == -1) {
+                if (!poclidek__parse_greedy(arg, &val)) {
                     logn(LOGERR, _("invalid value ('%s') of option 'greedy'"),
                          arg);
                     return EINVAL;

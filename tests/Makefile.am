@@ -15,6 +15,8 @@ check_PROGRAMS += test_relay_output
 check_PROGRAMS += test_dent
 # poldek_term_puts_c() output
 check_PROGRAMS += test_term
+# --greedy argument parsing
+check_PROGRAMS += test_greedy
 
 TESTS = $(check_PROGRAMS)
 
@@ -28,6 +30,11 @@ test_pndir_CPPFLAGS = -I$(top_srcdir)/pkgdir
 
 # pkg_dent_cmp_bday() is part of the CLI library
 test_dent_LDADD = $(top_builddir)/cli/libpoclidek.la @CHECK_LIBS@
+
+# poclidek__parse_greedy() is internal to the CLI library (hidden), so link
+# the translation unit that defines it
+test_greedy_LDADD = $(top_builddir)/cli/uninstall.lo \
+		    $(top_builddir)/cli/libpoclidek.la @CHECK_LIBS@
 
 EXTRA_DIST = test.h poldek_test_conf.conf \
 	sh run-sh-tests.sh metadata \
