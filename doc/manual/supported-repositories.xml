@@ -1,5 +1,5 @@
 
-<variablelist id="repositories.types"><title>Supported repositories</title>
+<variablelist id="repositories.types"><title>Supported sources</title>
 <varlistentry><term>pndir (features: read, write, update, incremental update)</term>
   <listitem>
      <para> Native <application>poldek</application> index format. 

@@ -1,4 +1,4 @@
-<sect2 id="cookbook.makeidx"><title>Repository index creation</title>
+<sect2 id="cookbook.makeidx"><title>Package index creation</title>
 <para>
 Create an index of ~/rpm/RPMS, its type is taken from <option>default index type</option>
 configuration option:
@@ -6,13 +6,13 @@ configuration option:
 &prompt; <command>poldek -s <replaceable>~/rpm/RPMS</replaceable> --makeidx</command> 
 </screen>
 
-Create an index of configured repository <emphasis>home</emphasis>, its type is 
+Create an index of the configured source <emphasis>home</emphasis>, its type is
 defined in configuration:
 <screen>
 &prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
 </screen>
 
-Indexes may be created for multiple repositories at once:
+Indexes may be created for multiple sources at once:
 <screen>
 &prompt; <command>poldek -n <replaceable>fedora-c2</replaceable> -n <replaceable>fedora-c2-up</replaceable> --makeidx</command>
 </screen>
@@ -27,7 +27,7 @@ Multiple indexes of different types may be created at once using
 
 <sect2 id="cookbook.install-dist"><title>Installation system from a scratch</title>
 <para>
-Install from <emphasis>fedora-c3</emphasis> repository apache and all its dependencies 
+Install from the <emphasis>fedora-c3</emphasis> source apache and all its dependencies
 under <filename>/mnt/chroot</filename> as root directory:
 <screen>
 &prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v <replaceable>apache</replaceable></command> 
@@ -67,7 +67,7 @@ Upgrade all packages needs upgrade with logging details to <filename>/tmp/poldek
 
 <sect2 id="cookbook.misc"><title>Miscellaneous</title>
 <para>
-Divide repository packages into 650 MB chunks, first chunk will be 100 MB smaller.
+Divide the packages of a source into 650 MB chunks, the first chunk 100 MB smaller.
 Files with lists of packages placed in chunks will be named <filename>cd.XX</filename>:
 <screen>
 &prompt; <command>poldek -n <replaceable>pld</replaceable> --split=<replaceable>650:100</replaceable> --split-out=<replaceable>/tmp/cd</replaceable></command>

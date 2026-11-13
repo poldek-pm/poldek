@@ -109,7 +109,7 @@ querying/ search the package database and more.
   <listitem>
     <para>
     &poldek; has been designed with efficiency and scalability in mind. 
-    The native package repository index format is optimized for storage size 
+    The native package index format is optimized for storage size
     and loading speed. Dependency processing (dependencies, conflicts, package
     ordering) is significantly faster and needs less memory than rpmlib-based 
     tools. &poldek; can handle 20K packages without noticable 
@@ -118,25 +118,25 @@ querying/ search the package database and more.
   </listitem>
 </varlistentry>
 
-<varlistentry><term>Incremental repository updates</term>
+<varlistentry><term>Incremental source updates</term>
   <listitem>
     <para>
-    &poldek;'s native repositories are able to update incrementally.
+    &poldek;'s native sources are able to update incrementally.
     During the update only the incremental files are transferred 
     instead of the complete index. Such files are certainly much smaller,
     what drastically reduces amout of data need to be retrieved
-    when remote repository was changed a bit. 
+    when remote source was changed a bit.
     </para>
   </listitem>
 </varlistentry>
 
-<varlistentry><term>Support for multiple repository types</term>
+<varlistentry><term>Support for multiple source types</term>
   <listitem>
     <para> 
-    &poldek; supports various types of package repositories including
+    &poldek; supports various types of package sources including
     &apt_link;, &yum_link; and &xmlmetadata_link;. 
     See the <link linkend="repositories.types">list</link> of
-    supported repository types for details. Support for other types may be easily added.
+    supported source types for details. Support for other types may be easily added.
     </para>
   </listitem>
 </varlistentry>
@@ -171,10 +171,10 @@ querying/ search the package database and more.
 </varlistentry>
 
 
-<varlistentry><term>Repository management</term>
+<varlistentry><term>Source management</term>
   <listitem>
     <para>
-     &poldek; provides functionality which helps to manage distribution repositories. 
+     &poldek; provides functionality which helps to manage distribution sources.
      Features include:
      <itemizedlist>
      <listitem><para> Detail reports about dependency loops, unmet dependencies,
@@ -183,7 +183,7 @@ querying/ search the package database and more.
      
      <listitem><para> Division package set to chunks to be placed on removable media
      with ordering according dependency tree and with priority handling.</para></listitem>
-     <listitem><para> Moving packages from one repository to another with full 
+     <listitem><para> Moving packages from one source to another with full
      dependency checking. </para></listitem>
      </itemizedlist>
     </para>
@@ -198,12 +198,12 @@ querying/ search the package database and more.
 
 <sect1 id="quickstart"> <title>Quick start</title>
 <para> 
-Suppose you want to: a) use remote repository of Fedora Core 4, 
+Suppose you want to: a) use remote source of Fedora Core 4,
 b) prepare your local package directory <filename>$HOME/rpm/RPMS</filename> to be available 
 to poldek. 
 </para>
 
-<sect2 id="quickstart.configure"> <title>Step #1 - Configure repositories</title>
+<sect2 id="quickstart.configure"> <title>Step #1 - Configure sources</title>
 <para>
 Source configuration may be placed in your local 
 <filename id="file.poldekrc">$HOME/.poldekrc</filename> or global <filename id="file.source-conf">/etc/poldek/source.conf</filename>. Whatever you choose, put there 
@@ -222,7 +222,7 @@ path = $HOME/rpm/RPMS
 </para>
 </sect2>
 
-<sect2 id="quickstart.create"> <title>Step #2 - Create repository index</title>
+<sect2 id="quickstart.create"> <title>Step #2 - Create a package index</title>
   <para>
   Fedora Core 4 index is ready, we must create one for <filename>$HOME/rpm/RPMS</filename>:
 
@@ -261,7 +261,7 @@ For example to install or upgrade Apache HTTP server:
 </screen>     
  <!-- See also <url name="sample interactive mode session" url="screenshoots.html">. -->
 
-Selection of particular repositories may be done by <option>-n</option> option:
+Selection of particular sources may be done by <option>-n</option> option:
 <screen>
 &ipoldek-prompt; -n fc4 ls foo\*
 &poldek-prompt; -n home -uv foo-3.1-2
@@ -325,20 +325,31 @@ Type COMMAND -? for details.
 </sect2>     
 </sect1>
 
-<sect1 id="repositories"> <title>Package repositories</title>
+<sect1 id="repositories"> <title>Package sources</title>
 <para>
-Like other packages management tools &poldek; uses package repositories
-(<emphasis>sources</emphasis>) to obtain meta-information about available 
-packages.
+A <emphasis>source</emphasis> (a <quote>[source]</quote> configuration
+section) describes one place &poldek; takes packages from: an address, a
+type and options. The options that select a source are <option>-s</option>
+and <option>-n</option>, and the word <emphasis>repository</emphasis> is
+often used for the same thing.
 
-Repository consist of database (<emphasis>package index</emphasis>) of
-package meta-data (dependencies, files, description, etc) and, of course packages 
-itself. Various types of repositories are supported including &apt-rpm; and 
-&yum; ones. 
+A source consist of database (<emphasis>package index</emphasis>) of
+package meta-data (dependencies, files, description, etc) and, of course packages
+itself. Various types of sources are supported including &apt-rpm; and
+&yum; ones.
+</para>
+
+<para>
+The <command>repo</command> command uses the word differently: a
+<emphasis>repository</emphasis> there is one configuration added from an
+URL (see <link linkend="repositories.repo">Adding repositories from a
+URL</link>), kept in the built-in <filename>repos.d</filename> directory.
+One such configuration may define several sources at once, and adding or
+removing a repository adds or removes all of them.
 </para>
 
 <!-- WTF?
-&supported-repositories; - 'IDREF attribute linkend references an unknown ID "repositories.types"'
+&supported-repositories; - 'IDREF attribute linkend references an unknown ID "sources.types"'
 
 <xi:include href="manual/supported-repositories.xml" xmlns:xi="http://www.w3.org/2001/XInclude" /> - 'variablelist: validity error : No declaration for attribute base of element variablelist'
 
@@ -347,19 +358,19 @@ So, lets old good m4:
 include(manual/supported-repositories.xml)
 
 <para>
-Native &poldek; repositories 'pndir' and 'pdir' have <quote>incremental updates</quote> 
+Native &poldek; source types 'pndir' and 'pdir' have <quote>incremental updates</quote>
 feature consist in creation of package index delta files with differences between
 already created and previous package index. Deltas are used later to perform update 
 of local indexes what noticeably reduces amout of data downloaded. In the other words, 
-when repository was changed by adding a few packages, only information about those few 
+when source was changed by adding a few packages, only information about those few
 packages will be retrieved on update 
 (see <link linkend="repositories.using.update">Update</link> subsection).
 </para>
 
-<sect2 id="repositories.configuration"> <title>Repositories configuration</title>
+<sect2 id="repositories.configuration"> <title>Sources configuration</title>
 <para>
-Although repositories can be specified directly at command line,
-they are usually configured. Every repository has its own configuration 
+Although sources can be specified directly at command line,
+they are usually configured. Every source has its own configuration
 section <quote>[source]</quote>, for example:
 
 <screen>
@@ -400,23 +411,82 @@ sources do:
 
 </sect2>
 
-<sect2 id="repositories.using"> <title>Using repositories</title>
+<sect2 id="repositories.repo"> <title>Adding repositories from a URL</title>
+<para>
+Besides editing the configuration files, sources can be added from a
+configuration file stored on an URL, a dnf (<filename>*.repo</filename>)
+or a &poldek; one. The <command>repo</command> command downloads the file
+once, converts it and stores it as a set of <quote>[source]</quote>
+sections in one managed <filename>.conf</filename> file in the built-in
+repositories directory, so that later reads need no network access:
+
+<screen>
+&prompt; <command>poldek repo add</command> <replaceable>URL</replaceable>
+&prompt; <command>poldek repo add --force</command> <replaceable>URL</replaceable>
+&prompt; <command>poldek repo del</command> <replaceable>URL</replaceable>
+&prompt; <command>poldek repo ls</command>
+</screen>
+
+A repository is identified by the URL it was added with;
+<command>repo del</command> takes that URL, or a fragment of it as long
+as the fragment is unambiguous. <command>repo ls</command> lists the
+added repositories together with the sources each of them defines, and
+<command>repo</command> alone does the same. Those sources are listed
+after the user's own, are marked <option>managed</option>, and are not
+loaded unless they are asked for by name (<option>-s</option>/<option>-n</option>);
+an <command>up</command> of all sources still refreshes their indexes.
+<command>repo add</command> refuses a URL that is already there unless
+<option>--force</option> is given, and <command>repo del</command>
+removes every source the repository defines, which needs
+<option>--force</option> when there is more than one.
+</para>
+
+<para>
+The files are kept in <filename>/var/lib/poldek/repos.d</filename> when
+run by root and in <filename>~/.config/poldek/repos.d</filename> (or
+<filename>$XDG_CONFIG_HOME/poldek/repos.d</filename>) otherwise; only
+the default configuration reads them, a configuration given with
+<option>--conf</option> ignores them. The directory is read on its own,
+so a <option>%include</option>/<option>%includedir</option> of it is
+not needed and is reported with a warning.
+</para>
+
+<para>
+A dnf repository file is converted at add time: each section becomes one
+source, its id the source name, the first <option>baseurl</option> the
+path, and
+<option>gpgcheck</option>, <option>gpgkey</option> and
+<option>priority</option> are mapped to <option>signed</option>,
+<option>signkey</option> and <option>pri</option>. A relative
+<option>baseurl</option> is resolved against the <filename>.repo</filename>
+location, and macro variables such as <option>$basearch</option> or
+<option>$releasever</option> are expanded. Local policy a downloaded
+file must not set for the user (<option>ignore</option>,
+<option>hold</option>, <option>auto</option>, <option>noauto</option>)
+is dropped and <option>auto</option> is forced off, dnf keys with no
+&poldek; equivalent (<option>exclude</option>, <option>includepkgs</option>,
+credentials, ...) are reported and ignored, and <option>%include</option>
+directives are skipped with a warning.
+</para>
+</sect2>
+
+<sect2 id="repositories.using"> <title>Using sources</title>
 
 <sect3 id="repositories.using.select"> <title>Selection</title>
 <para> 
-&poldek; loads all configured repositories at startup  
-Executed without repository selection options &poldek; 
-loads all configured repositories at startup, except they which have 
+&poldek; loads all configured sources at startup
+Executed without source selection options &poldek;
+loads all configured sources at startup, except they which have
 <option>auto</option> turned off. 
 
-To use particular repositories use <option>--sn</option> 
+To use particular sources use <option>--sn</option>
 (<option>-n</option>) option, for example, to use only <emphasis>home</emphasis> 
 source, do:
 <screen>
 &poldek-prompt; -n home
 </screen>
 
-Repository name can be also a glob, to use all sources with <quote>distro</quote>
+Source name can be also a glob, to use all sources with <quote>distro</quote>
 prefix, do:
 <screen>
 &poldek-prompt; -n distro\*
@@ -424,7 +494,7 @@ prefix, do:
 </para>
 
 <para>
-Non configured repositories can be specified directly at command line
+Non configured sources can be specified directly at command line
 by <option>--source</option> (<option>-s</option>) option. 
 The syntax is: 
 
@@ -433,7 +503,7 @@ The syntax is:
 </screen>
 
 where <emphasis>TYPE</emphasis> is one of index supported types, and SOURCEPATH is
-the path or URL of repository. If package index and packages 
+the path or URL of source. If package index and packages
 are located in different paths/URLs then <option>--prefix</option> can
 be used to point packages location. Examples:
 
@@ -448,7 +518,7 @@ be used to point packages location. Examples:
 
 <sect3 id="repositories.using.update"> <title>Updating</title>
 <para> 
- To resynchronize the package index from its repository use 
+ To resynchronize the package index from its source use
  <option>--update</option> (<option>--up</option>) or 
  <option>--update-whole</option> (<option>--upa</option>):
 
@@ -468,7 +538,7 @@ outdated. It is a good idea to run do updates regularly to keep indexes up to da
 
 </para>
 <para>
-Update requested for local repositories causes verification integrity of indexes.
+Update requested for local sources causes verification integrity of indexes.
 </para>
 
 <para> 
@@ -481,8 +551,8 @@ Examples:
 </para>
 </sect3>
 
-<sect3 id="repositories.using.list"> <title>Listing available repositories</title>
-<para> To list all configured repositories use 
+<sect3 id="repositories.using.list"> <title>Listing available sources</title>
+<para> To list all configured sources use
 <option>--sl</option> (<option>-l</option>):
 <screen>
 &poldek-prompt; -l
@@ -493,8 +563,8 @@ home            /home/me/rpm/RPMS/  (noauto,type=dir)
 </para>
 </sect3>
 
-<sect3 id="repositories.using.listype"> <title>Listing available repository types</title>
-<para> To list all available repository types, use <option>--stl</option>:
+<sect3 id="repositories.using.listype"> <title>Listing available source types</title>
+<para> To list all available source types, use <option>--stl</option>:
 <screen>
 &poldek-prompt; --stl
 dir    r--  Dynamic index built by scanning directory for packages
@@ -514,7 +584,7 @@ Legend: r - readable, w - writeable, u - updateable
 
 <sect2 id="repositories.creating"> <title>Creating</title>
 <para> 
-Creation of &poldek;'s repositories is quite simple, the syntax is:
+Creation of &poldek;'s sources is quite simple, the syntax is:
 
 <screen>
 &poldek-prompt; -s PATH --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
@@ -522,7 +592,7 @@ Creation of &poldek;'s repositories is quite simple, the syntax is:
 </screen>
 </para>
 <para>
-what creates package index of repository specified by <option>-n</option> or <option>-s</option> and saves it under directory specified by <option>--mkidx</option>
+what creates the package index of the source specified by <option>-n</option> or <option>-s</option> and saves it under directory specified by <option>--mkidx</option>
 (a package directory by default). Type of created index is the same
 as specified by <option>default index type</option> configuration option. 
 To make index of the other type or make many indexes of different types at once, use 
@@ -530,13 +600,13 @@ To make index of the other type or make many indexes of different types at once,
 </para>
 
 <para>
-For 'pndir' and 'pdir' indexes delta files are created if previous repository index 
-is different from currently created one. Outdated deltas are automatically removed.
+For 'pndir' and 'pdir' indexes delta files are created if the previous package
+index is different from the currently created one. Outdated deltas are automatically removed.
 To skip deltas creation use <option>--nodiff</option> option.
 </para>
 
 <para>
-Other related options are: <option>--nodesc</option> with that package descriptions are not saved to repository index and <option>--nocompress</option> means that uncompressed index will be created.
+Other related options are: <option>--nodesc</option> with that package descriptions are not saved to the package index and <option>--nocompress</option> means that uncompressed index will be created.
 </para>
 
 <para>
@@ -559,13 +629,13 @@ configuration option. Default cache directory is
 it can be set to different location by <option>cachedir</option>
 configuration option. Cached files can be removed by three options:
 <itemizedlist>
-<listitem> <para><option>--clean</option> remove source index files</para> </listitem>
+<listitem> <para><option>--clean</option> remove cached package index files</para> </listitem>
 <listitem> <para><option>--clean-pkg</option> remove cached packages. </para></listitem>
 <listitem> <para><option>--clean-whole</option> remove all files from cache directory </para> </listitem>
 </itemizedlist>
 
 In conjunction with <option>-n</option> or <option>-s</option> cleannig 
-may be limited to files belongs to specified repositories only. Examples:
+may be limited to files belongs to specified sources only. Examples:
 <screen>
 &poldek-prompt; -s http://foo.bar/RPMS --clean
 &poldek-prompt; -n foo --clean-whole
@@ -576,7 +646,7 @@ may be limited to files belongs to specified repositories only. Examples:
 
 <!-- 
 <para>
-See also repository related command line options <link linkend="ref.cmdl.repository_index_creation">reference</link>.
+See also source-related command line options <link linkend="ref.cmdl.repository_index_creation">reference</link>.
 </para>
 -->
 </sect1>
@@ -838,7 +908,7 @@ gimp-print-lib-4.2.6-1
 
 <sect3> <title>search - search packages</title>
 <para>
-Package repositories may be easily searched by many criteria like package
+Package sources may be easily searched by many criteria like package
 description, summary, group, requirements, etc. Type <literal>"search --help"</literal> 
 to see all available options.
 Syntax of command is:
@@ -937,11 +1007,11 @@ which automates user account configuration supplied with poldek.
 
 </sect1>
 
-<sect1 id="maintain"> <title id="maintain.title">Repository management</title>
+<sect1 id="maintain"> <title id="maintain.title">Source management</title>
 <para>
 &poldek; can be useful for distribution developers and maintainers by make 
 detailed reports about package set consistency, automating move packages 
-from one repository to another and helping to generate CD/DVD ISO images.
+from one source to another and helping to generate CD/DVD ISO images.
 </para>
 
 <sect2 id="maintain.verify"> <title>Verification of package set quality</title>
@@ -1064,7 +1134,7 @@ can be fed by comma separated report list, for example:
 
 <para>
 Package subset can verified too. If it is not desirable to verify whole
-repository, just give to poldek package list you want to verify:
+source, just give to poldek package list you want to verify:
 <screen>
 &poldek-prompt; -n foo --verify=deps --pset=packages-minicd.txt
 &poldek-prompt; -n foo --verify=deps glibc poldek
@@ -1103,23 +1173,23 @@ is <quote>packages.chunk</quote>.
 </para>
 </sect2>
 
-<sect2 id="maintain.manage"> <title>Managing repository packages</title>
+<sect2 id="maintain.manage"> <title>Managing packages in sources</title>
 <para>
-A typical scenario during distribution development looks like there is repository 
+A typical scenario during distribution development looks like there is a source
 for untested packages from where they periodically, when found to be tested enough, 
-are moved to the another repository marked as stable branch. 
+are moved to the another source marked as stable branch.
 </para><para>
-&poldek; can help movig packages between repositories through
-<quote>to repository</quote> installation, i.e. packages 
-are copied from source to destination repository with full dependency
+&poldek; can help movig packages between sources through
+<quote>to source</quote> installation, i.e. packages
+are copied from one source to another with full dependency
 checking. Thus this feature allows to move subtree of
-packages from one repository to another without a risk of break
+packages from one source to another without a risk of break
 dependencies. The syntax is:
 
 <screen>
 &poldek-prompt; ... --dn SOURCE_NAME [--dn SOURCE_NAME] ...
 </screen>
-Where <emphasis>SOURCE_NAME</emphasis> is a name of destination repository 
+Where <emphasis>SOURCE_NAME</emphasis> is a name of destination source
 to which we want to move packages, for example:
 <screen>
 &poldek-prompt; -n ac-test --dn ac -uv libselinux
@@ -1149,7 +1219,7 @@ cp libselinux-devel-1.22-1.i686.rpm /tmp/RPMS/libselinux-devel-1.22-1.i686.rpm
 cp libselinux-1.22-1.i686.rpm /tmp/RPMS/libselinux-1.22-1.i686.rpm
 </screen>
 
-Removing packages from repositories in that safe manner is also possible:
+Removing packages from sources in that safe manner is also possible:
 <screen>
 &poldek-prompt; --dn ac -e poldek
 mark poldek-0.18.8-3

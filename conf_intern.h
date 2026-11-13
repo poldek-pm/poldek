@@ -14,6 +14,8 @@
 #ifndef POLDEK_CONF_INTERN_H
 #define POLDEK_CONF_INTERN_H
 
+#include <trurl/nhash.h>
+
 #define CONF_TYPE_STRING        (1 << 0)
 #define CONF_TYPE_BOOLEAN       (1 << 1)
 #define CONF_TYPE_BOOLEAN3      (1 << 2) /* yes, no, auto */
@@ -46,5 +48,10 @@ struct poldek_conf_section {
 };
 
 extern struct poldek_conf_section poldek_conf_sections[];
+
+tn_hash *conf__new_htconf(const char *sectnam);
+int conf__save(const tn_hash *htconf, const char *path, const char *header);
+const char *conf__expand_value(char *dest, size_t size, const tn_hash *htconf,
+                               const tn_hash *ht, const char *val);
 
 #endif

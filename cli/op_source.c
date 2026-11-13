@@ -60,11 +60,11 @@
 
 /* The options we understand. */
 static struct argp_option source_options[] = {
-{0,0,0,0, N_("Repository selection:"), OPT_GID },
-{"source", 's', "PATH", 0, N_("Get packages info from repository under PATH"),
+{0,0,0,0, N_("Package source selection:"), OPT_GID },
+{"source", 's', "PATH", 0, N_("Get packages info from source under PATH"),
      OPT_GID },
-{"sn", 'n', "SOURCE-NAME", 0,
-     N_("Get packages info from repository named SOURCE-NAME"), OPT_GID },
+{"sn", 'n', "NAME", 0,
+     N_("Get packages info from source named NAME"), OPT_GID },
 
 
 {"dt", OPT_DEST_TYPE, "SOURCE-TYPE", 0,
@@ -75,8 +75,8 @@ static struct argp_option source_options[] = {
     N_("Install to specified destination"), OPT_GID },
 
 
-{"dn", OPT_DEST_NAME, "SOURCE-NAME", 0,
-    N_("Install to source SOURCE-NAME instead to the system"), OPT_GID },
+{"dn", OPT_DEST_NAME, "NAME", 0,
+    N_("Install to the source NAME instead of the system"), OPT_GID },
 
 {"sidx", OPT_SRC, "FILE", OPTION_HIDDEN, /* legacy */
  N_("Get packages info from package index file FILE"), OPT_GID },
@@ -91,7 +91,7 @@ static struct argp_option source_options[] = {
 {"prefix", 'P', "PREFIX", 0,
         N_("Get packages from PREFIX instead of SOURCE"), OPT_GID },
 
-{0,0,0,0, N_("Repository related actions:"), OPT_GID + 1 },
+{0,0,0,0, N_("Source related actions:"), OPT_GID + 1 },
 {"stl", OPT_SRCTYPE_LS, 0, 0, N_("List available source types"),
      OPT_GID + 1},
 
@@ -330,6 +330,7 @@ void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
     tn_hash *htcnf;
     tn_array *htcnf_sources;
     tn_array *toprint = n_array_new(32, NULL, NULL);
+    tn_array *toprint_managed = n_array_new(32, NULL, NULL);
     int maxlen = 0;
 
     n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_name);
@@ -340,8 +341,10 @@ void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
             if (maxlen < n)
                 maxlen = n;
         }
-
-        n_array_push(toprint, src);
+        if (src->flags & PKGSOURCE_MANAGED)
+            n_array_push(toprint_managed, src);
+        else
+            n_array_push(toprint, src);
     }
 
     n_array_sort(sources);
@@ -350,6 +353,12 @@ void poclidek__print_source_list(struct poldek_ctx *ctx, tn_array *sources,
         source_printf_w(src, maxlen);
     }
     n_array_cfree(&toprint);
+
+    for (i=0; i < n_array_size(toprint_managed); i++) {
+        struct source *src = n_array_nth(toprint_managed, i);
+        source_printf_w(src, maxlen);
+    }
+    n_array_cfree(&toprint_managed);
 
     if (print_groups == 0)
         return;

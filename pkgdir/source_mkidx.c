@@ -238,7 +238,7 @@ int source_make_idx(struct source *src, const char *stype,
         rc = 0;
 
     else if ((typcaps & PKGDIR_CAP_SAVEABLE) == 0) {
-        logn(LOGERR, _("%s: repository could not be created (missing "
+        logn(LOGERR, _("%s: package index could not be created (missing "
                        "feature)"), dtype);
         rc = 0;
 
@@ -388,7 +388,7 @@ int source_make_merged_idx(tn_array *sources,
         rc = 0;
 
     } else if ((typcaps & PKGDIR_CAP_SAVEABLE) == 0) {
-        logn(LOGERR, _("%s: repository could not be created (missing "
+        logn(LOGERR, _("%s: package index could not be created (missing "
                        "feature)"), dtype);
         rc = 0;
 

@@ -24,13 +24,15 @@
 #define POLDEK_LDCONF_FOREIGN     (1 << 0) /* not a poldek config file */
 #define POLDEK_LDCONF_NOVALIDATE  (1 << 1) /* do not validate config variables */
 #define POLDEK_LDCONF_UPDATE      (1 << 2) /* resync with remote config */
-#define POLDEK_LDCONF_NOINCLUDE   (1 << 3) /* ignore %include directives */
+#define POLDEK_LDCONF_NOINCLUDE   (1 << 3) /* ignore %include/%includedir, warn */
 #define POLDEK_LDCONF_GLOBALONLY  (1 << 4) /* for early cachedir setup */
+#define POLDEK_LDCONF_QUIET       (1 << 5) /* silence the skipped-include warning */
+#define POLDEK_LDCONF_STRICT      (1 << 6) /* reject unknown opts/directives */
 
 /* default localization is used if path is NULL */
 EXPORT tn_hash *poldek_conf_load(const char *path, unsigned flags);
 #define poldek_conf_load_default(flags) poldek_conf_load(NULL, flags)
-    
+
 /*
   Adds to htconf parameters discovered from lines; htconf is created if NULL.
   Caution: parameters from lines overwrite previously discovered ones, i.e.
@@ -38,6 +40,8 @@ EXPORT tn_hash *poldek_conf_load(const char *path, unsigned flags);
 */
 EXPORT tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
                               tn_array *lines);
+
+EXPORT char *poldek_conf_reposd(char *dest, size_t size);
 
 EXPORT tn_array *poldek_conf_get_sections(const tn_hash *htconf, const char *name);
 EXPORT tn_hash *poldek_conf_get_section(const tn_hash *htconf, const char *name);
@@ -55,4 +59,3 @@ EXPORT int poldek_conf_add_to_section(void *sect, const char *key, const char *v
 EXPORT int poldek_conf_set(tn_hash *ht_sect, const char *akey, const char *aval);
 
 #endif
-

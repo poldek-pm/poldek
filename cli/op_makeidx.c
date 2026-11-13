@@ -47,7 +47,7 @@
 
 /* The options we understand. */
 static struct argp_option options[] = {
-{0,0,0,0, N_("Repository index creation:"), OPT_GID},
+{0,0,0,0, N_("Package index creation:"), OPT_GID},
 
 {"mkidx", OPT_MKIDX, "PATH", OPTION_ARG_OPTIONAL,
  N_("Create package index (under SOURCE-PATH by default)"), OPT_GID},

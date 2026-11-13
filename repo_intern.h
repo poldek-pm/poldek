@@ -1,0 +1,22 @@
+/*
+  Copyright (C) 2026 PLD Linux Team <feedback@pld-linux.org>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#ifndef POLDEK_REPO_INTERN_H
+#define POLDEK_REPO_INTERN_H
+
+#include <trurl/nhash.h>
+
+/* repo-dnf.c */
+int repo_is_dnf(const char *url);
+tn_hash *repo_dnf_to_conf(const char *url, const char *localpath);
+
+#endif

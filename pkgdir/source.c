@@ -55,8 +55,8 @@ struct src_option {
     unsigned  flag;
 };
 
-#define PKGSRC_OPTION_SUBOPT  (1 << 15)
-#define PKGSRC_OPTION_STRING  (1 << 16)
+#define PKGSRC_OPTION_SUBOPT  (1 << 30)
+#define PKGSRC_OPTION_STRING  (1 << 29)
 #define PKGSRC_OPTION_OPTMASK (PKGSRC_OPTION_SUBOPT | PKGSRC_OPTION_STRING)
 
 static struct src_option source_options[] = {
@@ -126,6 +126,9 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
     return v;
 }
 
+/* A .repo file names a repository, it is not an index: send it to the
+   metadata module, which asks for `poldek repo add` instead of failing as
+   a missing native index */
 const char *source_guess_type(const char *path)
 {
     const char *p;
@@ -654,6 +657,9 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
     if (vs)
         src->config_origin = n_strdup(vs);
 
+    if (poldek_conf_get(htcnf, "__managed", NULL))
+        src->flags |= PKGSOURCE_MANAGED;
+
     get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
     get_conf_opt_list(htcnf, "ignore", src->ign_patterns);
     return src;
@@ -785,6 +791,12 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
 
     if (!src->type || n_str_ne(src->type, source_TYPE_GROUP)) {
         if ((src->flags & PKGSOURCE_GROUP) == 0) {
+            if ((src->flags & PKGSOURCE_MANAGED)) {
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", "managed");
+                n += n_snprintf(&str[n], size - n, ",");
+            }
+
             if ((src->flags & PKGSOURCE_NOAUTO) == 0) {
                 n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
                                             "%s", "auto");
@@ -895,7 +907,6 @@ void source_printf_w(const struct source *src, int name_width)
 
     printf(fmt, src->name ? src->name : "-", url,
            *optstr ? "  (" : "", optstr, *optstr ? ")" : "");
-
     if (src->pkg_prefix) {
         printf("%-14s prefix => %s\n", "", vf_url_slim_s(src->pkg_prefix, 0));
     }
@@ -932,7 +943,7 @@ int do_source_clean(struct source *src, const char *idxdir,
 
     DBGF("%s: %s, %s\n", src->path, idxdir, idxbn);
 
-    /* clean-pkg makes no sense for local repositories */
+    /* clean-pkg makes no sense for local sources */
     if ((urltype & VFURL_LOCAL) && (flags & PKGSOURCE_CLEAN)) {
         char path[PATH_MAX];
         vf_localdirpath(path, sizeof(path), idxdir);

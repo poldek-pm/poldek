@@ -54,6 +54,8 @@ libpoldek_core_la_SOURCES = \
 	  pkguniq.c			\
 	  arg_packages.c arg_packages.h	\
 	  conf.c conf.h			\
+	  reposd.c reposd.h		\
+	  repo-dnf.c repo_intern.h	\
 	  conf_intern.h conf_sections.c \
 	  pkgroup.c pkgroup.h	\
 	  pkgscore.c		\
@@ -76,7 +78,7 @@ libpoldek_core_la_SOURCES = \
 pkgincludedir = $(includedir)/poldek
 
 # one line to easy get them by external script
-libHEADERS = poldek.h poldek_ts.h pkg.h pkgcmp.h capreq.h pkgu.h pkgmisc.h arg_packages.h poldek_util.h poldek_term.h log.h pm/pm.h pkgdir/pkgdir.h pkgdir/source.h sigint/sigint.h conf.h pkgfl.h
+libHEADERS = poldek.h poldek_ts.h pkg.h pkgcmp.h capreq.h pkgu.h pkgmisc.h arg_packages.h poldek_util.h poldek_term.h log.h pm/pm.h pkgdir/pkgdir.h pkgdir/source.h sigint/sigint.h conf.h pkgfl.h reposd.h
 
 nobase_pkginclude_HEADERS = $(libHEADERS)
 

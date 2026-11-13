@@ -1,4 +1,4 @@
-<table frame="all"><title>Supported repositories</title>
+<table frame="all"><title>Supported sources</title>
 <tgroup cols="3" align="left" valing="top" colsep='1' rowsep='1'>
 <colspec colname="Name"/>
 <colspec colname="Capabilities"/>

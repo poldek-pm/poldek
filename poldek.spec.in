@@ -83,6 +83,8 @@ CONFIG="$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/%{name}.conf"
 perl -pi -e "s|^_distro\s*=\s*\w+\s*|_distro = $DISTRO\n|" $CONFIG
 %{?_with_poldekuser:perl -pi -e "s|^\#?\s*runas\s*=\s*\w+\s*|runas = poldek\n|" $CONFIG}
 %{?_with_poldekuser:mkdir -p $RPM_BUILD_ROOT%{_var}/cache/%{name}}
+# the built-in repos.d, `poldek repo add` stores its files there
+install -d $RPM_BUILD_ROOT%{_var}/lib/%{name}/repos.d
 
 # set PLD architecture
 perl -pi -e 's|_pld_arch\s*=\s*i686|_pld_arch = %{_target_cpu}|' $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/pld-*.conf
@@ -122,6 +124,8 @@ fi
 %{_infodir}/%{name}*
 %{_mandir}/man1/%{name}*
 %dir %attr(755,poldek,poldek) %{_var}/cache/%{name}
+%dir %{_var}/lib/%{name}
+%dir %{_var}/lib/%{name}/repos.d
 %doc *.gz conf/*.gz doc/manual.css doc/manual.html
 
 %files devel

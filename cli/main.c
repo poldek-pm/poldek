@@ -15,6 +15,7 @@
 #endif
 
 #include <signal.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
@@ -442,6 +443,25 @@ static int load_conf(struct args *argsp)
                               argsp->addon_cnflines, flags);
 }
 
+static int is_repo_command(const struct args *argsp)
+{
+    if (argsp->shcmd) {
+        const char *p = argsp->shcmd;
+        while (*p && isspace((unsigned char)*p))
+            p++;
+        if (strncmp(p, "repo", 4) == 0 &&
+            (p[4] == '\0' || isspace((unsigned char)p[4])))
+            return 1;
+        return 0;
+    }
+
+    if (argsp->mode == RUNMODE_APT && argsp->argc > 0 &&
+        strcmp(argsp->argv[0], "repo") == 0)
+        return 1;
+
+    return 0;
+}
+
 static void args_init(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                       int argc, char **argv, int mode)
 {
@@ -514,6 +534,11 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
     if (!poclidek_op_ctx_verify_major_mode(g_args.opctx))
         exit(EXIT_FAILURE);
+
+    if (is_repo_command(&g_args) && g_args.shcmd) {
+        logn(LOGERR, _("repo: cannot be used with --shcmd"));
+        exit(EXIT_FAILURE);
+    }
 
     if (!load_conf(&g_args))
         exit(EXIT_FAILURE);
