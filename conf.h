@@ -23,7 +23,6 @@
 
 #define POLDEK_LDCONF_FOREIGN     (1 << 0) /* not a poldek config file */
 #define POLDEK_LDCONF_NOVALIDATE  (1 << 1) /* do not validate config variables */
-#define POLDEK_LDCONF_UPDATE      (1 << 2) /* resync with remote config */
 #define POLDEK_LDCONF_NOINCLUDE   (1 << 3) /* ignore %include/%includedir, warn */
 #define POLDEK_LDCONF_GLOBALONLY  (1 << 4) /* for early cachedir setup */
 #define POLDEK_LDCONF_QUIET       (1 << 5) /* silence the skipped-include warning */

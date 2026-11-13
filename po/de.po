@@ -745,10 +745,6 @@ msgstr "Lese Konfiguration aus Datei FILE"
 msgid "Do not read configuration"
 msgstr "Lese keine Konfigurationsdateien"
 
-#: cli/main.c:113
-msgid "Update remote configuration files (if any)"
-msgstr ""
-
 #: cli/main.c:117
 msgid "Display program version information and exit"
 msgstr "Zeige die Programmversion und beende danach"

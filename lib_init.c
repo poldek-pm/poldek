@@ -993,54 +993,37 @@ static int preload_conf(const char *path)
 static
 tn_hash *do_load_conf(struct poldek_ctx *ctx, const char *path, unsigned flags)
 {
-    unsigned ldflags = 0;
     tn_hash *htconf = NULL;
 
     n_assert((flags & POLDEK_LOADCONF_NOCONF) == 0);
 
-    /* setup cachedir if not set */
+    if (path != NULL)
+        htconf = poldek_conf_load(path, 0);
+    else
+        htconf = poldek_conf_load_default(0);
+
+    if (htconf == NULL)
+        return NULL;
+
+    /* a configuration is a local file, nothing read here needs the cachedir
+       any more, so set it up from the configuration just read (or the
+       default); an invalid one fails the load, and --cachedir, applied and
+       marked done before the load, stays */
     if ((ctx->_iflags & CACHEDIR_SETUPDONE) == 0) {
-        int succeed = 0;
+        tn_hash *globalcnf;
+        const char *dir;
+
         n_assert(ctx->ts->cachedir == NULL);
 
-        /* remote config -> setup any cachedir */
-        if (path && vf_url_type(path) != VFURL_PATH) {
-            succeed = do_poldek_setup_cachedir(ctx);
+        globalcnf = poldek_conf_get_section(htconf, "global");
+        if (globalcnf && (dir = poldek_conf_get(globalcnf, "cachedir", NULL)))
+            poldek_configure(ctx, POLDEK_CONF_CACHEDIR, dir);
 
-        } else {  /* remote files may be included, get cachedir first */
-            tn_hash *cnf, *globalcnf;
-            const char *dir;
-
-            cnf = poldek_conf_load(path, POLDEK_LDCONF_GLOBALONLY);
-            if (cnf == NULL)
-                return NULL;
-
-            globalcnf = poldek_conf_get_section(cnf, "global");
-            n_assert(globalcnf);
-
-            if ((dir = poldek_conf_get(globalcnf, "cachedir", NULL))) {
-                poldek_configure(ctx, POLDEK_CONF_CACHEDIR, dir);
-                succeed = poldek_setup_cachedir(ctx);
-
-            } else {
-                succeed = do_poldek_setup_cachedir(ctx);
-            }
-
-            n_hash_free(cnf);
-        }
-
-        if (!succeed)
+        if (!poldek_setup_cachedir(ctx)) {
+            n_hash_free(htconf);
             return NULL;
+        }
     }
-
-
-    if (flags & POLDEK_LOADCONF_UPCONF)
-        ldflags |= POLDEK_LDCONF_UPDATE;
-
-    if (path != NULL)
-        htconf = poldek_conf_load(path, ldflags);
-    else
-        htconf = poldek_conf_load_default(ldflags);
 
     return htconf;
 }

@@ -68,7 +68,6 @@ static void argp_as_docbook(struct argp *argp);
 #define OPT_ASK               (OPT_GID + 2)
 #define OPT_NOASK             'y'
 #define OPT_CONF              (OPT_GID + 4)
-#define OPT_UPCONF            (OPT_GID + 5)
 #define OPT_NOCONF            (OPT_GID + 6)
 #define OPT_BANNER            (OPT_GID + 7)
 #define OPT_LOG               (OPT_GID + 8)
@@ -122,8 +121,6 @@ static struct argp_option common_options[] = {
      N_("Read configuration from FILE"), OPT_GID }, /* legacy */
 
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), OPT_GID },
-{"upconf", OPT_UPCONF, 0, 0, N_("Update remote configuration files (if any)"),
-     OPT_GID },
 
 {"version", OPT_BANNER, 0, OPTION_HIDDEN,
      N_("Display program version information and exit"), OPT_GID },
@@ -237,10 +234,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_CONF:
             g_args.path_conf = n_strdup(arg);
-            break;
-
-        case OPT_UPCONF:
-            argsp->cnflags |= OPT_AS_FLAG(OPT_UPCONF);
             break;
 
         case 'q':
@@ -432,9 +425,6 @@ static int load_conf(struct args *argsp)
 
     if (argsp->cnflags & OPT_AS_FLAG(OPT_NOCONF))
         flags |= POLDEK_LOADCONF_NOCONF;
-
-    else if (argsp->cnflags & OPT_AS_FLAG(OPT_UPCONF))
-        flags |= POLDEK_LOADCONF_UPCONF;
 
     if ((flags & POLDEK_LOADCONF_NOCONF) && argsp->addon_cnflines == NULL)
         return 1;
@@ -780,9 +770,6 @@ int main(int argc, char **argv)
 
     if ((g_args.cnflags & OPT_AS_FLAG(OPT_SHELL)) == 0) { /*no explicit --shell*/
         if (g_args.argc == 0 && (rrc & OPGROUP_RC_OK)) /* something minor cmd was executed  */
-            goto out;
-
-        if (g_args.cnflags & OPT_AS_FLAG(OPT_UPCONF)) /*UPCONF is major mode*/
             goto out;
     }
 

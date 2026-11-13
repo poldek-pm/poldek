@@ -60,17 +60,17 @@ path = $HOME/foo
 <description>
 [para]
 File can be combined from multiple configuration files with [option]%include[/option]
-directive. Either local and remote HTTP/FTP files can be included, examples:
+directive, examples:
 [screen]
 %include /etc/foo.conf            # simply include /etc/foo.conf
 %include foo.conf                 # include foo.conf from directory of includer
-%include http://bar.org/foo.conf  # include foo.conf from remote location
 [/screen]
 [/para]
 [para]
 Any "[ global ]" sections from included files are simply ignored.
-Remote files are cached, they can be updated using [option]--upconf[/option]
-switch.
+Only local files are included; a configuration kept on an URL is added once
+with [command]poldek repo add[/command] and read from the built-in
+repositories directory afterwards.
 [/para]
 
 [para]
