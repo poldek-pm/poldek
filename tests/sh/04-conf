@@ -337,7 +337,7 @@ EOF
     out=$($POLDEK --conf $TMPDIR/remote-includedir.conf -q -l 2>&1)
     rc=$?
     assertEquals "a remote %includedir should fail: $out" "1" "$rc"
-    echo "$out" | grep -q "a remote directory is not included" || \
+    echo "$out" | grep -q "a remote configuration is not included" || \
         fail "no reason given: $out"
 }
 
@@ -403,6 +403,92 @@ EOF
 
     grep -q '^alpha ' $TMPDIR/includedir-out || fail "alpha_source_not_loaded"
     grep -q '^beta ' $TMPDIR/includedir-out || fail "beta_source_not_loaded"
+}
+
+# %include takes a directory: every *.conf in it is included, others ignored
+testConfIncludeDir()
+{
+    local conf=$TMPDIR/include-dir.conf
+    local dir=$TMPDIR/include-dir.d
+
+    rm -rf $dir
+    mkdir -p $dir
+
+    cat > $dir/a.conf <<EOF
+[source]
+name = incdir-a
+type = pndir
+path = test:///incdir/a
+EOF
+
+    cat > $dir/b.conf <<EOF
+[source]
+name = incdir-b
+type = pndir
+path = test:///incdir/b
+EOF
+
+    echo "neither a section nor a parameter" > $dir/c.txt
+
+    cat > $conf <<EOF
+[global]
+%include $dir
+EOF
+
+    $POLDEK --conf $conf -q -l > $TMPDIR/include-dir-out 2>&1 || true
+    grep -q '^incdir-a ' $TMPDIR/include-dir-out || \
+        fail "first source not loaded: $(cat $TMPDIR/include-dir-out)"
+    grep -q '^incdir-b ' $TMPDIR/include-dir-out || \
+        fail "second source not loaded: $(cat $TMPDIR/include-dir-out)"
+}
+
+# a directory included with a relative path is resolved against the includer
+testConfIncludeRelativeDir()
+{
+    local conf=$TMPDIR/relative.conf
+    local dir=$TMPDIR/relative.d
+
+    rm -rf $dir $conf
+    mkdir -p $dir
+
+    cat > $dir/rel.conf <<EOF
+[source]
+name = incdir-rel
+type = pndir
+path = test:///incdir/rel
+EOF
+
+    cat > $conf <<EOF
+[global]
+%include relative.d
+EOF
+
+    $POLDEK --conf $conf -q -l > $TMPDIR/relative-out 2>&1 || true
+    grep -q '^incdir-rel ' $TMPDIR/relative-out || \
+        fail "a relative directory not resolved: $(cat $TMPDIR/relative-out)"
+}
+
+# %includedir is the older name of %include, so it takes a file as well
+testConfIncludedirWithFile()
+{
+    local conf=$TMPDIR/includedir-file.conf
+    local inc=$TMPDIR/includedir-file.inc
+
+    cat > $inc <<EOF
+[source]
+name = incdir-file
+type = pndir
+path = test:///incdir/file
+EOF
+
+    cat > $conf <<EOF
+[global]
+%includedir $inc
+EOF
+
+    $POLDEK --conf $conf -q -l > $TMPDIR/includedir-file-out 2>&1 || true
+    grep -q '^incdir-file ' $TMPDIR/includedir-file-out || \
+        fail "a file not included by %includedir: $(cat $TMPDIR/includedir-file-out)"
 }
 
 # Files in the built-in repos.d must not follow %%includedir directives.

@@ -45,8 +45,8 @@
 #include "pm/rpmorg/arch.h"
 
 static const char *global_tag = "global";
-static const char *include_tag = "%include";
-static const char *includedir_tag = "%includedir";
+static const char include_tag[] = "%include";
+static const char includedir_tag[] = "%includedir";
 
 static struct poldek_conf_tag unknown_tag = {
     NULL, CONF_TYPE_STRING | CONF_TYPE_F_ENV | CONF_TYPE_F_MULTI_EXCL,
@@ -319,25 +319,6 @@ static const char *expand_macros(char *dest, int size, const char *str,
 
     n_str_tokl_free(tl_save);
     return dest;
-}
-
-static char *eat_wws(char *s)
-{
-    char *p;
-
-    while (isspace(*s))
-        s++;
-
-    p = strrchr(s, '\0'); /* eat trailing ws */
-    n_assert(p);
-
-    if (p != s) {
-        p--;
-        while (isspace(*p))
-            *p-- = '\0';
-    }
-
-    return s;
 }
 
 static int verify_section(const struct poldek_conf_section *sect, tn_hash *ht)
@@ -749,31 +730,35 @@ static void afile_close(struct afile *af)
     free(af);
 }
 
+/* the path of an included file or directory, resolved against the directory
+   of the including file when it is relative */
+static const char *include_path(char *buf, size_t size, const char *path,
+                                const char *parent_path)
+{
+    char *s;
+    int n;
+
+    if (*path == '/' || parent_path == NULL || strrchr(parent_path, '/') == NULL)
+        return path;
+
+    n = n_snprintf(buf, size, "%s", parent_path);
+    s = strrchr(buf, '/');
+    n_assert(s);
+
+    n_snprintf(s + 1, size - n, "%s", path);
+    return buf;
+}
 
 static struct afile *afile_open(const char *path, const char *parent_path,
                                 const char *section_to_load)
 {
     char incpath[PATH_MAX];
-    const char    *ppath;
     struct afile  *af = NULL;
     struct vfile  *vf;
 
-    ppath = parent_path;        /* just for short */
+    path = include_path(incpath, sizeof(incpath), path, parent_path);
 
-    /* relative: %include foo.conf */
-    if (ppath && *path != '/' && strrchr(ppath, '/') != NULL) {
-        char *s;
-        int n;
-
-        n = n_snprintf(incpath, sizeof(incpath), "%s", ppath);
-        s = strrchr(incpath, '/');
-        n_assert(s);
-
-        n_snprintf(s + 1, sizeof(incpath) - n, "%s", path);
-        path = incpath;
-    }
-
-    if (ppath)  /* included file */
+    if (parent_path)  /* included file */
         msgn(3, "-- %s --", path);
 
     /* a configuration is a local file: no fetching, and no cached copy of a
@@ -787,31 +772,31 @@ static struct afile *afile_open(const char *path, const char *parent_path,
 }
 
 /*
-  %include path|url
-  %include_<section_name> path|url -> load only <section_name>
+  %include path
+  %include_<section_name> path -> load only <section_name>
+
+  arg is the rest of the line after the directive; sectnam is not NULL only
+  for %include, which is the one taking a section name
 */
-static char *prepare_include_path(const char *tag, char *path, size_t size,
-                                  char *line, char **sectnam,
+static char *prepare_include_path(char *path, size_t size, char *arg,
+                                  char **sectnam,
                                   tn_hash *ht, tn_hash *ht_global)
 {
-    char expenval[PATH_MAX], expval[PATH_MAX], *p;
+    char expenval[PATH_MAX], expval[PATH_MAX], *p = arg;
 
-    if (n_str_eq(tag, include_tag))
+    if (sectnam) {
         *sectnam = NULL;
-    else
-        n_assert(sectnam == NULL); /* irrelevant for non %include */
-
-    p = line + strlen(tag);
-    if (n_str_eq(tag, include_tag) && *p == '_') {
-        p++;
-        *sectnam = p;
-        while (!isspace(*p))
+        if (*p == '_') {
             p++;
-        *p = '\0';
-        p++;
+            *sectnam = p;
+            while (!isspace(*p))
+                p++;
+            *p = '\0';
+            p++;
+        }
     }
 
-    p = eat_wws(p);
+    p = n_str_strip_ws(p);
 
     if (strchr(p, '%'))
         p = (char*)expand_value(expval, sizeof(expval), p, ht, ht_global);
@@ -1184,27 +1169,18 @@ void read_continuation(struct afile *af, char *buf, int size, int *nline)
     }
 }
 
-static tn_array *includedir_files(const char *dirpath, const char *ppath)
+static tn_array *include_files(const char *path)
 {
-    tn_array       *configs = NULL;
-    char           tmpath[PATH_MAX];
+    tn_array *configs = NULL;
+    struct stat st;
 
-    if (*dirpath != '/' && strrchr(ppath, '/') != NULL) {
-        char *s;
-        int n;
-
-        n = n_snprintf(tmpath, sizeof(tmpath), "%s", ppath);
-        s = strrchr(tmpath, '/');
-        n_assert(s);
-
-        n_snprintf(s + 1, sizeof(tmpath) - n, "%s", dirpath);
-        dirpath = tmpath;
-    }
-
-    configs = poldek_util_readdir(dirpath, "*.conf");
-    if (configs == NULL) {
-        logn(LOGERR, "%%includedir %s: %m", dirpath);
-        return NULL;
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+        configs = poldek_util_readdir(path, "*.conf");
+        if (configs == NULL)
+            logn(LOGERR, "%s: %m", path);
+    } else {
+        configs = n_array_new(2, free, (tn_fn_cmp)strcmp);
+        n_array_push(configs, n_strdup(path));
     }
 
     return configs;
@@ -1274,69 +1250,35 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
         char *name, *value, *line;
 
         nline++;
-        line = eat_wws(buf);
+        line = n_str_strip_ws(buf);
         if (*line == '#' || *line == '\0')
             continue;
 
-        /* %includedir <directory> */
-        if (strncmp(line, includedir_tag, strlen(includedir_tag)) == 0) {
-            char ipath[PATH_MAX];
-            tn_array *configs;
-            int i;
+        /* %include [SECTION] <file|directory>, and %includedir as its older
+           name: a directory includes every *.conf file in it */
+        if (strncmp(line, include_tag, sizeof(include_tag) - 1) == 0) {
+            int is_includedir = strncmp(line, includedir_tag,
+                                        sizeof(includedir_tag) - 1) == 0;
+            const char *tag = is_includedir ? includedir_tag : include_tag;
+            size_t taglen = is_includedir ? sizeof(includedir_tag) - 1
+                                          : sizeof(include_tag) - 1;
+            char *section = NULL, ipath[PATH_MAX], rpath[PATH_MAX];
 
             if (flags & POLDEK_LDCONF_NOINCLUDE) {
-                warn_include_ignored(af->path, nline, includedir_tag, flags);
+                warn_include_ignored(af->path, nline, tag, flags);
                 continue;
             }
 
-            line = prepare_include_path(includedir_tag, ipath, sizeof(ipath), line,
-                                        NULL, ht_sect, ht);
+            if (is_includedir)
+                msgn(2, _("%s is deprecated, use %s"), includedir_tag,
+                     include_tag);
+
+            line = prepare_include_path(ipath, sizeof(ipath), line + taglen,
+                                        is_includedir ? NULL : &section,
+                                        ht_sect, ht);
 
             if (line == NULL) {
-                logn(LOGERR, _("%s:%d: wrong %%includedir"), af->path, nline);
-                is_err = 1;
-                goto l_end;
-            }
-
-            if (vf_url_type(line) != VFURL_PATH) {
-                logn(LOGERR, _("%s:%d: a remote directory is not included; "
-                               "a configuration is added with 'poldek repo add'"),
-                     af->path, nline);
-                is_err = 1;
-                goto l_end;
-            }
-            DBGF("includedir %s\n", line);
-
-            if ((configs = includedir_files(line, af->path)) == NULL)
-                continue;
-
-            for (i=0; i < n_array_size(configs); i++) {
-                char *cpath = n_array_nth(configs, i);
-
-                if (!do_ldconf(af_htconf, cpath, af->path, NULL, flags)) {
-                    n_array_free(configs);
-                    is_err = 1;
-                    goto l_end;
-                }
-            }
-            n_array_free(configs);
-            continue;
-        }
-
-        /* %include <file> */
-        if (strncmp(line, include_tag, strlen(include_tag)) == 0) {
-            char *section = NULL, ipath[PATH_MAX];
-
-            if (flags & POLDEK_LDCONF_NOINCLUDE) {
-                warn_include_ignored(af->path, nline, include_tag, flags);
-                continue;
-            }
-
-            line = prepare_include_path(include_tag, ipath, sizeof(ipath),
-                                        line, &section, ht_sect, ht);
-
-            if (line == NULL) {
-                logn(LOGERR, _("%s:%d: wrong %%include"), af->path, nline);
+                logn(LOGERR, _("%s:%d: wrong %s"), af->path, nline, tag);
                 is_err = 1;
                 goto l_end;
             }
@@ -1349,10 +1291,23 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
                 goto l_end;
             }
 
-            if (!do_ldconf(af_htconf, line, af->path, section, flags)) {
-                is_err = 1;
-                goto l_end;
+            line = (char*)include_path(rpath, sizeof(rpath), line, af->path);
+            DBGF("include %s\n", line);
+
+            tn_array *configs = include_files(line);
+            if (configs) {
+                for (int i=0; i < n_array_size(configs); i++) {
+                    char *cpath = n_array_nth(configs, i);
+
+                    if (!do_ldconf(af_htconf, cpath, af->path, section, flags)) {
+                        n_array_free(configs);
+                        is_err = 1;
+                        goto l_end;
+                    }
+                }
+                n_array_free(configs);
             }
+
             continue;
         }
 
