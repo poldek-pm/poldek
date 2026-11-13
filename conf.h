@@ -26,7 +26,7 @@
 #define POLDEK_LDCONF_UPDATE      (1 << 2) /* resync with remote config */
 #define POLDEK_LDCONF_NOINCLUDE   (1 << 3) /* ignore %include/%includedir, warn */
 #define POLDEK_LDCONF_GLOBALONLY  (1 << 4) /* for early cachedir setup */
-#define POLDEK_LDCONF_QUIET       (1 << 5) /* do not warn */
+#define POLDEK_LDCONF_QUIET       (1 << 5) /* silence the skipped-include warning */
 #define POLDEK_LDCONF_STRICT      (1 << 6) /* reject unknown opts/directives */
 
 /* default localization is used if path is NULL */

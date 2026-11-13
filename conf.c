@@ -992,6 +992,8 @@ int conf__save(const tn_hash *htconf, const char *path,
     int has_global_opts = 0;
     int rc = 0;
 
+    /* the file keeps mkstemp()'s 0600: a saved configuration may carry a
+       repository URL with a password in it */
     n_snprintf(tmp, sizeof(tmp), "%s.XXXXXX", path);
     fd = mkstemp(tmp);
     if (fd < 0) {
@@ -1236,8 +1238,7 @@ static tn_array *includedir_files(const char *dirpath, const char *ppath)
 
 
 /* An ignored include is worth a warning, except in the GLOBALONLY
-   pre-pass: it only reads the global section for the cachedir, and the
-   real load follows the includes */
+   pre-pass for the cachedir: the real load that follows reports it */
 static void warn_include_ignored(const char *path, int nline,
                                  const char *tag, unsigned flags)
 {
@@ -1543,6 +1544,16 @@ static int load_reposd(tn_hash *htconf, tn_hash *af_htconf, unsigned flags)
     for (i = 0; i < n_array_size(configs); i++) {
         const char *cpath = n_array_nth(configs, i);
         tn_hash *ht;
+
+        /* the configuration included this file by itself: its sources are
+           already loaded, and loading it twice is an error; the directive
+           is not needed, the directory is read here */
+        if (n_hash_exists(af_htconf, cpath)) {
+            logn(LOGWARN, _("%s: repos.d is read automatically, "
+                            "%%include/%%includedir of it is not needed"),
+                 cpath);
+            continue;
+        }
 
         if (!do_ldconf(af_htconf, cpath, NULL, "source",
                        flags | POLDEK_LDCONF_NOINCLUDE)) {

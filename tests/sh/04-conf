@@ -452,4 +452,33 @@ EOF
     fi
 }
 
+# A configuration may include the built-in repos.d itself; the files are then
+# read once instead of failing with "included twice", and the redundant
+# directive is reported
+testReposdIncludedByConfig()
+{
+    local reposd=$TMPDIR/reposd-self
+    rm -rf $reposd
+    mkdir -p $reposd $TMPDIR/home
+
+    cat > $reposd/self.conf <<EOF
+[source]
+name = self
+type = pndir
+path = test:///self
+EOF
+
+    cat > $TMPDIR/home/.poldekrc <<EOF
+[global]
+%includedir $reposd
+EOF
+
+    POLDEK_TESTING_REPOSDIR=$reposd HOME=$TMPDIR/home $POLDEK -q -l > $TMPDIR/self-out 2>&1
+    assertEquals "the configuration should load" "0" "$?"
+    assertEquals "the source should be listed once" "1" \
+        "$(grep -c '^self ' $TMPDIR/self-out)"
+    grep -q 'repos.d is read automatically' $TMPDIR/self-out || \
+        fail "no warning about the redundant include"
+}
+
 . ./sh/lib/shunit2
