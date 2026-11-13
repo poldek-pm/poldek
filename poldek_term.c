@@ -175,6 +175,7 @@ int poldek_term_puts_c(int color, const char *s)
     if (color & PRAT_BOLD) {
         printf("%s", at_bold);
         color &= ~PRAT_BOLD;
+        isbold = 1;
     }
 
     return printf("%s%s%s%s", pr_colors[color].seq, s, color_default,

@@ -13,6 +13,8 @@ check_PROGRAMS += test_copy_file
 check_PROGRAMS += test_relay_output
 # build day sorting, which lives in the CLI library
 check_PROGRAMS += test_dent
+# poldek_term_puts_c() output
+check_PROGRAMS += test_term
 
 TESTS = $(check_PROGRAMS)
 
