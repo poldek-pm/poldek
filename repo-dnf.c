@@ -35,6 +35,7 @@
 #include "conf.h"
 #include "conf_intern.h"
 #include "poldek_util.h"
+#include "repo_intern.h"
 #include "pm/rpmorg/arch.h"
 
 /* defined in pkgdir/metadata/basearch.c */
