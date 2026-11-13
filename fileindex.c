@@ -803,6 +803,8 @@ int file_index_report_semiorphans(struct pkgset *ps, tn_array *pkgs)
             char pkgstr[PATH_MAX];
             int k, n = 0;
 
+            *pkgstr = '\0';
+
             for (k=0; k < mreq->ncandidates && k < 3; k++)
                 n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
                                 "%s%s", mreq->candidates[k]->name,
