@@ -11,6 +11,8 @@ check_PROGRAMS += test_source_flags
 check_PROGRAMS += test_copy_file
 # a ^C while a command runs, and what poldek passes on to it
 check_PROGRAMS += test_relay_output
+# build day sorting, which lives in the CLI library
+check_PROGRAMS += test_dent
 
 TESTS = $(check_PROGRAMS)
 
@@ -21,6 +23,9 @@ AM_TESTS_ENVIRONMENT = GLIBC_TUNABLES=glibc.malloc.tcache_count=0; \
 
 # pndir.h includes its siblings by name
 test_pndir_CPPFLAGS = -I$(top_srcdir)/pkgdir
+
+# pkg_dent_cmp_bday() is part of the CLI library
+test_dent_LDADD = $(top_builddir)/cli/libpoclidek.la @CHECK_LIBS@
 
 EXTRA_DIST = test.h poldek_test_conf.conf \
 	sh run-sh-tests.sh metadata \
