@@ -130,6 +130,23 @@ EOF
     fi
 }
 
+# A repos.d file may define no source at all; listing it must neither crash
+# nor hide it
+testRepoLsEmptyConfiguration()
+{
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+
+    cat > $REPOSD/empty-19.conf <<EOF
+[global]
+foo = bar
+EOF
+
+    out=$($POLDEK repo ls 2>&1)
+    assertEquals "repo ls of an empty configuration failed" "0" "$?"
+    echo "$out" | grep -q "empty-19.conf (0 sources)" || \
+        fail "the empty repository not listed: $out"
+}
+
 # A source name can also come from a global `source = ...` line, where there
 # is no file to name; adding a repository with such a name is refused (the
 # configuration would not load afterwards) and the configuration keeps
@@ -313,7 +330,7 @@ EOF
 
     out=$($POLDEK repo del frag-a-19 2>&1)
     assertEquals "repo del by a unique fragment failed" "0" "$?"
-    echo "$out" | grep -q "$tmp/repo-frag-a-19.conf repo has been removed" || \
+    echo "$out" | grep -q "$tmp/repo-frag-a-19.conf: repository removed (1 source)" || \
         fail "the removed repository's origin not named: $out"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
@@ -356,7 +373,7 @@ testRepoDeleteMissingReposd()
     rc=$?
 
     assertEquals "repo del without repos.d fails" "1" "$rc"
-    echo "$out" | grep -q "no such repo" || fail "no reason given: $out"
+    echo "$out" | grep -q "no such repository" || fail "no reason given: $out"
 }
 
 # A URL that matches no repository leaves the repositories alone
@@ -615,8 +632,21 @@ EOF
     echo "$out" | grep -q 'one-19' || fail "the source not listed: $out"
     echo "$out" | grep -q 'disabled-19' && fail "disabled source listed: $out"
 
-    run_poldek $POLDEK repo del $tmp/dnf-19/my-19.repo
-    assertEquals "repo del by the .repo URL failed" "0" "$?"
+    # the configuration defines two sources, so removing it needs --force
+    out=$($POLDEK repo del $tmp/dnf-19/my-19.repo 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "removing a two-source repository should need --force"
+    fi
+    echo "$out" | grep -q "has 2 sources, use --force" || \
+        fail "the reason not given: $out"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "the .conf expected to stay" "1" "$n"
+
+    out=$($POLDEK repo del --force $tmp/dnf-19/my-19.repo 2>&1)
+    assertEquals "repo del --force failed: $out" "0" "$?"
+    echo "$out" | grep -q "repository removed (2 sources)" || \
+        fail "the number of removed sources not given: $out"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "the .conf expected to be gone" "0" "$n"
@@ -660,7 +690,7 @@ testRepoAddDnfRepoWhitespace()
     grep -q '^name = empty-19$' $fn || \
         fail "an empty enabled value should not disable the repo: $(cat $fn)"
 
-    run_poldek $POLDEK repo del $tmp/dnf-ws-19/ws.repo
+    run_poldek $POLDEK repo del --force $tmp/dnf-ws-19/ws.repo
 }
 
 # dnf repository variables are expanded when the file is added

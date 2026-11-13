@@ -10,18 +10,20 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef POLDEK_REPO_H
-#define POLDEK_REPO_H
+#ifndef POLDEK_REPOSD_H
+#define POLDEK_REPOSD_H
 
 #include "compiler.h"
 
 struct poldek_ctx;
 
-#define POLDEK_REPO_FORCE           (1 << 0)
+#define POLDEK_REPOSD_FORCE         (1 << 0)
 
-/* the built-in repos.d: `repo add URL` downloads a repository's
-   configuration and stores it there as a managed .conf */
-EXPORT int poldek_repo_add(struct poldek_ctx *ctx, const char *url, unsigned flags);
-EXPORT int poldek_repo_del(struct poldek_ctx *ctx, const char *url);
+/* the built-in repos.d: one repository there is the configuration added
+   from one URL, and it may define several sources */
+EXPORT int poldek_reposd_add(struct poldek_ctx *ctx, const char *url,
+                             unsigned flags);
+EXPORT int poldek_reposd_del(struct poldek_ctx *ctx, const char *url,
+                             unsigned flags);
 
 #endif

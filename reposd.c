@@ -40,7 +40,7 @@
 #include "misc.h"
 #include "poldek.h"
 #include "poldek_util.h"
-#include "repo.h"
+#include "reposd.h"
 #include "repo_intern.h"
 #include "pkgdir/source.h"
 
@@ -301,7 +301,7 @@ static int check_source_name_collision(struct poldek_ctx *ctx,
     return 1;
 }
 
-int poldek_repo_add(struct poldek_ctx *ctx, const char *url, unsigned flags)
+int poldek_reposd_add(struct poldek_ctx *ctx, const char *url, unsigned flags)
 {
     char reposd[PATH_MAX], dest[PATH_MAX];
     char filename[PATH_MAX];
@@ -311,12 +311,12 @@ int poldek_repo_add(struct poldek_ctx *ctx, const char *url, unsigned flags)
     int rc = 0;
 
     if (url == NULL || *url == '\0') {
-        logn(LOGERR, _("addrepo: empty URL"));
+        logn(LOGERR, _("repo add: empty URL"));
         return 0;
     }
 
     if (poldek_conf_reposd(reposd, sizeof(reposd)) == NULL) {
-        logn(LOGERR, _("addrepo: cannot determine repos.d directory"));
+        logn(LOGERR, _("repo add: cannot determine repos.d directory"));
         return 0;
     }
 
@@ -332,7 +332,7 @@ int poldek_repo_add(struct poldek_ctx *ctx, const char *url, unsigned flags)
 
     n_snprintf(dest, sizeof(dest), "%s/%s", reposd, filename);
 
-    if ((flags & POLDEK_REPO_FORCE) == 0 && access(dest, F_OK) == 0) {
+    if ((flags & POLDEK_REPOSD_FORCE) == 0 && access(dest, F_OK) == 0) {
         logn(LOGERR, _("%s: already exists (use --force to overwrite)"), dest);
         return 0;
     }
@@ -355,7 +355,12 @@ int poldek_repo_add(struct poldek_ctx *ctx, const char *url, unsigned flags)
     if (!conf__save(htconf, dest, header))
         goto l_end;
 
-    logn(LOGNOTICE, _("%s has been added"), url);
+    /* the URL names a configuration, and one configuration may define
+       more than one source */
+    logn(LOGNOTICE, ngettext("%s: repository added (%d source)",
+                             "%s: repository added (%d sources)",
+                             n_array_size(new_sources)),
+         url, n_array_size(new_sources));
     rc = 1;
 
 l_end:
@@ -369,14 +374,17 @@ l_end:
 struct repo_match {
     char    *origin;            /* NULL when the file has no _origin */
     char    *path;
+    int     nsources;           /* how many [source] sections it defines */
 };
 
-static struct repo_match *repo_match_new(const char *origin, const char *path)
+static struct repo_match *repo_match_new(const char *origin, const char *path,
+                                         int nsources)
 {
     struct repo_match *m = n_malloc(sizeof(*m));
 
     m->origin = origin ? n_strdup(origin) : NULL;
     m->path = n_strdup(path);
+    m->nsources = nsources;
     return m;
 }
 
@@ -404,6 +412,8 @@ static tn_array *find_repos_by_origin(const char *reposd, const char *origin)
         tn_hash *htconf;
         tn_hash *ht_global;
         const char *o;
+        tn_array *sources;
+        int nsources;
 
         htconf = poldek_conf_load(path, POLDEK_LDCONF_NOVALIDATE |
                                   POLDEK_LDCONF_NOINCLUDE);
@@ -413,14 +423,17 @@ static tn_array *find_repos_by_origin(const char *reposd, const char *origin)
         ht_global = poldek_conf_get_section(htconf, "global");
         o = ht_global ? poldek_conf_get(ht_global, "_origin", NULL) : NULL;
 
+        sources = poldek_conf_get_sections(htconf, "source");
+        nsources = sources ? n_array_size(sources) : 0;
+
         if ((o && strcmp(o, origin) == 0) || strcmp(n_basenam(path), origin) == 0) {
             n_array_clean(matches);
-            n_array_push(matches, repo_match_new(o, path));
+            n_array_push(matches, repo_match_new(o, path, nsources));
             n_hash_free(htconf);
             break;
 
         } else if (o && strstr(o, origin)) {
-            n_array_push(matches, repo_match_new(o, path));
+            n_array_push(matches, repo_match_new(o, path, nsources));
         }
 
         n_hash_free(htconf);
@@ -437,7 +450,7 @@ static const char *url_for_display(char *buf, size_t size, const char *url)
     return vf_url_hidepasswd(buf, size, url);
 }
 
-int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
+int poldek_reposd_del(struct poldek_ctx *ctx, const char *url, unsigned flags)
 {
     char reposd[PATH_MAX];
     struct repo_match *m;
@@ -456,7 +469,7 @@ int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
     if (n_array_size(matches) == 0) {
         char shown[PATH_MAX];
 
-        logn(LOGERR, _("%s: no such repo"),
+        logn(LOGERR, _("%s: no such repository"),
              url_for_display(shown, sizeof(shown), url));
         n_array_free(matches);
         return 0;
@@ -480,6 +493,17 @@ int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
 
     m = n_array_nth(matches, 0);
 
+    /* removing the configuration removes every source it defines, which
+       needs to be asked for when there is more than one */
+    if (m->nsources > 1 && (flags & POLDEK_REPOSD_FORCE) == 0) {
+        char shown[PATH_MAX];
+
+        logn(LOGERR, _("%s: the repository has %d sources, use --force to "
+                       "remove them all"),
+             url_for_display(shown, sizeof(shown), url), m->nsources);
+        goto l_err;
+    }
+
     if (access(m->path, F_OK) != 0) {
         logn(LOGERR, _("%s: no such file"), m->path);
         goto l_err;
@@ -492,8 +516,11 @@ int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
 
     char shown[PATH_MAX];
 
-    logn(LOGNOTICE, _("%s repo has been removed"),
-         url_for_display(shown, sizeof(shown), m->origin ? m->origin : m->path));
+    logn(LOGNOTICE, ngettext("%s: repository removed (%d source)",
+                             "%s: repository removed (%d sources)",
+                             m->nsources),
+         url_for_display(shown, sizeof(shown), m->origin ? m->origin : m->path),
+         m->nsources);
 
     n_array_free(matches);
     return 1;

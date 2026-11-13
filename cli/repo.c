@@ -33,7 +33,7 @@
 #include "log.h"
 #include "conf.h"
 #include "misc.h"
-#include "repo.h"
+#include "reposd.h"
 #include "pkgdir/source.h"
 #include "cli.h"
 #include "op.h"
@@ -48,7 +48,9 @@
 #define ACTION_LIST     3
 
 static struct argp_option options[] = {
-    { "force", OPT_FORCE, 0, 0, N_("Overwrite an existing .conf file"), 0 },
+    { "force", OPT_FORCE, 0, 0,
+      N_("Overwrite an existing repository configuration on add, "
+         "remove several sources on del"), 0 },
     { 0, 0, 0, 0, 0, 0 }
 };
 
@@ -143,8 +145,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (arg_s->action == ACTION_NONE)   /* repo == repo ls */
                 arg_s->action = ACTION_LIST;
 
-            if (arg_s->force && arg_s->action != ACTION_ADD) {
-                logn(LOGERR, _("repo: --force is only for add"));
+            if (arg_s->force && arg_s->action == ACTION_LIST) {
+                logn(LOGERR, _("repo: --force is only for add and del"));
                 goto l_err;
             }
 
@@ -217,12 +219,6 @@ static int list_repos(struct poldek_ctx *ctx)
         if (!origin)
             origin = n_basenam(path);
 
-        /* the URL is what the repository is known by, a password in it is
-           not for the screen */
-        poldek_term_printf_c(PRCOLOR_CYAN, "%s\n",
-                             vf_url_hidepasswd(origin_url, sizeof(origin_url),
-                                               origin));
-
         sources_ht = poldek_conf_get_sections(htconf, "source");
         if (sources_ht) {
             sources = n_array_new(4, (tn_fn_free)source_free, NULL);
@@ -233,6 +229,19 @@ static int list_repos(struct poldek_ctx *ctx)
                     n_array_push(sources, src);
             }
         }
+
+        /* the URL is what the repository is known by, a password in it is
+           not for the screen; the number of sources tells one repository
+           from one source */
+        int nsources = sources ? n_array_size(sources) : 0;
+
+        poldek_term_printf_c(PRCOLOR_CYAN, "%s ",
+                             vf_url_hidepasswd(origin_url, sizeof(origin_url),
+                                               origin));
+        poldek_term_printf_c(PRCOLOR_CYAN,
+                             ngettext("(%d source)\n", "(%d sources)\n",
+                                      nsources),
+                             nsources);
 
         if (sources && n_array_size(sources) > 0)
             poclidek__print_source_list(ctx, sources, 0);
@@ -259,15 +268,16 @@ static int repo(struct cmdctx *cmdctx)
         return list_repos(cmdctx->cctx->ctx);
 
     if (arg_s->action == ACTION_ADD) {
-        unsigned flags = arg_s->force ? POLDEK_REPO_FORCE : 0;
-        if (!poldek_repo_add(cmdctx->cctx->ctx, arg_s->url, flags))
+        unsigned flags = arg_s->force ? POLDEK_REPOSD_FORCE : 0;
+        if (!poldek_reposd_add(cmdctx->cctx->ctx, arg_s->url, flags))
             rc = 0;
 
         return rc;
     }
 
     if (arg_s->action == ACTION_DEL) {
-        if (!poldek_repo_del(cmdctx->cctx->ctx, arg_s->url))
+        unsigned flags = arg_s->force ? POLDEK_REPOSD_FORCE : 0;
+        if (!poldek_reposd_del(cmdctx->cctx->ctx, arg_s->url, flags))
             rc = 0;
 
         return rc;
@@ -279,13 +289,13 @@ static int repo(struct cmdctx *cmdctx)
 struct poclidek_cmd command_repo = {
     COMMAND_SELFARGS | COMMAND_EMPTYARGS | COMMAND_HASVERBOSE | COMMAND_BATCH,
     "repo", N_("COMMAND [URL]"),
-    N_("Manage built-in repos.d repositories"),
+    N_("Manage the repositories added from a URL (repos.d)"),
     options, parse_opt,
     NULL, repo, NULL, arg_s_free,
     N_("Commands:\n"
-       "  add URL      add a repository from a remote configuration\n"
-       "  del URL      remove a repository added with add\n"
-       "  ls           list the repositories"),
+       "  add URL      add a repository from the configuration at URL\n"
+       "  del URL      remove it and all its sources (--force if several)\n"
+       "  ls           list the repositories and their sources"),
     NULL, NULL, 0, 0,
     NULL
 };
