@@ -400,14 +400,6 @@ see <link linkend="configuration">Configuration</link> and
 and <filename>*source.conf</filename> files supplied with &poldek;.
 </para>
 
-<para>
-&poldek; is can read &apt-rpm;'s 
-<filename id="file.sources-list">/etc/apt/sources.list</filename> directly.
-It is controlled by <option>load apt sources list</option>, to load apt's
-sources do:
-<screen>load apt sources list = yes</screen> 
-</para>
-
 
 </sect2>
 
