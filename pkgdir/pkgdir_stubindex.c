@@ -226,12 +226,14 @@ void pkgdir__stubindex_update(struct pkgdir *pkgdir)
     }
 
     msgn_i(2, 2, "updating stub index of %s...", pkgdir_idstr_s(pkgdir));
-    int verbosity = poldek_set_verbose(0);
 
+    /* the verbosity is process-wide: the load threads, which come here with
+       the pkgdir loaded, must not change it */
     if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
+        int verbosity = poldek_set_verbose(0);
         pkgdir_load(pkgdir, 0, 0);
+        poldek_set_verbose(verbosity);
     }
 
     stubindex_create(pkgdir, path);
-    poldek_set_verbose(verbosity);
 }
