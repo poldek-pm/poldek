@@ -87,14 +87,15 @@ on_pty() {
         while IFS='	' read -r pattern key; do
             wait_for "$pattern" || { fail "\"$pattern\" did not show"; break; }
             if [ "$key" = HANGUP ]; then
-                pkill -KILL -P $pty_pid    # script, holding the terminal
+                pkill -KILL -P $pty_pid 2>/dev/null # script, holding the terminal
             else
                 printf "$key" >&7
             fi
         done < $PTY_ANSWERS
     fi
 
-    wait $pty_pid
+    # a job killed by SIGKILL would have the shell report "Killed"
+    wait $pty_pid 2>/dev/null
     exec 7>&-
     while [ ! -s $rcfile ] && [ $i -lt 300 ]; do    # poldek may outlive script
         sleep 0.1

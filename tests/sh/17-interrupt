@@ -303,8 +303,10 @@ testSignalWhileRpmStartsStopsIt()
     signal_rpm TERM poldek > $TERMINAL_RPM
     chmod 755 $TERMINAL_RPM
 
+    # the outer 2>/dev/null keeps the shell's own "Terminated" out of the
+    # log; poldek's stderr still goes to $out through the inner 2>&1
     out=$(env LC_ALL=C LD_PRELOAD=$SIGNAL_AT_FORK $POLDEK_INSTALL -Ouse_sudo=n \
-              --pmcmd $TERMINAL_RPM -uv a 2>&1)
+              --pmcmd $TERMINAL_RPM -uv a 2>&1) 2>/dev/null
     rc=$?
     assertEquals "exit code $rc: $out" "143" "$rc"
     assertEquals "no SIGTERM from $SIGNAL_AT_FORK: $out" "1" \

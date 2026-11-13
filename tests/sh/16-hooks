@@ -188,7 +188,9 @@ testSignalAsRpmEndsCutsNoPostHookShort()
     printf '#!/bin/sh\nset -e\necho post-start >> %s\nkill -TERM $PPID\nsleep 1\necho hook output\necho post-end >> %s\n' \
         "$HOOKS_LOG" "$HOOKS_LOG" > $HOOKS/post-install.d/log
 
-    out=$(env LD_PRELOAD=$SIGNAL_AT_RESTORE $POLDEK_HOOKS -Ouse_sudo=n -uv hooka 2>&1)
+    # the outer 2>/dev/null keeps the shell's own "Terminated" out of the
+    # log; poldek's stderr still goes to $out through the inner 2>&1
+    out=$(env LD_PRELOAD=$SIGNAL_AT_RESTORE $POLDEK_HOOKS -Ouse_sudo=n -uv hooka 2>&1) 2>/dev/null
     rc=$?
     assertEquals "no SIGTERM from $SIGNAL_AT_RESTORE: $out" "1" \
                  "$(echo "$out" | grep -c '^signal_at_restore: SIGTERM')"
