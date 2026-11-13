@@ -1414,6 +1414,7 @@ void poldeklib_destroy(void)
     n_array_free(default_op_map);
     default_op_map = NULL;
 
+    poldek_term_destroy();
     poldek_log_reset_appenders();
 }
 

@@ -244,7 +244,12 @@ int poldek_term_init(int force_color)
 
 void poldek_term_destroy(void)
 {
+    if (!sigwinch_attached)
+        return;
+
     signal(SIGWINCH, orig_sigwinch_handler);
+    orig_sigwinch_handler = NULL;
+    sigwinch_attached = 0;
 }
 
 
