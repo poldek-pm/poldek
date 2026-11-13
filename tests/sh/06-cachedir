@@ -73,27 +73,10 @@ testCacheDir()
     [ ! -d $legacy_default_home_cachedir ] && fail "$legacy_default_home_cachedir"
     rm -rf $default_home_cachedir $tmpdir_cachedir $legacy_default_home_cachedir
 
-    rm -rf $configured_cachedir
-    create_local_conf $configured_cachedir
-    msgn "--conf URL with empty TMPDIR / TMP"
-    # remote conf
-    POLDEK_TESTING_PRELOAD_CONF="$SHLIBDIR/vftest-fetch.conf"
-    export POLDEK_TESTING_PRELOAD_CONF
-
-    url="test://$TMPDIR/poldek.conf"
-    (TMPDIR=""; TMP=""; $POLDEK --conf $url -l)
-    [ ! -d $configured_cachedir ] && fail "remotely $configured_cachedir does not exists"
-    [ ! -d $default_home_cachedir ] && fail "$default_home_cachedir does not exists"
     rm -rf $configured_cachedir $default_home_cachedir $legacy_default_home_cachedir
 
-    msgn "--conf URL with non-empty TMPDIR"
-    $POLDEK --conf $url -l
-
-    [ -d $tmpdir_cachedir ] && fail "TMPDIR's $tmpdir_cachedir should not exists"
-    [ -d $configured_cachedir ] || fail "$configured_cachedir does not exists"
-    [ -d $default_home_cachedir ] || fail "$default_home_cachedir does not exists"
-    rm -rf $configured_cachedir $default_home_cachedir $legacy_default_home_cachedir
-
+    # a remote --conf, with its cachedir taken from the configuration, is gone:
+    # see testRemoteConfRefused in 04-conf
 
     return 0
 }
