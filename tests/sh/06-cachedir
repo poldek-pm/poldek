@@ -56,6 +56,16 @@ testCacheDir()
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     rm -rf $configured_cachedir $default_home_cachedir $legacy_default_home_cachedir
 
+    msgn "--conf with an invalid cachedir"
+    create_local_conf "$REPO/foobar/baz"
+    out=$($POLDEK --conf $TMPDIR/poldek.conf -l 2>&1)
+    rc=$?
+    assertEquals "an invalid cachedir in the configuration should fail: $out" \
+                 "1" "$rc"
+    echo "$out" | grep -q "invalid cache directory" || fail "no reason given: $out"
+    [ -d $REPO/foobar ] && fail "$REPO/foobar should not exists"
+    rm -rf $REPO/foobar
+
     create_local_conf ""
 
     msgn "--conf without cachedir"

@@ -997,41 +997,33 @@ tn_hash *do_load_conf(struct poldek_ctx *ctx, const char *path, unsigned flags)
 
     n_assert((flags & POLDEK_LOADCONF_NOCONF) == 0);
 
-    /* setup cachedir if not set */
-    if ((ctx->_iflags & CACHEDIR_SETUPDONE) == 0) {
-        tn_hash *cnf, *globalcnf;
-        const char *dir;
-        int succeed = 0;
-
-        n_assert(ctx->ts->cachedir == NULL);
-
-        /* get the cachedir from the configuration first */
-        cnf = poldek_conf_load(path, POLDEK_LDCONF_GLOBALONLY);
-        if (cnf == NULL)
-            return NULL;
-
-        globalcnf = poldek_conf_get_section(cnf, "global");
-        n_assert(globalcnf);
-
-        if ((dir = poldek_conf_get(globalcnf, "cachedir", NULL))) {
-            poldek_configure(ctx, POLDEK_CONF_CACHEDIR, dir);
-            succeed = poldek_setup_cachedir(ctx);
-
-        } else {
-            succeed = do_poldek_setup_cachedir(ctx);
-        }
-
-        n_hash_free(cnf);
-
-        if (!succeed)
-            return NULL;
-    }
-
-
     if (path != NULL)
         htconf = poldek_conf_load(path, 0);
     else
         htconf = poldek_conf_load_default(0);
+
+    if (htconf == NULL)
+        return NULL;
+
+    /* a configuration is a local file, nothing read here needs the cachedir
+       any more, so set it up from the configuration just read (or the
+       default); an invalid one fails the load, and --cachedir, applied and
+       marked done before the load, stays */
+    if ((ctx->_iflags & CACHEDIR_SETUPDONE) == 0) {
+        tn_hash *globalcnf;
+        const char *dir;
+
+        n_assert(ctx->ts->cachedir == NULL);
+
+        globalcnf = poldek_conf_get_section(htconf, "global");
+        if (globalcnf && (dir = poldek_conf_get(globalcnf, "cachedir", NULL)))
+            poldek_configure(ctx, POLDEK_CONF_CACHEDIR, dir);
+
+        if (!poldek_setup_cachedir(ctx)) {
+            n_hash_free(htconf);
+            return NULL;
+        }
+    }
 
     return htconf;
 }
