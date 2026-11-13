@@ -1,7 +1,8 @@
 #! /bin/sh
 # $Id$
 
-# test://path schema
+# test://path schema, and cred://login:password@/path where the credentials
+# are a part of the URL only (the file is read from the path)
 # requires: sed, grep
 
 if [ "$#" != "2" ]; then
@@ -10,7 +11,12 @@ if [ "$#" != "2" ]; then
 fi
 
 src=$1
-src=$(echo $src | sed 's|test:/||')
+case $src in
+    cred://*)
+        src=$(echo "$src" | sed -e 's|^cred://||' -e 's|^[^/@]*@||') ;;
+    *)
+        src=$(echo "$src" | sed 's|^test:/||') ;;
+esac
 dest=$2
 
 if [ ! -f $src ]; then

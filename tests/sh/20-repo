@@ -130,6 +130,40 @@ EOF
     fi
 }
 
+# A source name can also come from a global `source = ...` line, where there
+# is no file to name; adding a repository with such a name is refused (the
+# configuration would not load afterwards) and the configuration keeps
+# working
+testRepoAddDuplicateNameOfLegacySource()
+{
+    local tmp=${TMPDIR:-/tmp}
+    local home=$tmp/home-legacy-19
+    local out
+
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+    rm -rf $home
+    mkdir -p $home
+
+    cat > $home/.poldekrc <<EOF
+[global]
+cachedir = $home/cache
+source = poldekrepo-test-19,type=pndir /nonexistent/legacy-19/
+EOF
+
+    out=$(HOME=$home $POLDEK repo add $REMOTE_CONF 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "a source name taken by a [global] source line should be refused"
+    fi
+    echo "$out" | grep -q "already defined in \[global\]" || \
+        fail "the [global] owner not named: $out"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no .conf expected" "0" "$n"
+
+    HOME=$home $POLDEK -l > /dev/null 2>&1
+    assertEquals "the configuration should still load" "0" "$?"
+}
+
 testRepoBaseUrlMacro()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
@@ -169,6 +203,42 @@ EOF
 
     local arch=$(rpm --eval '%{_target_cpu}')
     echo "$out" | grep -q "test:/$(dirname $REMOTE_CONF)/$arch/" || fail "expanded path not listed: $out"
+}
+
+# A URL may carry a password; the file name must be derived from it all
+# the same, with the credentials left out of it
+testRepoAddWithPassword()
+{
+    local out fn
+    export POLDEK_TESTING_REPOSDIR=$REPOSD
+    SHLIBDIR="$PWD/sh/lib"
+    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache-19
+    rm -rf $CACHEDIR
+    mkdir -p $CACHEDIR
+
+    POLDEK_TESTING_PRELOAD_CONF="$SHLIBDIR/vftest-fetch.conf"
+    export POLDEK_TESTING_PRELOAD_CONF
+    PATH="$PATH:$SHLIBDIR"
+    export PATH
+
+    out=$($POLDEK --cachedir $CACHEDIR repo add \
+              "cred://user:secret-19@$REMOTE_CONF" 2>&1)
+    assertEquals "repo add of a URL with a password failed: $out" "0" "$?"
+
+    fn=$(ls $REPOSD/*.conf)
+    case "$fn" in
+        *secret-19*) fail "the password is a part of the file name: $fn" ;;
+    esac
+
+    grep -q '^name = poldekrepo-test-19$' $fn || \
+        fail "source not saved: $(cat $fn)"
+
+    out=$($POLDEK --cachedir $CACHEDIR repo ls 2>&1)
+    echo "$out" | grep -q "poldekrepo-test-19" || \
+        fail "source not listed: $out"
+    echo "$out" | grep -q "secret-19" && \
+        fail "the password is shown by repo ls: $out"
+    return 0
 }
 
 testRepoDeleteByUrl()
@@ -399,7 +469,7 @@ EOF
     fn=$(ls $REPOSD/*.conf)
     grep -q '^ignore' $fn && fail "ignore was saved"
     grep -q '^hold' $fn && fail "hold was saved"
-    grep -q '^noauto' $fn && fail "noauto was saved"
+    grep -q '^noauto = ' $fn && fail "noauto was saved"
     grep -q '^auto = no$' $fn || fail "auto = no was not forced"
     return 0
 }

@@ -1,8 +1,8 @@
 /*
-  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
+  Copyright (C) 2026 PLD Linux Team <feedback@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License, version 2 as
+  it under the terms of the GNU General Public License version 2 as
   published by the Free Software Foundation (see file COPYING for details).
 
   You should have received a copy of the GNU General Public License along
@@ -14,19 +14,15 @@
 # include "config.h"
 #endif
 
-#include <ctype.h>
 #include <errno.h>
-#include <limits.h>
+#include <limits.h>             /* for NAME_MAX */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
-#include <fnmatch.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
 
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
@@ -34,7 +30,6 @@
 #include <trurl/n_snprintf.h>
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
-#include <trurl/nstream.h>
 #include <vfile/vfile.h>
 
 #include "compiler.h"
@@ -46,11 +41,8 @@
 #include "poldek.h"
 #include "poldek_util.h"
 #include "repo.h"
+#include "repo_intern.h"
 #include "pkgdir/source.h"
-
-/* repo-dnf.c */
-int repo_is_dnf(const char *url);
-tn_hash *repo_dnf_to_conf(const char *url, const char *localpath);
 
 static int reposd_filename_from_url(char *buf, size_t size, const char *url)
 {
@@ -61,9 +53,14 @@ static int reposd_filename_from_url(char *buf, size_t size, const char *url)
 
     *buf = '\0';
 
+    /* hidepasswd() fills cleaned only when the URL carries a password,
+       otherwise u is the URL itself; cleaned must never be copied onto
+       itself, the copy would be undefined and truncate the name */
     u = vf_url_hidepasswd(cleaned, sizeof(cleaned), url);
-    n_snprintf(cleaned, sizeof(cleaned), "%s", u);
+    if (u != cleaned)
+        n_snprintf(cleaned, sizeof(cleaned), "%s", url);
 
+    /* drop login:password@, so the name does not depend on credentials */
     p = strstr(cleaned, "://");
     if (p) {
         q = strchr(p + 3, '@');
@@ -76,13 +73,11 @@ static int reposd_filename_from_url(char *buf, size_t size, const char *url)
     if (p)
         *p = '\0';
 
+    /* turns every character outside [alnum-+] into '.', so no '/' and no
+       ".." survive: the name cannot leave repos.d */
     n = vf_url_as_dirpath(buf, size, cleaned);
     if (n <= 0)
         return 0;
-
-    for (p = buf; *p; p++)
-        if (*p == '/')
-            *p = '.';
 
     /* a leading dot would make the file hidden from ls and from *.conf
        globs, although our own readdir() would still load it */
@@ -99,8 +94,7 @@ static int reposd_filename_from_url(char *buf, size_t size, const char *url)
     if (n >= 5 && strcasecmp(buf + n - 5, ".repo") == 0)
         memcpy(buf + n - 5, ".conf", 5);
 
-    //n += n_snprintf(&buf[n], size - n, ".conf");
-    if (n >= (int) size || n > NAME_MAX) {
+    if (n > NAME_MAX) {
         logn(LOGERR, _("%s: URL-derived filename too long"), url);
         return 0;
     }
@@ -167,7 +161,9 @@ static int validate_managed_sources(const char *url, tn_hash *htconf)
         if (raw_path) {
             poldek_conf_set(ht, "path", raw_path);
         }
-        /* force noauto */
+
+        /* a downloaded file must not decide that it is loaded: the source
+           is only used when asked for by name (-s/-n) */
         poldek_conf_set(ht, "auto", "no");
     }
 
@@ -284,8 +280,14 @@ static int check_source_name_collision(struct poldek_ctx *ctx,
             if (ex_name == NULL || strcmp(ex_name, new_name) != 0)
                 continue;
 
-            if (ex_file == NULL)
-                continue;
+            /* a source created from a global `source = ...` line has no
+               __file: its name is taken all the same, or the configuration
+               would not load */
+            if (ex_file == NULL) {
+                logn(LOGERR, _("%s: source name '%s' already defined in %s"),
+                     dest_path, new_name, "[global]");
+                return 0;
+            }
 
             if (strcmp(ex_file, new_file) == 0)
                 continue; /* same physical file, allowed */
@@ -384,7 +386,7 @@ static void repo_match_free(void *ptr)
 
     n_free(m->origin);
     n_free(m->path);
-    free(m);
+    n_free(m);
 }
 
 /* RET: the repositories the origin names: one whose _origin (or file name)
@@ -429,6 +431,12 @@ static tn_array *find_repos_by_origin(const char *reposd, const char *origin)
     return matches;
 }
 
+/* a URL is shown as typed/saved, but without the password */
+static const char *url_for_display(char *buf, size_t size, const char *url)
+{
+    return vf_url_hidepasswd(buf, size, url);
+}
+
 int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
 {
     char reposd[PATH_MAX];
@@ -446,18 +454,24 @@ int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
     matches = find_repos_by_origin(reposd, url);
 
     if (n_array_size(matches) == 0) {
-        logn(LOGERR, _("%s: no such repo"), url);
+        char shown[PATH_MAX];
+
+        logn(LOGERR, _("%s: no such repo"),
+             url_for_display(shown, sizeof(shown), url));
         n_array_free(matches);
         return 0;
     }
 
     if (n_array_size(matches) > 1) {
-        logn(LOGERR, _("%s: ambiguous name, matches %d repositories:"), url,
-             n_array_size(matches));
+        char shown[PATH_MAX];
+
+        logn(LOGERR, _("%s: ambiguous name, matches %d repositories:"),
+             url_for_display(shown, sizeof(shown), url), n_array_size(matches));
 
         for (i = 0; i < n_array_size(matches); i++) {
             m = n_array_nth(matches, i);
-            msgn(0, "  %s", m->origin ? m->origin : m->path);
+            msgn(0, "  %s", url_for_display(shown, sizeof(shown),
+                                            m->origin ? m->origin : m->path));
         }
 
         n_array_free(matches);
@@ -476,7 +490,10 @@ int poldek_repo_del(struct poldek_ctx *ctx, const char *url)
         goto l_err;
     }
 
-    logn(LOGNOTICE, _("%s repo has been removed"), m->origin ? m->origin : m->path);
+    char shown[PATH_MAX];
+
+    logn(LOGNOTICE, _("%s repo has been removed"),
+         url_for_display(shown, sizeof(shown), m->origin ? m->origin : m->path));
 
     n_array_free(matches);
     return 1;

@@ -1,8 +1,8 @@
 /*
-  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
+  Copyright (C) 2026 PLD Linux Team <feedback@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License, version 2 as
+  it under the terms of the GNU General Public License version 2 as
   published by the Free Software Foundation (see file COPYING for details).
 
   You should have received a copy of the GNU General Public License along
@@ -15,19 +15,18 @@
 #endif
 
 #include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
-#include <fnmatch.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/param.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <unistd.h>
 
 #include <trurl/narray.h>
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
+#include <vfile/vfile.h>
 
 #include "compiler.h"
 #include "i18n.h"
@@ -78,7 +77,7 @@ static void arg_s_free(void *ptr)
     if (arg_s->url)
         n_free(arg_s->url);
 
-    free(arg_s);
+    n_free(arg_s);
 }
 
 static const char *action_name(unsigned action)
@@ -214,10 +213,15 @@ static int list_repos(struct poldek_ctx *ctx)
 
         tn_hash *ht_global = poldek_conf_get_section(htconf, "global");
         const char *origin = ht_global ? poldek_conf_get(ht_global, "_origin", NULL) : NULL;
+        char origin_url[PATH_MAX];
         if (!origin)
             origin = n_basenam(path);
 
-        poldek_term_printf_c(PRCOLOR_CYAN, "%s\n", origin);
+        /* the URL is what the repository is known by, a password in it is
+           not for the screen */
+        poldek_term_printf_c(PRCOLOR_CYAN, "%s\n",
+                             vf_url_hidepasswd(origin_url, sizeof(origin_url),
+                                               origin));
 
         sources_ht = poldek_conf_get_sections(htconf, "source");
         if (sources_ht) {
