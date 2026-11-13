@@ -36,13 +36,13 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static void arg_s_free(void *ptr);
 
 static struct argp_option options[] = {
-  { 0, 'l', 0, 0, N_("List repos"), OPT_GID_OP_UP + 1 }, /* just for convinience */
+  { 0, 'l', 0, 0, N_("List sources"), OPT_GID_OP_UP + 1 }, /* just for convinience */
   { 0, 0, 0, 0, 0, 0 }
 };
 
 struct poclidek_cmd command_pull = {
     COMMAND_SELFARGS | COMMAND_HASVERBOSE | COMMAND_EMPTYARGS | COMMAND_BATCH,
-    "up", N_("REPO..."), N_("Update list of available packages"),
+    "up", N_("SOURCE..."), N_("Update list of available packages"),
     options, parse_opt,
     NULL, pull, NULL, arg_s_free, NULL, NULL, NULL, 0, 0,
     NULL

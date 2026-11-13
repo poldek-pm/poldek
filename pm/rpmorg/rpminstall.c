@@ -141,7 +141,7 @@ void pm_rpm_setup_commands(struct pm_rpm *pm)
     pm->flags |= PM_RPM_CMDSETUP_DONE;
 }
 
-/* colors equal? there are repository types without color info, so catch them */
+/* colors equal? there are source types without color info, so catch them */
 static int colors_eq(const struct pkg *pkg, const char *path)
 {
     Header h;

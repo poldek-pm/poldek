@@ -956,7 +956,7 @@ int do_create(struct pkgdir *pkgdir, const char *type,
     }
 
     if (pkgdir->mod->create == NULL) {
-        logn(LOGERR, _("%s: repository could not be created (missing "
+        logn(LOGERR, _("%s: package index could not be created (missing "
                        "feature)"), type);
         return 0;
     }

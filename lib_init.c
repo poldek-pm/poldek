@@ -1721,7 +1721,7 @@ static int setup_pm(struct poldek_ctx *ctx)
     } else if (strcmp(pm, "pset") == 0) {
         n_array_sort_ex(ctx->dest_sources, (tn_fn_cmp)source_cmp_no);
         if (n_array_size(ctx->dest_sources) == 0) {
-            logn(LOGERR, "%s: missing destination source", pm);
+            logn(LOGERR, "%s: missing destination", pm);
 
         } else if ((ctx->pmctx = pm_new(pm))) {
             int i;
@@ -1729,7 +1729,7 @@ static int setup_pm(struct poldek_ctx *ctx)
             for (i=0; i < n_array_size(ctx->dest_sources); i++) {
                 struct source *dest = n_array_nth(ctx->dest_sources, i);
                 if (source_is_remote(dest) && 0) {
-                    logn(LOGERR, "%s: destination source could not be remote",
+                    logn(LOGERR, "%s: destination could not be remote",
                          source_idstr(dest));
                     continue;
                 }
@@ -1743,7 +1743,7 @@ static int setup_pm(struct poldek_ctx *ctx)
 
         if (ctx->pmctx) {
             if (poldek_VERBOSE > 1)
-                logn(LOGNOTICE, "Depends on your destination repository you may need "
+                logn(LOGNOTICE, "Depending on the destination you may need "
                      "to disable conflicts and/or obsoletes processing");
         }
 

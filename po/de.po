@@ -803,7 +803,7 @@ msgstr "ls: Optionen '-l' und '-G' schliessen sich aus"
 
 #: cli/op_makeidx.c:48 cli/op_split.c:82
 #, fuzzy
-msgid "Repository index creation:"
+msgid "Package index creation:"
 msgstr "Indexerstellung:"
 
 #: cli/op_makeidx.c:51
@@ -876,17 +876,17 @@ msgstr "Option '%s' sollte von '--%s' gesetzt werden"
 
 #: cli/op_source.c:63
 #, fuzzy
-msgid "Repository selection:"
+msgid "Package source selection:"
 msgstr "Optionen für Quellen:"
 
 #: cli/op_source.c:64
 #, fuzzy
-msgid "Get packages info from repository under PATH"
+msgid "Get packages info from source under PATH"
 msgstr "Lese Paketinformationen von Quelle SOURCE-NAME"
 
 #: cli/op_source.c:67
 #, fuzzy
-msgid "Get packages info from repository named SOURCE-NAME"
+msgid "Get packages info from source named NAME"
 msgstr "Lese Paketinformationen von Quelle SOURCE-NAME"
 
 #: cli/op_source.c:71
@@ -898,7 +898,7 @@ msgid "Install to specified destination"
 msgstr ""
 
 #: cli/op_source.c:79
-msgid "Install to source SOURCE-NAME instead to the system"
+msgid "Install to the source NAME instead of the system"
 msgstr ""
 
 #: cli/op_source.c:82
@@ -920,7 +920,7 @@ msgstr "Lese Pakete von PREFIX anstelle von SOURCE"
 
 #: cli/op_source.c:94
 #, fuzzy
-msgid "Repository related actions:"
+msgid "Source related actions:"
 msgstr "Optionen für Quellen:"
 
 #: cli/op_source.c:95
@@ -1710,7 +1710,7 @@ msgstr[2] "%d doppelte Pakete entfernt"
 
 #: pkgdir/pkgdir.c:850 pkgdir/source_mkidx.c:241 pkgdir/source_mkidx.c:389
 #, fuzzy, c-format
-msgid "%s: repository could not be created (missing feature)"
+msgid "%s: package index could not be created (missing feature)"
 msgstr "%s: dieser Quelltyp ist nicht aktualsierbar"
 
 #: pkgdir/pkgdir.c:975
@@ -2842,9 +2842,6 @@ msgstr "'%s' beendet durch Signal %d"
 #~ msgstr "Installiere Pakete ohne Rücksicht auf die Abhängigkeiten"
 
 #, fuzzy
-#~ msgid "Source related actions:"
-#~ msgstr "Optionen für Quellen:"
-
 #~ msgid "Be verbose"
 #~ msgstr "Sei ausführlich"
 

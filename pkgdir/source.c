@@ -943,7 +943,7 @@ int do_source_clean(struct source *src, const char *idxdir,
 
     DBGF("%s: %s, %s\n", src->path, idxdir, idxbn);
 
-    /* clean-pkg makes no sense for local repositories */
+    /* clean-pkg makes no sense for local sources */
     if ((urltype & VFURL_LOCAL) && (flags & PKGSOURCE_CLEAN)) {
         char path[PATH_MAX];
         vf_localdirpath(path, sizeof(path), idxdir);

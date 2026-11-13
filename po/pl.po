@@ -967,8 +967,8 @@ msgid "%s options are exclusive"
 msgstr "opcje %s wykluczają się"
 
 #: cli/op_makeidx.c:48 cli/op_split.c:82
-msgid "Repository index creation:"
-msgstr "Tworzenie indeksu repozytorium:"
+msgid "Package index creation:"
+msgstr "Tworzenie indeksu pakietów:"
 
 #: cli/op_makeidx.c:51
 msgid "Create package index (under SOURCE-PATH by default)"
@@ -1038,16 +1038,16 @@ msgid "'%s' option should be set by --%s"
 msgstr "opcja '%s' powinna być ustawiona przez --%s"
 
 #: cli/op_source.c:63
-msgid "Repository selection:"
-msgstr "Wybór repozytorium:"
+msgid "Package source selection:"
+msgstr "Wybór źródła pakietów:"
 
 #: cli/op_source.c:64
-msgid "Get packages info from repository under PATH"
-msgstr "Pobierz informacje o pakietach z repozytorium w ścieżce PATH"
+msgid "Get packages info from source under PATH"
+msgstr "Pobierz informacje o pakietach ze źródła w ścieżce PATH"
 
 #: cli/op_source.c:67
-msgid "Get packages info from repository named SOURCE-NAME"
-msgstr "Pobierz informacje o pakietach ze źródła o nazwie SOURCE-NAME"
+msgid "Get packages info from source named NAME"
+msgstr "Pobierz informacje o pakietach ze źródła o nazwie NAME"
 
 #: cli/op_source.c:71
 msgid "Set the type of index specified by --destination option"
@@ -1058,7 +1058,7 @@ msgid "Install to specified destination"
 msgstr "Instaluj do podanej lokacji"
 
 #: cli/op_source.c:79
-msgid "Install to source SOURCE-NAME instead to the system"
+msgid "Install to the source NAME instead of the system"
 msgstr ""
 
 #: cli/op_source.c:82
@@ -1078,8 +1078,8 @@ msgid "Get packages from PREFIX instead of SOURCE"
 msgstr "Pobieraj pakiety ze źródła PREFIX zamiast z SOURCE"
 
 #: cli/op_source.c:94
-msgid "Repository related actions:"
-msgstr "Akcje związane z repozytorium:"
+msgid "Source related actions:"
+msgstr "Akcje związane ze źródłem:"
 
 #: cli/op_source.c:95
 msgid "List available source types"
@@ -1849,7 +1849,7 @@ msgstr[2] "usunięto %d zdublowanych pakietów"
 
 #: pkgdir/pkgdir.c:850 pkgdir/source_mkidx.c:241 pkgdir/source_mkidx.c:389
 #, c-format
-msgid "%s: repository could not be created (missing feature)"
+msgid "%s: package index could not be created (missing feature)"
 msgstr "%s: tego typu źródła nie można aktualizować"
 
 #: pkgdir/pkgdir.c:975
@@ -2965,9 +2965,6 @@ msgstr "%s zamkniety za sprawą sygnału %d (%s)"
 
 #~ msgid "Install packages with broken dependencies (applied to PM only)"
 #~ msgstr "Instaluj pakiety z niespełnionymi zależnościami"
-
-#~ msgid "Source related actions:"
-#~ msgstr "Opcje dot. \"źródeł\" pakietów:"
 
 #~ msgid "Be verbose"
 #~ msgstr "Bądź gadatliwy"
