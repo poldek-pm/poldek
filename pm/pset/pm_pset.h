@@ -35,7 +35,7 @@ int pm_pset_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
                                struct poldek_ts *ts);
 
 void *pm_pset_opendb(void *pm_pset, void *dbh,
-                     const char *dbpath, const char *rootdir, mode_t mode,
+                     const char *rootdir, const char *dbpath, mode_t mode,
                      tn_hash *kw);
 void pm_pset_closedb(void *dbh);
 void pm_pset_freedb(void *dbh);

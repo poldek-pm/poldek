@@ -95,7 +95,7 @@ struct rpmorg_db {
 };
 
 struct rpmorg_db *pm_rpm_opendb(void *pm_rpm, void *dbh,
-                                const char *dbpath, const char *rootdir, mode_t mode,
+                                const char *rootdir, const char *dbpath, mode_t mode,
                                 tn_hash *kw);
 void pm_rpm_closedb(struct rpmorg_db *db);
 
