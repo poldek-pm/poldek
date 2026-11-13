@@ -411,6 +411,7 @@ directory, so that later reads need no network access:
 
 <screen>
 &prompt; <command>poldek repo add</command> <replaceable>URL</replaceable>
+&prompt; <command>poldek repo add --force</command> <replaceable>URL</replaceable>
 &prompt; <command>poldek repo del</command> <replaceable>URL</replaceable>
 &prompt; <command>poldek repo ls</command>
 </screen>
@@ -419,7 +420,22 @@ A repository is identified by the URL it was added with;
 <command>repo del</command> takes that URL, or a fragment of it as long
 as the fragment is unambiguous. <command>repo ls</command> lists the
 added repositories and <command>repo</command> alone does the same.
-A source added this way is listed after the user's own sources.
+A source added this way is listed after the user's own sources, is
+marked <option>managed</option>, and is not loaded unless it is asked
+for by name (<option>-s</option>/<option>-n</option>); an
+<command>up</command> of all sources still refreshes its index.
+<command>repo add</command> refuses a URL that is already there unless
+<option>--force</option> is given.
+</para>
+
+<para>
+The files are kept in <filename>/var/lib/poldek/repos.d</filename> when
+run by root and in <filename>~/.config/poldek/repos.d</filename> (or
+<filename>$XDG_CONFIG_HOME/poldek/repos.d</filename>) otherwise; only
+the default configuration reads them, a configuration given with
+<option>--conf</option> ignores them. The directory is read on its own,
+so a <option>%include</option>/<option>%includedir</option> of it is
+not needed and is reported with a warning.
 </para>
 
 <para>
