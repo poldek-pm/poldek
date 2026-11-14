@@ -21,9 +21,11 @@
 EXPORT void sigint_init(void);
 EXPORT void sigint_destroy(void);
 EXPORT void sigint_reset(void);
+/* enable/disable the handler */
+EXPORT void sigint_enable(int v);
 
-/* 
- * emit sigint. Can be used in some external applications 
+/*
+ * emit sigint. Can be used in some external applications
  * using libpoldek to interrupt given action (eg. searching,
  * processing dependencies and others)
  */
