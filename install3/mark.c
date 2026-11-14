@@ -52,6 +52,9 @@ int i3_is_other_version_marked(struct i3ctx *ictx, const struct pkg *pkg,
 }
 
 
+#if 0
+/* unused: the inverse of i3_mark_package() never got a caller.  Kept in case
+   conflict handling or backtracking needs to unmark a package again. */
 int i3_unmark_package(struct i3ctx *ictx, struct pkg *pkg)
 {
     if (iset_ismarkedf(ictx->inset, pkg, PKGMARK_INTERNAL))
@@ -62,6 +65,7 @@ int i3_unmark_package(struct i3ctx *ictx, struct pkg *pkg)
 
     return 1;
 }
+#endif
 
 int i3_mark_package(struct i3ctx *ictx, struct pkg *pkg, unsigned mark)
 {
