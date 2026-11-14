@@ -752,11 +752,8 @@ static const char *include_path(char *buf, size_t size, const char *path,
 static struct afile *afile_open(const char *path, const char *parent_path,
                                 const char *section_to_load)
 {
-    char incpath[PATH_MAX];
     struct afile  *af = NULL;
     struct vfile  *vf;
-
-    path = include_path(incpath, sizeof(incpath), path, parent_path);
 
     if (parent_path)  /* included file */
         msgn(3, "-- %s --", path);

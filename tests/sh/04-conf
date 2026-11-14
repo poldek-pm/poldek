@@ -468,6 +468,33 @@ EOF
         fail "a relative directory not resolved: $(cat $TMPDIR/relative-out)"
 }
 
+# include paths are resolved once: --conf may itself be a relative path with
+# a directory component, and a relative %include must still name its includer
+testConfIncludeRelativeConf()
+{
+    local dir=$TMPDIR/relconf.d
+    local out rc
+
+    rm -rf $dir
+    mkdir -p $dir/sub/sub
+
+    printf '[source]\nname = right\ntype = pndir\npath = test:///right\n' \
+        > $dir/sub/inc.conf
+    # a second resolution would load this one instead
+    printf '[source]\nname = wrong\ntype = pndir\npath = test:///wrong\n' \
+        > $dir/sub/sub/inc.conf
+    printf '[global]\n%%include inc.conf\n' > $dir/sub/main.conf
+
+    out=$(cd $dir && $POLDEK --conf sub/main.conf -q -l 2>&1)
+    rc=$?
+    assertEquals "a relative --conf should load: $out" "0" "$rc"
+    echo "$out" | grep -q '^right ' || \
+        fail "an include was not resolved against its includer: $out"
+    if echo "$out" | grep -q '^wrong '; then
+        fail "an include was resolved twice: $out"
+    fi
+}
+
 # %includedir is the older name of %include, so it takes a file as well
 testConfIncludedirWithFile()
 {
