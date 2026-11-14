@@ -55,7 +55,6 @@ static const char *pndir_DEFAULT_OS = "linux";
 struct pndir_paths {
     char  path_main[PATH_MAX];
     char  path[PATH_MAX];
-    char  path_md[PATH_MAX];
     char  dscr_idxpath[PATH_MAX];
     char  dscr_tss[32];
     char  path_diff_toc[PATH_MAX];
