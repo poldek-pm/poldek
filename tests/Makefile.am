@@ -40,12 +40,15 @@ library_user_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 front_end_la_SOURCES = front_end.c
 front_end_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 
+# runs of sh/ scripts at a time: make check-sh CHECK_SH_JOBS=4
+CHECK_SH_JOBS = 1
+
 .PHONY: check-sh
 check-sh: $(check_LTLIBRARIES)
-	@./run-sh-tests.sh
+	@./run-sh-tests.sh -j $(CHECK_SH_JOBS)
 
 check-sh-no-loop: $(check_LTLIBRARIES)
-	@MAXLOOP=3 ./run-sh-tests.sh
+	@MAXLOOP=3 ./run-sh-tests.sh -j $(CHECK_SH_JOBS)
 
 # shared libraries export everything their headers declare EXPORT
 TESTS += exports.sh

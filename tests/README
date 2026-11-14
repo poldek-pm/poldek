@@ -7,6 +7,7 @@ To run all tests:
 
 $ make check    # runs all C-based tests
 $ make check-sh # runs tests written in shell (sh/ subdir)
+$ make check-sh CHECK_SH_JOBS=4 # the same, 4 runs at a time
 
 sh/ test scripts may be executed separately:
 
