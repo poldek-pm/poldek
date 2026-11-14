@@ -34,6 +34,7 @@
 #include "pkgdir/pkgdir_intern.h"
 #include "pkgset.h"
 #include "conf.h"
+#include "depdirs.h"
 #include "log.h"
 #include "misc.h"
 #include "i18n.h"
@@ -1414,6 +1415,8 @@ void poldeklib_destroy(void)
     n_array_free(default_op_map);
     default_op_map = NULL;
 
+    destroy_depdirs();
+    poldek_term_destroy();
     poldek_log_reset_appenders();
 }
 
@@ -1644,6 +1647,7 @@ static void __setup_multilib(struct poldek_ctx *ctx)
 {
     struct default_op_map_ent *ent, tmp;
     char     scolor[64];
+    unsigned ucolor;
     int      color;
     int      multilib = 2; /* 'auto' */
 
@@ -1651,8 +1655,10 @@ static void __setup_multilib(struct poldek_ctx *ctx)
     if (!pm_conf_get(ctx->pmctx, "%{_transaction_color}", scolor, sizeof(scolor)))
         return;
 
-    if (sscanf(scolor, "%u", &color) != 1)
+    if (sscanf(scolor, "%u", &ucolor) != 1)
         return;
+
+    color = ucolor;
 
     if (ctx->htconf) {
         tn_hash *htcnf = poldek_conf_get_section(ctx->htconf, "global");
@@ -1813,11 +1819,6 @@ int poldek_setup(struct poldek_ctx *ctx)
 }
 
 
-int poldek_is_sources_loaded(struct poldek_ctx *ctx)
-{
-    return ctx->_iflags & SOURCES_LOADED;
-}
-
 int poldek_load_sources(struct poldek_ctx *ctx)
 {
     int rc;
@@ -1857,16 +1858,13 @@ tn_hash *poldek_get_config(struct poldek_ctx *ctx)
 }
 
 
-const char *poldek_version(void)
-{
-    return VERSION;
-}
-
 /* for autoconf */
+void PACKAGE_VERSION_FUNCNAME (void) __attribute__((unused));
 void PACKAGE_VERSION_FUNCNAME (void)
 {}
 
 
 /* for autoconf */
+void PACKAGE_SERIES_FUNCNAME (void) __attribute__((unused));
 void PACKAGE_SERIES_FUNCNAME (void)
 {}

@@ -158,7 +158,7 @@ struct pkg *iset_has_kind_of_pkg(struct iset *iset, const struct pkg *pkg)
 
 int iset_provides(struct iset *iset, const struct capreq *cap)
 {
-    char             *dirname, *basename, path[PATH_MAX];
+    char             *dirname = NULL, *basename = NULL, path[PATH_MAX];
     char             *capnvr = NULL, *capname = NULL;
     int              i, is_file = 0;
     struct pkg       *pkg = NULL;
@@ -249,17 +249,4 @@ int iset_reqs_score(struct iset *iset, const struct pkg *pkg)
     pkg_req_iter_free(it);
 
     return score;
-}
-
-void iset_dump(struct iset *iset)
-{
-    int i;
-
-    printf("iset dump %p: ",  iset);
-
-    for (i=0; i<n_array_size(iset->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(iset->pkgs, i);
-        printf("%s, ", pkg_snprintf_s(pkg));
-    }
-    printf("\n");
 }

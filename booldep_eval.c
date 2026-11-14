@@ -93,7 +93,8 @@ static void dvalue_dump(const struct dvalue *dv, const char *label)
             n += n_snprintf(&providers[n], sizeof(providers) - n,
                             "%s,", pkg_id(pkg));
         }
-        providers[n-1] = '\0';
+        if (n > 0)
+            providers[n-1] = '\0';
     }
 
     trace(0, "%s %s cost=%d, providers: %s\n", label, capreq_stra(dv->req),

@@ -762,7 +762,7 @@ static tn_array *parse_removed(char *str)
     tn_array *pkgs;
 
     pkgs = pkgs_array_new(64);
-    p = q = eatws(str);
+    q = eatws(str);
     while ((p = next_tokn(&q, ' ', NULL)) != NULL) {
         const char   *name = NULL, *ver = NULL, *rel = NULL;
         int32_t      epoch = 0;

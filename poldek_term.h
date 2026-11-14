@@ -38,6 +38,7 @@
 #endif
 
 EXPORT int poldek_term_init(int force_color);
+EXPORT void poldek_term_destroy(void);
 EXPORT int poldek_term_get_width(void);
 EXPORT int poldek_term_get_height(void);
 

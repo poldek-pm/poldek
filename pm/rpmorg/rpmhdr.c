@@ -44,31 +44,6 @@ int pm_rpmhdr_get_int(Header h, int32_t tag, uint32_t *value)
     return 1;
 }
 
-int pm_rpmhdr_get_entry(Header h, int32_t tag, void *buf, int32_t *type,
-                        int32_t *cnt)
-{
-    rpmtd td = rpmtdNew();
-
-    *(char **)buf = NULL;
-
-    if (!headerGet(h, tag, td, HEADERGET_MINMEM)) {
-        *(char **)buf = NULL;
-        if (cnt)
-            *cnt = 0;
-        return 0;
-    }
-
-    *type = td->type;
-    if (cnt)
-        *cnt = td->count;
-    *(char ***)buf = td->data;
-
-    /* TODO: check td->flags - mem allocation? */
-    //rpmtdFree(td);
-
-    return 1;
-}
-
 int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
 {
     int type;
@@ -179,14 +154,6 @@ void pm_rpmhdr_ts_free(rpmts ts)
     rpmtsFree(ts);
 }
 
-Header pm_rpmhdr_readfdt(void *fdt)
-{
-    Header h;
-
-    h = headerRead(fdt, HEADER_MAGIC_YES);
-    return h;
-}
-
 /*
  * pm_rpmhdr_langs:
  *
@@ -234,12 +201,6 @@ int pm_rpmhdr_nevr(void *h, const char **name, int32_t *epoch,
     return 1;
 }
 
-
-void pm_rpmhdr_free_entry(void *e, int type)
-{
-    if (e && (type == RPM_STRING_ARRAY_TYPE || type == RPM_I18NSTRING_TYPE))
-        free(e);
-}
 
 /* struct rpmhdr_ent stuff */
 int pm_rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)

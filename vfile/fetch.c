@@ -390,9 +390,10 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 break;
 
             case FETCHFMT_DIRBN: {
-                int len = strlen(destdir) + strlen(bn) + 2;
+                const char *name = bn ? bn : "ERROR";
+                int len = strlen(destdir) + strlen(name) + 2;
                 argv[n] = alloca(len);
-                snprintf(argv[n], len, "%s/%s", destdir, bn ? bn : "ERROR");
+                snprintf(argv[n], len, "%s/%s", destdir, name);
                 n++;
                 break;
             }
@@ -728,7 +729,7 @@ int vf_url_type(const char *url)
 
         while (url != p) {
             if (!isalpha(*url)) {
-                is_url = 1;
+                is_url = 0;
                 break;
             }
             url++;

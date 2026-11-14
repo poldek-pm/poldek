@@ -265,6 +265,8 @@ EXPORT struct pkguinf *pkg_xuinf(const struct pkg *pkg, tn_array *langs);
 
 /* directories required by package */
 EXPORT tn_array *pkg_required_dirs(const struct pkg *pkg);
+/* directories owned by package */
+EXPORT tn_array *pkg_owned_dirs(const struct pkg *pkg);
 
 struct pkgflist {
     tn_tuple *fl;

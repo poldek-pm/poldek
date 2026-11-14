@@ -186,7 +186,7 @@ static char *parse_val(char *vstr, const char *path, int nline)
         return NULL;
 
     q = p;
-    if (q && (q = strchr(q, '#'))) {
+    if ((q = strchr(q, '#'))) {
         if (q == p) {
             p = NULL;
         } else {

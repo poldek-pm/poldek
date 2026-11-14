@@ -69,68 +69,9 @@ int cmd_pipe_writepkg(struct cmd_pipe *p, struct pkg *pkg)
     return 1;
 }
 
-struct pkg *cmd_pipe_getpkg(struct cmd_pipe *p)
-{
-    if (n_array_size(p->pkgs) == 0)
-        return NULL;
-
-    if (p->nread_pkgs >= n_array_size(p->pkgs))
-        return NULL;
-
-    return n_array_nth(p->pkgs, p->nread_pkgs++);
-}
-
-int cmd_pipe_writeline(struct cmd_pipe *p, const char *line, int len)
-{
-    int n;
-
-    if (len <= 0)
-        len = strlen(line);
-
-    n = n_buf_write(p->nbuf, line, len);
-    if (n == len)
-        p->nwritten++;
-    return len;
-}
-
-int cmd_pipe_printf(struct cmd_pipe *p, const char *fmt, ...)
-{
-    va_list  args;
-    int n;
-
-    va_start(args, fmt);
-    n = n_buf_vprintf(p->nbuf, fmt, args);
-    va_end(args);
-
-    return n;
-}
-
 int cmd_pipe_vprintf(struct cmd_pipe *p, const char *fmt, va_list args)
 {
     return n_buf_vprintf(p->nbuf, fmt, args);
-}
-
-char *cmd_pipe_getline(struct cmd_pipe *p, char *line, int size)
-{
-    size_t len = 0;
-    char *ptr;
-
-    if (n_buf_size(p->nbuf) > 0) {
-        ptr = n_buf_it_gets(&p->nbuf_it, &len);
-        if ((unsigned)size < len)
-            len = size - 1;
-        memcpy(line, ptr, len);
-        line[len] = '\0';
-        return line;
-    }
-    return NULL;
-}
-
-int cmd_pipe_size(struct cmd_pipe *p, int pctx)
-{
-    if (pctx == CMD_PIPE_CTX_PACKAGES)
-        return n_array_size(p->pkgs);
-    return p->nwritten;
 }
 
 int cmd_pipe_writeout_fd(struct cmd_pipe *p, int fd)

@@ -169,11 +169,6 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
     return files;
 }
 
-void file_index_setup_idxdir(void *files)
-{
-    n_array_sort(files);
-}
-
 int file_index_add_basename(struct file_index *fi, void *fidx_dir,
                             struct flfile *flfile,
                             struct pkg *pkg)
@@ -304,18 +299,6 @@ int file_index_lookup(const struct file_index *fi,
         *dirname = '/';
 
     return findfile(fi, dirname, basename, pkgs, size);
-}
-
-static void sort_files(const char *key, void *data)
-{
-    key = key;
-    n_array_sort(data);
-}
-
-
-void file_index_setup(struct file_index *fi)
-{
-    n_hash_map(fi->dirs, sort_files);
 }
 
 
@@ -802,6 +785,8 @@ int file_index_report_semiorphans(struct pkgset *ps, tn_array *pkgs)
             struct missing_req *mreq = n_array_nth(mreqarr, j);
             char pkgstr[PATH_MAX];
             int k, n = 0;
+
+            *pkgstr = '\0';
 
             for (k=0; k < mreq->ncandidates && k < 3; k++)
                 n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,

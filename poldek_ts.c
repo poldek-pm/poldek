@@ -574,16 +574,6 @@ int poldek_ts_add_pkg(struct poldek_ts *ts, struct pkg *pkg)
     return arg_packages_add_pkg(ts->aps, pkg);
 }
 
-int poldek_ts_add_pkgs(struct poldek_ts *ts, tn_array *pkgs)
-{
-    int i;
-
-    for (i=0; i < n_array_size(pkgs); i++)
-        arg_packages_add_pkg(ts->aps, n_array_nth(pkgs, i));
-
-    return i;
-}
-
 int poldek_ts_add_pkgmask(struct poldek_ts *ts, const char *mask)
 {
     DBGF("%s\n", mask);
@@ -782,7 +772,7 @@ int poldek_ts_set_type(struct poldek_ts *ts, enum poldek_ts_type type, const cha
             n_assert(0);
     }
 
-    ts->type = type;
+    n_assert(ts->type);
     if (typenam)
         ts->typenam = n_strdup(typenam);
     return 1;

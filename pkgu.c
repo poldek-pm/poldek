@@ -357,7 +357,7 @@ char *prepare_pld_changelog(tn_alloc *na, const char *changelog)
             }
 
             //Revision REV YYYY-MM-DD HH:MM:SS rest
-            rev = line + len + 1;       /* skip Revision */
+            rev = line + len;           /* skip Revision */
             while (*rev && isspace(*rev))
                 rev++;
 
@@ -369,13 +369,14 @@ char *prepare_pld_changelog(tn_alloc *na, const char *changelog)
                     tstr++;
             }
 
-            if (rev && tstr) {
+            if (tstr) {
                 ts = pkgu__parse_datetime(tstr);
                 if (ts == 0)
                     continue;
             }
 
-            n = n_snprintf(info, sizeof(info), "* r%s %s", rev, tstr);
+            n = n_snprintf(info, sizeof(info), "* r%s %s", rev,
+                           tstr ? tstr : "");
 
             ent = n_malloc(sizeof(*ent) + max_MESSAGE);
             memset(ent, 0, sizeof(*ent));
@@ -440,7 +441,7 @@ static tn_array *parse_changelog(tn_alloc *na, tn_array *lines)
 
             //* [rREV] YYYY-MM-DD HH:MM:SS rest
             ts = strchr(line, ' ');
-            while (*ts && isspace(*ts))
+            while (ts && *ts && isspace(*ts))
                 ts++;
 
             if (ts && *ts == 'r')
@@ -450,7 +451,7 @@ static tn_array *parse_changelog(tn_alloc *na, tn_array *lines)
                 while (*ts && isspace(*ts))
                     ts++;
 
-                if (ts)
+                if (*ts)
                     ent->ts = pkgu__parse_datetime(ts);
             }
             continue;

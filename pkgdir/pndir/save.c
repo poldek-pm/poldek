@@ -55,7 +55,6 @@ static const char *pndir_DEFAULT_OS = "linux";
 struct pndir_paths {
     char  path_main[PATH_MAX];
     char  path[PATH_MAX];
-    char  path_md[PATH_MAX];
     char  dscr_idxpath[PATH_MAX];
     char  dscr_tss[32];
     char  path_diff_toc[PATH_MAX];
@@ -104,6 +103,8 @@ char *pndir_dscr_pathname(char *dest, size_t size, const char *idxpath,
 {
     char suffix[128];
     const char *idstr, *langid;
+
+    n_assert(tss);
 
     pndir_db_dscr_idstr(lang, &idstr, &langid);
     n_snprintf(suffix, sizeof(suffix), "%s%s%s%s%s", pndir_desc_suffix,

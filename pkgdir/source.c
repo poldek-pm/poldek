@@ -84,6 +84,7 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
                     const char *str, const char *options_str)
 {
     unsigned v = 0;
+    int pri;
 
     n_assert(strncmp(str, opt->name, opt->len) == 0);
 
@@ -112,8 +113,8 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
         v = 1;
 
     } else if (opt->flag & PKGSOURCE_PRI) {
-        if (sscanf(str, "%d", &v) == 1) {
-            src->pri = v;
+        if (sscanf(str, "%d", &pri) == 1) {
+            src->pri = pri;
             v = 1;
         }
     }
@@ -612,6 +613,8 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
     if (type && n_str_eq(type, source_TYPE_GROUP)) {
         char tmp[PATH_MAX], *p;
         int i, nt = 0;
+
+        *tmp = '\0';
 
         tn_array *arr = poldek_conf_get_multi(htcnf, "sources");
         n_array_sort(arr);

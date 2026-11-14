@@ -147,7 +147,6 @@ void i3_cancel(struct i3ctx *ictx);
 
 /* mark.c */
 int i3_mark_package(struct i3ctx *ictx, struct pkg *pkg, uint32_t mark);
-int i3_unmark_package(struct i3ctx *ictx, struct pkg *pkg);
 
 #define i3_is_marked(iictx, p) iset_has_pkg(iictx->inset, p)
 #define i3_is_hand_marked(iictx, p) iset_ismarkedf(iictx->inset, p, PKGMARK_MARK)

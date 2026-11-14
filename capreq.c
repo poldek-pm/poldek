@@ -1016,6 +1016,11 @@ int capreq_arr_restore_skip_st(tn_stream *st)
     return 1;
 }
 
+#if 0
+/* Unused so far.  Pruning redundant capabilities looks useful, but it is not
+   clear whether packages carry enough redundant Requires/Provides to make it
+   worth doing, and the rule below (only an unversioned cap next to a
+   versioned one counts as redundant) would have to be settled first. */
 static
 int cmp_uniq(struct capreq *cr1, struct capreq *cr2)
 {
@@ -1062,3 +1067,4 @@ tn_array *capreq_arr_remove_redundant(tn_array *arr)
     n_array_uniq_ex(arr, (tn_fn_cmp)cmp_uniq);
     return arr;
 }
+#endif

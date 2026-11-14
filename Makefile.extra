@@ -1,5 +1,8 @@
 PROJ_DIR=$(shell pwd)
 
+lint:
+	@$(SHELL) $(top_srcdir)/tests/cppcheck/cppcheck.sh "$(top_srcdir)" "$(top_builddir)"
+
 github-local-ci:
 	gh act -j build
 

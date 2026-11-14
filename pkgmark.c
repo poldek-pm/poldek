@@ -173,7 +173,8 @@ int pkgmark_pkg_drags(struct pkg *pkg, struct pkgmark_set *pms, int deep)
     if (deep <= 0)
         return 0;
 
-    n_assert(pms->ps);
+    n_assert(pms != NULL);
+    n_assert(pms->ps != NULL);
     tn_array *reqpkgs = pkgset_get_required_packages(deep, pms->ps, pkg);
     if (reqpkgs == NULL)
         return 0;
@@ -182,11 +183,10 @@ int pkgmark_pkg_drags(struct pkg *pkg, struct pkgmark_set *pms, int deep)
         struct reqpkg *rpkg = n_array_nth(reqpkgs, i);
         int markit = 1;
 
-        if (pms && pkg_is_marked(pms, rpkg->pkg))
+        if (pkg_is_marked(pms, rpkg->pkg))
             continue;
 
-        if (pms)
-            n_assert(!pkg_is_dep_marked(pms, rpkg->pkg));
+        n_assert(!pkg_is_dep_marked(pms, rpkg->pkg));
 
         if (rpkg->flags & REQPKG_MULTI) {
             struct reqpkg *eqpkg;
@@ -195,7 +195,7 @@ int pkgmark_pkg_drags(struct pkg *pkg, struct pkgmark_set *pms, int deep)
             n = 1;
             eqpkg = rpkg->adds[0];
             while (eqpkg) {
-                if (pms && pkg_is_marked(pms, eqpkg->pkg)) {
+                if (pkg_is_marked(pms, eqpkg->pkg)) {
                     markit = 0;
                     break;
                 }
@@ -253,7 +253,6 @@ void visit_mark_reqs(struct pkg *parent_pkg,
 
         n_assert(!pkg_is_dep_marked(pms, rpkg->pkg));
 
-        tomark = rpkg->pkg;
         if (rpkg->flags & REQPKG_MULTI) {
             struct reqpkg *eqpkg;
             int n = 0;

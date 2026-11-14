@@ -99,7 +99,7 @@ int poldek_term_vprintf_c(int color, const char *fmt, va_list args)
     int n = 0, isbold = 0;
 
     if (color & PRAT_BOLD) {
-        n += printf("%s", at_bold);
+        printf("%s", at_bold);
         color &= ~PRAT_BOLD;
         isbold = 1;
     }
@@ -175,6 +175,7 @@ int poldek_term_puts_c(int color, const char *s)
     if (color & PRAT_BOLD) {
         printf("%s", at_bold);
         color &= ~PRAT_BOLD;
+        isbold = 1;
     }
 
     return printf("%s%s%s%s", pr_colors[color].seq, s, color_default,
@@ -243,7 +244,12 @@ int poldek_term_init(int force_color)
 
 void poldek_term_destroy(void)
 {
+    if (!sigwinch_attached)
+        return;
+
     signal(SIGWINCH, orig_sigwinch_handler);
+    orig_sigwinch_handler = NULL;
+    sigwinch_attached = 0;
 }
 
 

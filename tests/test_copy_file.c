@@ -48,4 +48,31 @@ START_TEST (test_copy_file_cp_not_started) {
 }
 END_TEST
 
-NTEST_RUNNER("copy_file", test_copy_file_cp_not_started);
+/* cp starts but cannot write the destination: the failure is reported */
+START_TEST (test_copy_file_cp_fails) {
+    char dir[PATH_MAX], src[PATH_MAX], dst[PATH_MAX];
+    const char *tmpdir = getenv_path("TMPDIR");
+    int rc;
+
+    n_snprintf(dir, sizeof(dir), "%s/poldek-copy-fail-XXXXXX",
+               tmpdir ? tmpdir : "/tmp");
+    fail_if(mkdtemp(dir) == NULL, "mkdtemp %s: %s", dir, strerror(errno));
+    n_snprintf(src, sizeof(src), "%s/src", dir);
+    n_snprintf(dst, sizeof(dst), "%s/missing/dst", dir);
+
+    FILE *f = fopen(src, "wx");
+    fail_if(f == NULL, "cannot create %s: %s", src, strerror(errno));
+    fputs("data\n", f);
+    fclose(f);
+
+    rc = poldek_util_copy_file(src, dst);
+    fail_unless(rc == 0, "copying reported success, but cp failed");
+    fail_if(access(dst, F_OK) == 0, "%s exists", dst);
+
+    unlink(src);
+    rmdir(dir);
+}
+END_TEST
+
+NTEST_RUNNER("copy_file", test_copy_file_cp_not_started,
+             test_copy_file_cp_fails);

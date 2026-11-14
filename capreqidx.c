@@ -29,7 +29,7 @@
 
 static void capreq_ent_free(struct capreq_idx_ent *ent)
 {
-    DBGF("ent %p, %p %d, %d\n", ent, ent->pkgs, ent->_size, ent->items);
+    DBGF("ent %p, %p %u, %u\n", ent, ent->pkgs, ent->_size, ent->items);
     if (ent->_size > 1)
         free(ent->pkgs);
 }
@@ -296,6 +296,7 @@ void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
     }
 }
 
+#if ENABLE_TRACE
 void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
 {
     tn_array *keys = n_oash_keys(idx->ht);
@@ -310,7 +311,7 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
 
     FILE *f = fopen(path, "w");
     while ((ent = n_oash_it_get(&it, &key)) != NULL) {
-        fprintf(f, "%d %s %s\n", ent->items, key, prefix);
+        fprintf(f, "%u %s %s\n", ent->items, key, prefix);
     }
     fclose(f);
 
@@ -328,6 +329,7 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
             printf("%s: %d: %d\n", prefix, i, stats[i]);
     }
 }
+#endif
 
 const
 struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,

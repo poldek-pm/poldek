@@ -144,9 +144,6 @@ static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
             file_index_add_basename(fidx, fidx_dir,
                                     flent->files[j], (struct pkg*)pkg);
         }
-        // XXX not needed (probably)
-        //if (setup)
-        //    file_index_setup_idxdir(fidx_dir);
     }
     return 1;
 }

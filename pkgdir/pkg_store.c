@@ -115,10 +115,8 @@ int pkg_store_skiptag(int tag, int tag_binsize, tn_stream *st)
 
         default:
             return 0;
-            break;
     }
     return 1;
-    return n_stream_seek(st, 1, SEEK_CUR) == 0; /* skip ending '\n' */
 }
 
 
@@ -378,8 +376,8 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf,
 }
 
 
-int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
-              tn_array *exclpath, unsigned flags)
+int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *exclpath,
+              tn_array *depdirs, unsigned flags)
 {
     int ncaps;
 
@@ -427,7 +425,7 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     }
 
     //mem_info(-10, "before fl");
-    pkg_store_fl(pkg, nbuf, depdirs, exclpath, flags);
+    pkg_store_fl(pkg, nbuf, exclpath, depdirs, flags);
     //mem_info(-10, "after fl");
 
     /* removed support for uinfo in main index,
@@ -437,19 +435,4 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     n_buf_printf(nbuf, "\n");
 
     return n_buf_size(nbuf);
-}
-
-
-int pkg_store_st(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
-                 unsigned flags)
-{
-    tn_buf *nbuf;
-    int n = 0;
-
-    nbuf = n_buf_new(1024 * 8);
-    if (pkg_store(pkg, nbuf, NULL, depdirs, flags) > 0)
-        n = n_stream_write(st, n_buf_ptr(nbuf), n_buf_size(nbuf));
-
-    n_buf_free(nbuf);
-    return n;
 }

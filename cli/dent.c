@@ -86,6 +86,7 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
         n_array_ctl(ent->pkg_dent_ents, TN_ARRAY_AUTOSORTED);
 
     } else {
+        n_assert(pkg);
         ent->name = pkg_id(pkg);
         ent->pkg_dent_pkg = pkg_link(pkg);
     }
@@ -182,7 +183,6 @@ int pkg_dent_cmp_bday(struct pkg_dent *ent1, struct pkg_dent *ent2)
     gmt_off = poldek_util_get_gmt_offs();
 
     cmprc = ((btime1 + gmt_off) / 86400) - ((btime2 + gmt_off) / 86400);
-    cmprc = btime1 - btime2;
 
     if (cmprc)
         return cmprc;
@@ -523,15 +523,6 @@ int poclidek_chdir(struct poclidek_ctx *cctx, const char *path)
     }
     n_str_tokl_free(tl_save);
     return rc;
-}
-
-
-int poclidek_chdirent(struct poclidek_ctx *cctx, const struct pkg_dent *dent)
-{
-    char path[PATH_MAX];
-
-    poclidek_dent_dirpath(path, sizeof(path), dent);
-    return poclidek_chdir(cctx, path);
 }
 
 
