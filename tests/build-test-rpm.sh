@@ -121,7 +121,6 @@ echo "Summary(de): de $name" >> $SPEC
 echo "Group: System" >> $SPEC
 echo "License: foo" >> $SPEC
 #echo "BuildArch: $arch" >> $SPEC
-echo "BuildRoot: $TMPDIR/%{name}-%{version}-root-%(id -u -n)-$$" >> $SPEC
 [ -n "$provides" ] &&  echo "Provides: $provides" >> $SPEC
 [ -n "$requires" ] && echo "Requires: $requires" >> $SPEC
 [ -n "$suggests" ] && echo "Suggests: $suggests" >> $SPEC
@@ -205,7 +204,7 @@ RPMBUILD_DIGEST=$(sha1sum "$RPMBUILD_BIN" | awk '{print $1}')
 BUILD_ID="${RPMBUILD_VERSION}-${RPMBUILD_DIGEST}"
 
 # hash the spec minus environment-dependent lines (PID, paths, invocation)
-SPEC_HASH=$(grep -v -E '^(BuildRoot:|%description|Package build by)' "$SPEC" |
+SPEC_HASH=$(grep -v -E '^(%description|Package build by)' "$SPEC" |
             grep -v '\$\$' |
             sha1sum | awk '{print $1}')
 
@@ -231,9 +230,13 @@ if [ -f "$CACHED_RPM" ]; then
     exit 0
 fi
 
+# rpmbuild works in %{_builddir}/<name>-<version>-build and names files in
+# TMPDIR after the package: each build gets a directory of its own for both
+BUILDDIR=$(mktemp -d "$TMPDIR/$name.rpmbuild.XXXXXX") || exit 1
 # the build time is SOURCE_DATE_EPOCH when the caller sets it
-rpmbuild --define 'use_source_date_epoch_as_buildtime 1' --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC
+TMPDIR="$BUILDDIR" rpmbuild --define 'use_source_date_epoch_as_buildtime 1' --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --define "_builddir $BUILDDIR" --target $arch -bb $SPEC
 ec=$?
+rm -rf "$BUILDDIR"
 # rpmorg stores packages in $arch subdir
 if [ -d "$rpmdir/$arch" ]; then
     mv -f $rpmdir/$arch/$name-*.rpm $rpmdir/ 2>/dev/null
