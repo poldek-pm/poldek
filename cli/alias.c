@@ -74,18 +74,18 @@ static void free_alias(struct poclidek_cmd *cmd)
 
 static struct poclidek_cmd *new_command_alias(const char *name, const char *cmdline)
 {
-    struct poclidek_cmd *alias;
+    struct poclidek_cmd *cmd;
 
-    alias = n_malloc(sizeof(*alias));
-    memset(alias, 0, sizeof(*alias));
-    alias->flags = COMMAND_IS_ALIAS | COMMAND__MALLOCED;
-    alias->name = n_strdup(name);
-    alias->cmdline = n_strdup(cmdline);
-    alias->aliasto = NULL;
-    alias->_free = free_alias;
-    if (strchr(alias->cmdline, '%'))
-        alias->flags |= COMMAND_PARAMETERIZED;
-    return alias;
+    cmd = n_malloc(sizeof(*cmd));
+    memset(cmd, 0, sizeof(*cmd));
+    cmd->flags = COMMAND_IS_ALIAS | COMMAND__MALLOCED;
+    cmd->name = n_strdup(name);
+    cmd->cmdline = n_strdup(cmdline);
+    cmd->aliasto = NULL;
+    cmd->_free = free_alias;
+    if (strchr(cmd->cmdline, '%'))
+        cmd->flags |= COMMAND_PARAMETERIZED;
+    return cmd;
 }
 
 /* determine to what command alias is aliased */
