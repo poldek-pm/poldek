@@ -104,6 +104,8 @@ char *pndir_dscr_pathname(char *dest, size_t size, const char *idxpath,
     char suffix[128];
     const char *idstr, *langid;
 
+    n_assert(tss);
+
     pndir_db_dscr_idstr(lang, &idstr, &langid);
     n_snprintf(suffix, sizeof(suffix), "%s%s%s%s%s", pndir_desc_suffix,
                *langid ? "." : "", langid, *tss ? "." : "", tss);

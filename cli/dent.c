@@ -86,6 +86,7 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
         n_array_ctl(ent->pkg_dent_ents, TN_ARRAY_AUTOSORTED);
 
     } else {
+        n_assert(pkg);
         ent->name = pkg_id(pkg);
         ent->pkg_dent_pkg = pkg_link(pkg);
     }

@@ -158,7 +158,7 @@ struct pkg *iset_has_kind_of_pkg(struct iset *iset, const struct pkg *pkg)
 
 int iset_provides(struct iset *iset, const struct capreq *cap)
 {
-    char             *dirname, *basename, path[PATH_MAX];
+    char             *dirname = NULL, *basename = NULL, path[PATH_MAX];
     char             *capnvr = NULL, *capname = NULL;
     int              i, is_file = 0;
     struct pkg       *pkg = NULL;

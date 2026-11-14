@@ -1859,10 +1859,12 @@ tn_hash *poldek_get_config(struct poldek_ctx *ctx)
 
 
 /* for autoconf */
+void PACKAGE_VERSION_FUNCNAME (void) __attribute__((unused));
 void PACKAGE_VERSION_FUNCNAME (void)
 {}
 
 
 /* for autoconf */
+void PACKAGE_SERIES_FUNCNAME (void) __attribute__((unused));
 void PACKAGE_SERIES_FUNCNAME (void)
 {}

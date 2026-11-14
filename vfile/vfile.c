@@ -267,7 +267,7 @@ int vfile_configure(int param, ...)
         };
 
         case VFILE_CONF_PROXY: {
-            char *proto, *url;
+            char *proto, *url = NULL;
 
             proto = va_arg(ap, char *);
             if (proto)

@@ -451,7 +451,7 @@ static tn_array *parse_changelog(tn_alloc *na, tn_array *lines)
                 while (*ts && isspace(*ts))
                     ts++;
 
-                if (ts)
+                if (*ts)
                     ent->ts = pkgu__parse_datetime(ts);
             }
             continue;

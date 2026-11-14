@@ -489,7 +489,7 @@ const char *pkgroup(struct pkgroup_idx *idx, int groupid)
     if (group)
         return _(group);
 
-    return group;
+    return NULL;
 }
 
 static int pkgroupid(struct pkgroup_idx *idx, const char *name)

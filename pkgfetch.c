@@ -92,7 +92,6 @@ void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
     }
     if (bytesget) {
         char buf[64];
-        n_assert(bytesget);
 
         snprintf_size(buf, sizeof(buf), bytesget, 1, 1);
         msg(1, _("Need to get %s of archives"), buf);
