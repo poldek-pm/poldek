@@ -98,6 +98,9 @@ vfscripts_SCRIPTS = scripts/zlib-in-rpm.sh scripts/vfjuggle scripts/vfcompr scri
 EXTRA_DIST = \
 	     $(vfscripts_SCRIPTS) \
 	     Makefile.extra \
+	     tests/cppcheck/cppcheck.sh \
+	     tests/cppcheck/trurl/nassert.h \
+	     tests/cppcheck/trurl/ndie.h \
 	     poldek.spec \
 	     package-set.sample scripts/vfjugglerc.sample \
 	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \
