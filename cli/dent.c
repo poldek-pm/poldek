@@ -525,15 +525,6 @@ int poclidek_chdir(struct poclidek_ctx *cctx, const char *path)
 }
 
 
-int poclidek_chdirent(struct poclidek_ctx *cctx, const struct pkg_dent *dent)
-{
-    char path[PATH_MAX];
-
-    poclidek_dent_dirpath(path, sizeof(path), dent);
-    return poclidek_chdir(cctx, path);
-}
-
-
 struct pkg_dent *poclidek_dent_ldfind(struct poclidek_ctx *cctx, const char *path, unsigned flags)
 {
     struct pkg_dent *dent;

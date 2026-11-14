@@ -424,13 +424,6 @@ int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
-int pkg_eq_name_evr(const struct pkg *p1, const struct pkg *p2)
-{
-    if (p1 == p2)
-        return 1;
-    return pkg_cmp_name_evr(p1, p2);
-}
-
 int pkg_cmp_pri_name_evr_rev(struct pkg *p1, struct pkg *p2)
 {
     register int cmprc = 0;

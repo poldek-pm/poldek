@@ -288,15 +288,6 @@ int arg_packages_add_pkgmask(struct arg_packages *aps, const char *mask)
     return 1;
 }
 
-int arg_packages_add_pkgmasks(struct arg_packages *aps, const tn_array *masks)
-{
-    int i;
-    for (i=0; i < n_array_size(masks); i++)
-        n_array_push(aps->package_masks, n_strdup(n_array_nth(masks, i)));
-    return 1;
-}
-
-
 static
 int is_package_file(const char *path)
 {

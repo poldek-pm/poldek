@@ -250,16 +250,3 @@ int iset_reqs_score(struct iset *iset, const struct pkg *pkg)
 
     return score;
 }
-
-void iset_dump(struct iset *iset)
-{
-    int i;
-
-    printf("iset dump %p: ",  iset);
-
-    for (i=0; i<n_array_size(iset->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(iset->pkgs, i);
-        printf("%s, ", pkg_snprintf_s(pkg));
-    }
-    printf("\n");
-}

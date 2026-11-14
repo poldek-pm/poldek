@@ -1817,11 +1817,6 @@ int poldek_setup(struct poldek_ctx *ctx)
 }
 
 
-int poldek_is_sources_loaded(struct poldek_ctx *ctx)
-{
-    return ctx->_iflags & SOURCES_LOADED;
-}
-
 int poldek_load_sources(struct poldek_ctx *ctx)
 {
     int rc;
@@ -1860,11 +1855,6 @@ tn_hash *poldek_get_config(struct poldek_ctx *ctx)
     return ctx->htconf;
 }
 
-
-const char *poldek_version(void)
-{
-    return VERSION;
-}
 
 /* for autoconf */
 void PACKAGE_VERSION_FUNCNAME (void)
