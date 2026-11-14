@@ -78,7 +78,6 @@ EXPORT struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 EXPORT int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 
 #define POLDEK_LOADCONF_NOCONF (1 << 0) /* do not load configuration from file */
-#define POLDEK_LOADCONF_UPCONF (1 << 1) /* do update of remote config files    */
 EXPORT int poldek_load_config(struct poldek_ctx *ctx, const char *path,
                               tn_array *addon_cnflines, unsigned flags);
 

@@ -751,57 +751,35 @@ static void afile_close(struct afile *af)
 
 
 static struct afile *afile_open(const char *path, const char *parent_path,
-                                const char *section_to_load, int update)
+                                const char *section_to_load)
 {
     char incpath[PATH_MAX];
     const char    *ppath;
     struct afile  *af = NULL;
     struct vfile  *vf;
-    int           is_local, is_parent_remote = 0, vfmode;
 
     ppath = parent_path;        /* just for short */
 
-    is_local = (vf_url_type(path) == VFURL_PATH);
-    if (ppath)
-        is_parent_remote = (vf_url_type(ppath) != VFURL_PATH);
+    /* relative: %include foo.conf */
+    if (ppath && *path != '/' && strrchr(ppath, '/') != NULL) {
+        char *s;
+        int n;
 
-    if (ppath) {
-        int prepend = 0;
+        n = n_snprintf(incpath, sizeof(incpath), "%s", ppath);
+        s = strrchr(incpath, '/');
+        n_assert(s);
 
-        /* relative: %include foo.conf */
-        if (is_local && *path != '/' && strrchr(ppath, '/') != NULL)
-            prepend = 1;
-
-        /* parent is remote -> included file must be remote too */
-        if (is_parent_remote && is_local)
-            prepend = 1;
-
-        if (prepend) {
-            char *s;
-            int n;
-
-            n = n_snprintf(incpath, sizeof(incpath), "%s", ppath);
-            s = strrchr(incpath, '/');
-            n_assert(s);
-
-            n_snprintf(s + 1, sizeof(incpath) - n, "%s", path);
-            path = incpath;
-        }
+        n_snprintf(s + 1, sizeof(incpath) - n, "%s", path);
+        path = incpath;
     }
 
     if (ppath)  /* included file */
         msgn(3, "-- %s --", path);
 
-
-    vfmode = VFM_RO | VFM_UNCOMPR | VFM_NOEMPTY;
-    if (!update)
-        vfmode |= VFM_CACHE;
-    else
-        vfmode |= VFM_NODEL | VFM_CACHE_NODEL;
-
-    if (update) DBGF("UPDATING %s...\n", path);
-
-    if ((vf = vfile_open(path, VFT_TRURLIO, vfmode)) == NULL)
+    /* a configuration is a local file: no fetching, and no cached copy of a
+       path that used to be remote can shadow it */
+    if ((vf = vfile_open(path, VFT_TRURLIO,
+                         VFM_RO | VFM_UNCOMPR | VFM_NOEMPTY)) == NULL)
         return NULL;
 
     af = afile_new(vf, path, section_to_load);
@@ -1251,7 +1229,7 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
     int       nline = 0, is_err = 0;
     tn_hash   *ht, *ht_sect; /*, *ht_global_sect;*/
     char      buf[PATH_MAX], *sectnam, *dn;
-    int       validate = 1, update = 0;
+    int       validate = 1;
     unsigned  addparam_flags = 0;
 
     if (flags & POLDEK_LDCONF_FOREIGN) {
@@ -1264,9 +1242,6 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
 
     if (flags & POLDEK_LDCONF_STRICT)
         addparam_flags |= ADD_PARAM_STRICT;
-
-    if (flags & POLDEK_LDCONF_UPDATE)
-        update = 1;
 
     if (n_hash_exists(af_htconf, path)) {
         logn(LOGERR, "%s: included twice", path);
@@ -1284,7 +1259,7 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
     if (dn)
         poldek_conf_set(ht_sect, "__dirname", dn);
 
-    af = afile_open(path, parent_path, section_to_load, update);
+    af = afile_open(path, parent_path, section_to_load);
     if (af == NULL) {
         is_err = 1;
         goto l_end;
@@ -1322,6 +1297,14 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
                 is_err = 1;
                 goto l_end;
             }
+
+            if (vf_url_type(line) != VFURL_PATH) {
+                logn(LOGERR, _("%s:%d: a remote directory is not included; "
+                               "a configuration is added with 'poldek repo add'"),
+                     af->path, nline);
+                is_err = 1;
+                goto l_end;
+            }
             DBGF("includedir %s\n", line);
 
             if ((configs = includedir_files(line, af->path)) == NULL)
@@ -1354,6 +1337,14 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
 
             if (line == NULL) {
                 logn(LOGERR, _("%s:%d: wrong %%include"), af->path, nline);
+                is_err = 1;
+                goto l_end;
+            }
+
+            if (vf_url_type(line) != VFURL_PATH) {
+                logn(LOGERR, _("%s:%d: a remote configuration is not included; "
+                               "use 'poldek repo add %s'"), af->path, nline,
+                     line);
                 is_err = 1;
                 goto l_end;
             }
@@ -1653,13 +1644,18 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
         path = confpath;
 
         /* avoid error messages with NOVALIDATE (lib_init's default config preload) */
-        if ((flags & POLDEK_LDCONF_NOVALIDATE) &&
-            vf_url_type(path) == VFURL_PATH && access(path, R_OK) != 0) {
+        if ((flags & POLDEK_LDCONF_NOVALIDATE) && access(path, R_OK) != 0)
             return NULL;
-        }
 
     }
     n_assert(path);
+
+    /* a remote configuration is added once with `repo add`, not read here */
+    if (vf_url_type(path) != VFURL_PATH) {
+        logn(LOGERR, _("%s: a remote configuration is not read; use "
+                       "'poldek repo add %s'"), path, path);
+        return NULL;
+    }
 
     if (flags & POLDEK_LDCONF_GLOBALONLY) {
         //section_to_load = global_tag;

@@ -262,31 +262,16 @@ testConfInclude()
 }
 
 
-testRemoteConfAndMacros()
+# macros are local to the file that declares them, also across %include: the
+# includer's _name_prefix does not leak into the included file, nor the other
+# way round
+testIncludeAndMacros()
 {
-
     create_local_conf
 
-    POLDEK_TESTING_PRELOAD_CONF="$SHLIBDIR/vftest-fetch.conf"
-    export POLDEK_TESTING_PRELOAD_CONF
-
-    echo "
-[global]
-%include ${REPOURL}remote.conf
-
-[source]
-name = %{_name_prefix}3
-type = pndir
-path = ${REPOURL}3
-
-[source]
-name = %{_name_prefix}4
-type = pndir
-path = ${REPOURL}4
-" >> $TMPDIR/poldek.conf
-
-    echo "
+    cat > $TMPDIR/included.conf <<EOF
 _name_prefix = xtest
+
 [source]
 name = %{_name_prefix}1
 type = pndir
@@ -296,89 +281,88 @@ path = ${REPOURL}x1
 name = %{_name_prefix}2
 type = pdir
 path = ${REPOURL}x2
-" > $REPO/remote.conf
+EOF
 
+    cat >> $TMPDIR/poldek.conf <<EOF
 
-    poldek_l="$POLDEK --conf $TMPDIR/poldek.conf -q -l"
-    poldek_l_cdir="$poldek_l --cachedir $CACHEDIR"
+[global]
+%include $TMPDIR/included.conf
 
-    n=$($poldek_l --noconf | grep 'test://' | wc -l)
-    assertEquals "--noconf failed" "$n" "0"
-
-    #$POLDEK --conf $TMPDIR/poldek.conf  -l --cachedir $CACHEDIR
-
-    n=$($poldek_l_cdir | grep 'test://' | wc -l)
-    assertEquals "6 sources expected, got $n" "$n" "6"
-
-    is_verbose_mode && $poldek_l_cdir
-
-    n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
-    [ "$n" == "4" ] && assertEquals "4 sources expected, but not those" "$n" "4"
-
-    n=$($poldek_l_cdir  -l | grep -E '^xtest[1234] ' | wc -l)
-    [ "$n" == "2" ] && assertEquals "2 xtest* sources expected, but not those $n" "$n" "2"
-
-    msgn "upconf"
-
-    echo "
 [source]
 name = %{_name_prefix}3
 type = pndir
-path = ${REPOURL}x3
+path = ${REPOURL}3
 
 [source]
 name = %{_name_prefix}4
 type = pdir
-path = ${REPOURL}x4
-" >> $REPO/remote.conf
+path = ${REPOURL}4
+EOF
 
-    POLDEK_TESTING_DENIED_FILES="remote.conf"
-    #cat $TMPDIR/poldek.conf
-    is_verbose_mode && echo $poldek_l_cdir && $poldek_l_cdir
+    poldek_l="$POLDEK --conf $TMPDIR/poldek.conf -q -l"
+    is_verbose_mode && $poldek_l
 
-    n=$($poldek_l_cdir | grep 'test://' | wc -l)
-    assertEquals "6 sources expected" "$n" "6"
-    #$POLDEK --conf $TMPDIR/poldek.conf -q  -l | grep -E '^test[12] '
-    n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
-    [ "$n" == "4" ] && assertEquals "4 sources expected, but not those" "$n" "4"
+    n=$($poldek_l | grep 'test://' | wc -l)
+    assertEquals "6 sources expected, got $n" "$n" "6"
 
-    POLDEK_TESTING_DENIED_FILES=""
-    $POLDEK --conf $TMPDIR/poldek.conf --upconf --cachedir $CACHEDIR
+    n=$($poldek_l | grep -E '^test[1234] ' | wc -l)
+    assertEquals "4 test sources expected, got $n" "$n" "4"
 
-    POLDEK_TESTING_DENIED_FILES="remote.conf"
-    n=$($poldek_l_cdir | grep 'test://' | wc -l)
-    assertEquals "8 sources exepected, got $n" "$n" "8"
+    n=$($poldek_l | grep -E '^xtest[12] ' | wc -l)
+    assertEquals "2 xtest sources expected, got $n" "$n" "2"
+}
 
-    n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
-    [ "$n" == "4" ] && assertEquals "4 sources expected, but not those" "$n" "4"
+# a remote configuration is not read at load time any more: it is added once
+# with repo add and kept in repos.d
+testRemoteIncludeRefused()
+{
+    cat > $TMPDIR/remote-include.conf <<EOF
+[global]
+%include http://example.com/remote.conf
+EOF
 
-    n=$($poldek_l_cdir | grep -E '^xtest[1234] ' | wc -l)
-    [ "$n" == "4" ] && assertEquals "4 sources expected, but not those" "$n" "4"
+    out=$($POLDEK --conf $TMPDIR/remote-include.conf -q -l 2>&1)
+    rc=$?
+    assertEquals "a remote %include should fail: $out" "1" "$rc"
+    echo "$out" | grep -q "a remote configuration is not included" || \
+        fail "no reason given: $out"
+    echo "$out" | grep -q "poldek repo add http://example.com/remote.conf" || \
+        fail "no hint to repo add: $out"
 
-    n=$(find $CACHEDIR -name \*.conf | wc -l)
-    assertEquals "Expected cachedir/remote.conf only" "$n" "1"
+    cat > $TMPDIR/remote-includedir.conf <<EOF
+[global]
+%includedir http://example.com/repos.d
+EOF
 
-    #find $CACHEDIR
-    POLDEK_TESTING_DENIED_FILES="remote.conf"
+    out=$($POLDEK --conf $TMPDIR/remote-includedir.conf -q -l 2>&1)
+    rc=$?
+    assertEquals "a remote %includedir should fail: $out" "1" "$rc"
+    echo "$out" | grep -q "a remote directory is not included" || \
+        fail "no reason given: $out"
+}
 
-    msgn "whole conf remote"
-    $POLDEK --conf test://$TMPDIR/poldek.conf --cachedir $CACHEDIR -q -l >/dev/null
-    is_verbose_mode && $poldek_l_cdir
+# nor is a remote configuration taken as the configuration itself
+testRemoteConfRefused()
+{
+    out=$($POLDEK --conf http://example.com/poldek.conf -q -l 2>&1)
+    rc=$?
+    assertEquals "a remote --conf should fail: $out" "1" "$rc"
+    echo "$out" | grep -q "a remote configuration is not read" || \
+        fail "no reason given: $out"
+    echo "$out" | grep -q "poldek repo add http://example.com/poldek.conf" || \
+        fail "no hint to repo add: $out"
+}
 
-    n=$($poldek_l_cdir | grep 'test://' | wc -l)
-    assertEquals "8 sources exepected, got $n" "$n" "8"
-
-    n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
-    [ "$n" == "4" ] && assertEquals "4 sources expected, but not those" "$n" "4"
-
-    n=$($poldek_l_cdir | grep -E '^xtest[1234] ' | wc -l)
-    [ "$n" == "4" ] && assertEquals "4 sources expected, but not those" "$n" "4"
-
-    n=$(find $CACHEDIR -name remote.conf | wc -l)
-    assertEquals "Where is remote.conf cached copy??" "$n" "1"
-
-    n=$(find $CACHEDIR -name poldek.conf | wc -l)
-    assertEquals "Where is poldek.conf cached copy??" "$n" "1"
+# --upconf went with the remote configurations
+testUpconfRemoved()
+{
+    out=$($POLDEK --upconf -q -l 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "--upconf should not be accepted: $out"
+    fi
+    echo "$out" | grep -q "upconf" || fail "no reason given: $out"
+    $POLDEK --help 2>&1 | grep -q -- "--upconf" && fail "--upconf is still in --help"
+    return 0
 }
 
 # argp prints the bug address only if it can see poldek's argp_program_bug_address

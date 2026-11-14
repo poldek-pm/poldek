@@ -69,13 +69,6 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.upconf">--upconf </option></term>
-  <listitem>
-   <para>
-      Update remote configuration files (if any)
-   </para>
-  </listitem>
-</varlistentry>
 <varlistentry><term><option id="ref.cmdl.log">--log=FILE </option></term>
   <listitem>
    <para>
