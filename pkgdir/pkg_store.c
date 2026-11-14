@@ -115,10 +115,8 @@ int pkg_store_skiptag(int tag, int tag_binsize, tn_stream *st)
 
         default:
             return 0;
-            break;
     }
     return 1;
-    return n_stream_seek(st, 1, SEEK_CUR) == 0; /* skip ending '\n' */
 }
 
 

@@ -1064,8 +1064,6 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
         orig = load_orig_pkgdir(pkgdir, path, idxpath, type);
 
 
-    n_assert(nerr == 0);
-
     if (orig == NULL) {
         if (!do_create(pkgdir, type, path, flags))
             nerr++;
