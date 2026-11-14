@@ -60,9 +60,6 @@ struct pkg;
 int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
               tn_array *exclpath, unsigned flags);
 
-int pkg_store_st(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
-                 unsigned flags);
-
 struct pkg_offs {
     off_t  nodep_files_offs;  /* no dep files offset in index */
     off_t  pkguinf_offs;

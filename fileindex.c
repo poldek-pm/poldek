@@ -169,11 +169,6 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
     return files;
 }
 
-void file_index_setup_idxdir(void *files)
-{
-    n_array_sort(files);
-}
-
 int file_index_add_basename(struct file_index *fi, void *fidx_dir,
                             struct flfile *flfile,
                             struct pkg *pkg)
@@ -304,18 +299,6 @@ int file_index_lookup(const struct file_index *fi,
         *dirname = '/';
 
     return findfile(fi, dirname, basename, pkgs, size);
-}
-
-static void sort_files(const char *key, void *data)
-{
-    key = key;
-    n_array_sort(data);
-}
-
-
-void file_index_setup(struct file_index *fi)
-{
-    n_hash_map(fi->dirs, sort_files);
 }
 
 

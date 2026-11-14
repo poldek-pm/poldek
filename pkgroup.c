@@ -88,31 +88,6 @@ int tr_store(struct tr *tr, tn_buf *nbuf)
 }
 
 static
-struct tr *tr_restore_st(tn_stream *st)
-{
-    int      len;
-    uint8_t  nlen;
-    char     buf[255], *p;
-
-    if (n_stream_read(st, &nlen, sizeof(nlen)) != sizeof(nlen))
-        return NULL;
-
-    len = nlen;
-    if (n_stream_read(st, buf, len) != len)
-        return NULL;
-
-    buf[len] = '\0';
-
-    if ((p = strchr(buf, ':')) == NULL)
-        return NULL;
-
-    *p++ = '\0';
-
-    return tr_new(buf, p);
-}
-
-
-static
 struct tr *tr_restore(tn_buf_it *it)
 {
     int      len;
@@ -257,52 +232,6 @@ int pkgroup_store(struct pkgroup *gr, tn_buf *nbuf)
 
 
 static
-struct pkgroup *pkgroup_restore_st(tn_stream *st)
-{
-    int             nerr = 0, i;
-    uint32_t        nid, ntrs;
-	uint8_t         nlen;
-    struct pkgroup  *gr;
-    char            name[256];
-
-    if (!n_stream_read_uint32(st, &nid))
-        return 0;
-
-
-    if (!n_stream_read_uint8(st, &nlen))
-        return 0;
-
-    if (n_stream_read(st, name, nlen) != nlen)
-        return 0;
-
-    name[nlen] = '\0';
-    DBGF("gid %d, name[%d] = %s\n", nid, nlen, name);
-
-    if (!n_stream_read_uint32(st, &ntrs))
-        return 0;
-
-    gr = pkgroup_new(nid, name);
-
-    for (i=0; i < (int)ntrs; i++) {
-        struct tr *tr;
-
-        if ((tr = tr_restore_st(st)) == NULL)
-            nerr++;
-        else
-            pkgroup_add_tr(gr, tr);
-        //printf("gr tr %s %s\n", tr->lang, tr->name);
-    }
-
-    if (nerr > 0) {
-        pkgroup_free(gr);
-        gr = NULL;
-    }
-
-    return gr;
-}
-
-
-static
 struct pkgroup *pkgroup_restore(tn_buf_it *it)
 {
     int             nerr = 0, i;
@@ -404,28 +333,6 @@ int pkgroup_idx_store(struct pkgroup_idx *idx, tn_buf *nbuf)
 }
 
 
-struct pkgroup_idx *pkgroup_idx_restore_st(tn_stream *st, unsigned flags)
-{
-    uint32_t nsize;
-    struct pkgroup_idx *idx;
-    int i;
-
-    flags = flags;
-    if (!n_stream_read_uint32(st, &nsize))
-        return NULL;
-
-    idx = pkgroup_idx_new();
-
-    for (i=0; i < (int)nsize; i++)
-        n_array_push(idx->arr, pkgroup_restore_st(st));
-
-//    if (flags & PKGROUP_MKNAMIDX)
-//        ;
-    n_array_sort(idx->arr);
-    n_stream_seek(st, 1, SEEK_CUR); /* eat '\n' */
-    return idx;
-}
-
 struct pkgroup_idx *pkgroup_idx_restore(tn_buf_it *it, unsigned flags)
 {
     uint32_t nsize;
@@ -522,22 +429,6 @@ int pkgroup_idx_add(struct pkgroup_idx *idx, const char *group)
     if (gr)
         return gr->id;
     return 0;
-}
-
-int pkgroup_idx_add_i18n(struct pkgroup_idx *idx, int groupid,
-                         const char *group, const char *lang)
-{
-    struct pkgroup *gr, tmpgr;
-
-    n_assert(lang);
-    n_assert(strcmp(lang, "C") != 0);
-
-    tmpgr.id = groupid;
-    if ((gr = n_array_bsearch(idx->arr, &tmpgr)) == NULL)
-        return 0;
-
-    pkgroup_add(gr, lang, group);
-    return gr->id;
 }
 
 

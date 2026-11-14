@@ -436,18 +436,3 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
 
     return n_buf_size(nbuf);
 }
-
-
-int pkg_store_st(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
-                 unsigned flags)
-{
-    tn_buf *nbuf;
-    int n = 0;
-
-    nbuf = n_buf_new(1024 * 8);
-    if (pkg_store(pkg, nbuf, NULL, depdirs, flags) > 0)
-        n = n_stream_write(st, n_buf_ptr(nbuf), n_buf_size(nbuf));
-
-    n_buf_free(nbuf);
-    return n;
-}
