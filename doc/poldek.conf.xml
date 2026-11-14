@@ -60,10 +60,12 @@ path = $HOME/foo
 <description>
 [para]
 File can be combined from multiple configuration files with [option]%include[/option]
-directive, examples:
+directive. Its argument is either a file, or a directory: every "*.conf"
+file in a directory is included, in name order. Examples:
 [screen]
 %include /etc/foo.conf            # simply include /etc/foo.conf
 %include foo.conf                 # include foo.conf from directory of includer
+%include repos.d                  # include every *.conf from the repos.d subdirectory
 [/screen]
 [/para]
 [para]
@@ -74,12 +76,9 @@ repositories directory afterwards.
 [/para]
 
 [para]
-Second directive, [option]%includedir[/option] includes all *.conf files from given directory,
-examples:
-[screen]
-%includedir repos.d                  # include all *.conf files from repos.d subdirectory
-%includedir /etc/repos.d             # include all *.conf files from /etc/repos.d
-[/screen]
+[option]%includedir[/option] is the older name of the same directive: it
+takes a directory, or a file, exactly as [option]%include[/option] does. It
+is still accepted and a note is printed when poldek is verbose.
 [/para]
 </description>
 </section>
