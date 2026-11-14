@@ -376,8 +376,8 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf,
 }
 
 
-int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
-              tn_array *exclpath, unsigned flags)
+int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *exclpath,
+              tn_array *depdirs, unsigned flags)
 {
     int ncaps;
 
@@ -425,7 +425,7 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     }
 
     //mem_info(-10, "before fl");
-    pkg_store_fl(pkg, nbuf, depdirs, exclpath, flags);
+    pkg_store_fl(pkg, nbuf, exclpath, depdirs, flags);
     //mem_info(-10, "after fl");
 
     /* removed support for uinfo in main index,

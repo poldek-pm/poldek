@@ -57,8 +57,8 @@ int pkg_store_skiptag(int tag, int tag_binsize, tn_stream *st);
 #define PKGSTORE_RECNO       (1 << 7)
 
 struct pkg;
-int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
-              tn_array *exclpath, unsigned flags);
+int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *exclpath,
+              tn_array *depdirs, unsigned flags);
 
 struct pkg_offs {
     off_t  nodep_files_offs;  /* no dep files offset in index */
