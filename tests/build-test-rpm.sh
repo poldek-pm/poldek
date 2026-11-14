@@ -241,7 +241,11 @@ fi
 
 if [ $ec -eq 0 ]; then
     mkdir -p "$CACHE_SUBDIR"
-    cp -p "$rpmdir/$name-$version-$release.$arch.rpm" "$CACHED_RPM"
+    # copied under a temporary name, then renamed: a build reading the cache
+    # meanwhile, or after a failed copy, finds the whole package or none
+    tmp=$(mktemp "$CACHED_RPM.XXXXXX") &&
+        cp -p "$rpmdir/$name-$version-$release.$arch.rpm" "$tmp" &&
+        mv -f "$tmp" "$CACHED_RPM" || rm -f "$tmp"
 fi
 
 cat $SPEC
