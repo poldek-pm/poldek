@@ -101,21 +101,3 @@ int in_depdirs(const char *dir)
     return in_depdirs_l(dir, strlen(dir));
 }
 
-
-char *path2depdir(char *path) 
-{
-    char *p;
-    
-    n_assert(*path == '/');
-
-    if (*(path + 1) == '\0')
-        return path;
-    
-    p = strrchr(path, '/');
-
-    if (p != path)
-        *p = '\0';
-    
-    return path + 1;
-}
-
