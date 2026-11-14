@@ -99,7 +99,7 @@ int poldek_term_vprintf_c(int color, const char *fmt, va_list args)
     int n = 0, isbold = 0;
 
     if (color & PRAT_BOLD) {
-        n += printf("%s", at_bold);
+        printf("%s", at_bold);
         color &= ~PRAT_BOLD;
         isbold = 1;
     }

@@ -253,7 +253,6 @@ void visit_mark_reqs(struct pkg *parent_pkg,
 
         n_assert(!pkg_is_dep_marked(pms, rpkg->pkg));
 
-        tomark = rpkg->pkg;
         if (rpkg->flags & REQPKG_MULTI) {
             struct reqpkg *eqpkg;
             int n = 0;

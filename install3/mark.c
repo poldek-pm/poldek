@@ -99,7 +99,7 @@ int i3_mark_namegroup(struct i3ctx *ictx, struct pkg *pkg, tn_array *pkgs)
 
     n_array_sort(pkgs);
 
-    len = n_snprintf(prefix, sizeof(prefix), "%s", pkg->name);
+    n_snprintf(prefix, sizeof(prefix), "%s", pkg->name);
     if ((p = strchr(prefix, '-')))
         *p = '\0';
 

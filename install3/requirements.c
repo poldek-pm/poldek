@@ -894,7 +894,6 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     unsigned            itflags = PKG_ITER_REQIN;
     int                 nerrors = 0, backtrack = 0;
 
-    pkg = i3pkg->pkg;
     n_assert(pkg);
     n_assert(pkg->reqs);
     //n_assert(i3pkg->bypkg);
