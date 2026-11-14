@@ -244,19 +244,15 @@ void store_package(uint32_t package_no, struct pkg *pkg, struct tndb *db,
 
         klen = package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_REQDIR);
 
-        if (owned)
-            n_assert(n_array_size(owned) > 0);
-
-        if (required)
-            n_assert(n_array_size(required) > 0);
-
         if (required) {
+            n_assert(n_array_size(required) > 0);
             n_buf_clean(nbuf);
             nbuf = dirarray_join(nbuf, required, ":");
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
         }
 
         if (owned) {
+            n_assert(n_array_size(owned) > 0);
             n_buf_clean(nbuf);
             nbuf = dirarray_join(nbuf, owned, ":");
 
