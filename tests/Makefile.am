@@ -17,6 +17,8 @@ check_PROGRAMS += test_dent
 check_PROGRAMS += test_term
 # --greedy argument parsing
 check_PROGRAMS += test_greedy
+# depdirs lifetime
+check_PROGRAMS += test_depdirs
 
 TESTS = $(check_PROGRAMS)
 

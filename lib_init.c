@@ -34,6 +34,7 @@
 #include "pkgdir/pkgdir_intern.h"
 #include "pkgset.h"
 #include "conf.h"
+#include "depdirs.h"
 #include "log.h"
 #include "misc.h"
 #include "i18n.h"
@@ -1414,6 +1415,7 @@ void poldeklib_destroy(void)
     n_array_free(default_op_map);
     default_op_map = NULL;
 
+    destroy_depdirs();
     poldek_term_destroy();
     poldek_log_reset_appenders();
 }
