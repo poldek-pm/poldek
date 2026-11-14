@@ -296,6 +296,7 @@ void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
     }
 }
 
+#if ENABLE_TRACE
 void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
 {
     tn_array *keys = n_oash_keys(idx->ht);
@@ -328,6 +329,7 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
             printf("%s: %d: %d\n", prefix, i, stats[i]);
     }
 }
+#endif
 
 const
 struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
