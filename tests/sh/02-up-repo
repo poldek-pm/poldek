@@ -157,4 +157,32 @@ testUpaChangedRepoIsNotUpToDate()
     ls_expect 1
 }
 
+# "up NAME" selects sources like -n NAME does: a noautoup source is
+# updated, a wildcard matches, and an unknown name is an error
+testUpByName()
+{
+    local out rc
+
+    rm -rf $REPO/*.* $CACHEDIR/*
+    mkidx
+
+    out=$($POLDEK_UP -Oautoupa=n -Osource="test,type=pndir,noautoup $REPOURL" up test 2>&1)
+    rc=$?
+    assertEquals "up test failed: $out" 0 "$rc"
+    echo "$out" | grep -Eq 'Retrieving|is up to date|updating' || \
+        fail "up test did not update the noautoup source: $out"
+
+    out=$($POLDEK_UP -Oautoupa=n -Osource="test,type=pndir,noautoup $REPOURL" up 'te*' 2>&1)
+    rc=$?
+    assertEquals "up te* failed: $out" 0 "$rc"
+    echo "$out" | grep -Eq 'Retrieving|is up to date|updating' || \
+        fail "up te* did not match the source: $out"
+
+    out=$($POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" up nosuch 2>&1)
+    rc=$?
+    [ "$rc" -ne 0 ] || fail "up nosuch succeeded: $out"
+    echo "$out" | grep -q 'no such source' || \
+        fail "no error for an unknown source: $out"
+}
+
 . ./sh/lib/shunit2

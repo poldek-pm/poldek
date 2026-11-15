@@ -42,7 +42,7 @@ static struct argp_option options[] = {
 
 struct poclidek_cmd command_pull = {
     COMMAND_SELFARGS | COMMAND_HASVERBOSE | COMMAND_EMPTYARGS | COMMAND_BATCH,
-    "up", N_("SOURCE..."), N_("Update list of available packages"),
+    "up", N_("NAME..."), N_("Update list of available packages"),
     options, parse_opt,
     NULL, pull, NULL, arg_s_free, NULL, NULL, NULL, 0, 0,
     NULL
@@ -53,15 +53,15 @@ struct poclidek_cmd command_pull = {
 
 struct arg_s {
     unsigned            action;
-    tn_array            *repos;
+    tn_array            *names;
 };
 
 static void arg_s_free(void *ptr)
 {
     struct arg_s *arg_s = ptr;
 
-    if (arg_s->repos)
-        n_array_free(arg_s->repos);
+    if (arg_s->names)
+        n_array_free(arg_s->names);
     free(arg_s);
 }
 
@@ -86,10 +86,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_ARG:
-            if (arg_s->repos == NULL)
-                arg_s->repos = n_array_new(8, free, (tn_fn_cmp)strcmp);
+            if (arg_s->names == NULL)
+                arg_s->names = n_array_new(8, free, (tn_fn_cmp)strcmp);
 
-            n_array_push(arg_s->repos, n_strdup(arg));
+            n_array_push(arg_s->names, n_strdup(arg));
             break;
 
         default:
@@ -108,22 +108,27 @@ static int pull(struct cmdctx *cmdctx)
     if (args->action == ACTION_LIST) {
         poclidek__print_source_list(cmdctx->cctx->ctx, sources, 1);
 
-    } else {
-        if (args->repos)
-            n_array_sort(args->repos);
+    } else if (args->names) {
+        tn_array *selected = poldek_select_sources(cmdctx->cctx->ctx,
+                                                   args->names);
 
+        if (selected == NULL) {
+            nerr++;
+
+        } else {
+            if (!sources_update(selected, PKGSOURCE_UP | PKGSOURCE_FORCE))
+                nerr++;
+            n_array_free(selected);
+        }
+
+    } else {
         for (int i=0; i < n_array_size(sources); i++) {
             struct source *src = n_array_nth(sources, i);
 
-            /* a source given as a bare path (-s PATH) has no name */
-            if (args->repos && (src->name == NULL ||
-                                n_array_bsearch(args->repos, src->name) == NULL)) {
+            if (src->flags & PKGSOURCE_NOAUTOUP)
                 continue;
-            } else if (src->flags & PKGSOURCE_NOAUTOUP) {
-                continue;
-            }
 
-            if (!source_update(src, PKGSOURCE_UP | PKGSOURCE_UPAUTOA))
+            if (!source_update(src, PKGSOURCE_UP))
                 nerr++;
         }
     }

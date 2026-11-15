@@ -6,7 +6,7 @@ check_PROGRAMS = test_match test_env test_pmdb test_op test_config \
 		 test_ignore_merge test_log test_pndir test_pkgu test_sigint
 
 # a source's flags hold only its options
-check_PROGRAMS += test_source_flags
+check_PROGRAMS += test_source
 # copying fails cleanly when cp cannot be started
 check_PROGRAMS += test_copy_file
 # a ^C while a command runs, and what poldek passes on to it

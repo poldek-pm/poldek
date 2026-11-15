@@ -188,6 +188,58 @@ tn_array *poldek_get_sources(struct poldek_ctx *ctx)
     return ctx->sources ? n_ref(ctx->sources) : NULL;
 }
 
+tn_array *poldek_select_sources(struct poldek_ctx *ctx, const tn_array *patterns)
+{
+    tn_array *selected;
+    int i, j, n, *matches, nerr = 0;
+
+    n_assert(patterns);
+    n = n_array_size(patterns);
+    n_assert(n > 0);
+
+    selected = n_array_new(4, (tn_fn_free)source_free,
+                           (tn_fn_cmp)source_cmp_name);
+    matches = n_calloc(n, sizeof(*matches));
+
+    for (i = 0; i < n_array_size(ctx->sources); i++) {
+        struct source *src = n_array_nth(ctx->sources, i);
+        int matched = 0;
+
+        /* a source given as a bare path (-s PATH) has no name */
+        if (src->name == NULL)
+            continue;
+
+        for (j = 0; j < n; j++) {
+            const char *pattern = n_array_nth(patterns, j);
+
+            if (fnmatch(pattern, src->name, 0) == 0) {
+                matches[j]++;
+                matched = 1;
+            }
+        }
+
+        if (matched)
+            n_array_push(selected, source_link(src));
+    }
+
+    for (j = 0; j < n; j++) {
+        if (matches[j] == 0) {
+            logn(LOGERR, _("%s: no such source"), (char*)n_array_nth(patterns, j));
+            nerr++;
+        }
+    }
+
+    n_free(matches);
+
+    if (nerr) {
+        n_array_free(selected);
+        return NULL;
+    }
+
+    n_array_sort(selected);
+    return selected;
+}
+
 tn_array *poldek_get_pkgdirs(struct poldek_ctx *ctx)
 {
     return ctx->pkgdirs ? n_ref(ctx->pkgdirs) : NULL;
