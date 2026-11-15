@@ -213,7 +213,9 @@ EOF
     grep -qE '^path = /' $fn && fail "path was expanded to absolute local path in saved file"
     grep -q '^auto = no$' $fn || fail "missing auto = no in saved file"
 
-    out=$($POLDEK --cachedir $CACHEDIR repo ls 2>&1)
+    # a long path is shortened in the listing unless the width is known: the
+    # path below is whatever TMPDIR the run got, so keep it from being elided
+    out=$(env COLUMNS=500 $POLDEK --cachedir $CACHEDIR repo ls 2>&1)
 
     echo "$out" | grep -q "baseurl-test-19" || fail "source not listed: $out"
     echo "$out" | grep -q "test:/$REMOTE_CONF" || fail "_origin URL not listed: $out"
