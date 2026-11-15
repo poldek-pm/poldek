@@ -92,6 +92,10 @@ EXPORT int poldek_is_interactive_on(const struct poldek_ctx *ctx);
 
 
 EXPORT tn_array *poldek_get_sources(struct poldek_ctx *ctx);
+
+EXPORT tn_array *poldek_select_sources(struct poldek_ctx *ctx,
+                                       const tn_array *patterns);
+
 EXPORT tn_array *poldek_get_pkgdirs(struct poldek_ctx *ctx);
 
 struct pm_ctx;

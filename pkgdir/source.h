@@ -55,6 +55,7 @@ struct source {
     char      *lc_lang;
     tn_array  *exclude_path;
     tn_array  *ign_patterns;    /* ignore package patterns */
+    tn_array  *hold_patterns;   /* hold patterns from the source's config */
     char      *original_type;   /* type of source repo for this source  */
     char      *config_origin;   /* config file:line where source was defined */
     unsigned  subopt_flags;
@@ -94,6 +95,7 @@ EXPORT int source_cmp_no(const struct source *s1, const struct source *s2);
 #define PKGSOURCE_UP         (1 << 0)
 #define PKGSOURCE_UPA        (1 << 1)
 #define PKGSOURCE_UPAUTOA    (1 << 2)
+#define PKGSOURCE_FORCE      (1 << 3) /* update even if noautoup is set */
 
 EXPORT int source_update(struct source *src, unsigned flags);
 
