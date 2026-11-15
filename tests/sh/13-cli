@@ -474,15 +474,20 @@ testClean()
 
 }
 
-# the source given with -s has no name, so up REPO leaves it alone
+# the source given with -s has no name, so up REPO cannot match it: the
+# selection skips it (a NULL name never reaches strcmp()) and reports the
+# name it found no source for
 testUpRepoSkipsSourceWithoutName()
 {
     skip_if_rpm_testing_off && return
 
     index
     before=$(find $CACHEDIR | sort)
-    $POLDEK up nosuch
-    assertEquals "up nosuch failed" "$?" "0"
+    out=$($POLDEK up nosuch 2>&1)
+    rc=$?
+    [ "$rc" -ne 0 ] || fail "up nosuch succeeded: $out"
+    echo "$out" | grep -q 'no such source' || \
+        fail "no error for an unknown source: $out"
     assertEquals "up nosuch updated the source given with -s" "$before" "$(find $CACHEDIR | sort)"
 }
 
