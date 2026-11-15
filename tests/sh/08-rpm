@@ -386,7 +386,7 @@ testRPMsignkeyRevoked() {
     skip_if_rpm_testing_off && return
 
     signkey_test_prepare
-    local keydir="$TMPDIR/signkey-test"
+    local keydir="$SIGNKEY_TEST_KEYDIR"
     local gpglog="$TMPDIR/signkey-gpg.log"
     local conf="$TMPDIR/signkey.conf"
     local fp=$(gpg --list-keys --with-colons 2>>"$gpglog" |
