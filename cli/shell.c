@@ -246,7 +246,7 @@ static char *command_options_generator(const char *text, int state)
         n_array_sort(opts_table);
     }
 
-    if (state >= n_array_size(opts_table)) {
+    if (opts_table == NULL || state >= n_array_size(opts_table)) {
         n_array_cfree(&opts_table);
         return NULL;
     }
@@ -397,7 +397,7 @@ static char *deps_generator(const char *text, int state)
         }
     }
 
-    if (state >= n_array_size(deps_table)) {
+    if (deps_table == NULL || state >= n_array_size(deps_table)) {
         n_array_cfree(&deps_table);
         return NULL;
     }
