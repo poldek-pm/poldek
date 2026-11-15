@@ -59,7 +59,7 @@ jobs:
     - name: make check
       run: make CFLAGS="-O0" check
     - name: make check-sh
-      run: make CFLAGS="-O0" check-sh
+      run: make CFLAGS="-O0" CHECK_SH_JOBS=$(nproc) check-sh
     - name: save sh tests log
       if: failure()
       uses: actions/upload-artifact@v4

@@ -111,12 +111,16 @@ rpm_state_check() {
 # poldek-signkey-test-1-1 in $REPO signed with it
 signkey_test_prepare() {
     local rpmformat="${1:-}"
-    local keydir="$TMPDIR/signkey-test"
+    # keep the directory names short: gpg-agent's socket lives under
+    # $GNUPGHOME and a unix socket path ends at about 107 characters, while
+    # a run of check-sh has a TMPDIR of its own that can be long
+    local keydir="$TMPDIR/sk"
     local gpglog="$TMPDIR/signkey-gpg.log"
-    export GNUPGHOME="$keydir/gnupg"
-    export XDG_RUNTIME_DIR="$keydir/run"
+    export SIGNKEY_TEST_KEYDIR="$keydir"
+    export GNUPGHOME="$TMPDIR/g"
+    export XDG_RUNTIME_DIR="$keydir/r"
 
-    rm -rf "$keydir"
+    rm -rf "$keydir" "$GNUPGHOME"
     mkdir -p "$GNUPGHOME" "$XDG_RUNTIME_DIR"
     chmod 700 "$GNUPGHOME" "$XDG_RUNTIME_DIR"
     gpgconf --launch gpg-agent

@@ -7,6 +7,7 @@ To run all tests:
 
 $ make check    # runs all C-based tests
 $ make check-sh # runs tests written in shell (sh/ subdir)
+$ make check-sh CHECK_SH_JOBS=4 # the same, 4 runs at a time
 
 sh/ test scripts may be executed separately:
 
@@ -17,4 +18,7 @@ Particular tests may be choosen:
 $ ./sh/07-depsolver -v -t testSuggests
 
 Notes:
+*) make check-sh keeps the files of each run in a directory of its own,
+   /tmp/poldek-sh-tests.XXXXXX/<script>[.<compression>][.<install mode>] ($TMP
+   or $TMPDIR in place of /tmp when set), and removes them when every run passes
 *) set CK_FORK=no to run C-based test without fork
