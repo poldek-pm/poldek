@@ -686,6 +686,24 @@ START_TEST(test_http_empty_header_value)
 }
 END_TEST
 
+/* a header has a name (RFC 9110, 5.1); a line without one is refused */
+START_TEST(test_http_empty_header_name)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/empty-header-name", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    fail_if(strstr(logged(logged_err), "response parse error") == NULL,
+            "not refused as a parse error: %s", logged(logged_err));
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+}
+END_TEST
+
 START_TEST(test_http_auth_success)
 {
     char url[512];
@@ -965,6 +983,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_keepalive_reset);
     tcase_add_test(tc_http, test_http_cut_body_fails);
     tcase_add_test(tc_http, test_http_empty_header_value);
+    tcase_add_test(tc_http, test_http_empty_header_name);
     suite_add_tcase(s, tc_http);
 
     /* HTTPS tests */

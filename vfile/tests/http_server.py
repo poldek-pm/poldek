@@ -81,6 +81,11 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._serve_file(path[len("/empty-header/"):], [("X-Empty", "")])
             return
 
+        # a header line with no name before its colon
+        if path == "/empty-header-name":
+            self.wfile.write(b"HTTP/1.0 200 OK\r\n: x\r\nContent-Length: 0\r\n\r\n")
+            return
+
         # File serving: /file/<filename>
         if path.startswith("/file/"):
             self._serve_file(path[6:])

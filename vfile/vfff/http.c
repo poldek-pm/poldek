@@ -601,7 +601,7 @@ static int http_resp_parse(struct http_resp *resp)
 
         /* the lines are this function's own copies (n_str_tokl()), cut in place */
         line = (char *)*tl;
-        if ((p = strchr(line, ':')) == NULL) {
+        if ((p = strchr(line, ':')) == NULL || p == line) {   /* no name */
             is_err = 1;
             break;
         }
