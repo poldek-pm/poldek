@@ -45,12 +45,12 @@ files=$(mktemp "${TMPDIR:-/tmp}/poldek-lint.XXXXXX")
 trap 'rm -f "$files"' EXIT
 
 find . \
-    \( -path ./trurlib -o -path ./tndb -o -path ./python -o -path ./po \
+    \( -path ./python -o -path ./po \
        -o -path ./Cellar -o -path ./tmp -o -path ./tests \
        -o -path ./vfile/tests \) -prune \
     -o -name 'test_*.c' -prune \
     -o -name 'sample.c' -prune \
-    -o -name '*.c' -print > "$files"
+    -o -name '*.c' -print | sort > "$files"
 
 # cppcheck's analysis cache; remove it to force a full re-analysis
 cache=${CPPCHECK_CACHE:-"${TMPDIR:-/tmp}/poldek-cppcheck-build"}
@@ -58,12 +58,10 @@ mkdir -p "$cache"
 
 # alloca() is used on purpose; NULL as the sentinel of the trurl varargs
 # helpers is the project idiom (on supported platforms every pointer has the
-# same representation); the trurlib headers belong to the submodule
+# same representation)
 suppressions="
     --suppress=allocaCalled
     --suppress=varFuncNullUB
-    --suppress=*:trurlib/*
-    --suppress=unusedFunction:trurlib/*
 "
 
 set -- \
