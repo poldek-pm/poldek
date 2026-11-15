@@ -173,6 +173,13 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.close_connection = True
             return
 
+        # a redirect to an address with no scheme before its "://"
+        if path == "/redirect-no-scheme":
+            self.wfile.write(b"HTTP/1.1 302 Found\r\nLocation: ://127.0.0.1/x\r\n"
+                             b"Content-Length: 0\r\nConnection: close\r\n\r\n")
+            self.close_connection = True
+            return
+
         # 4 KiB under any name, enough for the progress bar: /label/<name>
         if path.startswith("/label/"):
             body = b"x" * 4096

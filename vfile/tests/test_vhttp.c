@@ -455,6 +455,24 @@ START_TEST(test_http_redirect_control_bytes_refused)
 }
 END_TEST
 
+/* a URI has a scheme of at least one letter (RFC 3986, 3.1) */
+START_TEST(test_http_redirect_no_scheme_refused)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/redirect-no-scheme", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    fail_if(strstr(logged(logged_err), "invalid redirect URI") == NULL,
+            "not refused as an invalid URI: %s", logged(logged_err));
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+}
+END_TEST
+
 /* the progress label shows the URL decoded, where %1b is an ESC */
 START_TEST(test_http_label_control_bytes_escaped)
 {
@@ -973,6 +991,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_stat_redirect_failed);
     tcase_add_test(tc_http, test_http_server_control_bytes_escaped);
     tcase_add_test(tc_http, test_http_redirect_control_bytes_refused);
+    tcase_add_test(tc_http, test_http_redirect_no_scheme_refused);
     tcase_add_test(tc_http, test_http_label_control_bytes_escaped);
     tcase_add_test(tc_http, test_http_auth_success);
     tcase_add_test(tc_http, test_http_auth_fail);
