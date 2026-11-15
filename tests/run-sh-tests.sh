@@ -29,6 +29,20 @@ if ! [ "$jobs" -ge 1 ] 2>/dev/null; then
     exit 2
 fi
 
+# no scripts means the runner was started from the wrong directory: say so and
+# do not build the source repository for nothing
+have_scripts=
+for i in sh/[0-9][0-9]*; do
+    if [ -f "$i" ]; then
+        have_scripts=1
+        break
+    fi
+done
+[ -n "$have_scripts" ] || {
+    echo "$0: no test scripts in sh/" >&2
+    exit 1
+}
+
 #echo "Running *.sh tests";
 rm -f sh/*~
 
@@ -44,8 +58,11 @@ TOP=$(mktemp -d "${TMP:-${TMPDIR:-/tmp}}/poldek-sh-tests.XXXXXX") || exit 1
 SOURCE_REPO=$TOP/repo
 mkdir -p $SOURCE_REPO $TOP/build
 TMP=$TOP/build TMPDIR=$TOP/build sh -c '. ./sh/lib/repo-setup; SOURCE_REPO=$1; build_repo_packages' \
-    sh $SOURCE_REPO > $TOP/repo.log 2>&1 ||
+    sh $SOURCE_REPO > $TOP/repo.log 2>&1 || {
     echo "$0: building the source repository failed, see $TOP/repo.log" >&2
+    tail -20 $TOP/repo.log >&2
+    exit 1
+}
 RUNS=$TOP/runs
 > $RUNS
 
