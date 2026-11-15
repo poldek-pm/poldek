@@ -79,7 +79,7 @@ static struct repomd_ent *load_repomd_ent(xmlNode *node)
         return NULL;
 
     len = strlen(location);
-    ent = malloc(sizeof(*ent) + len + 1);
+    ent = n_malloc(sizeof(*ent) + len + 1);
     ent->ts = ts;
     n_snprintf(ent->checksum, sizeof(ent->checksum), "%s", checksum);
     n_snprintf(ent->checksum_type, sizeof(ent->checksum_type), "%s",

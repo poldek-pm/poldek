@@ -741,7 +741,7 @@ static char *cut_country_code (const char *lang)
 	return NULL;
 
     /* newlang is always shorter than lang */
-    newlang = malloc(strlen(lang));
+    newlang = n_malloc(strlen(lang));
 
     p = n_strncpy(newlang, lang, q - lang + 1);
 
