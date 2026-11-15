@@ -45,7 +45,7 @@ static struct node *node_new(int type, int ary,
 {
     int len = strlen(name);
 
-    struct node *node = malloc(sizeof(*node) + len + 1);
+    struct node *node = n_malloc(sizeof(*node) + len + 1);
     node->type = type;
     node->ary = ary;
 
