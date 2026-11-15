@@ -211,16 +211,15 @@ tn_tuple *pkgfl_array_pdir_sort(tn_tuple *fl)
     return n_tuple_isort_ex(fl, pkgfl_ent_deep_cmp);
 }
 
-/* trim slashes from dirname, update dirnamelen  */
+/* trim slashes from dirname, update dirnamelen; dirname belongs to an rpm
+   header, so it must not be written to */
 static
-char *prepare_dirname(char *dirname, int *dirnamelen)
+const char *prepare_dirname(const char *dirname, int *dirnamelen)
 {
-    if (dirname[*dirnamelen - 1] == '/' && *dirnamelen > 1) {
+    if (*dirnamelen > 1 && dirname[*dirnamelen - 1] == '/')
         (*dirnamelen)--;
-        dirname[*dirnamelen] = '\0';
-    }
 
-    if (*dirname == '/' && *dirnamelen > 1) {
+    if (*dirnamelen > 1 && *dirname == '/') {
         dirname++;
         (*dirnamelen)--;
     }
@@ -229,7 +228,7 @@ char *prepare_dirname(char *dirname, int *dirnamelen)
 
 
 struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
-                                char *dirname, int dirname_len, int nfiles)
+                                const char *dirname, int dirname_len, int nfiles)
 {
     struct pkgfl_ent *flent;
 

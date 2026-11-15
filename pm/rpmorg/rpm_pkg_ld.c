@@ -428,8 +428,8 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
 
         skipdirs[i] = dir;
 
-        /* XXX dangerous cast to char* */
-        flent = pkgfl_ent_new(na, (char *)dir, dirslen[i], fentdirs_items[i]);
+        /* dir is the header's; pkgfl_ent_new() must not modify it */
+        flent = pkgfl_ent_new(na, dir, dirslen[i], fentdirs_items[i]);
         fentdirs[i] = flent;
         ndirs++;
     }

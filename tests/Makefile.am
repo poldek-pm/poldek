@@ -19,6 +19,8 @@ check_PROGRAMS += test_term
 check_PROGRAMS += test_greedy
 # depdirs lifetime
 check_PROGRAMS += test_depdirs
+# pkgfl_ent_new() must leave the rpm header's dirname alone
+check_PROGRAMS += test_pkgfl
 
 TESTS = $(check_PROGRAMS)
 

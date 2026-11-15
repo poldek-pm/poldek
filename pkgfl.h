@@ -53,7 +53,7 @@ struct pkgfl_ent {
 };
 
 EXPORT struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
-                                       char *dirname, int dirname_len, int nfiles);
+                                       const char *dirname, int dirname_len, int nfiles);
 
 EXPORT int pkgfl_ent_cmp(const void *a, const void *b);
 
