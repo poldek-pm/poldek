@@ -40,15 +40,15 @@
 
 char *vfff_uri_escape(const char *path);
 
-static int extr_port(char *host) 
+static int extr_port(char *host)
 {
     char *p;
     int port = 0;
-    
+
     if ((p = strrchr(host, ':'))) {
         if (sscanf(p + 1, "%d", &port) != 1)
             return -1;
-        
+
         *p = '\0';
     }
 
@@ -56,18 +56,18 @@ static int extr_port(char *host)
 }
 
 static
-int vf_parse_url(char *url, struct vf_request *req) 
+int vf_parse_url(char *url, struct vf_request *req)
 {
     char               *p, *q;
 
-    if ((p = strstr(url, "://")) == NULL) 
+    if ((p = strstr(url, "://")) == NULL)
         return 0;
-    
+
     req->proto = url;
     *p = '\0';
     p += 3;
     req->host = p;
-    
+
     if ((q = strchr(p, '/')) != NULL) {
         *q = '\0';
         req->uri = q+1;
@@ -79,14 +79,14 @@ int vf_parse_url(char *url, struct vf_request *req)
         req->login = req->host;
         req->host = p + 1;
 
-        if ((p = strchr(req->login, ':')) == NULL) 
+        if ((p = strchr(req->login, ':')) == NULL)
             return 0;
 
         *p = '\0';
         req->passwd = p + 1;
     }
 
-    if ((req->port = extr_port(req->host)) < 0) 
+    if ((req->port = extr_port(req->host)) < 0)
         return 0;
 
     n_assert(req->proto && req->host);
@@ -97,34 +97,34 @@ static tn_array *get_noproxy(void)
 {
     const char **tl, **tl_save, *v;
     tn_array *noproxy;
-    
+
     if ((v = getenv("no_proxy")) == NULL || *v == 0)
         return NULL;
 
     tl = tl_save = n_str_tokl(v, ", \t");
-    
+
     noproxy = n_array_new(16, free, NULL);
     while (*tl) {
         n_array_push(noproxy, n_strdup(*tl));
         tl++;
     }
-    
+
     n_str_tokl_free(tl_save);
     return noproxy;
 }
 
-static int is_proxable(struct vf_request *req) 
+static int is_proxable(struct vf_request *req)
 {
     tn_array *noproxy = vfile_conf.noproxy;
     int i;
 
-    
+
     if (n_array_size(vfile_conf.noproxy) == 0) {
         noproxy = get_noproxy();
         if (noproxy == NULL)
             return 1;
     }
-    
+
     for (i=0; i < n_array_size(noproxy); i++) {
         const char *mask = n_array_nth(noproxy, i);
         if (*mask == '.') {
@@ -140,15 +140,16 @@ static int is_proxable(struct vf_request *req)
             return 0;
         }
     }
-    
+
     /* no configured noproxy, env is set */
-    if (noproxy && noproxy != vfile_conf.noproxy) { 
+    n_assert(noproxy);
+    if (noproxy != vfile_conf.noproxy) {
         while (n_array_size(noproxy))
             n_array_push(vfile_conf.noproxy, n_array_shift(noproxy));
-        
+
         n_array_free(noproxy);
     }
-    
+
     return 1;
 }
 
@@ -162,7 +163,7 @@ static const char *get_proxy(struct vf_request *req)
 
     if ((url = n_hash_get(vfile_conf.proxies_ht, req->proto)))
         return url;
-    
+
     snprintf(buf, sizeof(buf), "%s_proxy", req->proto);
 
     if ((url = getenv(buf)) == NULL || *url == 0) {
@@ -185,7 +186,7 @@ static const char *get_proxy(struct vf_request *req)
             url = n_strdup(url);
             n_hash_insert(vfile_conf.proxies_ht, req->proto, url);
         }
-    } 
+    }
 
     return url;
 }
@@ -195,21 +196,21 @@ int vf_request_open_destpath(struct vf_request *req)
     int          fd;
     struct stat  st;
 
-    
+
     n_assert(req->dest_fd <= 0);
     n_assert(req->destpath);
-    
+
     if ((fd = open(req->destpath, O_WRONLY|O_APPEND|O_CREAT, 0644)) < 0) {
         vf_logerr("open %s: %m\n", req->destpath);
         return 0;
     }
-    
+
     if (fstat(fd, &st) != 0) {
         vf_logerr("fstat %s: %m\n", req->destpath);
         close(fd);
         return 0;
     }
-    
+
     req->dest_fd = fd;
     req->dest_fdoff = st.st_size;
     if (st.st_size > 0) {      /* existing file */
@@ -231,42 +232,42 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
 
     //printf("**request new %s\n", url);
     snprintf(buf, sizeof(buf), "%s", url);
-    
+
     if (!vf_parse_url(buf, &rreq) || rreq.uri == NULL) {
         vf_logerr(err_msg, CL_URL(url));
         return NULL;
     }
-    
+
     if ((proxy = get_proxy(&rreq))) {
 
         snprintf(pbuf, sizeof(pbuf), "%s", proxy);
         memset(&preq, 0, sizeof(preq));
-        
+
         if (!vf_parse_url(pbuf, &preq)) {
             vf_logerr(err_msg, CL_URL(proxy));
             return NULL;
         }
     }
-    
+
     if (destpath) {
         rreq.destpath = (char*)destpath;
         if (!vf_request_open_destpath(&rreq))
             return NULL;
     }
-    
+
     req = n_malloc(sizeof(*req));
     memset(req, 0, sizeof(*req));
-    
+
     if (destpath)
         req->destpath = n_strdup(destpath);
     else
         req->destpath = NULL;
-    
+
     req->dest_fd = rreq.dest_fd;
     req->dest_fdoff = rreq.dest_fdoff;
     req->st_local_size = rreq.st_local_size;
     req->st_local_mtime = rreq.st_local_mtime;
-    
+
     req->proto = n_strdup(rreq.proto);
     req->host = n_strdup(rreq.host);
 
@@ -275,7 +276,7 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     /* escape URI if HTTP */
     if (n_str_eq(req->proto, "http") && (escaped_uri = vfff_uri_escape(tmp)))
         req->uri = escaped_uri;
-    else 
+    else
         req->uri = n_strdupl(tmp, len);
 
     /* req->url is the canonical form of the request and it is re-parsed by
@@ -297,7 +298,7 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
         n_assert(at != NULL && atoi(at + 1) == req->port);
     }
 
-    
+
     if (rreq.login)
         req->login = n_strdup(rreq.login);
 
@@ -323,7 +324,7 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
             req->proxy_passwd = n_strdup(preq.passwd);
         req->proxy_port = preq.port;
     }
-    
+
     return req;
 }
 
@@ -336,13 +337,13 @@ void vf_request_close_destpath(struct vf_request *req)
         if (*vfile_verbose > 1) {
             char timbuf[64] = { '\0' };
 
-            if (req->st_remote_mtime > 0) 
+            if (req->st_remote_mtime > 0)
                 strftime(timbuf, sizeof(timbuf), "(mtime %Y-%m-%d %H:%M:%S)",
                      gmtime(&req->st_remote_mtime));
-            
+
             vf_loginfo("Closing %s %s\n", req->destpath, timbuf);
         }
-        
+
         if (req->st_remote_mtime > 0) {
             ut.actime = ut.modtime = req->st_remote_mtime;
             utime(req->destpath, &ut);
@@ -377,7 +378,7 @@ void vf_request_free(struct vf_request *req)
     free(req);
 }
 
-#define xx_replace(p, q) n_cfree(&p); p = q; q = NULL; 
+#define xx_replace(p, q) n_cfree(&p); p = q; q = NULL;
 
 struct vf_request *vf_request_redirto(struct vf_request *req, const char *url)
 {
@@ -386,10 +387,10 @@ struct vf_request *vf_request_redirto(struct vf_request *req, const char *url)
     tmpreq = vf_request_new(url, NULL);
     if (tmpreq == NULL)
         return NULL;
-    
+
     if (*vfile_verbose > 1)
         vf_loginfo("Redirected to %s\n", PR_URL(tmpreq->url));
-    
+
     xx_replace(req->url, tmpreq->url);
 
     if (strcmp(req->proto, tmpreq->proto) != 0)
@@ -397,13 +398,13 @@ struct vf_request *vf_request_redirto(struct vf_request *req, const char *url)
 
     if ((req->flags & VF_REQ_INT_REDIRECTED) ||
         strcmp(req->host, tmpreq->host) != 0) {
-        
+
         xx_replace(req->proto, tmpreq->proto);
         xx_replace(req->host, tmpreq->host);
         n_cfree(&req->login);
         n_cfree(&req->passwd);
     }
-    
+
     xx_replace(req->uri, tmpreq->uri);
     req->port = tmpreq->port;
     xx_replace(req->proxy_proto, tmpreq->proxy_proto);
@@ -414,5 +415,3 @@ struct vf_request *vf_request_redirto(struct vf_request *req, const char *url)
     vf_request_free(tmpreq);
     return req;
 }
-
-    
