@@ -158,6 +158,7 @@ struct source *source_malloc(void)
     src->_refcnt = 0;
     src->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
     src->ign_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
+    src->hold_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
     return src;
 }
 
@@ -200,6 +201,9 @@ struct source *source_clone(const struct source *src)
     n_array_free(nsrc->ign_patterns);
     nsrc->ign_patterns = n_ref(src->ign_patterns);
 
+    n_array_free(nsrc->hold_patterns);
+    nsrc->hold_patterns = n_ref(src->hold_patterns);
+
     nsrc->subopt_flags = src->subopt_flags;
     return nsrc;
 }
@@ -229,6 +233,9 @@ void source_free(struct source *src)
 
     if (src->ign_patterns)
         n_array_free(src->ign_patterns);
+
+    if (src->hold_patterns)
+        n_array_free(src->hold_patterns);
 
     memset(src, 0, sizeof(*src));
     free(src);
@@ -665,6 +672,7 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
 
     get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
     get_conf_opt_list(htcnf, "ignore", src->ign_patterns);
+    get_conf_opt_list(htcnf, "hold", src->hold_patterns);
     return src;
 }
 
@@ -926,7 +934,8 @@ int sources_update(tn_array *sources, unsigned flags)
     for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
 
-        if (src->flags & PKGSOURCE_NOAUTOUP)
+        if ((src->flags & PKGSOURCE_NOAUTOUP) &&
+            (flags & PKGSOURCE_FORCE) == 0)
             continue;
 
         if (!source_update(src, flags))
