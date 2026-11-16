@@ -30,7 +30,7 @@ jobs:
           exit 1
         fi
         echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: git safe dir
       run: git config --global --add safe.directory $(pwd)
     - name: verify hash paths
@@ -39,7 +39,7 @@ jobs:
         ls tests/build-test-rpm.sh >/dev/null 2>&1 || { echo "::error::tests/build-test-rpm.sh missing"; exit 1; }
     - name: restore test cache
       id: rpm-cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       with:
         path: ${{ env.POLDEK_TEST_RPM_CACHE }}
         key: rpm-cache-${{ steps.image-digest.outputs.digest }}-${{ hashFiles('tests/sh/**', 'tests/build-test-rpm.sh') }}
@@ -62,7 +62,7 @@ jobs:
       run: make CFLAGS="-O0" CHECK_SH_JOBS=$(nproc) check-sh
     - name: save sh tests log
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: sh-tests.log
         path: tests/sh-tests.log
@@ -76,7 +76,7 @@ jobs:
         fi
     - name: save test cache
       if: always() && steps.rpm-cache.outputs.cache-primary-key != '' && steps.rpm-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v6
       with:
         path: ${{ env.POLDEK_TEST_RPM_CACHE }}
         key: ${{ steps.rpm-cache.outputs.cache-primary-key }}
