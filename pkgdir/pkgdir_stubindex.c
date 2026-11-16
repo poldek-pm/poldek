@@ -99,6 +99,7 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
     struct vflock *lock;
     tn_stream     *st;
     char *dir, *tmp;
+    int ok = 1;
 
     msgn_i(2, 2, "Creating stub index of %s...", pkgdir_idstr_s(pkgdir));
 
@@ -123,11 +124,24 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
 
         int n = pndir_make_pkgkey(key, sizeof(key), pkg);
         n_snprintf(&key[n], sizeof(key) - n, "^%u:%u:%u", pkg->color, pkg->size, pkg->btime);
-        n_stream_printf(st, "%s\n", key);
+        if (n_stream_printf(st, "%s\n", key) < 0) {
+            ok = 0;
+            break;
+        }
     }
 
-    n_stream_close(st);
+    if (n_stream_close(st) != 0)
+        ok = 0;
+
+    /* no file is better than a cut one: the next load writes it again */
+    if (!ok) {
+        logn(LOGERR, "%s: write failed (%m)", path);
+        unlink(path);
+    }
     vf_lock_release(lock);
+
+    if (!ok)
+        return 0;
 
     util__set_cache_mtime(path, pkgdir_mtime(pkgdir));
 

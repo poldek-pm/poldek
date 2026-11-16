@@ -165,6 +165,29 @@ testStubIndexEmptyWrittenAgain()
     assertEquals "packages in the stub index" "2" "$(zstdcat $STUB | wc -l)"
 }
 
+# a stub index that could not be written is not kept, so the next load
+# writes it again
+testStubIndexWriteError()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    index
+    $POLDEK up                  # to create stubindex
+
+    local stub=$(ls $CACHEDIR/*/stubindex.pndir.zst)
+    [ -f "$stub" ] || fail "no stub index"
+    # every write to /dev/full fails with "No space left on device"
+    rm -f $stub
+    ln -s /dev/full $stub
+    $POLDEK ls > /dev/null 2>&1
+    [ ! -L "$stub" ] || fail "stub index kept after a failed write"
+
+    $POLDEK ls > /dev/null 2>&1
+    assertEquals "packages in the stub index" "2" "$(zstdcat $stub | wc -l)"
+}
+
 # an index made with --mo=nodesc keeps no package info: ls --qf shows (none)
 # for the summary, desc -L no changelog
 testIndexWithoutPackageInfo()
