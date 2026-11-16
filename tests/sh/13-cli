@@ -106,6 +106,65 @@ testInstallAlreadyInstalled() {
     rpm_state_check "a" ""
 }
 
+# an index of a and b with its stub index cut short, in $STUB; with "empty"
+# cut before its first write
+index_with_cut_stub() {
+    build a
+    build b
+    index
+    # the stub index of an index made just now gets an earlier time and is
+    # not read at all, cut or not
+    touch -d '-1 hour' $REPO/packages.ndir*
+    $POLDEK up                  # to create stubindex
+
+    STUB=$(ls $CACHEDIR/*/stubindex.pndir.zst)
+    [ -f "$STUB" ] || fail "no stub index"
+    if [ "${1:-}" = empty ]; then
+        : > $STUB.cut
+    else
+        # like a large one cut short: the lines before the cut read whole,
+        # the line of b is in a frame cut short
+        zstdcat $STUB > $STUB.lines || fail "zstdcat failed"
+        { grep -v '^b#' $STUB.lines | zstd -q; grep '^b#' $STUB.lines | zstd -q | head -c 10; } > $STUB.cut
+        rm -f $STUB.lines
+    fi
+    touch -r $STUB $STUB.cut        # the file keeps its time
+    mv $STUB.cut $STUB
+}
+
+# a stub index cut short is not used: install still finds a package that was
+# listed after the cut
+testInstallStubIndexCut()
+{
+    skip_if_rpm_testing_off && return
+
+    index_with_cut_stub
+    $POLDEK install -v b
+    assertEquals "install failed" "$?" "0"
+    rpm_state_check "b" ""
+}
+
+# a stub index cut short is written again whole, though its time says that it
+# is up to date
+testStubIndexCutWrittenAgain()
+{
+    skip_if_rpm_testing_off && return
+
+    index_with_cut_stub
+    $POLDEK ls > /dev/null 2>&1
+    assertEquals "packages in the stub index" "2" "$(zstdcat $STUB | wc -l)"
+}
+
+# so is one cut before its first write, an empty file
+testStubIndexEmptyWrittenAgain()
+{
+    skip_if_rpm_testing_off && return
+
+    index_with_cut_stub empty
+    $POLDEK ls > /dev/null 2>&1
+    assertEquals "packages in the stub index" "2" "$(zstdcat $STUB | wc -l)"
+}
+
 # an index made with --mo=nodesc keeps no package info: ls --qf shows (none)
 # for the summary, desc -L no changelog
 testIndexWithoutPackageInfo()

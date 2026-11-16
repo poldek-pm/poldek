@@ -139,9 +139,17 @@ tn_array *load_stubindex(const char *path)
 {
     tn_stream *st;
     tn_array *pkgs;
+    struct stat sb;
     char *buf;
     size_t size;
     int n;
+
+    /* a stub index, even an empty one, holds a zstd frame: an empty file is
+       one cut before its first write, which trurlib reads as a whole stream */
+    if (stat(path, &sb) == 0 && sb.st_size == 0) {
+        unlink(path);
+        return NULL;
+    }
 
     st = n_stream_open(path, "r", TN_STREAM_UNKNOWN);
     if (st == NULL)
@@ -168,8 +176,14 @@ tn_array *load_stubindex(const char *path)
             n_array_push(pkgs, pkg);
         }
     }
-    n_stream_close(st);
     n_free(buf);
+
+    /* a stream cut short, as its close reports: the packages after the cut
+       are missing, and the file goes: its time may still say it is current */
+    if (n_stream_close(st) != 0) {
+        n_array_cfree(&pkgs);
+        unlink(path);
+    }
 
     return pkgs;
 }
