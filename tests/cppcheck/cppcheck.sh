@@ -18,9 +18,10 @@
 # cppcheck does not define __GNUC__; without it compiler.h turns
 # __attribute__ into a no-op and the real function attributes are lost.
 #
-# The analysis cache lives in $CPPCHECK_CACHE, or in tmp/cppcheck/build below
-# the build directory when it is not set.  CI points it at a persisted path;
-# deleting the directory only costs a full re-analysis.
+# The analysis cache lives in $CPPCHECK_CACHE, or in ${TMPDIR:-/tmp}/
+# poldek-cppcheck-build when it is not set.  CI points it at a persisted path
+# (see .github/workflows/build.yml); deleting the directory only costs a full
+# re-analysis.
 
 set -e
 

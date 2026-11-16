@@ -20,6 +20,7 @@ jobs:
     env:
       LANG: C
       POLDEK_TEST_RPM_CACHE: /var/cache/poldek-test-rpm-cache
+      CPPCHECK_CACHE: /var/cache/poldek-cppcheck
     steps:
     - name: get image digest
       id: image-digest
@@ -37,7 +38,7 @@ jobs:
       run: |
         ls tests/sh/ >/dev/null 2>&1 || { echo "::error::tests/sh missing"; exit 1; }
         ls tests/build-test-rpm.sh >/dev/null 2>&1 || { echo "::error::tests/build-test-rpm.sh missing"; exit 1; }
-    - name: restore test cache
+    - name: restore rpm cache
       id: rpm-cache
       uses: actions/cache/restore@v6
       with:
@@ -45,6 +46,15 @@ jobs:
         key: rpm-cache-${{ steps.image-digest.outputs.digest }}-${{ hashFiles('tests/sh/**', 'tests/build-test-rpm.sh') }}
         restore-keys: |
           rpm-cache-${{ steps.image-digest.outputs.digest }}-
+    - name: restore cppcheck cache
+      id: cppcheck-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ env.CPPCHECK_CACHE }}
+        key: cppcheck-${{ steps.image-digest.outputs.digest }}-${{ hashFiles('tests/cppcheck/**') }}-${{ github.sha }}
+        restore-keys: |
+          cppcheck-${{ steps.image-digest.outputs.digest }}-${{ hashFiles('tests/cppcheck/**') }}-
+          cppcheck-${{ steps.image-digest.outputs.digest }}-
     - name: pre cache check
       run: |
         if [ -d "${{ env.POLDEK_TEST_RPM_CACHE }}" ]; then
@@ -56,6 +66,8 @@ jobs:
       run: ./autogen.sh --enable-strict
     - name: make
       run: make CFLAGS="-O0"
+    - name: make lint
+      run: make lint
     - name: make check
       run: make CFLAGS="-O0" check
     - name: make check-sh
@@ -74,9 +86,17 @@ jobs:
         else
           echo "sth wrong with cache"
         fi
-    - name: save test cache
-      if: always() && steps.rpm-cache.outputs.cache-primary-key != '' && steps.rpm-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master'
+    # a run cancelled by concurrency can leave a partial cache; skip the saves
+    # then, a later run rebuilds only what is missing
+    - name: save rpm cache
+      if: ${{ !cancelled() && steps.rpm-cache.outputs.cache-primary-key != '' && steps.rpm-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master' }}
       uses: actions/cache/save@v6
       with:
         path: ${{ env.POLDEK_TEST_RPM_CACHE }}
         key: ${{ steps.rpm-cache.outputs.cache-primary-key }}
+    - name: save cppcheck cache
+      if: ${{ !cancelled() && steps.cppcheck-cache.outputs.cache-primary-key != '' && steps.cppcheck-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master' }}
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ env.CPPCHECK_CACHE }}
+        key: ${{ steps.cppcheck-cache.outputs.cache-primary-key }}
