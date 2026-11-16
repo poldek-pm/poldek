@@ -93,6 +93,34 @@ testCreateDescrWriteError()
     [ ! -f "$dir/packages.ndir.md" ] || fail "digest of unwritten descriptions"
 }
 
+# a diff whose descriptions could not be written is not listed for the clients
+testCreateDiffWriteError()
+{
+    local repo="$TMPDIR/write-error-diff"
+    local last=$(ls $REPO/*.rpm | tail -1)
+    local dscr
+
+    rm -rf $repo $repo.copy
+    mkdir $repo
+    cp $REPO/*.rpm $repo || fail "cp failed"
+    rm -f $repo/$(basename $last)
+    $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+    cp $last $repo || fail "cp failed"
+
+    # a diff's files are named after the time of the index it follows, so a
+    # run on a copy tells the name of the diff's descriptions
+    cp -a $repo $repo.copy
+    $POLDEK_NOCONF -s $repo.copy --mkidx || fail "mkidx of the copy failed"
+    dscr=$(cd $repo.copy && ls packages.i/packages.ndir.dscr.[0-9]*)
+    [ -n "$dscr" ] || fail "no descriptions in the diff"
+
+    mkdir -p $repo/$dscr
+    if $POLDEK_NOCONF -s $repo --mkidx; then
+        fail "mkidx succeeded"
+    fi
+    [ ! -f "$repo/packages.i/packages.ndir.diff.toc$COMPR_EXT" ] || fail "diff with unwritten descriptions listed"
+}
+
 #  b) --st rpmdb -s /foo          =>  rpmdb -> default type
 testCreateFromRpmdb() {
     skip_if_rpm_testing_off && return
