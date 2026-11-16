@@ -157,6 +157,19 @@ static int do_unlink(const char *path)
     return 0;
 }
 
+/* a tndb writes its file out when it is closed */
+static int close_written_db(struct tndb *db)
+{
+    char path[PATH_MAX];
+
+    n_snprintf(path, sizeof(path), "%s", tndb_path(db));
+    if (tndb_close(db))
+        return 1;
+
+    logn(LOGERR, _("%s: unable to write index: %m"), path);
+    return 0;
+}
+
 static tn_hash *put_avlangs(struct tndb *db, struct pkgdir *pkgdir,
                             tn_buf *nbuf /* workbuf */)
 {
@@ -698,7 +711,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     if (pkgdir->pkgs == NULL)
         goto l_close;
 
-    db_dscr_h = pndir_db_dscr_h_new();
+    /* no free function: each db is closed, i.e. written, and checked below */
+    db_dscr_h = n_hash_new(16, NULL);
     keys = n_array_new(n_array_size(pkgdir->pkgs), free, (tn_fn_cmp)strcmp);
     nbuf = n_buf_new(1024 * 256);
 
@@ -760,7 +774,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 
  l_close:
 	if (db) {
-		tndb_close(db);
+		if (!close_written_db(db))
+			nerr++;
 		db = NULL;
 	}
 
@@ -777,6 +792,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
             n_assert(dscr_db);
             p = vf_url_slim_s(tndb_path(dscr_db), 0);
             msgn(2, _(" Writing '%s' descriptions %s..."), lang, p);
+            if (!close_written_db(dscr_db))
+                nerr++;
         }
         n_hash_free(db_dscr_h);
         n_array_free(langs);

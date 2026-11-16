@@ -2036,6 +2036,11 @@ msgstr ""
 msgid "%s: unable to write remote index"
 msgstr "%s: nie udało się zapisać zdalnego indeksu"
 
+#: pkgdir/pndir/save.c
+#, c-format
+msgid "%s: unable to write index: %m"
+msgstr "%s: nie udało się zapisać indeksu: %m"
+
 #: pkgdir/source_mkidx.c:255
 #, c-format
 msgid "%s: refusing to overwrite index"

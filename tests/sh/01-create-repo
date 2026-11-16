@@ -64,6 +64,35 @@ testCreateInDirWithPercent()
     check_repo_content $repo
 }
 
+# an index that could not be written fails --mkidx and gets no digest
+testCreateWriteError()
+{
+    local dir="$TMPDIR/write-error"
+
+    rm -rf $dir
+    mkdir $dir
+    # with SIGXFSZ ignored, a write past the file size limit fails instead of killing poldek
+    if (trap '' XFSZ; ulimit -f 1; $POLDEK_NOCONF -s $REPO --mkidx=$dir); then
+        fail "mkidx succeeded"
+    fi
+    [ ! -f "$dir/packages.ndir.md" ] || fail "digest of an unwritten index"
+}
+
+# descriptions that could not be written fail --mkidx too, though the index was
+testCreateDescrWriteError()
+{
+    local dir="$TMPDIR/descr-write-error"
+
+    rm -rf $dir
+    # the descriptions cannot replace a directory of their name
+    mkdir -p $dir/packages.ndir.dscr$COMPR_EXT
+    if $POLDEK_NOCONF -s $REPO --mkidx=$dir; then
+        fail "mkidx succeeded"
+    fi
+    die_if_empty_index "$dir/packages.ndir$COMPR_EXT"
+    [ ! -f "$dir/packages.ndir.md" ] || fail "digest of unwritten descriptions"
+}
+
 #  b) --st rpmdb -s /foo          =>  rpmdb -> default type
 testCreateFromRpmdb() {
     skip_if_rpm_testing_off && return
