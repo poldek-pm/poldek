@@ -60,7 +60,7 @@ int vf_parse_url(char *url, struct vf_request *req)
 {
     char               *p, *q;
 
-    if ((p = strstr(url, "://")) == NULL)
+    if ((p = strstr(url, "://")) == NULL || p == url)    /* no scheme */
         return 0;
 
     req->proto = url;

@@ -81,6 +81,11 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._serve_file(path[len("/empty-header/"):], [("X-Empty", "")])
             return
 
+        # a header line with no name before its colon
+        if path == "/empty-header-name":
+            self.wfile.write(b"HTTP/1.0 200 OK\r\n: x\r\nContent-Length: 0\r\n\r\n")
+            return
+
         # File serving: /file/<filename>
         if path.startswith("/file/"):
             self._serve_file(path[6:])
@@ -164,6 +169,13 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if path == "/ctl-redirect":
             self.wfile.write(b"HTTP/1.1 302 Found\r\n"
                              b"Location: \x1b[31mRED\x1b[0m\r\n"
+                             b"Content-Length: 0\r\nConnection: close\r\n\r\n")
+            self.close_connection = True
+            return
+
+        # a redirect to an address with no scheme before its "://"
+        if path == "/redirect-no-scheme":
+            self.wfile.write(b"HTTP/1.1 302 Found\r\nLocation: ://127.0.0.1/x\r\n"
                              b"Content-Length: 0\r\nConnection: close\r\n\r\n")
             self.close_connection = True
             return
