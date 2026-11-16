@@ -420,8 +420,10 @@ int pndir_difftoc_vaccum(const struct pndir_paths *paths)
     char         tmp[PATH_MAX], difftoc_path_bak[PATH_MAX + 2]; /* -Wformat-truncation */
     struct stat  st_idx, st;
     struct vfile *vf;
-    int          lineno, i, len;
+    int          lineno, i, len, ok;
     off_t        diffs_size;
+
+    difftoc_path_bak[0] = '\0';
 
     if (poldek__is_in_testing_mode())
         return 1;
@@ -457,7 +459,8 @@ int pndir_difftoc_vaccum(const struct pndir_paths *paths)
 
     vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_RW);
     if (vf == NULL) {
-        rename(difftoc_path_bak, paths->path_diff_toc);
+        if (difftoc_path_bak[0])
+            rename(difftoc_path_bak, paths->path_diff_toc);
         n_array_free(lines);
         return 0;
     }
@@ -511,16 +514,33 @@ int pndir_difftoc_vaccum(const struct pndir_paths *paths)
         }
     }
 
+    ok = 1;
     for (i = lineno; i < n_array_size(lines); i++) {
-        char *l;
+        char *l = n_array_nth(lines, i);
+        int n = strlen(l);
 
-        l = n_array_nth(lines, i);
-        if (*l)
-            n_stream_printf(vf->vf_tnstream, "%s", l);
+        if (n && n_stream_write(vf->vf_tnstream, l, n) != n)
+            ok = 0;
     }
 
-    vfile_close(vf);
+    if (!vfile_close(vf))
+        ok = 0;
+
     n_array_free(lines);
+
+    if (!ok) {
+        logn(LOGERR, _("%s: unable to write the list of diffs: %m"),
+             paths->path_diff_toc);
+        /* the old list, the new entry included, is in the backup */
+        if (difftoc_path_bak[0]) {
+            if (rename(difftoc_path_bak, paths->path_diff_toc) != 0)
+                logn(LOGERR, "rename %s: %m", difftoc_path_bak);
+        } else {
+            unlink(paths->path_diff_toc);
+        }
+        return 0;
+    }
+
     return 1;
 }
 
@@ -530,6 +550,7 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir,
 {
     struct vfile   *vf;
     struct pndir   *idx;
+    int            ok, err = 0;
 
 
     vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_APPEND);
@@ -538,10 +559,29 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir,
 
     idx = pkgdir->mod_data;
     n_assert(idx && idx->md_orig);
-    n_stream_printf(vf->vf_tnstream, "%s %lu %s %lu\n",
-                    n_basenam(paths->path), (unsigned long)pkgdir->ts,
-                    idx->md_orig, (unsigned long)pkgdir->orig_ts);
-    vfile_close(vf);
+
+    /* the line is far shorter than n_stream_vprintf()'s buffer; -1 is a
+       short write, and the close reports what the stream still holds */
+    ok = n_stream_printf(vf->vf_tnstream, "%s %lu %s %lu\n",
+                         n_basenam(paths->path), (unsigned long)pkgdir->ts,
+                         idx->md_orig, (unsigned long)pkgdir->orig_ts) >= 0;
+    if (!ok)
+        err = errno;
+
+    if (!vfile_close(vf)) {
+        ok = 0;                 /* vfile_close() kept the close's errno */
+    } else if (err) {
+        errno = err;     /* a close that worked kept no errno */
+    }
+
+    if (!ok) {
+        logn(LOGERR, _("%s: unable to write the list of diffs: %m"),
+             paths->path_diff_toc);
+        /* a cut entry would abort a client's read of the whole list; without
+           it the client takes the whole index instead */
+        unlink(paths->path_diff_toc);
+        return 0;
+    }
 
     if (pkgdir->pkgs && n_array_size(pkgdir->pkgs))
         return pndir_difftoc_vaccum(paths);

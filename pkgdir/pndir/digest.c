@@ -22,6 +22,7 @@
 #include <time.h>
 #include <fnmatch.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/param.h>          /* for PATH_MAX */
 
 #include <openssl/evp.h>
@@ -223,7 +224,7 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
 {
     char            path[PATH_MAX];
     struct vfile    *vf;
-    int             n, brandnew = 0;
+    int             n, ok, err = 0, brandnew = 0;
     char            *compr = NULL;
 
     /* no patch was generated based on this pkgdir nor patch
@@ -237,19 +238,32 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
         return 0;
     }
 
-    if ((vf = vfile_open_ul(path, VFT_STDIO, VFM_RW, pkgdir->name)) == NULL)
+    if ((vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RW, pkgdir->name)) == NULL)
         return 0;
 
     DBGF("brandnew %s %d\n", pkgdir_idstr_s(pkgdir), brandnew);
     if (!compr)
         compr = COMPR_NONE;
 
-    fprintf(vf->vf_stream, "%s %s%s%s", pdg->md,
-            brandnew ? option_brandnew : "",
-            compr && brandnew ? "," : "",
-            compr ? compr : "");
+    /* a short write is -1; what the stream still holds fails the close */
+    ok = n_stream_printf(vf->vf_tnstream, "%s %s%s%s", pdg->md,
+                         brandnew ? option_brandnew : "",
+                         compr && brandnew ? "," : "",
+                         compr ? compr : "") >= 0;
+    if (!ok)
+        err = errno;
 
-    vfile_close(vf);
+    if (!vfile_close(vf)) {
+        ok = 0;                 /* vfile_close() kept the close's errno */
+    } else if (err) {
+        errno = err;     /* a close that worked kept no errno */
+    }
+
+    if (!ok) {
+        logn(LOGERR, _("%s: unable to write digest: %m"), path);
+        unlink(path);           /* a cut one would be taken for a whole one */
+        return 0;
+    }
 
     return 1;
 }

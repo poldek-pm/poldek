@@ -44,9 +44,9 @@ EXTRA_DIST = test.h poldek_test_conf.conf \
 	sh run-sh-tests.sh metadata \
 	build-test-rpm.sh
 
-# preloaded by sh/16-hooks, sh/17-interrupt and sh/19-questions
+# preloaded by sh/01-create-repo, sh/16-hooks, sh/17-interrupt and sh/19-questions
 check_LTLIBRARIES = sigint_at_init.la signal_at_fork.la signal_at_restore.la \
-		    library_user.la front_end.la
+		    library_user.la front_end.la close_error.la
 sigint_at_init_la_SOURCES = sigint_at_init.c
 sigint_at_init_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 signal_at_fork_la_SOURCES = signal_at_fork.c
@@ -57,6 +57,8 @@ library_user_la_SOURCES = library_user.c
 library_user_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 front_end_la_SOURCES = front_end.c
 front_end_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
+close_error_la_SOURCES = close_error.c
+close_error_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 
 # runs of sh/ scripts at a time: make check-sh CHECK_SH_JOBS=4
 CHECK_SH_JOBS = 1
