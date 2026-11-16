@@ -68,6 +68,19 @@ check-sh: $(check_LTLIBRARIES)
 check-sh-no-loop: $(check_LTLIBRARIES)
 	@MAXLOOP=3 ./run-sh-tests.sh -j $(CHECK_SH_JOBS)
 
+# cppcheck instances at a time: make lint LINT_JOBS=4
+LINT_JOBS = 1
+
+.PHONY: lint lint-full
+lint:
+	@$(SHELL) $(abs_top_srcdir)/tests/cppcheck/cppcheck.sh -j $(LINT_JOBS) \
+		"$(abs_top_srcdir)" "$(abs_top_builddir)"
+
+# also report functions unused anywhere in the tree (slower)
+lint-full:
+	@$(SHELL) $(abs_top_srcdir)/tests/cppcheck/cppcheck.sh -j $(LINT_JOBS) --unused \
+		"$(abs_top_srcdir)" "$(abs_top_builddir)"
+
 # shared libraries export everything their headers declare EXPORT
 TESTS += exports.sh
 EXTRA_DIST += exports.sh

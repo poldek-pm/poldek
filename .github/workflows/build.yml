@@ -67,7 +67,7 @@ jobs:
     - name: make
       run: make CFLAGS="-O0"
     - name: make lint
-      run: make lint
+      run: make lint LINT_JOBS=$(nproc)
     - name: make check
       run: make CFLAGS="-O0" check
     - name: make check-sh

@@ -1,15 +1,5 @@
 PROJ_DIR=$(shell pwd)
 
-.PHONY: lint lint-full
-
-lint:
-	@$(SHELL) $(top_srcdir)/tests/cppcheck/cppcheck.sh "$(top_srcdir)" "$(top_builddir)"
-
-# also report functions unused anywhere in the tree (slower)
-lint-full:
-	@$(SHELL) $(top_srcdir)/tests/cppcheck/cppcheck.sh --unused \
-		"$(top_srcdir)" "$(top_builddir)"
-
 github-local-ci:
 	gh act -j build
 

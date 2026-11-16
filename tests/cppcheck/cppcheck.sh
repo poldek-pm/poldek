@@ -4,9 +4,11 @@
 #   make lint        fast checks (warnings, performance, portability)
 #   make lint-full   also reports functions unused anywhere in the tree
 #
+#   make lint LINT_JOBS=4   run four cppcheck instances at a time
+#
 # Direct use:
 #
-#   tests/cppcheck/cppcheck.sh [--unused] [SRCDIR [BUILDDIR]]
+#   tests/cppcheck/cppcheck.sh [-j JOBS] [--unused] [SRCDIR [BUILDDIR]]
 #
 # Tests are skipped: they use the check macros cppcheck cannot follow, and
 # cppcheck-suppress comments there would only add noise.  ENABLE_TRACE is 0,
@@ -21,14 +23,45 @@
 # The analysis cache lives in $CPPCHECK_CACHE, or in ${TMPDIR:-/tmp}/
 # poldek-cppcheck-build when it is not set.  CI points it at a persisted path
 # (see .github/workflows/build.yml); deleting the directory only costs a full
-# re-analysis.
+# re-analysis.  lint-full uses a "-full" directory of its own: the enabled
+# checks are part of the cache key, and whole-program analysis (unusedFunction)
+# is not cached at all, so a shared directory would make each switch between
+# the two targets re-analyse the whole tree.
 
 set -e
 
+usage() {
+    echo "usage: $0 [-j JOBS] [--unused] [SRCDIR [BUILDDIR]]" >&2
+    exit 2
+}
+
+jobs=1
 unused=0
-if [ "${1:-}" = "--unused" ] || [ "${1:-}" = "-u" ]; then
-    unused=1
-    shift
+while [ $# -gt 0 ]; do
+    case $1 in
+        -j)          [ $# -ge 2 ] || usage
+                     jobs=$2
+                     shift 2
+                     ;;
+        -j*)         jobs=${1#-j}
+                     shift
+                     ;;
+        -u|--unused) unused=1
+                     shift
+                     ;;
+        --)          shift
+                     break
+                     ;;
+        -*)          usage
+                     ;;
+        *)           break
+                     ;;
+    esac
+done
+
+if ! [ "$jobs" -ge 1 ] 2>/dev/null; then
+    echo "$0: -j takes a number of cppcheck instances, 1 or more" >&2
+    exit 2
 fi
 
 srcdir=${1:-.}
@@ -55,6 +88,12 @@ find . \
 
 # cppcheck's analysis cache; remove it to force a full re-analysis
 cache=${CPPCHECK_CACHE:-"${TMPDIR:-/tmp}/poldek-cppcheck-build"}
+
+# the enabled checks are part of cppcheck's cache key, and whole-program
+# analysis (--unused) is not cached, so keep lint-full out of lint's cache
+if [ "$unused" = 1 ]; then
+    cache="$cache-full"
+fi
 mkdir -p "$cache"
 
 # alloca() is used on purpose; NULL as the sentinel of the trurl varargs
@@ -66,6 +105,7 @@ suppressions="
 "
 
 set -- \
+    -j"$jobs" \
     --quiet \
     --std=c99 --language=c --inline-suppr \
     --suppress=missingIncludeSystem \

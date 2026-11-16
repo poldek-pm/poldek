@@ -126,6 +126,12 @@ conf_sections.c: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl
 check-sh:
 	$(MAKE) -C tests check-sh
 
+.PHONY: lint lint-full
+lint:
+	$(MAKE) -C tests lint
+lint-full:
+	$(MAKE) -C tests lint-full
+
 dist-hook:
 	@if test -d "$(srcdir)/.git"; then \
 		echo "Creating ChangeLog" && \
