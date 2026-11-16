@@ -121,6 +121,26 @@ testCreateDiffWriteError()
     [ ! -f "$repo/packages.i/packages.ndir.diff.toc$COMPR_EXT" ] || fail "diff with unwritten descriptions listed"
 }
 
+# a diff whose list of diffs the clients read could not be written fails too
+testCreateDiffTocWriteError()
+{
+    local repo="$TMPDIR/write-error-toc"
+    local last=$(ls $REPO/*.rpm | tail -1)
+
+    rm -rf $repo
+    mkdir $repo
+    cp $REPO/*.rpm $repo || fail "cp failed"
+    rm -f $repo/$(basename $last)
+    $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+    cp $last $repo || fail "cp failed"
+
+    # a directory cannot replace packages.ndir.diff.toc<comp>
+    mkdir -p $repo/packages.i/packages.ndir.diff.toc$COMPR_EXT
+    if $POLDEK_NOCONF -s $repo --mkidx; then
+        fail "mkidx succeeded"
+    fi
+}
+
 #  b) --st rpmdb -s /foo          =>  rpmdb -> default type
 testCreateFromRpmdb() {
     skip_if_rpm_testing_off && return

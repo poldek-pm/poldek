@@ -810,8 +810,10 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     }
 
 
-    if ((pkgdir->flags & PKGDIR_DIFF) && nerr == 0)
-        pndir_difftoc_update(pkgdir, &paths);
+    if ((pkgdir->flags & PKGDIR_DIFF) && nerr == 0) {
+        if (!pndir_difftoc_update(pkgdir, &paths))
+            nerr++;
+    }
 
  l_end:
     if (nbuf)
