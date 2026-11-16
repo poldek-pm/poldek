@@ -4,7 +4,11 @@
   of diffs are smaller than a buffer, so their bytes reach the disk only from
   the close, and only a close that reports the failure can be tested.
 */
-#define _GNU_SOURCE
+/* RTLD_NEXT is a GNU extension; the build defines it too, so do not redefine
+   it under -Werror */
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
+#endif
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
