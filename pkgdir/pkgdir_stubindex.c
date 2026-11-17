@@ -99,6 +99,7 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
     struct vflock *lock;
     tn_stream     *st;
     char *dir, *tmp;
+    int ok = 1;
 
     msgn_i(2, 2, "Creating stub index of %s...", pkgdir_idstr_s(pkgdir));
 
@@ -123,11 +124,24 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
 
         int n = pndir_make_pkgkey(key, sizeof(key), pkg);
         n_snprintf(&key[n], sizeof(key) - n, "^%u:%u:%u", pkg->color, pkg->size, pkg->btime);
-        n_stream_printf(st, "%s\n", key);
+        if (n_stream_printf(st, "%s\n", key) < 0) {
+            ok = 0;
+            break;
+        }
     }
 
-    n_stream_close(st);
+    if (n_stream_close(st) != 0)
+        ok = 0;
+
+    /* no file is better than a cut one: the next load writes it again */
+    if (!ok) {
+        logn(LOGERR, "%s: write failed (%m)", path);
+        unlink(path);
+    }
     vf_lock_release(lock);
+
+    if (!ok)
+        return 0;
 
     util__set_cache_mtime(path, pkgdir_mtime(pkgdir));
 
@@ -139,9 +153,17 @@ tn_array *load_stubindex(const char *path)
 {
     tn_stream *st;
     tn_array *pkgs;
+    struct stat sb;
     char *buf;
     size_t size;
     int n;
+
+    /* a stub index, even an empty one, holds a zstd frame: an empty file is
+       one cut before its first write, which trurlib reads as a whole stream */
+    if (stat(path, &sb) == 0 && sb.st_size == 0) {
+        unlink(path);
+        return NULL;
+    }
 
     st = n_stream_open(path, "r", TN_STREAM_UNKNOWN);
     if (st == NULL)
@@ -168,8 +190,14 @@ tn_array *load_stubindex(const char *path)
             n_array_push(pkgs, pkg);
         }
     }
-    n_stream_close(st);
     n_free(buf);
+
+    /* a stream cut short, as its close reports: the packages after the cut
+       are missing, and the file goes: its time may still say it is current */
+    if (n_stream_close(st) != 0) {
+        n_array_cfree(&pkgs);
+        unlink(path);
+    }
 
     return pkgs;
 }
