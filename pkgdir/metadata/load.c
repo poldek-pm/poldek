@@ -446,7 +446,7 @@ tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
             struct pkg *pkg;
             if ((pkg = load_package(pkgdir->na, pkgdir->pkgroups, node)))
                 n_array_push(pkgs, pkg);
-            MEMINF("%s", pkg ? pkg_snprintf_s(pkg) : "null");
+            MEMINF("%s", pkg ? pkg_id(pkg) : "null");
         }
 
         x_xmlFree(type);
