@@ -12,6 +12,9 @@ setUp() {
     sudo_up
 }
 
+# preloaded into poldek to make the close of a file fail
+CLOSE_ERROR_SO="$PWD/.libs/close_error.so"
+
 #  Index creation use cases:
 Case_a="-s /foo                   =>  dir  -> default type"
 Case_b="--st type -s /foo         =>  type -> default type"
@@ -139,6 +142,43 @@ testCreateDiffTocWriteError()
     if $POLDEK_NOCONF -s $repo --mkidx; then
         fail "mkidx succeeded"
     fi
+}
+
+# a digest whose close failed fails --mkidx; its bytes are written from the
+# close of a stdio stream, so nothing else could report the bad write
+testCreateDigestCloseError()
+{
+    local dir="$TMPDIR/digest-close-error" out rc
+
+    rm -rf $dir
+    mkdir $dir
+    out=$(env LC_ALL=C LD_PRELOAD=$CLOSE_ERROR_SO WRITE_ERROR=packages.ndir.md \
+        $POLDEK_NOCONF -s $REPO --mkidx=$dir 2>&1)
+    rc=$?
+    assertTrue "mkidx succeeded: $out" "[ $rc -ne 0 ]"
+    assertTrue "no cause given: $out" "echo \"$out\" | grep -q 'unable to write digest: No space left on device'"
+    die_if_empty_index "$dir/packages.ndir$COMPR_EXT"
+    [ ! -f "$dir/packages.ndir.md" ] || fail "digest of a failed write"
+}
+
+# a list of diffs whose close failed fails --mkidx and is not left cut
+testCreateDiffTocCloseError()
+{
+    local repo="$TMPDIR/close-error-toc"
+    local last=$(ls $REPO/*.rpm | tail -1)
+
+    rm -rf $repo
+    mkdir $repo
+    cp $REPO/*.rpm $repo || fail "cp failed"
+    rm -f $repo/$(basename $last)
+    $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+    cp $last $repo || fail "cp failed"
+
+    if env LD_PRELOAD=$CLOSE_ERROR_SO WRITE_ERROR=packages.ndir.diff.toc$COMPR_EXT \
+        $POLDEK_NOCONF -s $repo --mkidx; then
+        fail "mkidx succeeded"
+    fi
+    [ ! -f "$repo/packages.i/packages.ndir.diff.toc$COMPR_EXT" ] || fail "cut list of diffs left"
 }
 
 #  b) --st rpmdb -s /foo          =>  rpmdb -> default type

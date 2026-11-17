@@ -609,31 +609,36 @@ struct vfile *vfile_incref(struct vfile *vf)
     return vf;
 }
 
-void vfile_close(struct vfile *vf)
+int vfile_close(struct vfile *vf)
 {
+    int rc = 1, err = 0;
+
     //printf("vfile_close %p %s [%d]\n", vf, vf->vf_path ? vf->vf_path : NULL, vf->_refcnt);
 
     if (vf->_refcnt > 0) {
         vf->_refcnt--;
-        return;
+        return 1;
     }
 
     //printf("vfile_closeD %p %s [%d]\n", vf, vf->vf_path ? vf->vf_path : NULL, vf->_refcnt);
 
     switch (vf->vf_type) {
         case VFT_IO:
-            close(vf->vf_fd);
+            if (close(vf->vf_fd) != 0)
+                rc = 0;
             vf->vf_fd = -1;
             break;
 
         case VFT_STDIO:
-            fclose(vf->vf_stream);
+            if (fclose(vf->vf_stream) != 0)
+                rc = 0;
             vf->vf_stream = NULL;
             break;
 
 #ifdef ENABLE_VFILE_TRURLIO
         case VFT_TRURLIO:
-            n_stream_close(vf->vf_tnstream);
+            if (n_stream_close(vf->vf_tnstream) != 0)
+                rc = 0;
             vf->vf_tnstream = NULL;
             break;
 #endif
@@ -643,7 +648,13 @@ void vfile_close(struct vfile *vf)
             n_assert(0);
     }
 
-    if (vf->vf_path && (vf->vf_mode & VFM_UNCOMPR) && (vf->vf_mode & VFM_RW)) {
+    /* what the close failed with, kept for the caller: the frees below and
+       the unlink of a fetched copy would overwrite it */
+    if (!rc)
+        err = errno;
+
+    /* the file is not whole, compressing it would only hide that */
+    if (rc && vf->vf_path && (vf->vf_mode & VFM_UNCOMPR) && (vf->vf_mode & VFM_RW)) {
         n_assert(vf_url_type(vf->vf_path) & VFURL_LOCAL);
         if (vf_decompressable(vf->vf_path, NULL, 0)) {
             char src[PATH_MAX], *p;
@@ -670,6 +681,10 @@ void vfile_close(struct vfile *vf)
     }
     memset(vf, 0, sizeof(*vf));
     free(vf);
+
+    if (!rc)
+        errno = err;
+    return rc;
 }
 
 

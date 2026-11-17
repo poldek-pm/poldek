@@ -118,7 +118,9 @@ EXPORT struct vfile *vfile_open_ul(const char *path, int vftype, unsigned vfmode
     vfile_open_ul(path, vftype, vfmode, NULL)
 
 
-EXPORT void vfile_close(struct vfile *vf);
+/* closing writes what is left in the file's buffers, so it can fail with the
+   file cut short; 1, or 0 when the close failed */
+EXPORT int vfile_close(struct vfile *vf);
 EXPORT struct vfile *vfile_incref(struct vfile *vf);
 
 EXPORT int vfile_unlink(struct vfile *vf);
