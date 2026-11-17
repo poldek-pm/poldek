@@ -623,8 +623,6 @@ static int search(struct cmdctx *cmdctx)
     if (pkgs == NULL)
         return 0;
 
-    n_assert(n_array_size(pkgs) > 0);
-
     matched_pkgs = n_array_new(32, NULL, NULL);
     if (n_array_size(pkgs) > 5 && (cmdctx->_flags & OPT_SEARCH_HDD)) {
         display_bar = 1;
@@ -637,7 +635,7 @@ static int search(struct cmdctx *cmdctx)
        not need to re-sort back as pkgs is owned by this function (it is not a ref)
     */
     uint32_t hdd_flags = OPT_SEARCH_FL | OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_CHANGELOG;
-    if (cmdctx->_flags & hdd_flags) {
+    if ((cmdctx->_flags & hdd_flags) && n_array_size(pkgs) > 0) {
         struct pkg *pkg = n_array_nth(pkgs, 0);
         if (pkg->seqno != 0)
             n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_seqno);

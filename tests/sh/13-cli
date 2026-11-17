@@ -265,6 +265,22 @@ testSearchInvalidPattern()
     assertEquals "a-1-1 not found ($out)" "0" "$?"
 }
 
+# search over a directory without packages, such as the available
+# packages of an empty source, matches nothing; -p looks only at the
+# capabilities, the default fields also at summaries and descriptions
+testSearchNoPackages()
+{
+    skip_if_rpm_testing_off && return
+
+    mkdir -p $TMPDIR/empty
+    for opt in -p ""; do
+        out=$($RAW_POLDEK --st dir -s $TMPDIR/empty --skip-installed search $opt a 2>&1)
+        assertEquals "search${opt:+ $opt} a failed ($out)" "0" "$?"
+        echo "$out" | grep -q "No package matches 'a'"
+        assertEquals "search${opt:+ $opt} a: no 'No package matches' ($out)" "0" "$?"
+    done
+}
+
 testUpgrade()
 {
     skip_if_rpm_testing_off && return
