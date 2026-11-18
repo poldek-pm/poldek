@@ -85,6 +85,36 @@ testLoadZst()
     assertEquals "load failed" "$n" "1"
 }
 
+# the load of primary.xml takes no stack per package; with the stack limited
+# to 1 MiB, 8192 packages are enough to show one taking 256 bytes
+testLoadManyPackages()
+{
+    local dir="$TMPDIR/meta-many"
+    local primary old new n
+
+    rm -rf $dir
+    mkdir -p $dir/repo
+    cp -r metadata/repo_02/repodata $dir/repo/ || fail "cp failed"
+    primary=$(ls $dir/repo/repodata/*-primary.xml.gz)
+    old=$(sha256sum < $primary | cut -d' ' -f1)
+    # copies of fake_bash named pkg00000 to pkg08191
+    zcat $primary | awk -v n=8192 '
+        /<package type="rpm">/ && !done { inpkg = 1 }
+        inpkg { pkg = pkg $0 "\n" }
+        inpkg && /<\/package>/ { inpkg = 0; done = 1 }
+        /<\/metadata>/ {
+            for (i = 0; i < n; i++) {
+                p = pkg; gsub(/fake_bash/, sprintf("pkg%05d", i), p); printf "%s", p
+            }
+        }
+        { print }' | gzip -n > $dir/primary.gz
+    mv $dir/primary.gz $primary
+    new=$(sha256sum < $primary | cut -d' ' -f1)
+    sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
+    n=$( (ulimit -s 1024 && $POLDEK -s "m,type=metadata $dir/repo/" ls) | grep -c '^pkg[0-9]')
+    assertEquals "packages listed" "8192" "$n"
+}
+
 # after --up fetches a changed repository, ls lists its packages, not the
 # ones before the change
 testUpRefreshesStubIndex()

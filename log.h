@@ -181,7 +181,8 @@ static inline int dbgf_noop( const char *fmt __attribute__ ((unused)), ... )
 
 # define DBGF(fmt, args...)	while(0) { dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); }
 # define DBG(fmt, args...)	while(0) { dbgf_noop( "" fmt, ## args); }
-# define MEMINF(fmt, args...)	do { dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); } while (0)
+/* no argument is evaluated: an alloca() in one holds stack until return */
+# define MEMINF(fmt, args...)	do { if (0) dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); } while (0)
 # define DBGFIF(cond, fmt, args...) do { if (cond) dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); } while (0)
 #endif
 
