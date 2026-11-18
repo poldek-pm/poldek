@@ -608,6 +608,26 @@ testIgnoreSourceMaskWithoutName()
     assertEquals "'*:a*' did not ignore only a ($out)" "b-1-1" "$(echo "$out" | grep -o '^[ab]-1-1')"
 }
 
+# -vvv names each package the source ignores in its index, also the first
+testSourceIgnoreVerbose()
+{
+    skip_if_rpm_testing_off && return
+
+    local conf="$TMPDIR/source-ignore.conf" mask out
+
+    build a
+    build b
+    index
+
+    for mask in a b; do
+        printf '[source]\nname = s\ntype = pndir\npath = %s/\nignore = %s*\n' $REPO $mask > $conf
+        out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n s -vvv --cmd ls 2>&1)
+        assertEquals "ls ignoring $mask failed ($out)" "0" "$?"
+        assertEquals "the message does not name $mask ($out)" "1" \
+            "$(echo "$out" | grep -c "pndir: ignored $mask-1-1$")"
+    done
+}
+
 # what the cache of installed packages leaves out (descriptions, file lists)
 # comes from the --root database, not from the host's
 testDescInstalledRootFromCache()

@@ -706,7 +706,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             for (i=0; i < n_array_size(ign_patterns); i++) {
                 char *p = n_array_nth(ign_patterns, i);
                 if (fnmatch(p, buf, 0) == 0) {
-                    msgn(3, "pndir: ignored %s", pkg_snprintf_s(pkg));
+                    msgn(3, "pndir: ignored %s", buf);
                     goto l_continue_loop;
                 }
             }
