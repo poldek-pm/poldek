@@ -219,13 +219,13 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
             if (pkgscore_match(&psc, mask)) {
                 switch (scoreflag) {
                     case PKG_HELD:
-                        msgn(3, "held %s", pkg_snprintf_s(pkg));
+                        msgn(3, "held %s", pkg_id(pkg));
                         DBGF("HELD %s\n", pkg_snprintf_s(pkg));
                         pkg_score(pkg, PKG_HELD);
                         break;
 
                     case PKG_IGNORED:
-                        msgn(3, "ignored %s", pkg_snprintf_s(pkg));
+                        msgn(3, "ignored %s", pkg_id(pkg));
                         DBGF("IGNORED %s\n", pkg_snprintf_s(pkg));
                         pkg_score(pkg, PKG_IGNORED);
                         break;
