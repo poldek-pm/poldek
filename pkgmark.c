@@ -382,8 +382,10 @@ int pkgmark_log_unsatisfied_dependecies(struct pkgmark_set *pms)
 
         for (int i=0; i < n_array_size(errs); i++) {
             struct pkg_unreq *unreq = n_array_nth(errs, i);
+            char nvr[256];
+
             logn(LOGERR, _("%s.%s: req %s %s"),
-                 pkg_snprintf_s(m->pkg), pkg_arch(m->pkg), unreq->req,
+                 pkg_str(nvr, sizeof(nvr), m->pkg), pkg_arch(m->pkg), unreq->req,
                  unreq->mismatch ? _("version mismatch") : _("not found"));
             nerr++;
         }
@@ -420,8 +422,10 @@ int pkgmark_verify_package_conflicts(struct pkgmark_set *pms)
         for (int i=0; i < n_array_size(cnflpkgs); i++) {
             struct reqpkg *cpkg = n_array_nth(cnflpkgs, i);
             if (pkg_is_marked(pms, cpkg->pkg)) {
-                logn(LOGERR, _("%s: conflicts with %s (dep %s)"), pkg_snprintf_s(m->pkg),
-                     pkg_snprintf_s0(cpkg->pkg), capreq_stra(cpkg->req));
+                char cr[512];
+
+                logn(LOGERR, _("%s: conflicts with %s (dep %s)"), pkg_id(m->pkg),
+                     pkg_id(cpkg->pkg), capreq_str(cr, sizeof(cr), cpkg->req));
                 nerr++;
             }
         }
