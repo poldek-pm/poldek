@@ -165,27 +165,59 @@ testStubIndexEmptyWrittenAgain()
     assertEquals "packages in the stub index" "2" "$(zstdcat $STUB | wc -l)"
 }
 
-# a stub index that could not be written is not kept, so the next load
-# writes it again
+# a stub index that could not be written is left as it was: its time is the
+# old index's, so the next load writes it again
 testStubIndexWriteError()
 {
     skip_if_rpm_testing_off && return
 
     build a
-    build b
     index
+    touch -d '-1 hour' $REPO/packages.ndir*
     $POLDEK up                  # to create stubindex
 
     local stub=$(ls $CACHEDIR/*/stubindex.pndir.zst)
     [ -f "$stub" ] || fail "no stub index"
-    # every write to /dev/full fails with "No space left on device"
-    rm -f $stub
-    ln -s /dev/full $stub
-    $POLDEK ls > /dev/null 2>&1
-    [ ! -L "$stub" ] || fail "stub index kept after a failed write"
+    assertEquals "packages in the stub index" "1" "$(zstdcat $stub | wc -l)"
+
+    build b
+    index
+    env LD_PRELOAD=$PWD/.libs/close_error.so WRITE_ERROR=stubindex.pndir.zst \
+        $POLDEK ls > /dev/null 2>&1
+    assertEquals "stub index replaced" "1" "$(zstdcat $stub | wc -l)"
+    left=$(find $(dirname $stub) -name '.*.tmp.??????')
+    [ -z "$left" ] || fail "temporary files left: $left"
 
     $POLDEK ls > /dev/null 2>&1
     assertEquals "packages in the stub index" "2" "$(zstdcat $stub | wc -l)"
+}
+
+# a directory index that could not be written is left as it was, with its
+# time, so the next load still finds it outdated and writes it again
+testDirIndexWriteError()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+    touch -d '-1 hour' $REPO/packages.ndir*
+    $POLDEK up                  # to create dirindex
+
+    local dirindex=$(ls $CACHEDIR/*/dirindex.pndir.tndb)
+    [ -f "$dirindex" ] || fail "no dirindex"
+    local before=$(cksum < $dirindex) mtime=$(stat -c %Y $dirindex)
+
+    build b
+    index
+    env LD_PRELOAD=$PWD/.libs/close_error.so WRITE_ERROR=dirindex.pndir.tndb \
+        $POLDEK up > /dev/null 2>&1
+    assertEquals "dirindex replaced" "$before" "$(cksum < $dirindex)"
+    assertEquals "time of the old dirindex changed" "$mtime" "$(stat -c %Y $dirindex)"
+    left=$(find $(dirname $dirindex) -name '.*.tmp.??????')
+    [ -z "$left" ] || fail "temporary files left: $left"
+
+    $POLDEK up > /dev/null 2>&1
+    [ "$(cksum < $dirindex)" != "$before" ] || fail "dirindex not written again"
 }
 
 # an index made with --mo=nodesc keeps no package info: ls --qf shows (none)

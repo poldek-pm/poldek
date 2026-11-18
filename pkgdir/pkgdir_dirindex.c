@@ -357,9 +357,16 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     n_buf_free(nbuf);
     n_hash_free(path_index);
     n_alloc_free(na);
-    tndb_close(db);
-    util__set_cache_mtime(path, pkgdir_mtime(pkgdir));
 
+    /* a failure keeps the old index, which is outdated or missing: the next
+       load makes it again */
+    if (!tndb_close(db)) {
+        logn(LOGERR, _("%s: unable to write directory index: %m"), path);
+        vf_lock_release(lock);
+        return 0;
+    }
+
+    util__set_cache_mtime(path, pkgdir_mtime(pkgdir));
     vf_lock_release(lock);
 
     MEMINF("END");
