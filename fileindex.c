@@ -548,7 +548,7 @@ int file_index_report_orphans(const struct file_index *fi, tn_array *pkgs)
 
             if (n_hash_exists(orphanh, dir)) {
                 tn_hash *opkgh = n_hash_get(orphanh, dir);
-                n_hash_replace(opkgh, pkg_snprintf_s0(pkg), pkg);
+                n_hash_replace(opkgh, pkg_id(pkg), pkg);
                 continue;
             }
 

@@ -1089,8 +1089,8 @@ Path: /usr/bin/digest
     Report is called <emphasis>file-orphans</emphasis>:
     <screen>
 &poldek-prompt; -n foo --verify=file-orphans
-error: /etc/X11/dm: orphaned directory from gdm-2.4.4.5-1, gnome-session-2.4.0-1
-error: /var/games/phantasia: orphaned directory from bsd-games-2.16-2
+error: /etc/X11/dm: orphaned directory from gdm-2.4.4.5-1.i686, gnome-session-2.4.0-1.i686
+error: /var/games/phantasia: orphaned directory from bsd-games-2.16-2.i686
     </screen>
    </para>
   </listitem>
