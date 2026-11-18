@@ -67,6 +67,44 @@ testCreateInDirWithPercent()
     check_repo_content $repo
 }
 
+# --mkidx with the previous index takes no stack for each package of it,
+# also with -vvv; with the stack limited to 256 KiB, 2048 packages are
+# enough to show one taking 256 bytes
+testCreateManyPackagesWithPreviousIndex()
+{
+    local repo="$TMPDIR/many" top="$TMPDIR/many.rpmbuild" i
+
+    rm -rf $repo $top
+    mkdir -p $repo $top
+    # one spec builds the empty packages p0000 to p2047
+    {
+        printf 'Name: many\nVersion: 1\nRelease: 1\nSummary: many\nLicense: GPL\n'
+        printf 'BuildArch: noarch\nAutoReqProv: no\n%%description\nmany\n'
+        i=0
+        while [ $i -lt 2048 ]; do
+            printf '%%package -n p%04d\nSummary: p\n%%description -n p%04d\np\n%%files -n p%04d\n' $i $i $i
+            i=$((i + 1))
+        done
+    } > $top/many.spec
+    rpmbuild -bb --quiet --define "_topdir $top" --define "_builddir $top" \
+        --define "_rpmdir $repo" --define '_buildhost localhost' \
+        --define '_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm' \
+        --define '_binary_payload w0.gzdio' $top/many.spec > $top/log 2>&1 || \
+        fail "rpmbuild failed: $(tail -3 $top/log)"
+    rm -rf $top
+
+    $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+    (ulimit -s 256 && $POLDEK_NOCONF -s $repo --mkidx) || \
+        fail "mkidx with the previous index failed"
+    # -vvv names each package found in the previous index by its file...
+    (ulimit -s 256 && $POLDEK_NOCONF -s $repo --mkidx -vvv > /dev/null) || \
+        fail "mkidx -vvv failed"
+    # ...and, when the time of the file differs, by its header
+    touch -d '2001-01-01 00:00' $repo/*.rpm
+    (ulimit -s 256 && $POLDEK_NOCONF -s $repo --mkidx -vvv > /dev/null) || \
+        fail "mkidx -vvv of touched packages failed"
+}
+
 # an index that could not be written fails --mkidx and gets no digest
 testCreateWriteError()
 {

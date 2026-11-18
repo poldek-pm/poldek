@@ -81,11 +81,11 @@ static tn_hash *build_mtime_index(tn_array *pkgs)
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
-        char key[2048];
+        char key[2048], fn[256];
 
         if (pkg->fmtime && pkg->fsize) {
-            mtime_key(key, sizeof(key), pkg_filename_s(pkg), pkg->fmtime,
-                      pkg->fsize);
+            mtime_key(key, sizeof(key), pkg_filename(pkg, fn, sizeof(fn)),
+                      pkg->fmtime, pkg->fsize);
             n_hash_insert(ht, key, pkg);
         }
     }
@@ -213,7 +213,7 @@ int load_dir(struct pkgdir *pkgdir,
 
     n = 0;
     for (;;) {
-        char path[PATH_MAX];
+        char path[PATH_MAX], fn[256];
         struct pkg *pkg = NULL;
         Header h = NULL;
 
@@ -236,7 +236,7 @@ int load_dir(struct pkgdir *pkgdir,
             pkg = search_in_mtime_index(mtime_index, ent->d_name, &st);
             if (pkg) {
                 msgn(3, _("%s: file seems untouched, loaded from previous index"),
-                     pkg_filename_s(pkg));
+                     pkg_filename(pkg, fn, sizeof(fn)));
                 pkg = pkg_link(pkg);
                 remap_groupid(pkg, pkgroups, prev_pkgdir);
             }
@@ -255,7 +255,7 @@ int load_dir(struct pkgdir *pkgdir,
                 pkg = search_in_prev(prev_pkgdir, h, ent->d_name, &st);
                 if (pkg) {
                     msgn(3, _("%s: seems untouched, loaded from previous index"),
-                         pkg_snprintf_s(pkg));
+                         pkg_id(pkg));
                     pkg = pkg_link(pkg);
                     remap_groupid(pkg, pkgroups, prev_pkgdir);
                 }
