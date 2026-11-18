@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <dirent.h>
 #include <fnmatch.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
@@ -60,8 +61,6 @@ struct pndir_paths {
     char  path_diff_toc[PATH_MAX];
 };
 
-static
-int pndir_difftoc_vaccum(const struct pndir_paths *paths);
 
 
 char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
@@ -147,17 +146,13 @@ int fheader(char *hdr, size_t size, const char *name, struct pkgdir *pkgdir)
 }
 
 
-static int do_unlink(const char *path)
+/* a tndb writes its file out when it is closed */
+static void abort_written_db(struct tndb *db)
 {
-    struct stat st;
-
-    if (stat(path, &st) == 0 && S_ISREG(st.st_mode))
-        return vf_localunlink(path);
-
-    return 0;
+    tndb_unlink(db);            /* the file is not written */
+    tndb_close(db);
 }
 
-/* a tndb writes its file out when it is closed */
 static int close_written_db(struct tndb *db)
 {
     char path[PATH_MAX];
@@ -412,22 +407,52 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg)
 }
 
 
-static
-int pndir_difftoc_vaccum(const struct pndir_paths *paths)
+/* the lines of the list of diffs, none for a missing list; NULL when the
+   list cannot be read whole, and must not be rewritten from a part */
+static tn_array *difftoc_read(const char *path)
 {
-    tn_array     *lines;
-    char         line[2048], *dn, *bn;
-    char         tmp[PATH_MAX], difftoc_path_bak[PATH_MAX + 2]; /* -Wformat-truncation */
+    tn_array   *lines;
+    tn_stream  *st;
+    char       *buf = NULL;
+    size_t     size = 0;
+    int        n;
+
+    lines = n_array_new(32, free, NULL);
+    if ((st = n_stream_open(path, "r", TN_STREAM_UNKNOWN)) == NULL) {
+        if (errno == ENOENT)
+            return lines;
+
+        logn(LOGERR, "%s: %m", path);
+        n_array_free(lines);
+        return NULL;
+    }
+
+    while ((n = n_stream_getline(st, &buf, &size)) > 0)
+        n_array_push(lines, n_strdupl(buf, n));
+    free(buf);
+
+    if (n_stream_close(st) != 0) {
+        logn(LOGERR, _("%s: unable to read the list of diffs: %m"), path);
+        n_array_free(lines);
+        return NULL;
+    }
+
+    return lines;
+}
+
+/* the diffs are listed from the newest back until they add up to 90% of
+   the whole index: a client behind that takes the index instead.  The
+   older diffs go to obsolete, the lines of the missing ones are emptied;
+   *from is the first line to keep */
+static int difftoc_vaccum(tn_array *lines, const struct pndir_paths *paths,
+                          tn_array *obsolete, int *from)
+{
+    char         tmp[PATH_MAX], *dn, *bn;
     struct stat  st_idx, st;
-    struct vfile *vf;
-    int          lineno, i, len, ok;
-    off_t        diffs_size;
+    off_t        diffs_size = 0;
+    int          i, cut = -1;
 
-    difftoc_path_bak[0] = '\0';
-
-    if (poldek__is_in_testing_mode())
-        return 1;
-
+    *from = 0;
     if (stat(paths->path_main, &st_idx) != 0) {
         logn(LOGERR, "vaccum: stat %s: %m", paths->path_main);
         return 0;
@@ -436,38 +461,6 @@ int pndir_difftoc_vaccum(const struct pndir_paths *paths)
     memcpy(tmp, paths->path_diff_toc, sizeof(tmp));
     n_basedirnam(tmp, &dn, &bn);
 
-    vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_RO);
-    if (vf == NULL)
-        return 0;
-
-    lines = n_array_new(128, NULL, NULL);
-    while ((len = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
-        char *l;
-
-        l = alloca(len + 1);
-        memcpy(l, line, len + 1);
-        n_array_push(lines, l);
-        DBGF("line len=%d buf=[%s]\n", len, l);
-    }
-
-    if (n_array_size(lines)) {
-        snprintf(difftoc_path_bak, sizeof(difftoc_path_bak), "%s-",
-                 paths->path_diff_toc);
-        rename(paths->path_diff_toc, difftoc_path_bak);
-    }
-    vfile_close(vf);
-
-    vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_RW);
-    if (vf == NULL) {
-        if (difftoc_path_bak[0])
-            rename(difftoc_path_bak, paths->path_diff_toc);
-        n_array_free(lines);
-        return 0;
-    }
-
-
-    lineno = 0;
-    diffs_size = 0;
     for (i = n_array_size(lines) - 1; i >= 0; i--) {
         char *p, *l, path[PATH_MAX];
 
@@ -478,117 +471,109 @@ int pndir_difftoc_vaccum(const struct pndir_paths *paths)
             continue;
         }
 
-        *p = '\0';
-        /*  "- 1" to save space for ".md" (to unlink md too) */
-        snprintf(path, sizeof(path) - 1, "%s/%s", dn, l);
-
-        *p = ' ';
+        snprintf(path, sizeof(path), "%s/%.*s", dn, (int)(p - l), l);
 
         if (stat(path, &st) != 0) {
             if (errno != ENOENT)
-                logn(LOGERR, "vaccum diff: stat %s: %m", l);
+                logn(LOGERR, "vaccum diff: stat %s: %m", path);
             *l = '\0';
             continue;
         }
         DBGF("path = %s %lld, %lld, %lld\n", path, (long long)st.st_size,
              (long long)diffs_size, (long long)st_idx.st_size);
 
-        if (lineno) {
-            if (vf_valid_path(path)) {
-                char *q;
+        if (cut >= 0) {
+            if (vf_valid_path(path))
+                n_array_push(obsolete, n_strdup(path));
 
-                msgn(1, _("Removing outdated %s"), n_basenam(path));
-                unlink(path);
-                if ((q = strrchr(path, '.')) && (n_str_eq(q+1, COMPR_GZ) || n_str_eq(q+1, COMPR_ZST))) {
-                    strcpy(q, pndir_digest_ext);
-                    //msgn(1, _("Removing outdated MDD %s"), n_basenam(path));
-                    unlink(path);
-                }
-            }
+        } else if (diffs_size + st.st_size > (st_idx.st_size * 0.9)) {
+            cut = i;
 
         } else {
-            if (diffs_size + st.st_size > (st_idx.st_size * 0.9))
-                lineno = i;
-            else
-                diffs_size += st.st_size;
+            diffs_size += st.st_size;
         }
     }
 
-    ok = 1;
-    for (i = lineno; i < n_array_size(lines); i++) {
-        char *l = n_array_nth(lines, i);
-        int n = strlen(l);
-
-        if (n && n_stream_write(vf->vf_tnstream, l, n) != n)
-            ok = 0;
-    }
-
-    if (!vfile_close(vf))
-        ok = 0;
-
-    n_array_free(lines);
-
-    if (!ok) {
-        logn(LOGERR, _("%s: unable to write the list of diffs: %m"),
-             paths->path_diff_toc);
-        /* the old list, the new entry included, is in the backup */
-        if (difftoc_path_bak[0]) {
-            if (rename(difftoc_path_bak, paths->path_diff_toc) != 0)
-                logn(LOGERR, "rename %s: %m", difftoc_path_bak);
-        } else {
-            unlink(paths->path_diff_toc);
-        }
-        return 0;
-    }
+    if (cut >= 0)
+        *from = cut;
 
     return 1;
 }
 
+/* the list is written whole, with the new diff added: a client finds the
+   old list or the new one, never a cut entry, which would abort its read
+   of the list.  The diffs it no longer lists are removed after it */
 static
 int pndir_difftoc_update(const struct pkgdir *pkgdir,
                          const struct pndir_paths *paths)
 {
-    struct vfile   *vf;
+    tn_array       *lines, *obsolete;
+    tn_stream      *st;
     struct pndir   *idx;
-    int            ok, err = 0;
-
-
-    vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_APPEND);
-    if (vf == NULL)
-        return 0;
+    char           entry[PATH_MAX + 256];
+    int            i, n, from = 0, ok = 1, trim;
 
     idx = pkgdir->mod_data;
     n_assert(idx && idx->md_orig);
 
-    /* the line is far shorter than n_stream_vprintf()'s buffer; -1 is a
-       short write, and the close reports what the stream still holds */
-    ok = n_stream_printf(vf->vf_tnstream, "%s %lu %s %lu\n",
-                         n_basenam(paths->path), (unsigned long)pkgdir->ts,
-                         idx->md_orig, (unsigned long)pkgdir->orig_ts) >= 0;
-    if (!ok)
-        err = errno;
+    if ((lines = difftoc_read(paths->path_diff_toc)) == NULL)
+        return 0;
 
-    if (!vfile_close(vf)) {
-        ok = 0;                 /* vfile_close() kept the close's errno */
-    } else if (err) {
-        errno = err;     /* a close that worked kept no errno */
+    n = n_snprintf(entry, sizeof(entry), "%s %lu %s %lu\n",
+                   n_basenam(paths->path), (unsigned long)pkgdir->ts,
+                   idx->md_orig, (unsigned long)pkgdir->orig_ts);
+    n_array_push(lines, n_strdupl(entry, n));
+
+    /* only a diff that adds packages trims the list */
+    obsolete = n_array_new(8, free, NULL);
+    trim = pkgdir->pkgs && n_array_size(pkgdir->pkgs);
+    if (trim && !poldek__is_in_testing_mode()) {
+        if (!difftoc_vaccum(lines, paths, obsolete, &from))
+            ok = 0;             /* the list is not trimmed */
     }
 
-    if (!ok) {
+    st = n_stream_open(paths->path_diff_toc, "w",
+                       TN_STREAM_UNKNOWN | TN_STREAM_ATOMIC | TN_STREAM_SYNC);
+    if (st == NULL) {
+        logn(LOGERR, "%s: %m", paths->path_diff_toc);
+        ok = 0;
+        goto l_end;
+    }
+
+    for (i = from; i < n_array_size(lines); i++) {
+        const char *l = n_array_nth(lines, i);
+        int len = strlen(l);
+
+        if (len && n_stream_write(st, l, len) != len) {
+            n_stream_abort(st);
+            st = NULL;
+            break;
+        }
+    }
+
+    if (st == NULL || n_stream_close(st) != 0) {
         logn(LOGERR, _("%s: unable to write the list of diffs: %m"),
              paths->path_diff_toc);
-        /* a cut entry would abort a client's read of the whole list; without
-           it the client takes the whole index instead */
-        unlink(paths->path_diff_toc);
-        return 0;
+        ok = 0;
+        goto l_end;             /* the old list, and its diffs, stay */
     }
 
-    if (pkgdir->pkgs && n_array_size(pkgdir->pkgs))
-        return pndir_difftoc_vaccum(paths);
+    for (i = 0; i < n_array_size(obsolete); i++) {
+        char *q, *path = n_array_nth(obsolete, i);
 
-    return 1;
+        msgn(1, _("Removing outdated %s"), n_basenam(path));
+        unlink(path);
+        if ((q = strrchr(path, '.')) && (n_str_eq(q+1, COMPR_GZ) || n_str_eq(q+1, COMPR_ZST))) {
+            strcpy(q, pndir_digest_ext); /* not longer than q */
+            unlink(path);
+        }
+    }
+
+ l_end:
+    n_array_free(obsolete);
+    n_array_free(lines);
+    return ok;
 }
-
 
 static
 int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
@@ -687,13 +672,76 @@ int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, tn_hash *langstosave_h,
                 akey = dkey;
             }
 
-            tndb_put(db, akey, aklen, n_buf_ptr(nbuf), n_buf_size(nbuf));
+            if (!tndb_put(db, akey, aklen, n_buf_ptr(nbuf), n_buf_size(nbuf))) {
+                logn(LOGERR, _("%s: unable to write index: %m"), tndb_path(db));
+                return 0;
+            }
             n_buf_clean(nbuf);
         }
     }
     return 1;
 }
 
+
+/* the .<name>.tmp.XXXXXX a killed writer left of a file of the index in dir;
+   one written now is newer than that */
+#define TMP_STALE_AGE (60 * 60)
+
+static void rm_stale_tmps(const char *dir, const char *stem)
+{
+    struct dirent  *ent;
+    struct stat    st;
+    char           pattern[PATH_MAX], path[PATH_MAX];
+    time_t         now = time(NULL);
+    DIR            *d;
+    int            n;
+
+    n = n_snprintf(pattern, sizeof(pattern), ".%s*.tmp.??????", stem);
+    if (n >= (int)sizeof(pattern) - 1)
+        return;
+
+    if ((d = opendir(dir)) == NULL)
+        return;
+
+    while ((ent = readdir(d)) != NULL) {
+        if (fnmatch(pattern, ent->d_name, FNM_PERIOD) != 0)
+            continue;
+
+        n_snprintf(path, sizeof(path), "%s/%s", dir, ent->d_name);
+        if (lstat(path, &st) != 0 || !S_ISREG(st.st_mode))
+            continue;
+
+        if (now - st.st_mtime < TMP_STALE_AGE)
+            continue;
+
+        msgn(1, _("Removing leftover %s"), path);
+        if (unlink(path) != 0)
+            logn(LOGWARN, "unlink %s: %m", path);
+    }
+    closedir(d);
+}
+
+/* every file of the index is named after its name without the compression
+   extension: packages.ndir.gz, packages.ndir.md, packages.i/packages.ndir... */
+static void rm_index_stale_tmps(const char *path)
+{
+    char  tmp[PATH_MAX], dir[PATH_MAX], *dn, *bn, *ext;
+
+    n_snprintf(tmp, sizeof(tmp), "%s", path);
+    n_basedirnam(tmp, &dn, &bn);
+    if (*bn == '\0')
+        return;
+
+    if (dn == NULL)
+        dn = ".";
+
+    if ((ext = strrchr(bn, '.')) && strcmp(ext + 1, pndir_extension) != 0)
+        *ext = '\0';
+
+    rm_stale_tmps(dn, bn);
+    n_snprintf(dir, sizeof(dir), "%s/%s", dn, pndir_packages_incdir);
+    rm_stale_tmps(dir, bn);
+}
 
 int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 {
@@ -730,11 +778,13 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         return 0;
     }
 
+    if ((pkgdir->flags & PKGDIR_DIFF) == 0)
+        rm_index_stale_tmps(paths.path_main);
+
     DBGF("path %s, flags %d\n", paths.path, flags);
     msgn_tty(1, _("Writing %s..."), t_url_slim(paths.path, 12));
     msgn_f(1, _("Writing %s..."), paths.path);
 
-    do_unlink(paths.path);
     db = tndb_creat(paths.path, PNDIR_COMPRLEVEL,
                     TNDB_NOHASH | TNDB_SIGN_DIGEST);
     if (db == NULL) {
@@ -790,8 +840,13 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         n_array_push(keys, n_strdupl(key, klen));
 
         n_buf_clean(nbuf);
-        if (pkg_store(pkg, nbuf, exclpath, pkgdir->depdirs, st_flags))
-            tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
+        if (pkg_store(pkg, nbuf, exclpath, pkgdir->depdirs, st_flags)) {
+            if (!tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf))) {
+                logn(LOGERR, _("%s: unable to write index: %m"), paths.path);
+                nerr++;
+                goto l_close;
+            }
+        }
 
         if (i % 1000 == 0)
             MEMINF("%d packages", i);
@@ -813,11 +868,16 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     }
 
  l_close:
-	if (db) {
-		if (!close_written_db(db))
-			nerr++;
-		db = NULL;
-	}
+    /* the index first, the largest, then its descriptions, then its digest
+       or the list of diffs, which tell the clients there is a new one;
+       after a failure the rest is dropped and the files stay as they were */
+    if (db) {
+        if (nerr)
+            abort_written_db(db);
+        else if (!close_written_db(db))
+            nerr++;
+        db = NULL;
+    }
 
     if (db_dscr_h) {
         struct tndb *dscr_db;
@@ -830,6 +890,11 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 
             dscr_db = pndir_db_dscr_h_get(db_dscr_h, lang);
             n_assert(dscr_db);
+            if (nerr) {
+                abort_written_db(dscr_db);
+                continue;
+            }
+
             p = vf_url_slim_s(tndb_path(dscr_db), 0);
             msgn(2, _(" Writing '%s' descriptions %s..."), lang, p);
             if (!close_written_db(dscr_db))

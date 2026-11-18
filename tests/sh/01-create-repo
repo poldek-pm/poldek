@@ -15,6 +15,27 @@ setUp() {
 # preloaded into poldek to make the close of a file fail
 CLOSE_ERROR_SO="$PWD/.libs/close_error.so"
 
+# the files of an index are replaced from a hidden .<name>.tmp.XXXXXX,
+# which neither a finished nor a failed write may leave
+assert_no_tmp() {
+    local left=$(find $1 -name '.*.tmp.??????')
+    [ -z "$left" ] || fail "temporary files left: $left"
+}
+
+# the checksums of the files of the index in $1
+index_sums() {
+    (cd $1 && find . -type f -name 'packages.*' ! -name '*.md5' | sort | xargs -r cksum)
+}
+
+# $1 with all the packages of $REPO but the last one, and an index of them
+mkrepo_but_last() {
+    rm -rf $1
+    mkdir $1
+    cp $REPO/*.rpm $1 || fail "cp failed"
+    rm -f $1/$(basename $(ls $REPO/*.rpm | tail -1))
+    $POLDEK_NOCONF -s $1 --mkidx || fail "mkidx failed"
+}
+
 #  Index creation use cases:
 Case_a="-s /foo                   =>  dir  -> default type"
 Case_b="--st type -s /foo         =>  type -> default type"
@@ -79,6 +100,7 @@ testCreateWriteError()
         fail "mkidx succeeded"
     fi
     [ ! -f "$dir/packages.ndir.md" ] || fail "digest of an unwritten index"
+    assert_no_tmp $dir
 }
 
 # descriptions that could not be written fail --mkidx too, though the index was
@@ -94,6 +116,42 @@ testCreateDescrWriteError()
     fi
     die_if_empty_index "$dir/packages.ndir$COMPR_EXT"
     [ ! -f "$dir/packages.ndir.md" ] || fail "digest of unwritten descriptions"
+    assert_no_tmp $dir
+}
+
+# a file of the index that cannot be written fails --mkidx and is left as it
+# was, and so are the files after it: an index that fails leaves all of them,
+# and as the digest is written last, the clients see the old index as
+# current whichever file failed
+testCreateErrorKeepsIndex()
+{
+    local repo="$TMPDIR/keep-index"
+    local last=$(ls $REPO/*.rpm | tail -1)
+    local n=$(ls $REPO/*.rpm | wc -l)
+    local f before md fsum
+
+    for f in packages.ndir$COMPR_EXT packages.ndir.dscr$COMPR_EXT packages.ndir.md; do
+        mkrepo_but_last $repo
+        before=$(index_sums $repo)
+        md=$(cksum < $repo/packages.ndir.md)
+        fsum=$(cksum < $repo/$f)
+        cp $last $repo || fail "cp failed"
+
+        if env LD_PRELOAD=$CLOSE_ERROR_SO WRITE_ERROR=$f $POLDEK_NOCONF -s $repo --mkidx; then
+            fail "$f: mkidx succeeded"
+        fi
+        assert_no_tmp $repo
+        [ ! -e $repo/packages.i ] || fail "$f: diff of an unwritten index"
+        [ "$(cksum < $repo/$f)" = "$fsum" ] || fail "$f: replaced"
+        [ "$(cksum < $repo/packages.ndir.md)" = "$md" ] || fail "$f: digest replaced"
+
+        if [ "$f" = packages.ndir$COMPR_EXT ]; then
+            [ "$(index_sums $repo)" = "$before" ] || fail "$f: index changed"
+            die_if_invalid_index $repo/packages.ndir$COMPR_EXT $(expr $n - 1)
+        else
+            die_if_invalid_index $repo/packages.ndir$COMPR_EXT $n
+        fi
+    done
 }
 
 # a diff whose descriptions could not be written is not listed for the clients
@@ -159,6 +217,7 @@ testCreateDigestCloseError()
     assertTrue "no cause given: $out" "echo \"$out\" | grep -q 'unable to write digest: No space left on device'"
     die_if_empty_index "$dir/packages.ndir$COMPR_EXT"
     [ ! -f "$dir/packages.ndir.md" ] || fail "digest of a failed write"
+    assert_no_tmp $dir
 }
 
 # a list of diffs whose close failed fails --mkidx and is not left cut
@@ -179,6 +238,111 @@ testCreateDiffTocCloseError()
         fail "mkidx succeeded"
     fi
     [ ! -f "$repo/packages.i/packages.ndir.diff.toc$COMPR_EXT" ] || fail "cut list of diffs left"
+    assert_no_tmp $repo
+}
+
+cat_toc() {
+    case $1 in
+        *.gz)  zcat $1 ;;
+        *.zst) zstdcat -q $1 ;;
+        *)     cat $1 ;;
+    esac
+}
+
+# every diff the list in $1 names is there
+assert_listed_diffs() {
+    local toc=$1 d
+
+    for d in $(cat_toc $toc | cut -d' ' -f1); do
+        [ -f $(dirname $toc)/$d ] || fail "listed $d missing"
+    done
+}
+
+# a list of diffs is replaced only by a whole one: after a failure the
+# clients find the old list, its diffs still there.  Out of testing mode the
+# list is trimmed, and only after it is written the diffs it no longer
+# lists are removed
+testCreateDiffTocErrorKeepsList()
+{
+    local repo="$TMPDIR/keep-toc"
+    local toc="$repo/packages.i/packages.ndir.diff.toc$COMPR_EXT"
+    local last=$(basename $(ls $REPO/*.rpm | tail -1))
+    local i before diffs out rc mo=$COMPR
+
+    [ "$COMPR" = none ] && mo=nocompress    # out of testing mode
+
+    mkrepo_but_last $repo
+    rm -rf $repo.out
+    mkdir $repo.out
+    cp $REPO/$last $repo.out || fail "cp failed"
+
+    # 6 diffs, each about a quarter of the index, enough to trim the list
+    for i in 1 2 3; do
+        mv $repo.out/$last $repo/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+        mv $repo/$last $repo.out/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+    done
+    die_if_invalid_index $toc 6
+
+    before=$(cksum < $toc)
+    diffs=$(ls $repo/packages.i)
+    mv $repo.out/$last $repo/
+    out=$(env -u POLDEK_TESTING LC_ALL=C LD_PRELOAD=$CLOSE_ERROR_SO \
+        WRITE_ERROR=packages.ndir.diff.toc$COMPR_EXT \
+        $POLDEK_NOCONF -s $repo --mkidx --mo=$mo 2>&1)
+    rc=$?
+    assertTrue "mkidx succeeded: $out" "[ $rc -ne 0 ]"
+    assertTrue "no cause given: $out" "echo \"$out\" | grep -q 'unable to write the list of diffs: No space left on device'"
+    [ "$(cksum < $toc)" = "$before" ] || fail "list of diffs changed"
+    for i in $diffs; do
+        [ -e $repo/packages.i/$i ] || fail "$i removed"
+    done
+    assert_listed_diffs $toc
+    assert_no_tmp $repo
+
+    # a diff that adds packages trims the list; the uncompressed index would
+    # take 30 diffs and more
+    [ "$COMPR" = none ] && return
+    mv $repo/$last $repo.out/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+    mv $repo.out/$last $repo/
+    env -u POLDEK_TESTING $POLDEK_NOCONF -s $repo --mkidx --mo=$mo || fail "mkidx failed"
+    [ $(cat_toc $toc | wc -l) -lt 8 ] || fail "list of diffs not trimmed"
+    assert_listed_diffs $toc
+    for i in $diffs; do
+        [ -e $repo/packages.i/$i ] || continue
+        case $i in
+            packages.ndir.diff.toc*|packages.ndir.dscr.*) continue ;;
+        esac
+        cat_toc $toc | grep -q "^$i " || fail "unlisted $i left"
+    done
+    assert_no_tmp $repo
+}
+
+# the temporary files of the index a killed --mkidx left are removed by the
+# next one that writes it; a fresh one may be another --mkidx's, and other files are not
+# the index's
+testCreateRemovesStaleTmps()
+{
+    local repo="$TMPDIR/stale-tmps" f
+
+    mkrepo_but_last $repo
+    mkdir -p $repo/packages.i
+    for f in .packages.ndir$COMPR_EXT.tmp.AAAAAA .packages.ndir.md.tmp.BBBBBB \
+             packages.i/.packages.ndir.diff.toc$COMPR_EXT.tmp.CCCCCC; do
+        echo cut > $repo/$f
+        touch -d '-2 hours' $repo/$f
+    done
+    echo fresh > $repo/.packages.ndir.md.tmp.DDDDDD
+    echo other > $repo/.other.tmp.EEEEEE
+    touch -d '-2 hours' $repo/.other.tmp.EEEEEE
+
+    cp $(ls $REPO/*.rpm | tail -1) $repo || fail "cp failed"
+    $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+    for f in .packages.ndir$COMPR_EXT.tmp.AAAAAA .packages.ndir.md.tmp.BBBBBB \
+             packages.i/.packages.ndir.diff.toc$COMPR_EXT.tmp.CCCCCC; do
+        [ ! -e $repo/$f ] || fail "$f left"
+    done
+    [ -f $repo/.packages.ndir.md.tmp.DDDDDD ] || fail "fresh temporary file removed"
+    [ -f $repo/.other.tmp.EEEEEE ] || fail "file of no index removed"
 }
 
 #  b) --st rpmdb -s /foo          =>  rpmdb -> default type
