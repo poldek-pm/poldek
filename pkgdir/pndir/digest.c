@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -30,6 +31,7 @@
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
 #include <trurl/nmalloc.h>
+#include <trurl/nstream.h>
 #include <trurl/n_snprintf.h>
 #include <vfile/vfile.h>
 
@@ -223,8 +225,8 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
                       const struct pkgdir *pkgdir)
 {
     char            path[PATH_MAX];
-    struct vfile    *vf;
-    int             n, ok, err = 0, brandnew = 0;
+    tn_stream       *st;
+    int             n, ok, err, brandnew = 0;
     char            *compr = NULL;
 
     /* no patch was generated based on this pkgdir nor patch
@@ -238,30 +240,35 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
         return 0;
     }
 
-    if ((vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RW, pkgdir->name)) == NULL)
+    /* the digest tells a client the index changed: it is replaced only by
+       a whole one */
+    st = n_stream_open(path, "w",
+                       TN_STREAM_UNKNOWN | TN_STREAM_ATOMIC | TN_STREAM_SYNC);
+    if (st == NULL) {
+        logn(LOGERR, "%s: %m", path);
         return 0;
+    }
 
     DBGF("brandnew %s %d\n", pkgdir_idstr_s(pkgdir), brandnew);
     if (!compr)
         compr = COMPR_NONE;
 
     /* a short write is -1; what the stream still holds fails the close */
-    ok = n_stream_printf(vf->vf_tnstream, "%s %s%s%s", pdg->md,
-                         brandnew ? option_brandnew : "",
-                         compr && brandnew ? "," : "",
-                         compr ? compr : "") >= 0;
-    if (!ok)
+    if (n_stream_printf(st, "%s %s%s%s", pdg->md,
+                        brandnew ? option_brandnew : "",
+                        compr && brandnew ? "," : "",
+                        compr ? compr : "") < 0) {
         err = errno;
+        n_stream_abort(st);     /* the old digest stays */
+        errno = err;
+        ok = 0;
 
-    if (!vfile_close(vf)) {
-        ok = 0;                 /* vfile_close() kept the close's errno */
-    } else if (err) {
-        errno = err;     /* a close that worked kept no errno */
+    } else {
+        ok = n_stream_close(st) == 0;
     }
 
     if (!ok) {
         logn(LOGERR, _("%s: unable to write digest: %m"), path);
-        unlink(path);           /* a cut one would be taken for a whole one */
         return 0;
     }
 

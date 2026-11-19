@@ -1104,7 +1104,9 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
                  vf_url_slim_s(orig->idxpath, 0));
         }
 
-        if (diff && (flags & PKGDIR_CREAT_NOPATCH) == 0) { /* save diff? */
+        /* a diff from the old index to one that is not there would be
+           listed for the clients */
+        if (diff && nerr == 0 && (flags & PKGDIR_CREAT_NOPATCH) == 0) {
             if (!do_create(diff, type, NULL, flags))
                 nerr++;
         }

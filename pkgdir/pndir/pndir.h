@@ -66,6 +66,10 @@ char *pndir_dscr_pathname(char *dest, size_t size, const char *idxpath,
 
 int pndir_tsstr(char *tss, int size, time_t ts);
 
+/* path is cut into its directory and the index name without the
+   compression extension */
+int pndir_index_stem(char *path, char **dn, char **stem);
+
 
 extern const char *pndir_digest_ext;
 
@@ -102,6 +106,12 @@ int pndir_m_update_a(const struct source *src, const char *idxpath,
 int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc);
 
 const char *pndir_localidxpath(const struct pkgdir *pkgdir);
+
+/* difftoc.c: the list of diffs */
+int pndir_difftoc_update(const struct pkgdir *pkgdir, const char *idxpath,
+                         const char *diffpath, const char *tocpath);
+int pndir_difftoc_leads_to(tn_array *lines, time_t orig_ts);
+const char *pndir_difftoc_find_tss(const char *name);
 
 
 /* description.c */

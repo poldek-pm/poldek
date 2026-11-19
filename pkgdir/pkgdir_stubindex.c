@@ -111,7 +111,7 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
     if ((lock = vf_lock_mkdir(dir)) == NULL)
         return 0;
 
-    st = n_stream_open(path, "w", TN_STREAM_UNKNOWN);
+    st = n_stream_open(path, "w", TN_STREAM_UNKNOWN | TN_STREAM_ATOMIC);
     if (st == NULL) {
         logn(LOGERR, "%s: open failed (%m)\n", path);
         vf_lock_release(lock);
@@ -130,14 +130,20 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
         }
     }
 
-    if (n_stream_close(st) != 0)
-        ok = 0;
-
-    /* no file is better than a cut one: the next load writes it again */
+    /* a failure keeps the old file, older than the index: the next load
+       writes it again */
     if (!ok) {
-        logn(LOGERR, "%s: write failed (%m)", path);
-        unlink(path);
+        int err = errno;
+
+        n_stream_abort(st);
+        errno = err;
+
+    } else if (n_stream_close(st) != 0) {
+        ok = 0;
     }
+
+    if (!ok)
+        logn(LOGERR, "%s: write failed (%m)", path);
     vf_lock_release(lock);
 
     if (!ok)

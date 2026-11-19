@@ -35,6 +35,8 @@ up_debug() {
 
 testUpdate()
 {
+    local out rc
+
     POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
 
     rm -rf $REPO/*.*
@@ -110,16 +112,19 @@ testUpdate()
     msg "\n## up #5"
 
     POLDEK_TESTING_DENIED_FILES=""
-    lastdiff=$(ls -tr $REPO/packages.i/packages.ndir.*.*.*-*.*.*$COMPR_EXT | tail -1)
+    # the index files, not their dscr siblings and not the list: those are
+    # written after the index and are newer
+    lastdiff=$(ls -tr $REPO/packages.i/packages.ndir.[0-9]* | tail -1)
     [ -z "$lastdiff" ] && fail "no last diff?"
     msg "lastdiff $lastdiff"
     rm -f "$lastdiff"
-    $POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up
-    if [ $? -eq 0 ]; then
-        force_msg "THE ERROR ABOVE (about missig packages.i/ file) is EXPECTED"
-    else
-        fail "up"
-    fi
+    out=$($POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up 2>&1)
+    rc=$?
+    # the output is captured to be checked, and printed, so the error the
+    # message below is about stays in the log
+    echo "$out"
+    assertEquals "up failed: $out" 0 "$rc"
+    echo "$out" | grep -q 'no such file' || fail "no error for the missing diff: $out"
     ls_expect 5
 
     msg "\n## stubindex"

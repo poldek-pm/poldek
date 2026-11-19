@@ -12,6 +12,7 @@ libpkgdir_pndir_la_SOURCES =			\
 	digest.c				\
 	update.c				\
 	save.c					\
+	difftoc.c				\
 	tags.h					\
 	description.c				\
 	$(NULL)
