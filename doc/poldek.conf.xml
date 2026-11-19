@@ -189,6 +189,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
    <option name="rsync get" type="string" obsoleted="yes" />
    <option name="cdrom get" type="string" obsoleted="yes" />
    <option name="load apt sources list" type="boolean" obsoleted="yes" />
+   <option name="auto zlib in rpm" type="boolean" obsoleted="yes" />
 
   <option name="default index type" type="string" default="pndir">
     <description>
@@ -226,16 +227,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
   <option name="vfile external compress" type="boolean" default="no">
     <description>
     Handle gzipped indexes externally (needed on RedHat 9 and Fedora Core 1 and 2).
-    This option is a workaround for broken zlib linked into librpm; with enabled
-    'auto zlib in rpm' poldek tries to detect such case and then enables external
-     *.gz handling automatically.
-    </description>
-  </option>
-
-  <option name="auto zlib in rpm" type="boolean" default="yes">
-    <description>
-    Auto detection of zlib linked into librpm. See 'vfile external compress'
-    description.
+    This option is a workaround for broken zlib linked into librpm.
     </description>
   </option>
 

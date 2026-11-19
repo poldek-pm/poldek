@@ -704,39 +704,6 @@ int set_default_vf_fetcher(int tag, const char *confvalue)
 }
 
 
-static void zlib_in_rpm(struct poldek_ctx *ctx)
-{
-    char              *argv[2], cmd[256];
-    const char        *libdir;
-    struct p_open_st  pst;
-    tn_hash           *htcnf;
-    int               ec;
-
-
-    htcnf = poldek_conf_get_section(ctx->htconf, "global");
-    libdir = poldek_conf_get(htcnf, "_libdir", NULL);
-    if (libdir == NULL)
-        libdir = "/usr/lib";
-
-    n_snprintf(cmd, sizeof(cmd), "%s/poldek/zlib-in-rpm.sh", libdir);
-
-    argv[0] = cmd;
-    argv[1] = NULL;
-
-    p_st_init(&pst);
-    if (p_open(&pst, 0, cmd, argv) == NULL) {
-        p_st_destroy(&pst);
-        return;
-    }
-
-    if ((ec = p_close(&pst)) == 0) {
-        logn(LOGNOTICE, "zlib-in-rpm detected, enabling workaround");
-        vfile_configure(VFILE_CONF_EXTCOMPR, 1);
-    }
-
-    p_st_destroy(&pst);
-}
-
 int default_op_map_ent_cmp(struct default_op_map_ent *e1,
                            struct default_op_map_ent *e2)
 {
@@ -1100,9 +1067,6 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
 
     if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
-
-    else if (poldek_conf_get_bool(htcnf, "auto_zlib_in_rpm", 0))
-        zlib_in_rpm(ctx);
 
     if ((v = poldek_conf_get_int(htcnf, "vfile_retries", 100)) > 0)
         vfile_configure(VFILE_CONF_STUBBORN_NRETRIES, v);
