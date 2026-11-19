@@ -440,7 +440,7 @@ tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
 
         msgn(2, _("%s: %d package(s) found:"), mask, n_array_size(pkgs));
         for (i=0; i < n_array_size(pkgs); i++)
-            msgn(2, " - %s", pkg_snprintf_s(n_array_nth(pkgs, i)));
+            msgn(2, " - %s", pkg_id(n_array_nth(pkgs, i)));
     }
 
     n_hash_insert(aps->resolved_caps, mask, pkgs);

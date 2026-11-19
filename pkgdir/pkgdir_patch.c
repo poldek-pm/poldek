@@ -119,7 +119,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
         pkg = n_array_nth(pkgdir2->pkgs, i);
         if ((plus_pkg = search_for_diff(pkgdir, pkg)) == NULL) {
             n_array_push(plus_pkgs, pkg_link(pkg));
-            msg(2, "++ %s\n", pkg_snprintf_s(pkg));
+            msg(2, "++ %s\n", pkg_id(pkg));
         }
     }
 
@@ -131,7 +131,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
 
         if ((minus_pkg = search_for_diff(pkgdir2, pkg)) == NULL) {
             n_array_push(minus_pkgs, pkg_link(pkg));
-            msg(2, "-- %s\n", pkg_snprintf_s(pkg));
+            msg(2, "-- %s\n", pkg_id(pkg));
         }
     }
 
@@ -212,7 +212,7 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
     if (patch->removed_pkgs)
         for (i=0; i < n_array_size(patch->removed_pkgs); i++) {
             pkg = n_array_nth(patch->removed_pkgs, i);
-            msg(2, "-- %s\n", pkg_snprintf_s(pkg));
+            msg(2, "-- %s\n", pkg_id(pkg));
             n_array_remove(pkgdir->pkgs, pkg);
         }
 
@@ -234,7 +234,7 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
 
         for (i=0; i < n_array_size(patch->pkgs); i++) {
             pkg = n_array_nth(patch->pkgs, i);
-            msg(2, "++ %s\n", pkg_snprintf_s(pkg));
+            msg(2, "++ %s\n", pkg_id(pkg));
             n_array_push(pkgdir->pkgs, pkg_link(pkg));
         }
 
