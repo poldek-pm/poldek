@@ -667,7 +667,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     idx = pkgdir->mod_data;
     if (!tndb_it_start(idx->db, &it))
-        return 0;
+        return -1;
 
     /* start from first package position */
     it._nrec = idx->_tndb_first_pkg_nrec;
@@ -749,10 +749,25 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         }
     }
 
+    if (nerr == 0 && (ldflags & PKGDIR_LD_VERIFYDIGEST) && idx->dg) {
+        struct pndir_digest dg;
+
+        /* the index was replaced but its digest was not (or the other way
+           around), so it is not the one the clients were told about */
+        pndir_digest_init(&dg);
+        pndir_digest_calc_pkgs(&dg, pkgdir->pkgs);
+        if (!n_str_eq(dg.md, idx->dg->md)) {
+            logn(LOGWARN, _("%s: index does not match its digest"), path);
+            nerr++;
+        }
+    }
+
     if (nerr)
         n_array_clean(pkgdir->pkgs);
 
-    return n_array_size(pkgdir->pkgs);
+    /* a failed load has no packages to give; only a whole index that is
+       empty is a success */
+    return nerr ? -1 : n_array_size(pkgdir->pkgs);
 }
 
 

@@ -329,7 +329,14 @@ int vfile_configure(int param, ...)
     return rc;
 }
 
-/* RET: bool */
+/* the log may change errno, which says why the open failed */
+#define logerr_keep_errno(fmt, ...) do {        \
+        int err_ = errno;                       \
+        vf_logerr(fmt, __VA_ARGS__);            \
+        errno = err_;                           \
+    } while (0)
+
+/* RET: bool; errno is set on a failure */
 static int openvf(struct vfile *vf, const char *path, int vfmode)
 {
     int rc = 0;
@@ -352,7 +359,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             }
 
             if ((vf->vf_fd = open(path, flags)) == -1)
-                vf_logerr("open %s: %m\n", CL_URL(path));
+                logerr_keep_errno("open %s: %m\n", CL_URL(path));
             else
                 rc = 1;
         }
@@ -371,7 +378,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             if ((vf->vf_stream = fopen(path, mode)) != NULL)
                 rc = 1;
             else
-                vf_logerr("%s: %m\n", CL_URL(path));
+                logerr_keep_errno("%s: %m\n", CL_URL(path));
         }
         break;
 
@@ -390,7 +397,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             if (vf->vf_tnstream != NULL)
                 rc = 1;
             else
-                vf_logerr("%s: %m\n", CL_URL(path));
+                logerr_keep_errno("%s: %m\n", CL_URL(path));
         }
         break;
 #endif
@@ -471,7 +478,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     const char *p = NULL;
     const char *rpath, *opath;
     enum vf_fetchrc ftrc;
-    int len;
+    int len, err = 0;           /* errno of a failed open */
 
 
     if (vfile_conf.flags & VFILE_CONF_EXTCOMPR)
@@ -496,18 +503,21 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
 
             } else {
                 if ((opath = vfdecompr(path, buf, sizeof(buf))) == NULL)
-                    return 0;
+                    goto l_end;
             }
         }
 
         if (openvf(&vf, opath, vfmode))
             opened = 1;
+        else
+            err = errno;
         goto l_end;
     }
 
     if (vfmode & VFM_RW) {
         vf_logerr("%s: cannot open remote file for writing\n", CL_URL(path));
-        return 0;
+        err = EINVAL;
+        goto l_end;
     }
 
     len = n_snprintf(buf, sizeof(buf), "%s/", vfile_cachedir());
@@ -519,7 +529,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
         opath = rpath = buf;
         if ((vfmode & VFM_UNCOMPR)) {
             if ((opath = vfdecompr(buf, de_tmpath, sizeof(de_tmpath))) == NULL)
-                return 0;
+                goto l_end;
         }
 
         if (openvf(&vf, opath, vfmode)) {
@@ -561,7 +571,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
         opath = rpath = lpath;
         if ((vfmode & VFM_UNCOMPR)) {
             if ((opath = vfdecompr(lpath, upath, sizeof(upath))) == NULL)
-                return 0;
+                goto l_end;
         }
 
         if (openvf(&vf, opath, VFM_RO)) {
@@ -571,11 +581,14 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
                 vf.vf_flags |= VF_FETCHED;
 
         } else {
+            err = errno;
             if (*vfile_verbose > 1)
                 vf_loginfo("vfile: rm -f %s\n", lpath);
             vf_localunlink(lpath);
             //wget && co sometimes badly returns non zero -> patch it!
         }
+    } else {
+        err = vfile_err_no;     /* of an internal fetcher; none of a command */
     }
 
 l_end:
@@ -583,6 +596,10 @@ l_end:
         rvf = n_malloc(sizeof(*rvf));
         memcpy(rvf, &vf, sizeof(*rvf));
         rvf->vf_urltype = urltype;
+
+    } else {
+        /* a failed decompression or a fetch command gives no reason */
+        errno = err ? err : EIO;
     }
 
     return rvf;

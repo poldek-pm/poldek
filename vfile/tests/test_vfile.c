@@ -151,7 +151,34 @@ START_TEST (test_url_type_scheme) {
 END_TEST
 
 
+/* a failed open says why in errno: what open() said of a local file, EIO
+   from a fetch command, which gives only its exit code */
+START_TEST (test_open_errno) {
+    int verbose = -1;
+    tn_array *protos;
+
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
+    vfile_configure(VFILE_CONF_CACHEDIR, NTEST_TMPPATH("vfile-cache"));
+
+    errno = 0;
+    fail_unless(vfile_open(NTEST_TMPPATH("no-such-file"), VFT_IO, VFM_RO) == NULL);
+    fail_unless(errno == ENOENT, "local: errno %d", errno);
+
+    protos = n_array_new(2, NULL, NULL);
+    n_array_push(protos, "failfetch");
+    fail_unless(vfile_register_ext_handler("failfetch", protos,
+                                           "/bin/false %P %D"),
+                "cannot register the test fetcher");
+    n_array_free(protos);
+
+    errno = 0;
+    fail_unless(vfile_open("failfetch://host/x.toc", VFT_IO, VFM_RO) == NULL);
+    fail_unless(errno == EIO, "fetch command: errno %d", errno);
+}
+END_TEST
+
+
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_as_path_percent, test_url_hidepasswd,
              test_url_hidepasswd_short_buffer, test_fetcha_ext_multi_dirbn,
-             test_url_type_scheme);
+             test_url_type_scheme, test_open_errno);

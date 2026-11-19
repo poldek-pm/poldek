@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -277,8 +278,14 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
              none_compr ? "" : dg_remote.compr);
 
     vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RO, pkgdir->name);
-    if (vf == NULL)
+    if (vf == NULL) {
+        /* without the list of diffs there is no incremental way to the
+           index, as when no patch on it starts from us; but a cache that
+           cannot take the list would not take the whole index either */
+        if (errno != ENOSPC && errno != EDQUOT && errno != EROFS)
+            *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
         return 0;
+    }
 
     n_assert(strlen(idx->dg->md) == TNIDX_DIGEST_SIZE);
     memcpy(current_md, idx->dg->md, TNIDX_DIGEST_SIZE + 1);
@@ -435,6 +442,10 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
         diff = pkgdir_open_ext(path, NULL, pkgdir->type, "diff", NULL,
                                PKGDIR_OPEN_DIFF, pkgdir->lc_lang);
         if (diff == NULL) {
+            /* a diff on the list is gone or broken: the chain is broken as
+               when no patch starts from us, and only the whole index gets
+               the client back in sync */
+            *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
             nerr++;
             break;
         }
@@ -447,7 +458,15 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             }
         }
         msgn(1, _("Applying %s..."), n_basenam(diff->idxpath));
-        pkgdir_load(diff, NULL, 0);
+        if (!pkgdir_load(diff, NULL, 0)) {
+            /* a diff that opened but did not load is broken too; patching
+               with it would abort or leave a partial package set */
+            logn(LOGERR, _("%s: load failed"), diff->idxpath);
+            *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
+            nerr++;
+            pkgdir_free(diff);
+            break;
+        }
         pkgdir_patch(pkgdir, diff);
         pkgdir_free(diff);
 

@@ -101,7 +101,9 @@ static struct pkgdir *load_pkgdir(const struct source *src,
                                orig_name, NULL, PKGDIR_OPEN_ALLDESC,
                                src->lc_lang);
 
-        if (pdir && !pkgdir_load(pdir, NULL, ldflags)) {
+        /* the previous index is the base of the new one: a half written one
+           must not be taken for it */
+        if (pdir && !pkgdir_load(pdir, NULL, PKGDIR_LD_VERIFYDIGEST)) {
             pkgdir_free(pdir);
             pdir = NULL;
         }
