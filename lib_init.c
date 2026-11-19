@@ -79,7 +79,6 @@ void (*poldek_malloc_fault_hook)(void) = NULL;
 static
 void (*poldek_die_hook)(const char *msg) = NULL;
 
-static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
 
 static int setup_legacy_sources(tn_hash *htcnf);
@@ -576,64 +575,6 @@ static char *extract_handler_name(char *name, int size, const char *cmd)
 }
 
 
-static void register_vf_handlers_compat(const tn_hash *htcnf)
-{
-    char name[128];
-    const char *vs;
-    tn_array *protocols;
-
-    protocols = n_array_new(2, NULL, (tn_fn_cmp)strcmp);
-
-    if ((vs = poldek_conf_get(htcnf, "ftp_http_get", NULL))) {
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "ftp");
-        n_array_push(protocols, "http");
-        //vfile_cnflags |= VFILE_USEXT_FTP | VFILE_USEXT_HTTP;
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "ftp_get", NULL))) {
-        //vfile_cnflags |= VFILE_USEXT_FTP;
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "ftp");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "http_get", NULL))) {
-        //vfile_cnflags |= VFILE_USEXT_HTTP;
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "http");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "https_get", NULL))) {
-        //vfile_cnflags |= VFILE_USEXT_HTTPS;
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "https");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "rsync_get", NULL))) {
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "rsync");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "cdrom_get", NULL))) {
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "cdrom");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-    n_array_free(protocols);
-}
-
-
 static void register_vf_handlers(const tn_array *fetchers)
 {
     char name[128];
@@ -1019,7 +960,6 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
     poldek__ts_apply_config(ctx, ctx->ts);
 
     htcnf = poldek_conf_get_section(ctx->htconf, "global");
-    register_vf_handlers_compat(htcnf);
     register_vf_handlers(poldek_conf_get_sections(ctx->htconf, "fetcher"));
 
     if ((list = poldek_conf_get_multi(htcnf, "default_fetcher"))) {

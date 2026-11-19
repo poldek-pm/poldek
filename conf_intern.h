@@ -31,7 +31,8 @@
 #define CONF_TYPE_F_ENV        (1 << 10) /* environment variables are expanded */
 #define CONF_TYPE_F_REQUIRED   (1 << 11) /*  */
 #define CONF_TYPE_F_ALIAS      (1 << 12) /* an alias */
-#define CONF_TYPE_F_OBSL       (1 << 14) /* obsoleted */
+#define CONF_TYPE_F_DEPRECATED (1 << 14) /* still works, but warned about */
+#define CONF_TYPE_F_OBSOLETE   (1 << 15) /* does nothing any more */
 
 struct poldek_conf_tag {
     char      *name;
@@ -39,6 +40,7 @@ struct poldek_conf_tag {
     char      *defaultv;
     int       _op_no;           /* internal option number */
     char      *enums[8];
+    char      *use;             /* what to use instead of an obsoleted one */
 };
 
 struct poldek_conf_section {

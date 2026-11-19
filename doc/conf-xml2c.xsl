@@ -21,7 +21,8 @@ static struct poldek_conf_tag <xsl:value-of select="@name"/>_tags[] = {
              <xsl:if test="@env='yes'"> | CONF_TYPE_F_ENV</xsl:if>
              <xsl:if test="@list='yes'"> | CONF_TYPE_F_LIST</xsl:if>
              <xsl:if test="@path='yes'"> | CONF_TYPE_F_PATH</xsl:if>
-             <xsl:if test="@obsoleted='yes'"> | CONF_TYPE_F_OBSL</xsl:if>,
+             <xsl:if test="@stage='deprecated'"> | CONF_TYPE_F_DEPRECATED</xsl:if>
+             <xsl:if test="@stage='obsolete'"> | CONF_TYPE_F_OBSOLETE</xsl:if>,
              <xsl:choose>
                <xsl:when test="string-length(@default) > 0">"<xsl:value-of select="@default"/>"</xsl:when>
                <xsl:otherwise>NULL</xsl:otherwise>
@@ -29,14 +30,18 @@ static struct poldek_conf_tag <xsl:value-of select="@name"/>_tags[] = {
              <xsl:choose>
                <xsl:when test="string-length(@op) > 0">POLDEK_OP_<xsl:value-of select="@op"/></xsl:when>
                <xsl:otherwise>0</xsl:otherwise>
-             </xsl:choose>, { 0 } },
+             </xsl:choose>, { 0 },
+             <xsl:choose>
+               <xsl:when test="string-length(@use) > 0">"<xsl:value-of select="@use"/>"</xsl:when>
+               <xsl:otherwise>NULL</xsl:otherwise>
+             </xsl:choose> },
              <xsl:for-each select="alias">
-          {  "<xsl:value-of select="@name"/>", CONF_TYPE_F_ALIAS<xsl:if test="@obsoleted='yes'"> | CONF_TYPE_F_OBSL</xsl:if>, NULL, 0, { 0 } },
+          {  "<xsl:value-of select="@name"/>", CONF_TYPE_F_ALIAS<xsl:if test="@stage='deprecated'"> | CONF_TYPE_F_DEPRECATED</xsl:if>, NULL, 0, { 0 }, NULL },
              </xsl:for-each>
              
         </xsl:for-each>
       </xsl:for-each>
-          { NULL, 0, NULL, 0, { 0 } }
+          { NULL, 0, NULL, 0, { 0 }, NULL }
 };
 
     </xsl:for-each>
