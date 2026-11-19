@@ -277,8 +277,12 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
              none_compr ? "" : dg_remote.compr);
 
     vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RO, pkgdir->name);
-    if (vf == NULL)
+    if (vf == NULL) {
+        /* without the list of diffs there is no incremental way to the
+           index, as when no patch on it starts from us */
+        *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
         return 0;
+    }
 
     n_assert(strlen(idx->dg->md) == TNIDX_DIGEST_SIZE);
     memcpy(current_md, idx->dg->md, TNIDX_DIGEST_SIZE + 1);
