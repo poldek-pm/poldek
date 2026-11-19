@@ -409,14 +409,15 @@ struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
 
 struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr)
 {
-    uint8_t size;
+    size_t bufsize, size;
     struct capreq *newcr;
 
     if (malloced(cr) && na == NULL) {
-        size = capreq_sizeof(cr) + cr->namelen + 1;
+        bufsize = capreq_bufsize(cr);
+        size = sizeof(*cr) + bufsize + cr->namelen + 1;
         newcr = n_malloc(size);
         memcpy(newcr, cr, size);
-        newcr->name = &newcr->_buff[capreq_bufsize(newcr)];
+        newcr->name = &newcr->_buff[bufsize];
         n_assert(*newcr->name == *cr->name);
         return newcr;
     }
