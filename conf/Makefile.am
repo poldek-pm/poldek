@@ -12,7 +12,6 @@ REPO_CONFIGS = pld-source.conf
 EXTRA_DIST = $(CONFIGS) \
 	     $(REPO_CONFIGS) \
 	     sample-source-remoteconf.conf \
-             sample-cdrom-source.conf \
              poldek-pri-sample.conf
 
 fetch.conf: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl

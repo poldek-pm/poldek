@@ -135,9 +135,8 @@ EXPORT int vfile_cachedir_clean(void);
 #define VFURL_HTTP    (1 << 3)
 #define VFURL_HTTPS   (1 << 4)
 #define VFURL_RSYNC   (1 << 5)
-#define VFURL_CDROM   (1 << 6)
 
-#define VFURL_LOCAL    (VFURL_CDROM | VFURL_PATH)
+#define VFURL_LOCAL    VFURL_PATH
 #define VFURL_REMOTE   ~(VFURL_LOCAL)
 
 

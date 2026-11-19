@@ -93,7 +93,8 @@ libpoldek_core_la_LIBADD = \
 LDADD_              = @INTLLIBS@
 
 vfscriptsdir = $(PKGLIBDIR)
-vfscripts_SCRIPTS = scripts/vfjuggle scripts/vfcompr scripts/vfsmb scripts/poldekuser-setup.sh
+
+vfscripts_SCRIPTS = scripts/vfcompr scripts/vfsmb scripts/poldekuser-setup.sh
 
 EXTRA_DIST = \
 	     $(vfscripts_SCRIPTS) \
@@ -102,7 +103,7 @@ EXTRA_DIST = \
 	     tests/cppcheck/trurl/nassert.h \
 	     tests/cppcheck/trurl/ndie.h \
 	     poldek.spec \
-	     package-set.sample scripts/vfjugglerc.sample \
+	     package-set.sample \
 	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \
 	     m4/intdiv0.m4 m4/inttypes_h.m4 m4/inttypes.m4 m4/inttypes-pri.m4 \
 	     m4/isc-posix.m4 m4/lcmessage.m4 m4/lib-ld.m4 m4/lib-link.m4 \

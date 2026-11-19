@@ -112,7 +112,7 @@ void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
 int packages_fetch(struct pm_ctx *pmctx,
                    tn_array *pkgs, const char *destdir, int is_destdir_custom)
 {
-    int       i, nerr, urltype, ncdroms;
+    int       i, nerr, urltype;
     tn_array  *urls = NULL, *packages = NULL;
     tn_array  *urls_arr = NULL;
     tn_hash   *urls_h, *pkgs_h = NULL;
@@ -128,7 +128,6 @@ int packages_fetch(struct pm_ctx *pmctx,
     urls_arr = n_array_new(pkgs_count, NULL, (tn_fn_cmp)strcmp);
 
     // group by URL
-    ncdroms = 0;
     nerr = 0;
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg  *pkg = n_array_nth(pkgs, i);
@@ -141,9 +140,6 @@ int packages_fetch(struct pm_ctx *pmctx,
             break;
 
         urltype = vf_url_type(pkgpath);
-
-        if (urltype == VFURL_CDROM)
-            ncdroms++;
 
         pkg_basename = pkg_filename_s(pkg);
 
@@ -212,17 +208,6 @@ int packages_fetch(struct pm_ctx *pmctx,
 
     if (sigint_reached())
         goto l_end;
-
-    /* files must be copied if they are taken from more than
-       one removable media;
-
-       Not so nice, but it works
-    */
-    if (ncdroms > 1)
-        putenv("POLDEK_VFJUGGLE_CPMODE=copy");
-
-    else if (ncdroms == 1)
-        putenv("POLDEK_VFJUGGLE_CPMODE=link");
 
     int counter = 0;
     for (i=0; i < n_array_size(urls_arr); i++) {
