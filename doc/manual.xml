@@ -619,20 +619,10 @@ them even after successful installation, set <option>keep downloads</option>
 configuration option. Default cache directory is 
 <filename id="file.home-poldek-cache">$HOME/.poldek-cache</filename>, 
 it can be set to different location by <option>cachedir</option>
-configuration option. Cached files can be removed by three options:
-<itemizedlist>
-<listitem> <para><option>--clean</option> remove cached package index files</para> </listitem>
-<listitem> <para><option>--clean-pkg</option> remove cached packages. </para></listitem>
-<listitem> <para><option>--clean-whole</option> remove all files from cache directory </para> </listitem>
-</itemizedlist>
-
-In conjunction with <option>-n</option> or <option>-s</option> cleannig 
-may be limited to files belongs to specified sources only. Examples:
-<screen>
-&poldek-prompt; -s http://foo.bar/RPMS --clean
-&poldek-prompt; -n foo --clean-whole
-&poldek-prompt; --clean-pkg
-</screen>
+configuration option. <option>--clean</option> (or the
+<command>clean</command> command) deletes all files from the cache
+directory; <option>-n</option> and <option>-s</option> do not limit it to
+the given sources.
 </para>
 </sect2>
 

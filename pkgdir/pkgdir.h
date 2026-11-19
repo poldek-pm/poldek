@@ -182,12 +182,6 @@ EXPORT const char *pkgdir_type_default_compr(const char *type);
 
 EXPORT int pkgdir_isremote(struct pkgdir *pkgdir);
 
-#if 0   /* not implemented, use source_clean() instead */
-#define PKGDIR_CLEAN_IDX    (1 << 0)
-#define PKGDIR_CLEAN_CACHE  (1 << 1)
-EXPORT int pkgdir_clean_cache(const char *type, const char *path, unsigned flags);
-#endif
-
 struct pkgdir_type_uinf {
     char name[32];
     char aliases[64];

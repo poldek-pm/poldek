@@ -1098,17 +1098,9 @@ msgstr "Aktualizuj indeks i sprawdź jego integralność"
 msgid "Update whole index of source"
 msgstr "Aktualizuj indeks przez pobranie go w całości"
 
-#: cli/op_source.c:111
-msgid "Remove source index files from cache directory"
-msgstr "Usuń lokalne pliki indeksów"
-
-#: cli/op_source.c:114
-msgid "Remove cached packages of the source"
-msgstr "Usuń lokalnie przechowywane pakiety źródła"
-
-#: cli/op_source.c:117
-msgid "Remove all files belongs to source from cache directory"
-msgstr "Usuń wszystkie lokalnie przechowywane pliki z danego źródła"
+#: cli/op_source.c:110 cli/clean.c:35
+msgid "Delete all files from local cache"
+msgstr "Usuń wszystkie pliki z lokalnego katalogu cache"
 
 #: cli/op_source.c:251
 msgid "--dt: destination is already set, use me before --destination"

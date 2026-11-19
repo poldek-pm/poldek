@@ -71,6 +71,7 @@ testCleanCache()
     assertEquals "$n files left in cache" "$n" "0"
 }
 
+# -n does not narrow --clean: the whole cache goes, other files too
 testCleanRepoCache()
 {
     msgn "up"
@@ -85,11 +86,35 @@ testCleanRepoCache()
     assertEquals "index and package not downloaded?" "$n" "9"
 
     msgn "clean"
+    touch $CACHEDIR/foo.txt     # not of the source
     poldek_up -n $REPONAME --clean
 
     n=$(find $CACHEDIR -type f | wc -l)
     [ "$n" != "0" ] && find $CACHEDIR/
     assertEquals "$n files left in cache" "$n" "0"
+}
+
+# --test --clean removes nothing
+testCleanTestMode()
+{
+    up
+    n=$(find $CACHEDIR -type f | wc -l)
+    [ "$n" -gt 0 ] || fail "index not downloaded?"
+
+    poldek_up --test --clean || fail "--test --clean failed"
+    assertEquals "files removed in test mode" "$n" "$(find $CACHEDIR -type f | wc -l)"
+}
+
+# the variants of --clean are gone
+testCleanVariantsGone()
+{
+    local opt
+
+    for opt in --clean-pkg --clean-whole --cleana; do
+        if poldek_up $opt >/dev/null 2>&1; then
+            fail "$opt accepted"
+        fi
+    done
 }
 
 . ./sh/lib/shunit2

@@ -33,7 +33,7 @@
 <varlistentry><term><option id="ref.cmdl.clean">--clean </option></term>
   <listitem>
    <para>
-      Remove source local cache
+      Delete all files from local cache
    </para>
   </listitem>
 </varlistentry>

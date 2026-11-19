@@ -21,6 +21,7 @@
 
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
+#include <vfile/vfile.h>
 
 #include "compiler.h"
 #include "i18n.h"
@@ -48,8 +49,6 @@
 #define OPT_SRCUPDATE_A (OPT_GID + 7)
 
 #define OPT_SRCCLEAN     (OPT_GID + 8)
-#define OPT_SRCCLEAN_PKG (OPT_GID + 9)
-#define OPT_SRCCLEAN_ALL (OPT_GID + 10)
 
 #define OPT_SRCTYPE_LS  (OPT_GID + 11)
 
@@ -108,15 +107,7 @@ static struct argp_option source_options[] = {
 {"upa", OPT_SRCUPDATE_A, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
 
 {"clean", OPT_SRCCLEAN, 0, 0,
- N_("Remove source local cache"), OPT_GID + 1 },
-
-{"clean-pkg", OPT_SRCCLEAN_PKG, 0, OPTION_HIDDEN,
- N_("Remove cached packages of the source"), OPT_GID + 1 },
-
-{"clean-whole", OPT_SRCCLEAN_ALL, 0, OPTION_HIDDEN,
- N_("Remove all files belongs to source from cache directory"), OPT_GID + 1 },
-
-{"cleana", OPT_SRCCLEAN_ALL, 0, OPTION_ALIAS|OPTION_HIDDEN, 0, OPT_GID + 1 },
+ N_("Delete all files from local cache"), OPT_GID + 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -126,7 +117,6 @@ static struct argp_option source_options[] = {
 #define POLDEKCLI_SRC_UPDATEA      (1 << 3)
 #define POLDEKCLI_SRC_UPDATE_AUTOA (1 << 4)
 #define POLDEKCLI_SRC_CLEAN        (1 << 5)
-#define POLDEKCLI_SRC_CLEAN_PKG    (1 << 6)
 #define POLDEKCLI_SRC_SPECIFIED    (1 << 10) /* any -s or -n */
 
 /* TODO: there is no way to get other group parameters */
@@ -301,15 +291,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SRCCLEAN:
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG;
-            break;
-
-        case OPT_SRCCLEAN_PKG:
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN_PKG;
-            break;
-
-        case OPT_SRCCLEAN_ALL:
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG;
+            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN;
             break;
 
         case ARGP_KEY_END:
@@ -455,22 +437,10 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     }
     poclidek_op_source_nodesc = 0;
 
-    if (arg_s->cnflags & (POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG)) {
-        unsigned flags = 0;
-
-        if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN)
-            flags |= PKGSOURCE_CLEAN;
-
-        if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN_PKG)
-            flags |= PKGSOURCE_CLEANPKG;
-
-        if ((arg_s->cnflags & POLDEKCLI_SRC_SPECIFIED) == 0)
-            flags |= PKGSOURCE_CLEAN_WHOLE_CACHEDIR;
-
-        if (rt->ts->getop(rt->ts, POLDEK_OP_TEST))
-            flags |= PKGSOURCE_CLEAN_TEST;
-
-        sources_clean(sources, flags);
+    /* the whole cache, as the clean command: -s and -n do not narrow it */
+    if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN) {
+        if (!rt->ts->getop(rt->ts, POLDEK_OP_TEST))
+            vfile_cachedir_clean();
         rc = OPGROUP_RC_OK;
     }
 
