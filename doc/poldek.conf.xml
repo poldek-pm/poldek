@@ -317,9 +317,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
  default fetcher = ftp,http:internal
  default fetcher = https:wget
  default fetcher = http,ftp:aria
- default fetcher = cdrom:vfjuggle
      [/screen]
-     [filename]vfjuggle[/filename] is a cdrom getter supplied with poldek.
     </description>
   </option>
 
@@ -793,10 +791,6 @@ Each section describes one fetcher.
 
 ##Configured fetchers
 # aria2 is configured as multifile downloader for speedup
-
-[ fetcher ]
-proto = cdrom
-cmd   = vfjuggle %d %Pn
 
 [ fetcher ]
 proto = http,ftp,https

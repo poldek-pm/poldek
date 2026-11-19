@@ -35,11 +35,6 @@
 #define OPT_GID  OPT_GID_OP_VERIFY
 
 #define OPT_DEPS        'V'
-#define OPT_CNFLS       (OPT_GID + 1)
-#define OPT_FILECNFLS   (OPT_GID + 2)
-#define OPT_FILEORPHANS (OPT_GID + 3)
-#define OPT_ALL         (OPT_GID + 4)
-#define OPT_DEPGRAPH    (OPT_GID + 5)
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -48,18 +43,6 @@ static struct argp_option options[] = {
      N_("Verify package set, available reports are: 'deps', 'order', 'conflicts', "
         "'file-conflicts', 'file-orphans' and 'file-missing-deps'. "
         "Default is 'deps'."), OPT_GID },
-{"verify-conflicts",  OPT_CNFLS, 0, OPTION_HIDDEN, N_("Verify conflicts"), OPT_GID },
-{"verify-fileconflicts",  OPT_FILECNFLS, 0, OPTION_HIDDEN,
-     N_("Verify file conflicts"),OPT_GID },
-
-{"verify-fileorphans",  OPT_FILEORPHANS, 0, OPTION_HIDDEN,
-     N_("Find orphaned directories"),OPT_GID },
-
-{"verify-all",  OPT_ALL, 0, OPTION_HIDDEN,
-N_("Verify dependencies, conflicts, file conflicts and orphaned directories"),
-        OPT_GID },
-{"depgraph", OPT_DEPGRAPH, "TYPE[:FILE]", OPTION_HIDDEN,
-        N_("Generate dependency graph, types are dot,lanvi"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -179,41 +162,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             }
 
             rt->set_major_mode(rt, mode, "verify");
-            break;
-
-        case OPT_CNFLS:
-            arg_s->verify = 1;
-            ts->setop(ts, POLDEK_OP_VRFY_CNFLS, 1);
-            rt->set_major_mode(rt, mode, "verify-conflicts");
-            break;
-
-        case OPT_FILECNFLS:
-            arg_s->verify = 1;
-            ts->setop(ts, POLDEK_OP_VRFY_FILECNFLS, 1);
-            rt->set_major_mode(rt, mode, "verify-fileconflicts");
-            break;
-
-        case OPT_FILEORPHANS:
-            arg_s->verify = 1;
-            ts->setop(ts, POLDEK_OP_VRFY_FILEORPHANS, 1);
-            rt->set_major_mode(rt, mode, "verify-fileorphans");
-            break;
-
-        case OPT_ALL:
-            arg_s->verify = 1;
-            ts->setop(ts, POLDEK_OP_VRFY_DEPS, 1);
-            ts->setop(ts, POLDEK_OP_VRFY_CNFLS, 1);
-            ts->setop(ts, POLDEK_OP_VRFY_FILECNFLS, 1);
-            ts->setop(ts, POLDEK_OP_VRFY_FILEORPHANS, 1);
-            rt->set_major_mode(rt, mode, "verify-all");
-            break;
-
-        case OPT_DEPGRAPH:
-            arg_s->verify = 1;
-            ts->setop(ts, POLDEK_OP_DEPGRAPH, 1);
-            rt->set_major_mode(rt, mode, "depgraph");
-            logn(LOGERR, "this feature has been removed");
-            //poldek_ts_configure(ts, POLDEK_CONF_DEPGRAPH, arg);
             break;
 
         default:

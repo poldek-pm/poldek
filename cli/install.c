@@ -63,16 +63,13 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_NOIGNORE         (OPT_GID + 27)
 #define OPT_INST_GREEDY           'g'
 #define OPT_INST_UNIQNAMES        'Q'
-#define OPT_INST_UNIQNAMES_ALIAS  (OPT_GID + 30)
 #define OPT_INST_ROOTDIR          'r'
 #define OPT_MERCY                 'm'
 #define OPT_PROMOTEEPOCH           (OPT_GID + 32)
 #define OPT_PMONLY_NODEPS         (OPT_GID + 33)
 #define OPT_PMONLY_FORCE          (OPT_GID + 34)
 #define OPT_PM                    (OPT_GID + 35)
-#define OPT_INST_NOFETCH          (OPT_GID + 36)
 #define OPT_INST_PARSABLETS       (OPT_GID + 37)
-#define OPT_INST_MKDIR            (OPT_GID + 38)
 #define OPT_INST_CAPLOOKUP        (OPT_GID + 39)
 #define OPT_INST_NOSIGNATURE      (OPT_GID + 40)
 
@@ -128,23 +125,15 @@ N_("Print packages names to FILE (stdout by default) instead of install them"), 
 {"pm-nodeps", OPT_PMONLY_NODEPS, 0, 0,
 N_("Same as --nodeps but applied to PM (rpm) only"), OPT_GID },
 
-{"rpm-nodeps", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
-
 {"pm-force", OPT_PMONLY_FORCE, 0, 0,
 N_("Same as --force but applied to PM (rpm) only)"), OPT_GID },
-{"rpm-force", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 
 {"pmop", OPT_PM, "OPTION", 0,
  N_("pass option OPTION to PM binary"), OPT_GID },
-{"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 {"pmopt", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 
 {"nohold", OPT_INST_NOHOLD, 0, 0,
  N_("Do not hold any packages. Disables --hold settings."), OPT_GID },
-
-/* hidden, for debugging/testing purposes */
-{"nofetch", OPT_INST_NOFETCH, 0, OPTION_HIDDEN,
-     N_("Do not download packages"), OPT_GID },
 
 {"caplookup", OPT_INST_CAPLOOKUP, 0, 0,
 N_("Look into package capabilities and files to resolve packages"), OPT_GID },
@@ -196,14 +185,8 @@ static struct argp_option cmdl_options[] = {
 {"uniq", OPT_INST_UNIQNAMES, 0, 0,
 N_("Remove package duplicates from available package list"), OPT_GID },
 
-{"unique-pkg-names", OPT_INST_UNIQNAMES_ALIAS, 0, OPTION_ALIAS | OPTION_HIDDEN,
-        0, OPT_GID },
-
 {"parsable-tr-summary", OPT_INST_PARSABLETS, 0, 0,
      N_("Print installation summary in parseable form"), OPT_GID },
-
-{"mkdir", OPT_INST_MKDIR, 0, OPTION_HIDDEN, /* legacy */
-     "make %{_dbpath} directory if not exists", OPT_GID },
 
 { 0, 0, 0, 0, 0, 0 },
 };
@@ -357,16 +340,12 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_INST_UNIQNAMES:
-        case OPT_INST_UNIQNAMES_ALIAS:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_UNIQN, 1);
             break;
 
         case OPT_INST_PARSABLETS:
             ts->setop(ts, POLDEK_OP_PARSABLETS, 1);
             break;
-
-        case OPT_INST_MKDIR:
-            break;              /* ignored, directory is created by default */
 
         case 'I':               /* silently ignore */
             break;
@@ -498,10 +477,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (arg)
                 poldek_ts_configure(ts, POLDEK_CONF_DUMPFILE, arg);
             ts->setop(ts, POLDEK_OP_JUSTPRINT_N, 1);
-            break;
-
-        case OPT_INST_NOFETCH:
-            ts->setop(ts, POLDEK_OP_NOFETCH, 1);
             break;
 
         case OPT_INST_CAPLOOKUP:

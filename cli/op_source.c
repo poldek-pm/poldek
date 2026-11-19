@@ -21,6 +21,7 @@
 
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
+#include <vfile/vfile.h>
 
 #include "compiler.h"
 #include "i18n.h"
@@ -36,9 +37,6 @@
 #define OPT_GID  OPT_GID_OP_SOURCE
 
 #define OPT_SRC         's'
-#define OPT_SRCTXT      (OPT_GID + 1) /* legacy */
-#define OPT_SRCDIR      (OPT_GID + 2) /* legacy */
-#define OPT_SRCHDL      (OPT_GID + 3) /* legacy */
 
 #define OPT_PKGPREFIX   (OPT_GID + 4)
 #define OPT_SRCTYPE     (OPT_GID + 5)
@@ -48,8 +46,6 @@
 #define OPT_SRCUPDATE_A (OPT_GID + 7)
 
 #define OPT_SRCCLEAN     (OPT_GID + 8)
-#define OPT_SRCCLEAN_PKG (OPT_GID + 9)
-#define OPT_SRCCLEAN_ALL (OPT_GID + 10)
 
 #define OPT_SRCTYPE_LS  (OPT_GID + 11)
 
@@ -78,12 +74,6 @@ static struct argp_option source_options[] = {
 {"dn", OPT_DEST_NAME, "NAME", 0,
     N_("Install to the source NAME instead of the system"), OPT_GID },
 
-{"sidx", OPT_SRC, "FILE", OPTION_HIDDEN, /* legacy */
- N_("Get packages info from package index file FILE"), OPT_GID },
-
-{"sdir", OPT_SRCDIR, "DIR", OPTION_HIDDEN,
- N_("Get packages info from directory DIR by scanning it"), OPT_GID },
-
 {"st", OPT_SRCTYPE, "SOURCE-TYPE", 0,
        N_("Set the source type (use --stl to list available values)"),
        OPT_GID },
@@ -108,15 +98,7 @@ static struct argp_option source_options[] = {
 {"upa", OPT_SRCUPDATE_A, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
 
 {"clean", OPT_SRCCLEAN, 0, 0,
- N_("Remove source local cache"), OPT_GID + 1 },
-
-{"clean-pkg", OPT_SRCCLEAN_PKG, 0, OPTION_HIDDEN,
- N_("Remove cached packages of the source"), OPT_GID + 1 },
-
-{"clean-whole", OPT_SRCCLEAN_ALL, 0, OPTION_HIDDEN,
- N_("Remove all files belongs to source from cache directory"), OPT_GID + 1 },
-
-{"cleana", OPT_SRCCLEAN_ALL, 0, OPTION_ALIAS|OPTION_HIDDEN, 0, OPT_GID + 1 },
+ N_("Delete all files from local cache"), OPT_GID + 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -126,11 +108,7 @@ static struct argp_option source_options[] = {
 #define POLDEKCLI_SRC_UPDATEA      (1 << 3)
 #define POLDEKCLI_SRC_UPDATE_AUTOA (1 << 4)
 #define POLDEKCLI_SRC_CLEAN        (1 << 5)
-#define POLDEKCLI_SRC_CLEAN_PKG    (1 << 6)
 #define POLDEKCLI_SRC_SPECIFIED    (1 << 10) /* any -s or -n */
-
-/* TODO: there is no way to get other group parameters */
-int poclidek_op_source_nodesc = 0;
 
 struct arg_s {
     unsigned            cnflags;
@@ -173,8 +151,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct poclidek_opgroup_rt   *rt;
     struct arg_s *arg_s;
-    char *source_type = NULL;
-    int source_type_isset = 0;
 
     rt = state->input;
     if (rt->_opdata) {
@@ -225,22 +201,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             arg_s->curr_src_type = arg;
             break;
 
-        case OPT_SRCTXT:     /* no break */
-            source_type = NULL; /* guess */
-            source_type_isset = 1;
-            /* fallthru */
-
-        case OPT_SRCDIR:     /* no break */
-            if (source_type_isset == 0) {
-                source_type = n_strdup("dir");
-                source_type_isset = 1;
-            }
-            /* fallthru */
         case 's':
             arg_s->curr_src_path = arg;
-            if (arg_s->curr_src_type == NULL)
-                arg_s->curr_src_type = source_type;
-
             arg_s->src = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
 			poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->src);
             arg_s->cnflags |= POLDEKCLI_SRC_SPECIFIED;
@@ -301,15 +263,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SRCCLEAN:
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG;
-            break;
-
-        case OPT_SRCCLEAN_PKG:
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN_PKG;
-            break;
-
-        case OPT_SRCCLEAN_ALL:
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG;
+            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN;
             break;
 
         case ARGP_KEY_END:
@@ -446,31 +400,10 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     sources = poldek_get_sources(rt->ctx);
 
-    if (sources && poclidek_op_source_nodesc) {
-        int i;
-        for (i=0; i < n_array_size(sources); i++) {
-            struct source *src = n_array_nth(sources, i);
-            src->flags |= PKGSOURCE_NODESC;
-        }
-    }
-    poclidek_op_source_nodesc = 0;
-
-    if (arg_s->cnflags & (POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG)) {
-        unsigned flags = 0;
-
-        if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN)
-            flags |= PKGSOURCE_CLEAN;
-
-        if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN_PKG)
-            flags |= PKGSOURCE_CLEANPKG;
-
-        if ((arg_s->cnflags & POLDEKCLI_SRC_SPECIFIED) == 0)
-            flags |= PKGSOURCE_CLEAN_WHOLE_CACHEDIR;
-
-        if (rt->ts->getop(rt->ts, POLDEK_OP_TEST))
-            flags |= PKGSOURCE_CLEAN_TEST;
-
-        sources_clean(sources, flags);
+    /* the whole cache, as the clean command: -s and -n do not narrow it */
+    if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN) {
+        if (!rt->ts->getop(rt->ts, POLDEK_OP_TEST))
+            vfile_cachedir_clean();
         rc = OPGROUP_RC_OK;
     }
 

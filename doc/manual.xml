@@ -579,8 +579,8 @@ Legend: r - readable, w - writeable, u - updateable
 Creation of &poldek;'s sources is quite simple, the syntax is:
 
 <screen>
-&poldek-prompt; -s PATH --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
-&poldek-prompt; -n NAME --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
+&poldek-prompt; -s PATH --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--mo=OPTION[,OPTION]...]
+&poldek-prompt; -n NAME --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--mo=OPTION[,OPTION]...]
 </screen>
 </para>
 <para>
@@ -594,17 +594,17 @@ To make index of the other type or make many indexes of different types at once,
 <para>
 For 'pndir' and 'pdir' indexes delta files are created if the previous package
 index is different from the currently created one. Outdated deltas are automatically removed.
-To skip deltas creation use <option>--nodiff</option> option.
+To skip deltas creation use <option>--mo=nodiff</option> option.
 </para>
 
 <para>
-Other related options are: <option>--nodesc</option> with that package descriptions are not saved to the package index and <option>--nocompress</option> means that uncompressed index will be created.
+Other <option>--mo</option> options are: <option>nodesc</option> with that package descriptions are not saved to the package index and <option>nocompress</option> means that uncompressed index will be created; <option>--mo=help</option> lists them all.
 </para>
 
 <para>
 Examples:
 <screen>
-&poldek-prompt; -s ~/rpm/RPMS --mkidx --nodiff
+&poldek-prompt; -s ~/rpm/RPMS --mkidx --mo=nodiff
 &poldek-prompt; -s /cdrom/RPMS --mkidx=/tmp
 &poldek-prompt; -n home --mkidx 
 &poldek-prompt; -n pld --mkidx --mt=pdir,pndir
@@ -619,20 +619,10 @@ them even after successful installation, set <option>keep downloads</option>
 configuration option. Default cache directory is 
 <filename id="file.home-poldek-cache">$HOME/.poldek-cache</filename>, 
 it can be set to different location by <option>cachedir</option>
-configuration option. Cached files can be removed by three options:
-<itemizedlist>
-<listitem> <para><option>--clean</option> remove cached package index files</para> </listitem>
-<listitem> <para><option>--clean-pkg</option> remove cached packages. </para></listitem>
-<listitem> <para><option>--clean-whole</option> remove all files from cache directory </para> </listitem>
-</itemizedlist>
-
-In conjunction with <option>-n</option> or <option>-s</option> cleannig 
-may be limited to files belongs to specified sources only. Examples:
-<screen>
-&poldek-prompt; -s http://foo.bar/RPMS --clean
-&poldek-prompt; -n foo --clean-whole
-&poldek-prompt; --clean-pkg
-</screen>
+configuration option. <option>--clean</option> (or the
+<command>clean</command> command) deletes all files from the cache
+directory; <option>-n</option> and <option>-s</option> do not limit it to
+the given sources.
 </para>
 </sect2>
 

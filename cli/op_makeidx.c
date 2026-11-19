@@ -37,12 +37,8 @@
 #define OPT_MKIDX       (OPT_GID + 1)
 #define OPT_MAKEIDX     (OPT_GID + 2)
 #define OPT_MKIDXZ      (OPT_GID + 3) /* legacy */
-#define OPT_NODESC      (OPT_GID + 4)
-#define OPT_COMPR       (OPT_GID + 5)
-#define OPT_NOCOMPR     (OPT_GID + 6)
 #define OPT_TYPE        (OPT_GID + 7)
 #define OPT_TYPE_ALIAS  (OPT_GID + 11) /* XXX argp bug? with +8 this doesn't work... */
-#define OPT_NODIFF      (OPT_GID + 9)
 #define OPT_MOPT        (OPT_GID + 10)
 
 /* The options we understand. */
@@ -63,9 +59,6 @@ static struct argp_option options[] = {
 {"mkidxz", OPT_MKIDXZ, "PATH", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
  N_("Likewise, but gzipped file is created"), OPT_GID},
 
-{"nodesc", OPT_NODESC, 0, OPTION_HIDDEN, "", OPT_GID },
-{"nodiff", OPT_NODIFF, 0, OPTION_HIDDEN, "", OPT_GID },
-{"nocompress", OPT_NOCOMPR, NULL, OPTION_HIDDEN, "", OPT_GID },
 {"mo", OPT_MOPT, "OPTION[,OPTION]", 0,
      N_("Create options (type --mo=help for help)"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
@@ -142,13 +135,6 @@ static void arg_s_free(void *a)
     free(arg_s);
 }
 
-extern int poclidek_op_source_nodesc;
-
-static void log_modeprecated(const char *opname)
-{
-    logn(LOGNOTICE, _("--%s is deprecated, use --mo=%s"), opname, opname);
-}
-
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -185,31 +171,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (arg)
                 arg_s->src_mkidx = source_new_pathspec(NULL, arg, NULL);
             arg_s->cnflags |= DO_MAKEIDX;
-            break;
-
-        case OPT_NODESC:
-            log_modeprecated("nodesc");
-            parse_mopts(arg_s, "nodesc");
-            /* XXX hack, no way to pass option between argps (?)*/
-            poclidek_op_source_nodesc = 1;
-            break;
-
-        case OPT_NODIFF:
-            log_modeprecated("nodiff");
-            parse_mopts(arg_s, "nodiff");
-            break;
-
-        case OPT_COMPR: {
-            char tmp[128];
-            log_modeprecated("compress");
-            n_snprintf(tmp, sizeof(tmp), "compress=%s", arg);
-            parse_mopts(arg_s, tmp);
-            break;
-        }
-
-        case OPT_NOCOMPR:
-            log_modeprecated("nocompress");
-            parse_mopts(arg_s, "nocompress");
             break;
 
         case OPT_MOPT:

@@ -937,19 +937,9 @@ msgstr "Aktualisiere und prüfe Index der Quelle"
 msgid "Update whole index of source"
 msgstr "Aktualisiere den gesamten Index der Quelle"
 
-#: cli/op_source.c:111
-msgid "Remove source index files from cache directory"
-msgstr "Lösche Indexdateien der Quelle aus dem Pufferverzeichnis"
-
-#: cli/op_source.c:114
-#, fuzzy
-msgid "Remove cached packages of the source"
-msgstr "Es sind %d Pakete zu installieren"
-
-#: cli/op_source.c:117
-#, fuzzy
-msgid "Remove all files belongs to source from cache directory"
-msgstr "Lösche alle Quelldateien aus dem Pufferverzeichnis"
+#: cli/op_source.c:110 cli/clean.c:35
+msgid "Delete all files from local cache"
+msgstr "Lösche alle Dateien aus dem lokalen Pufferverzeichnis"
 
 #: cli/op_source.c:251
 msgid "--dt: destination is already set, use me before --destination"

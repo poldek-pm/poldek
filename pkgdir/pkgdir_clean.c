@@ -143,18 +143,3 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
     closedir(dir);
     return 1;
 }
-
-
-int pkgdir__cache_clean(const char *path, const char *mask, int test)
-{
-    char tmpath[PATH_MAX], path_i[PATH_MAX];
-
-    if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath))
-        pkgdir__rmf(tmpath, mask, test);
-
-    n_snprintf(path_i, sizeof(path_i), "%s/%s", path, "packages.i");
-    if (vf_localdirpath(tmpath, sizeof(tmpath), path_i) < (int)sizeof(tmpath))
-        pkgdir__rmf(tmpath, mask, test);
-
-    return 1;
-}
