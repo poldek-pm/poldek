@@ -356,8 +356,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     char              *bn = NULL, **argv;
     struct vflock     *vflock = NULL;
     struct p_open_st  pst;
-    int               i, n, ec, verbose;
-    unsigned          p_open_flags = 0;
+    int               i, n, ec;
 
 
     if ((vflock = vf_lock_mkdir(destdir)) == NULL)
@@ -449,16 +448,9 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         vf_loginfo(_("Running %s\n"), s);
     }
 
-    verbose = *vfile_verbose;
-    if (fftch->urltypes & VFURL_CDROM) {
-        p_open_flags |= P_OPEN_KEEPSTDIN;
-        if (*vfile_verbose < 1)
-            *vfile_verbose = 1;
-    }
-
     p_st_init(&pst);
 
-    if (p_open(&pst, p_open_flags, fftch->path, argv) == NULL) {
+    if (p_open(&pst, 0, fftch->path, argv) == NULL) {
         vf_logerr("p_open: %s\n", pst.errmsg);
         ec = -1;
 
@@ -472,7 +464,6 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     }
 
     p_st_destroy(&pst);
-    *vfile_verbose = verbose;
     if (vflock)
         vf_lock_release(vflock);
     return ec == 0;
@@ -720,9 +711,6 @@ int vf_url_type(const char *url)
 
     if (strncmp(url, "rsync://", 8) == 0)
         return VFURL_RSYNC;
-
-    if (strncmp(url, "cdrom://", 8) == 0)
-        return VFURL_CDROM;
 
     if ((p = strstr(url, "://"))) {
         int is_url = 1;
