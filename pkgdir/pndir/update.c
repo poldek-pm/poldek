@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -279,8 +280,10 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RO, pkgdir->name);
     if (vf == NULL) {
         /* without the list of diffs there is no incremental way to the
-           index, as when no patch on it starts from us */
-        *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
+           index, as when no patch on it starts from us; but a cache that
+           cannot take the list would not take the whole index either */
+        if (errno != ENOSPC && errno != EDQUOT && errno != EROFS)
+            *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
         return 0;
     }
 
