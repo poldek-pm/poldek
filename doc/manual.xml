@@ -579,8 +579,8 @@ Legend: r - readable, w - writeable, u - updateable
 Creation of &poldek;'s sources is quite simple, the syntax is:
 
 <screen>
-&poldek-prompt; -s PATH --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
-&poldek-prompt; -n NAME --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
+&poldek-prompt; -s PATH --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--mo=OPTION[,OPTION]...]
+&poldek-prompt; -n NAME --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--mo=OPTION[,OPTION]...]
 </screen>
 </para>
 <para>
@@ -594,17 +594,17 @@ To make index of the other type or make many indexes of different types at once,
 <para>
 For 'pndir' and 'pdir' indexes delta files are created if the previous package
 index is different from the currently created one. Outdated deltas are automatically removed.
-To skip deltas creation use <option>--nodiff</option> option.
+To skip deltas creation use <option>--mo=nodiff</option> option.
 </para>
 
 <para>
-Other related options are: <option>--nodesc</option> with that package descriptions are not saved to the package index and <option>--nocompress</option> means that uncompressed index will be created.
+Other <option>--mo</option> options are: <option>nodesc</option> with that package descriptions are not saved to the package index and <option>nocompress</option> means that uncompressed index will be created; <option>--mo=help</option> lists them all.
 </para>
 
 <para>
 Examples:
 <screen>
-&poldek-prompt; -s ~/rpm/RPMS --mkidx --nodiff
+&poldek-prompt; -s ~/rpm/RPMS --mkidx --mo=nodiff
 &poldek-prompt; -s /cdrom/RPMS --mkidx=/tmp
 &poldek-prompt; -n home --mkidx 
 &poldek-prompt; -n pld --mkidx --mt=pdir,pndir

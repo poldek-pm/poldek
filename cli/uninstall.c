@@ -83,7 +83,6 @@ static struct argp_option options[] = {
 
 {"pmop", OPT_PM, "OPTION", 0,
  N_("pass option OPTION to PM binary (ex. --pmop noscripts)"), OPT_GID },
-{"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 {"pmopt", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 
 { 0, 0, 0, 0, 0, 0 },
@@ -92,7 +91,6 @@ static struct argp_option options[] = {
 static struct argp_option cmdl_options[] = {
     {0,0,0,0, N_("Package deinstallation:"), OPT_GID - 10 },
     {"erase", OPT_UNINSTALL, 0, 0, N_("Uninstall given packages"), OPT_GID - 10 },
-    {"uninstall", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, 11 },
     { 0, 0, 0, 0, 0, 0 },
 };
 

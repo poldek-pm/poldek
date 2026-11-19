@@ -74,7 +74,6 @@ static void argp_as_docbook(struct argp *argp);
 #define OPT_SKIPINSTALLED     (OPT_GID + 9)
 #define OPT_PM                (OPT_GID + 11)
 #define OPT_PMCMD             (OPT_GID + 12)
-#define OPT_PMCMD_ALIAS       (OPT_GID + 13)
 #define OPT_SUDOCMD           (OPT_GID + 15)
 #define OPT_SHELL             (OPT_GID + 16)
 #define OPT_SHELL_CMD         (OPT_GID + 17)
@@ -93,7 +92,6 @@ static struct argp_option common_options[] = {
 {0,0,0,0, N_("Miscellaneous options:"), OPT_GID },
 {"pm", OPT_PM, "PM", OPTION_HIDDEN, 0, OPT_GID },
 {"pmcmd", OPT_PMCMD, "FILE", 0, N_("Use FILE as PM(rpm) binary"), OPT_GID },
-{"rpmcmd", OPT_PMCMD_ALIAS, "FILE", OPTION_HIDDEN, 0, OPT_GID },
 {"sudocmd", OPT_SUDOCMD, "FILE", 0, N_("Use FILE as sudo binary"), OPT_GID },
 
 {"cachedir", OPT_CACHEDIR, "DIR", 0,
@@ -113,12 +111,8 @@ static struct argp_option common_options[] = {
 
 {"skip-installed", OPT_SKIPINSTALLED, 0, 0,
      N_("Don't load installed packages at startup"), OPT_GID },
-{"fast", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, OPT_GID }, /* legacy */
-{ 0, 'f', 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, OPT_GID }, /* legacy */
 
 {"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), OPT_GID },
-{"_conf", 'c', "FILE", OPTION_HIDDEN,
-     N_("Read configuration from FILE"), OPT_GID }, /* legacy */
 
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), OPT_GID },
 
@@ -228,10 +222,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 exit(EXIT_FAILURE);
             break;
 
-        case 'c':
-            logn(LOGNOTICE, _("-c is depreciated, use --conf instead"));
-            /* fallthru */
-
         case OPT_CONF:
             g_args.path_conf = n_strdup(arg);
             break;
@@ -280,10 +270,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->cnflags |= OPT_AS_FLAG(OPT_SHELL);
             break;
 
-        case 'f':
-            logn(LOGWARN, "-f is obsoleted, use --skip-installed instead");
-            /* fallthru */
-
         case OPT_SKIPINSTALLED:
             argsp->cnflags |= OPT_AS_FLAG(OPT_SKIPINSTALLED);
             argsp->cctx->flags |= POCLIDEK_SKIP_INSTALLED;
@@ -293,7 +279,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             poldek_configure(ctx, POLDEK_CONF_PM, arg);
             break;
 
-        case OPT_PMCMD_ALIAS:
         case OPT_PMCMD:
             set_config_option(argsp, "pm command", arg);
             break;

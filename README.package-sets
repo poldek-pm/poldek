@@ -26,4 +26,4 @@ pdksh
 ~dhcp-client
 
 After every modification set should be verified by:
-$ poldek -s YOUR_SOURCE -V --pkgset=PKGSETFILE 
+$ poldek -s YOUR_SOURCE -V --pset=PKGSETFILE 

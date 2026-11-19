@@ -9,12 +9,5 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.depgraph">--depgraph=TYPE[:FILE] </option></term>
-  <listitem>
-   <para>
-      Generate dependency graph, types are dot,lanvi
-   </para>
-  </listitem>
-</varlistentry>
 </variablelist>
 </sect2>
