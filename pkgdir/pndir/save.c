@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 #include <dirent.h>
 #include <fnmatch.h>
 #include <sys/param.h>          /* for PATH_MAX */
@@ -442,10 +443,9 @@ static tn_array *difftoc_read(const char *path)
 
 /* the diffs are listed from the newest back until they add up to 90% of
    the whole index: a client behind that takes the index instead.  The
-   older diffs go to obsolete, the lines of the missing ones are emptied;
-   *from is the first line to keep */
+   lines of the missing ones are emptied; *from is the first line to keep */
 static int difftoc_vaccum(tn_array *lines, const struct pndir_paths *paths,
-                          tn_array *obsolete, int *from)
+                          int *from)
 {
     char         tmp[PATH_MAX], *dn, *bn;
     struct stat  st_idx, st;
@@ -482,11 +482,10 @@ static int difftoc_vaccum(tn_array *lines, const struct pndir_paths *paths,
         DBGF("path = %s %lld, %lld, %lld\n", path, (long long)st.st_size,
              (long long)diffs_size, (long long)st_idx.st_size);
 
-        if (cut >= 0) {
-            if (vf_valid_path(path))
-                n_array_push(obsolete, n_strdup(path));
+        if (cut >= 0)
+            continue;
 
-        } else if (diffs_size + st.st_size > (st_idx.st_size * 0.9)) {
+        if (diffs_size + st.st_size > (st_idx.st_size * 0.9)) {
             cut = i;
 
         } else {
@@ -500,6 +499,141 @@ static int difftoc_vaccum(tn_array *lines, const struct pndir_paths *paths,
     return 1;
 }
 
+/* each diff starts from the index the one before it led to.  A list whose
+   last diff does not lead to the index this one starts from lost a diff,
+   one a failed --mkidx did not list: its diffs lead no client to the
+   current index */
+static int difftoc_leads_to(tn_array *lines, time_t orig_ts)
+{
+    unsigned long ts;
+    int i;
+
+    for (i = n_array_size(lines) - 1; i >= 0; i--) {
+        const char *l = n_array_nth(lines, i);
+
+        if (*l == '\0' || *l == '\n')
+            continue;
+
+        if (sscanf(l, "%*s %lu", &ts) != 1)
+            return 0;
+
+        return ts == (unsigned long)orig_ts;
+    }
+
+    return 1;                   /* an empty list */
+}
+
+/* the timestamp (pndir_tsstr()) in the name of a file of a diff, as in
+   packages.ndir.2026.11.18-16.04.00.gz or packages.ndir.dscr.<tss>.gz */
+#define TSS_LEN 19
+
+static const char *find_tss(const char *name)
+{
+    static const char form[] = "dddd.dd.dd-dd.dd.dd";
+    const char *p;
+    int i;
+
+    for (p = strchr(name, '.'); p && strlen(p + 1) >= TSS_LEN; p = strchr(p + 1, '.')) {
+        const char *t = p + 1;
+
+        for (i = 0; i < TSS_LEN; i++) {
+            if (form[i] == 'd' ? !isdigit((unsigned char)t[i]) : t[i] != form[i])
+                break;
+        }
+
+        if (i == TSS_LEN && (t[TSS_LEN] == '.' || t[TSS_LEN] == '\0'))
+            return t;
+    }
+
+    return NULL;
+}
+
+/* the name of an index without its compression extension, which every
+   file of it starts with: packages.ndir.gz, packages.ndir.md,
+   packages.i/packages.ndir.<tss>.gz; path is cut into *dn and *stem */
+static int index_stem(char *path, char **dn, char **stem)
+{
+    char *ext;
+
+    n_basedirnam(path, dn, stem);
+    if (**stem == '\0')
+        return 0;
+
+    if (*dn == NULL)
+        *dn = ".";
+
+    if ((ext = strrchr(*stem, '.')) && strcmp(ext + 1, pndir_extension) != 0)
+        *ext = '\0';
+
+    return 1;
+}
+
+/* the files of the diffs the list no longer names: the trimmed ones, with
+   their descriptions, and those of a diff a failed --mkidx did not list */
+static void rm_unlisted_diffs(const struct pndir_paths *paths,
+                              tn_array *lines, int from)
+{
+    char           tmp[PATH_MAX], dir[PATH_MAX], path[PATH_MAX], *dn, *stem;
+    tn_array       *listed;
+    struct dirent  *ent;
+    struct stat    st;
+    size_t         stemlen;
+    DIR            *d;
+    int            i;
+
+    n_snprintf(tmp, sizeof(tmp), "%s", paths->path_main);
+    if (!index_stem(tmp, &dn, &stem))
+        return;
+    stemlen = strlen(stem);
+
+    listed = n_array_new(16, free, (tn_fn_cmp)strcmp);
+    for (i = from; i < n_array_size(lines); i++) {
+        const char *l = n_array_nth(lines, i), *t;
+        char name[PATH_MAX];
+
+        n_snprintf(name, sizeof(name), "%.*s", (int)strcspn(l, " \n"), l);
+        if ((t = find_tss(name)))
+            n_array_push(listed, n_strdupl(t, TSS_LEN));
+    }
+
+    n_array_sort(listed);
+
+    n_snprintf(dir, sizeof(dir), "%s/%s", dn, pndir_packages_incdir);
+    if ((d = opendir(dir)) == NULL) {
+        n_array_free(listed);
+        return;
+    }
+
+    while ((ent = readdir(d)) != NULL) {
+        const char *t;
+        char tss[TSS_LEN + 1];
+
+        if (strncmp(ent->d_name, stem, stemlen) != 0)
+            continue;
+
+        if (ent->d_name[stemlen] != '.')
+            continue;
+
+        if ((t = find_tss(ent->d_name + stemlen)) == NULL)
+            continue;           /* the list itself */
+
+        n_snprintf(tss, sizeof(tss), "%.*s", TSS_LEN, t);
+        if (n_array_bsearch(listed, tss))
+            continue;
+
+        n_snprintf(path, sizeof(path), "%s/%s", dir, ent->d_name);
+        if (lstat(path, &st) != 0 || !S_ISREG(st.st_mode))
+            continue;
+
+        msgn(1, _("Removing outdated %s"), ent->d_name);
+        if (unlink(path) != 0)
+            logn(LOGWARN, "unlink %s: %m", path);
+    }
+
+    closedir(d);
+    n_array_free(listed);
+}
+
 /* the list is written whole, with the new diff added: a client finds the
    old list or the new one, never a cut entry, which would abort its read
    of the list.  The diffs it no longer lists are removed after it */
@@ -507,7 +641,7 @@ static
 int pndir_difftoc_update(const struct pkgdir *pkgdir,
                          const struct pndir_paths *paths)
 {
-    tn_array       *lines, *obsolete;
+    tn_array       *lines;
     tn_stream      *st;
     struct pndir   *idx;
     char           entry[PATH_MAX + 256];
@@ -519,16 +653,21 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir,
     if ((lines = difftoc_read(paths->path_diff_toc)) == NULL)
         return 0;
 
+    if (!difftoc_leads_to(lines, pkgdir->orig_ts)) {
+        logn(LOGWARN, _("%s: a diff is missing from the list, the older diffs "
+                        "are dropped"), paths->path_diff_toc);
+        n_array_clean(lines);
+    }
+
     n = n_snprintf(entry, sizeof(entry), "%s %lu %s %lu\n",
                    n_basenam(paths->path), (unsigned long)pkgdir->ts,
                    idx->md_orig, (unsigned long)pkgdir->orig_ts);
     n_array_push(lines, n_strdupl(entry, n));
 
     /* only a diff that adds packages trims the list */
-    obsolete = n_array_new(8, free, NULL);
     trim = pkgdir->pkgs && n_array_size(pkgdir->pkgs);
     if (trim && !poldek__is_in_testing_mode()) {
-        if (!difftoc_vaccum(lines, paths, obsolete, &from))
+        if (!difftoc_vaccum(lines, paths, &from))
             ok = 0;             /* the list is not trimmed */
     }
 
@@ -558,19 +697,11 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir,
         goto l_end;             /* the old list, and its diffs, stay */
     }
 
-    for (i = 0; i < n_array_size(obsolete); i++) {
-        char *q, *path = n_array_nth(obsolete, i);
-
-        msgn(1, _("Removing outdated %s"), n_basenam(path));
-        unlink(path);
-        if ((q = strrchr(path, '.')) && (n_str_eq(q+1, COMPR_GZ) || n_str_eq(q+1, COMPR_ZST))) {
-            strcpy(q, pndir_digest_ext); /* not longer than q */
-            unlink(path);
-        }
-    }
+    /* the tests keep every diff */
+    if (!poldek__is_in_testing_mode())
+        rm_unlisted_diffs(paths, lines, from);
 
  l_end:
-    n_array_free(obsolete);
     n_array_free(lines);
     return ok;
 }
@@ -721,26 +852,17 @@ static void rm_stale_tmps(const char *dir, const char *stem)
     closedir(d);
 }
 
-/* every file of the index is named after its name without the compression
-   extension: packages.ndir.gz, packages.ndir.md, packages.i/packages.ndir... */
 static void rm_index_stale_tmps(const char *path)
 {
-    char  tmp[PATH_MAX], dir[PATH_MAX], *dn, *bn, *ext;
+    char  tmp[PATH_MAX], dir[PATH_MAX], *dn, *stem;
 
     n_snprintf(tmp, sizeof(tmp), "%s", path);
-    n_basedirnam(tmp, &dn, &bn);
-    if (*bn == '\0')
+    if (!index_stem(tmp, &dn, &stem))
         return;
 
-    if (dn == NULL)
-        dn = ".";
-
-    if ((ext = strrchr(bn, '.')) && strcmp(ext + 1, pndir_extension) != 0)
-        *ext = '\0';
-
-    rm_stale_tmps(dn, bn);
+    rm_stale_tmps(dn, stem);
     n_snprintf(dir, sizeof(dir), "%s/%s", dn, pndir_packages_incdir);
-    rm_stale_tmps(dir, bn);
+    rm_stale_tmps(dir, stem);
 }
 
 int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)

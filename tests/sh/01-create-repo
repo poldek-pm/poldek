@@ -249,6 +249,11 @@ cat_toc() {
     esac
 }
 
+# the timestamp in the name of a file of a diff
+tss_of() {
+    echo $1 | grep -oE '[0-9]{4}\.[0-9]{2}\.[0-9]{2}-[0-9]{2}\.[0-9]{2}\.[0-9]{2}'
+}
+
 # every diff the list in $1 names is there
 assert_listed_diffs() {
     local toc=$1 d
@@ -258,10 +263,50 @@ assert_listed_diffs() {
     done
 }
 
+# next to the list in $1 are the files of the diffs it names, all of those
+# among the files in $2, and no others
+assert_diff_files() {
+    local toc=$1 before=$2 dir=$(dirname $1) listed f t
+
+    assert_listed_diffs $toc
+    listed=$(cat_toc $toc | cut -d' ' -f1)
+    for f in $(ls $dir); do
+        t=$(tss_of $f)
+        [ -n "$t" ] || continue
+        echo "$listed" | grep -qF "$t" || fail "unlisted $f left"
+    done
+
+    for f in $before; do
+        t=$(tss_of $f)
+        [ -n "$t" ] || continue
+        echo "$listed" | grep -qF "$t" || continue
+        [ -e $dir/$f ] || fail "$f of a listed diff removed"
+    done
+}
+
+# $1 with all the packages of $REPO but the last one, in $1.out, and an
+# index with 6 diffs of the last one removed and added again, each about a
+# quarter of the index
+mkrepo_with_diffs() {
+    local repo=$1 last=$(basename $(ls $REPO/*.rpm | tail -1)) i
+
+    mkrepo_but_last $repo
+    rm -rf $repo.out
+    mkdir $repo.out
+    cp $REPO/$last $repo.out || fail "cp failed"
+
+    for i in 1 2 3; do
+        mv $repo.out/$last $repo/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+        mv $repo/$last $repo.out/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+    done
+    die_if_invalid_index $repo/packages.i/packages.ndir.diff.toc$COMPR_EXT 6
+}
+
 # a list of diffs is replaced only by a whole one: after a failure the
-# clients find the old list, its diffs still there.  Out of testing mode the
-# list is trimmed, and only after it is written the diffs it no longer
-# lists are removed
+# clients find the old list, its diffs still there.  The diff of that run is
+# missing from the list, so the next diff does not follow the last one
+# listed, and the list starts again from it; out of testing mode the files
+# of the diffs dropped go
 testCreateDiffTocErrorKeepsList()
 {
     local repo="$TMPDIR/keep-toc"
@@ -271,18 +316,7 @@ testCreateDiffTocErrorKeepsList()
 
     [ "$COMPR" = none ] && mo=nocompress    # out of testing mode
 
-    mkrepo_but_last $repo
-    rm -rf $repo.out
-    mkdir $repo.out
-    cp $REPO/$last $repo.out || fail "cp failed"
-
-    # 6 diffs, each about a quarter of the index, enough to trim the list
-    for i in 1 2 3; do
-        mv $repo.out/$last $repo/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
-        mv $repo/$last $repo.out/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
-    done
-    die_if_invalid_index $toc 6
-
+    mkrepo_with_diffs $repo
     before=$(cksum < $toc)
     diffs=$(ls $repo/packages.i)
     mv $repo.out/$last $repo/
@@ -299,21 +333,33 @@ testCreateDiffTocErrorKeepsList()
     assert_listed_diffs $toc
     assert_no_tmp $repo
 
-    # a diff that adds packages trims the list; the uncompressed index would
-    # take 30 diffs and more
+    diffs=$(ls $repo/packages.i)
+    mv $repo/$last $repo.out/
+    out=$(env -u POLDEK_TESTING LC_ALL=C $POLDEK_NOCONF -s $repo --mkidx --mo=$mo 2>&1)
+    assertTrue "mkidx failed: $out" "[ $? -eq 0 ]"
+    assertTrue "no warning: $out" "echo \"$out\" | grep -q 'a diff is missing from the list'"
+    die_if_invalid_index $toc 1
+    assert_diff_files $toc "$diffs"
+}
+
+# out of testing mode a diff that adds packages trims the list, and the
+# files of the diffs it no longer names are removed, their descriptions too
+testCreateDiffTocVaccum()
+{
+    local repo="$TMPDIR/vaccum"
+    local toc="$repo/packages.i/packages.ndir.diff.toc$COMPR_EXT"
+    local last=$(basename $(ls $REPO/*.rpm | tail -1))
+    local diffs
+
+    # the uncompressed index would take 30 diffs and more
     [ "$COMPR" = none ] && return
-    mv $repo/$last $repo.out/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
+
+    mkrepo_with_diffs $repo
+    diffs=$(ls $repo/packages.i)
     mv $repo.out/$last $repo/
-    env -u POLDEK_TESTING $POLDEK_NOCONF -s $repo --mkidx --mo=$mo || fail "mkidx failed"
-    [ $(cat_toc $toc | wc -l) -lt 8 ] || fail "list of diffs not trimmed"
-    assert_listed_diffs $toc
-    for i in $diffs; do
-        [ -e $repo/packages.i/$i ] || continue
-        case $i in
-            packages.ndir.diff.toc*|packages.ndir.dscr.*) continue ;;
-        esac
-        cat_toc $toc | grep -q "^$i " || fail "unlisted $i left"
-    done
+    env -u POLDEK_TESTING $POLDEK_NOCONF -s $repo --mkidx --mo=$COMPR || fail "mkidx failed"
+    [ $(cat_toc $toc | wc -l) -lt 7 ] || fail "list of diffs not trimmed"
+    assert_diff_files $toc "$diffs"
     assert_no_tmp $repo
 }
 
