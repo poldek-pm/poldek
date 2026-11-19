@@ -43,7 +43,8 @@
 #include "tags.h"
 
 /* the lines of the list of diffs, none for a missing list; NULL when the
-   list cannot be read whole, and must not be rewritten from a part */
+   list cannot be read whole: the caller starts a new list rather than
+   rewrite one from a part */
 static tn_array *difftoc_read(const char *path)
 {
     tn_array   *lines;
@@ -262,8 +263,14 @@ int pndir_difftoc_update(const struct pkgdir *pkgdir, const char *idxpath,
     idx = pkgdir->mod_data;
     n_assert(idx && idx->md_orig);
 
-    if ((lines = difftoc_read(tocpath)) == NULL)
-        return 0;
+    if ((lines = difftoc_read(tocpath)) == NULL) {
+        /* the list is derived, and a client it does not lead to the index
+           takes the whole one instead: a list that cannot be read is
+           replaced rather than failing every --mkidx that changes the repo */
+        logn(LOGWARN, _("%s: unreadable list of diffs, starting a new one"),
+             tocpath);
+        lines = n_array_new(32, free, NULL);
+    }
 
     if (!pndir_difftoc_leads_to(lines, pkgdir->orig_ts)) {
         logn(LOGWARN, _("%s: a diff is missing from the list, the older diffs "

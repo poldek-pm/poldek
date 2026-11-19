@@ -17,7 +17,7 @@
 =xxxstart <xsl:value-of select="description"/> =xxxend </xsl:if>
 </xsl:if>
       <xsl:for-each select="option">
-<xsl:if test="string-length(description) > 0">
+<xsl:if test="string-length(description) > 0 and not(@hidden = 'yes')">
 
 =xxxstart <xsl:value-of select="description"/> =xxxend <xsl:if test="string-length(@default) > 0">
 #<xsl:value-of select="@name"/> = <xsl:value-of select="@default"/>

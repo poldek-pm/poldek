@@ -1001,7 +1001,9 @@ struct pkgdir *load_orig_pkgdir(struct pkgdir *pkgdir, const char *path,
                                pkgdir->lc_lang);
     }
 
-    if (orig && pkgdir_load(orig, NULL, 0) <= 0) {
+    /* the previous index is the base of the new one: a half written one must
+       not be taken for it */
+    if (orig && pkgdir_load(orig, NULL, PKGDIR_LD_VERIFYDIGEST) <= 0) {
         pkgdir_free(orig);
         orig = NULL;
     }
@@ -1088,7 +1090,10 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
         create = 1;
         if ((diff = pkgdir_diff(orig, pkgdir))) {
             diff->ts = pkgdir->ts;
-            pkgdir->flags |= PKGDIR_DIFFED;
+            /* a diff that is not saved is no way to the index: the digest
+               must tell the clients to take the whole index instead */
+            if ((flags & PKGDIR_CREAT_NOPATCH) == 0)
+                pkgdir->flags |= PKGDIR_DIFFED;
 
         } else if ((flags & PKGDIR_CREAT_IFORIGCHANGED)) {
             create = 0;         /* no difference -> do not create */

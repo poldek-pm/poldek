@@ -34,7 +34,7 @@
 
 
 <xsl:template match="option">
-  <xsl:if test="string-length(description) > 0">
+  <xsl:if test="string-length(description) > 0 and not(@hidden = 'yes')">
     <xsl:variable name="id_option">
       <xsl:value-of select="translate(@name, ' ', '_')"/>
     </xsl:variable>

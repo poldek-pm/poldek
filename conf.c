@@ -50,7 +50,7 @@ static const char includedir_tag[] = "%includedir";
 
 static struct poldek_conf_tag unknown_tag = {
     NULL, CONF_TYPE_STRING | CONF_TYPE_F_ENV | CONF_TYPE_F_MULTI_EXCL,
-    NULL, 0, { 0 },
+    NULL, 0, { 0 }, NULL,
 };
 
 /* XXX: aliases are not implemented yet
@@ -602,6 +602,24 @@ static int add_param(tn_hash *ht_sect, const char *section,
 
     msgn_i(3, 2, "%s::%s = %s", section, name, value);
 
+    if (tag->flags & (CONF_TYPE_F_DEPRECATED | CONF_TYPE_F_OBSOLETE) &&
+        (tag->flags & CONF_TYPE_F_ALIAS) == 0) {
+        int ignored = tag->flags & CONF_TYPE_F_OBSOLETE;
+
+        if (tag->use && ignored)
+            logn(LOGWARN, _("%s: '%s::%s' is obsolete and ignored, use %s"),
+                 filemark, section, name, tag->use);
+        else if (tag->use)
+            logn(LOGWARN, _("%s: '%s::%s' is deprecated, use %s"), filemark,
+                 section, name, tag->use);
+        else if (ignored)
+            logn(LOGWARN, _("%s: '%s::%s' is obsolete and ignored"), filemark,
+                 section, name);
+        else
+            logn(LOGWARN, _("%s: '%s::%s' is deprecated"), filemark,
+                 section, name);
+    }
+
     if (tag->flags & CONF_TYPE_F_ALIAS) {
         int n = tagindex;
         char *p = NULL;
@@ -609,6 +627,9 @@ static int add_param(tn_hash *ht_sect, const char *section,
             n--;
             if ((sect->tags[n].flags & CONF_TYPE_F_ALIAS) == 0) {
                 msg(5, "alias %s -> %s\n", name, sect->tags[n].name);
+                if (tag->flags & CONF_TYPE_F_DEPRECATED)
+                    logn(LOGWARN, _("%s: '%s::%s' is deprecated, use '%s'"),
+                         filemark, section, name, sect->tags[n].name);
                 p = name = sect->tags[n].name;
                 tag = &sect->tags[n];
                 break;

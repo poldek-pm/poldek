@@ -157,6 +157,48 @@ testCreateDescrWriteError()
     assert_no_tmp $dir
 }
 
+# no diff written means the digest must say brand-new: there is no list of
+# diffs to take, so a client that does not know the index takes the whole one
+testCreateNoDiffDigest()
+{
+    local repo="$TMPDIR/nodiff-digest"
+    local last=$(ls $REPO/*.rpm | tail -1)
+
+    mkrepo_but_last $repo
+    cp $last $repo || fail "cp failed"
+    $POLDEK_NOCONF -s $repo --mkidx --mo=nodiff || fail "mkidx failed"
+    [ ! -e $repo/packages.i ] || fail "a diff was written"
+    grep -q 'brand-new' $repo/packages.ndir.md || \
+        fail "the digest does not say brand-new: $(cat $repo/packages.ndir.md)"
+}
+
+# a run that failed after the index was written leaves the index newer than
+# its digest; the next run must notice the mismatch and publish the index,
+# not leave the digest of the run before
+testCreateRepairsStaleDigest()
+{
+    local repo="$TMPDIR/stale-digest" ref="$TMPDIR/stale-digest-ref"
+    local last=$(ls $REPO/*.rpm | tail -1)
+
+    mkrepo_but_last $repo
+    cp $last $repo || fail "cp failed"
+    if env LD_PRELOAD=$CLOSE_ERROR_SO WRITE_ERROR=packages.ndir.md \
+        $POLDEK_NOCONF -s $repo --mkidx; then
+        fail "mkidx succeeded"
+    fi
+    die_if_invalid_index $repo/packages.ndir$COMPR_EXT $(ls $REPO/*.rpm | wc -l)
+
+    $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx of the retry failed"
+
+    # the digest the same packages get when the index is written from scratch
+    rm -rf $ref
+    mkdir $ref
+    cp $repo/*.rpm $ref || fail "cp failed"
+    $POLDEK_NOCONF -s $ref --mkidx || fail "mkidx of the reference failed"
+    assertEquals "the digest of the repaired index" \
+        "$(cat $ref/packages.ndir.md)" "$(cat $repo/packages.ndir.md)"
+}
+
 # a file of the index that cannot be written fails --mkidx and is left as it
 # was, and so are the files after it: an index that fails leaves all of them,
 # and as the digest is written last, the clients see the old index as
@@ -348,6 +390,34 @@ mkrepo_with_diffs() {
         mv $repo/$last $repo.out/ && $POLDEK_NOCONF -s $repo --mkidx || fail "mkidx failed"
     done
     die_if_invalid_index $repo/packages.i/packages.ndir.diff.toc$COMPR_EXT 6
+}
+
+# a list of diffs that cannot be read is replaced by a new one, not a reason
+# for every --mkidx that changes the repo to fail
+testCreateReplacesUnreadableToc()
+{
+    local repo="$TMPDIR/unreadable-toc"
+    local toc="$repo/packages.i/packages.ndir.diff.toc$COMPR_EXT"
+    local last=$(basename $(ls $REPO/*.rpm | tail -1))
+    local out rc
+
+    # an uncompressed list cut in two is still a list of some entries
+    [ "$COMPR" = none ] && return
+
+    mkrepo_with_diffs $repo
+    head -c $(($(wc -c < $toc) / 2)) $toc > $toc.cut && mv $toc.cut $toc
+    if cat_toc $toc >/dev/null 2>&1; then
+        fail "the list of diffs is still readable"
+    fi
+
+    mv $repo.out/$last $repo/
+    out=$($POLDEK_NOCONF -s $repo --mkidx 2>&1)
+    rc=$?
+    assertEquals "mkidx failed: $out" 0 "$rc"
+    echo "$out" | grep -q 'starting a new one' || fail "no new list of diffs: $out"
+    die_if_invalid_index $toc 1
+    assert_listed_diffs $toc
+    assert_no_tmp $repo
 }
 
 # a list of diffs is replaced only by a whole one: after a failure the

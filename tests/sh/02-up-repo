@@ -144,6 +144,60 @@ testUpdate()
 
 }
 
+# a diff the list names that is gone behind one the client has applied: half
+# way through, like with no matching patch at all, only the whole index gets
+# the client back in sync (autoupa)
+testUpMissingDiffAfterPatch()
+{
+    local out rc diff
+
+    rm -rf $REPO/*.* $CACHEDIR/*
+    mkidx
+    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+
+    # two diffs to apply: the client applies the first, the second is denied
+    add_package_to_repo
+    mkidx
+    add_package_to_repo
+    mkidx
+
+    # the index files, not their dscr siblings and not the list
+    diff=$(basename $(ls -tr $REPO/packages.i/packages.ndir.[0-9]* | tail -1))
+    [ -n "$diff" ] || fail "no diff to deny"
+
+    POLDEK_TESTING_DENIED_FILES="$diff"
+    out=$($POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up 2>&1)
+    rc=$?
+    POLDEK_TESTING_DENIED_FILES=""
+    assertEquals "up failed: $out" 0 "$rc"
+    echo "$out" | grep -q 'desynchronized index, trying to update whole index' || \
+        fail "no whole index update: $out"
+    ls_expect 2
+}
+
+# a list of diffs that is not there (a lost file) is no incremental way to
+# the index: the client takes the whole one instead of failing
+testUpNoDiffList()
+{
+    local out rc toc="$REPO/packages.i/packages.ndir.diff.toc$COMPR_EXT"
+
+    rm -rf $REPO/*.* $CACHEDIR/*
+    mkidx
+    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+
+    add_package_to_repo
+    mkidx
+    [ -f $toc ] || fail "no list of diffs"
+    rm -f $toc
+
+    out=$($POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up 2>&1)
+    rc=$?
+    assertEquals "up failed: $out" 0 "$rc"
+    echo "$out" | grep -q 'trying to update whole index' || \
+        fail "no whole index update: $out"
+    ls_expect 1
+}
+
 # --upa of a changed repository fetches the whole index again
 testUpaChangedRepoIsNotUpToDate()
 {

@@ -137,6 +137,9 @@ EXPORT struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 #define PKGDIR_LD_ALLDESC            (1 << 8) /* load all i18n descriptions
 				                  (see PKGDIR_OPEN_ALLDESC)
 				               */
+#define PKGDIR_LD_VERIFYDIGEST       (1 << 9) /* fail unless the loaded index
+                                                 matches the digest next to it
+                                               */
 
 EXPORT int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags);
 

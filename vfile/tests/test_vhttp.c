@@ -252,6 +252,37 @@ START_TEST(test_http_404)
 }
 END_TEST
 
+/* a failed open says why in errno: no such file for a 404, permission for
+   a 403 */
+START_TEST(test_http_open_errno)
+{
+    char url[512], cachedir[PATH_MAX + 8], cmd[PATH_MAX + 32];
+
+    fail_if(http_port == 0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    /* vfile_open() fetches into the cache, which must be there */
+    snprintf(cachedir, sizeof(cachedir), "%s/cache", tmpdir);
+    fail_if(mkdir(cachedir, 0755) != 0);
+    vfile_configure(VFILE_CONF_CACHEDIR, cachedir);
+
+    snprintf(url, sizeof(url), "http://%s:%d/file/nonexistent.txt",
+             server_host, http_port);
+    errno = 0;
+    fail_unless(vfile_open(url, VFT_IO, VFM_RO) == NULL);
+    fail_unless(errno == ENOENT, "404: errno %d: %s", errno, logged(logged_err));
+
+    snprintf(url, sizeof(url), "http://%s:%d/status/403", server_host, http_port);
+    errno = 0;
+    fail_unless(vfile_open(url, VFT_IO, VFM_RO) == NULL);
+    fail_unless(errno == EPERM, "403: errno %d: %s", errno, logged(logged_err));
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    snprintf(cmd, sizeof(cmd), "rm -rf %s", cachedir);
+    fail_if(system(cmd) != 0);
+}
+END_TEST
+
 START_TEST(test_http_error_status_named)
 {
     char url[512];
@@ -980,6 +1011,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_keeps_server_mtime);
     tcase_add_test(tc_http, test_http_get_binary);
     tcase_add_test(tc_http, test_http_404);
+    tcase_add_test(tc_http, test_http_open_errno);
     tcase_add_test(tc_http, test_http_error_status_named);
     tcase_add_test(tc_http, test_http_error_status_without_reason);
     tcase_add_test(tc_http, test_http_reason_phrase_as_sent);

@@ -35,7 +35,7 @@
         </synopsis>
         <variablelist><title></title>
         <xsl:for-each select="option">
-          <xsl:if test="string-length(description) > 0">
+          <xsl:if test="string-length(description) > 0 and not(@hidden = 'yes')">
             <varlistentry><term><option><xsl:value-of select="@name"/></option></term>
             <listitem>
               <para>

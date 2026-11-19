@@ -111,6 +111,8 @@ struct vfile {
 
 #define vfile_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
 
+/* NULL with errno set on a failure: ENOENT for a file the server does not
+   have, EIO when the fetch command or the decompression gives no reason */
 EXPORT struct vfile *vfile_open_ul(const char *path, int vftype, unsigned vfmode,
                             const char *urlabel);
 

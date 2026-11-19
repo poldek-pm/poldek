@@ -79,7 +79,6 @@ void (*poldek_malloc_fault_hook)(void) = NULL;
 static
 void (*poldek_die_hook)(const char *msg) = NULL;
 
-static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
 
 static int setup_legacy_sources(tn_hash *htcnf);
@@ -576,64 +575,6 @@ static char *extract_handler_name(char *name, int size, const char *cmd)
 }
 
 
-static void register_vf_handlers_compat(const tn_hash *htcnf)
-{
-    char name[128];
-    const char *vs;
-    tn_array *protocols;
-
-    protocols = n_array_new(2, NULL, (tn_fn_cmp)strcmp);
-
-    if ((vs = poldek_conf_get(htcnf, "ftp_http_get", NULL))) {
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "ftp");
-        n_array_push(protocols, "http");
-        //vfile_cnflags |= VFILE_USEXT_FTP | VFILE_USEXT_HTTP;
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "ftp_get", NULL))) {
-        //vfile_cnflags |= VFILE_USEXT_FTP;
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "ftp");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "http_get", NULL))) {
-        //vfile_cnflags |= VFILE_USEXT_HTTP;
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "http");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "https_get", NULL))) {
-        //vfile_cnflags |= VFILE_USEXT_HTTPS;
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "https");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "rsync_get", NULL))) {
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "rsync");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-
-    if ((vs = poldek_conf_get(htcnf, "cdrom_get", NULL))) {
-        extract_handler_name(name, sizeof(name), vs);
-        n_array_clean(protocols);
-        n_array_push(protocols, "cdrom");
-        vfile_register_ext_handler(name, protocols, vs);
-    }
-    n_array_free(protocols);
-}
-
-
 static void register_vf_handlers(const tn_array *fetchers)
 {
     char name[128];
@@ -703,39 +644,6 @@ int set_default_vf_fetcher(int tag, const char *confvalue)
     return 1;
 }
 
-
-static void zlib_in_rpm(struct poldek_ctx *ctx)
-{
-    char              *argv[2], cmd[256];
-    const char        *libdir;
-    struct p_open_st  pst;
-    tn_hash           *htcnf;
-    int               ec;
-
-
-    htcnf = poldek_conf_get_section(ctx->htconf, "global");
-    libdir = poldek_conf_get(htcnf, "_libdir", NULL);
-    if (libdir == NULL)
-        libdir = "/usr/lib";
-
-    n_snprintf(cmd, sizeof(cmd), "%s/poldek/zlib-in-rpm.sh", libdir);
-
-    argv[0] = cmd;
-    argv[1] = NULL;
-
-    p_st_init(&pst);
-    if (p_open(&pst, 0, cmd, argv) == NULL) {
-        p_st_destroy(&pst);
-        return;
-    }
-
-    if ((ec = p_close(&pst)) == 0) {
-        logn(LOGNOTICE, "zlib-in-rpm detected, enabling workaround");
-        vfile_configure(VFILE_CONF_EXTCOMPR, 1);
-    }
-
-    p_st_destroy(&pst);
-}
 
 int default_op_map_ent_cmp(struct default_op_map_ent *e1,
                            struct default_op_map_ent *e2)
@@ -1052,7 +960,6 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
     poldek__ts_apply_config(ctx, ctx->ts);
 
     htcnf = poldek_conf_get_section(ctx->htconf, "global");
-    register_vf_handlers_compat(htcnf);
     register_vf_handlers(poldek_conf_get_sections(ctx->htconf, "fetcher"));
 
     if ((list = poldek_conf_get_multi(htcnf, "default_fetcher"))) {
@@ -1100,9 +1007,6 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
 
     if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
-
-    else if (poldek_conf_get_bool(htcnf, "auto_zlib_in_rpm", 0))
-        zlib_in_rpm(ctx);
 
     if ((v = poldek_conf_get_int(htcnf, "vfile_retries", 100)) > 0)
         vfile_configure(VFILE_CONF_STUBBORN_NRETRIES, v);

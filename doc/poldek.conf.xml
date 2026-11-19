@@ -8,13 +8,16 @@ option syntax
   path="yes"      # if path list (':' separator) in conjunction with list,
   multiple="yes"  # if an option may be set multiple times
   env="yes"       # if an option value may contain environment variables
-  obsoleted="yes" # if an option is obsoleted
-  hidden="yes"    # not to show it to the user. XXX need to be implemented
-                  # in *conf-xml2*.xsls, currently just length of the
-                  # description is tested.
+  stage="deprecated" # if an option still works but should not be used;
+                     # using it gives a warning
+  stage="obsolete"   # if an option does nothing any more; likewise
+  use="TEXT"      # what to use instead of such an option, shown in the
+                  # warning
+  hidden="yes"    # not to show it to the user (an option without
+                  # a description is not shown either)
 >
 <description> OPTION DESCRIPTION </description>
-<alias name="ALIAS NAME" obsoleted="{yes,no}" /> an option alias
+<alias name="ALIAS NAME" stage="deprecated" /> an option alias
 </option>
 -->
 
@@ -179,16 +182,17 @@ and [filename]*-source.conf[/filename], file getters are declared in
 <confsection name="global" id="section.global" config="poldek.conf">
 <optiongroup id="ogroup.general">
    <!-- legacy options  -->
-   <option name="source" type="string" multiple="yes" env="yes" obsoleted="yes" />
-   <option name="source?*" type="string" env="yes" obsoleted="yes" />
-   <option name="prefix?*" type="string" env="yes" obsoleted="yes" />
-   <option name="ftp http get" type="string" obsoleted="yes" />
-   <option name="ftp get" type="string" obsoleted="yes" />
-   <option name="http get" type="string" obsoleted="yes" />
-   <option name="https get" type="string" obsoleted="yes" />
-   <option name="rsync get" type="string" obsoleted="yes" />
-   <option name="cdrom get" type="string" obsoleted="yes" />
-   <option name="load apt sources list" type="boolean" obsoleted="yes" />
+   <option name="source" type="string" multiple="yes" env="yes" hidden="yes" />
+   <option name="source?*" type="string" env="yes" stage="deprecated" use="a [source] section" />
+   <option name="prefix?*" type="string" env="yes" stage="deprecated" use="a [source] section" />
+   <option name="ftp http get" type="string" stage="obsolete" use="a [fetcher] section" />
+   <option name="ftp get" type="string" stage="obsolete" use="a [fetcher] section" />
+   <option name="http get" type="string" stage="obsolete" use="a [fetcher] section" />
+   <option name="https get" type="string" stage="obsolete" use="a [fetcher] section" />
+   <option name="rsync get" type="string" stage="obsolete" use="a [fetcher] section" />
+   <option name="cdrom get" type="string" stage="obsolete" use="a [fetcher] section" />
+   <option name="load apt sources list" type="boolean" stage="obsolete" />
+   <option name="auto zlib in rpm" type="boolean" stage="obsolete" />
 
   <option name="default index type" type="string" default="pndir">
     <description>
@@ -226,16 +230,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
   <option name="vfile external compress" type="boolean" default="no">
     <description>
     Handle gzipped indexes externally (needed on RedHat 9 and Fedora Core 1 and 2).
-    This option is a workaround for broken zlib linked into librpm; with enabled
-    'auto zlib in rpm' poldek tries to detect such case and then enables external
-     *.gz handling automatically.
-    </description>
-  </option>
-
-  <option name="auto zlib in rpm" type="boolean" default="yes">
-    <description>
-    Auto detection of zlib linked into librpm. See 'vfile external compress'
-    description.
+    This option is a workaround for broken zlib linked into librpm.
     </description>
   </option>
 
@@ -261,7 +256,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
     (see 'use sudo'), it runs without a controlling terminal and cannot ask
     for a password, so a wrapper that runs sudo does not belong here.
     </description>
-    <alias name="rpm command" obsoleted="yes" />
+    <alias name="rpm command" stage="deprecated" />
   </option>
 
   <option name="sudo command" type="string" default="/usr/bin/sudo" multiple="no">
@@ -302,7 +297,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
     Send ${USER}@${HOSTNAME} as anonymous FTP password (by default
     [literal]'poldek@znienacka.net'[/literal] is sent)
     </description>
-    <alias name="ftp sysuser as anon passwd" obsoleted="yes" /> <!-- legacy -->
+    <alias name="ftp sysuser as anon passwd" stage="deprecated" /> <!-- legacy -->
   </option>
 
   <option name="default fetcher" type="string" default="http,ftp: internal" multiple="yes">
@@ -395,7 +390,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
     <description>
     Confirm packages installation.
     </description>
-    <alias name="confirm installs" obsoleted="yes"/>
+    <alias name="confirm installs" stage="deprecated"/>
   </option>
 
   <option name="confirm removal" type="boolean" default="yes" op="CONFIRM_UNINST">
@@ -421,7 +416,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
  hold = kernel* foo*.i686 th-test:* *-smp-* th-ready:bar*.x86_64
     [/screen]
     </description>
-    <alias name="a hold alias for testing purposes" obsoleted="yes" />
+    <alias name="a hold alias for testing purposes" stage="deprecated" />
   </option>
 
   <option name="ignore" type="string" list="yes" default="vserver-packages" multiple="yes">
@@ -647,8 +642,8 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
-  <option name="noauto" type="boolean" default="no" obsoleted="yes" />
-  <option name="noautoup" type="boolean" default="no" obsoleted="yes"/>
+  <option name="noauto" type="boolean" default="no" stage="deprecated" use="'auto = no'" />
+  <option name="noautoup" type="boolean" default="no" stage="deprecated" use="'autoup = no'" />
 
   <option name="signkey" type="string" value="/some/url/or/dir">
     <description>
@@ -710,7 +705,7 @@ Every repository is configured in its own [ source ] section.
  lang = pl_PL:lt_LT
     [/screen]
     </description>
-    <alias name="dscr" obsoleted="yes" />
+    <alias name="dscr" stage="deprecated" />
   </option>
 
   <option name="sources" type="string" list="yes" value="foo foo-updates">
