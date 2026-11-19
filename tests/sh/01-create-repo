@@ -284,6 +284,16 @@ assert_diff_files() {
     done
 }
 
+# the total size of the diff files the list in $1 names
+listed_size() {
+    local toc=$1 total=0 d
+
+    for d in $(cat_toc $toc | cut -d' ' -f1); do
+        total=$((total + $(wc -c < $(dirname $toc)/$d)))
+    done
+    echo $total
+}
+
 # $1 with all the packages of $REPO but the last one, in $1.out, and an
 # index with 6 diffs of the last one removed and added again, each about a
 # quarter of the index
@@ -336,7 +346,8 @@ testCreateDiffTocErrorKeepsList()
     diffs=$(ls $repo/packages.i)
     mv $repo/$last $repo.out/
     out=$(env -u POLDEK_TESTING LC_ALL=C $POLDEK_NOCONF -s $repo --mkidx --mo=$mo 2>&1)
-    assertTrue "mkidx failed: $out" "[ $? -eq 0 ]"
+    rc=$?
+    assertTrue "mkidx failed: $out" "[ $rc -eq 0 ]"
     assertTrue "no warning: $out" "echo \"$out\" | grep -q 'a diff is missing from the list'"
     die_if_invalid_index $toc 1
     assert_diff_files $toc "$diffs"
@@ -349,7 +360,7 @@ testCreateDiffTocVaccum()
     local repo="$TMPDIR/vaccum"
     local toc="$repo/packages.i/packages.ndir.diff.toc$COMPR_EXT"
     local last=$(basename $(ls $REPO/*.rpm | tail -1))
-    local diffs
+    local diffs out rc n oldest limit kept
 
     # the uncompressed index would take 30 diffs and more
     [ "$COMPR" = none ] && return
@@ -357,9 +368,26 @@ testCreateDiffTocVaccum()
     mkrepo_with_diffs $repo
     diffs=$(ls $repo/packages.i)
     mv $repo.out/$last $repo/
-    env -u POLDEK_TESTING $POLDEK_NOCONF -s $repo --mkidx --mo=$COMPR || fail "mkidx failed"
-    [ $(cat_toc $toc | wc -l) -lt 7 ] || fail "list of diffs not trimmed"
+    out=$(env -u POLDEK_TESTING LC_ALL=C $POLDEK_NOCONF -s $repo --mkidx --mo=$COMPR 2>&1)
+    rc=$?
+    assertTrue "mkidx failed: $out" "[ $rc -eq 0 ]"
+    # the chain is whole: only the size trims the list, no diff is dropped
+    # for leading nowhere
+    assertTrue "gap warning: $out" "! echo \"$out\" | grep -q 'a diff is missing from the list'"
+    n=$(cat_toc $toc | wc -l)
+    [ $n -lt 7 ] || fail "list of diffs not trimmed"
     assert_diff_files $toc "$diffs"
+
+    # the kept diffs alone pass 90% of the index, and without the oldest kept
+    # one they do not: a diff that still fits was dropped or one that does not
+    # was kept
+    oldest=$(cat_toc $toc | cut -d' ' -f1 | head -1)
+    limit=$(( $(wc -c < $repo/packages.ndir$COMPR_EXT) * 9 / 10 ))
+    kept=$(listed_size $toc)
+    [ $kept -gt $limit ] || fail "list overtrimmed: $kept <= $limit"
+    [ $((kept - $(wc -c < $repo/packages.i/$oldest))) -le $limit ] || \
+        fail "an older diff than fits is kept: $kept"
+
     assert_no_tmp $repo
 }
 
