@@ -19,6 +19,8 @@ check_PROGRAMS += test_term
 check_PROGRAMS += test_greedy
 # depdirs lifetime
 check_PROGRAMS += test_depdirs
+# the file conflict report of a path of many owners
+check_PROGRAMS += test_fileindex
 # pkgfl_ent_new() must leave the rpm header's dirname alone
 check_PROGRAMS += test_pkgfl
 
