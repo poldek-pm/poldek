@@ -176,10 +176,13 @@ struct vflock *vf_lock_mkdir(const char *path)
     if ((subdir_vflock = vf_lockdir(dn)) == NULL)
         return NULL;
 
-    if (mkdir(path, 0750) != 0)
+    /* another process may have made it since the stat() above */
+    if (mkdir(path, 0750) != 0 &&
+        (errno != EEXIST || stat(path, &st) != 0 || !S_ISDIR(st.st_mode))) {
         vf_logerr("%s: mkdir: %m\n", path);
-    else
+    } else {
         vflock = vf_lockdir(path);
+    }
 
     vf_lock_release(subdir_vflock);
     return vflock;

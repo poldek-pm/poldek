@@ -1,3 +1,6 @@
+#include <dlfcn.h>
+#include <unistd.h>
+
 #include "test.h"
 
 void append(const char *path, int vft_io)
@@ -178,7 +181,43 @@ START_TEST (test_open_errno) {
 END_TEST
 
 
+static const char *mkdir_meanwhile;
+
+/* mkdir() of mkdir_meanwhile finds it made by another process; libvfile
+   calls this one */
+__attribute__((visibility("default")))
+int mkdir(const char *path, mode_t mode)
+{
+    static int (*real_mkdir)(const char *, mode_t);
+
+    if (real_mkdir == NULL)
+        real_mkdir = (int (*)(const char *, mode_t))dlsym(RTLD_NEXT, "mkdir");
+    if (mkdir_meanwhile && strcmp(path, mkdir_meanwhile) == 0) {
+        mkdir_meanwhile = NULL;
+        real_mkdir(path, mode);
+    }
+    return real_mkdir(path, mode);
+}
+
+/* of two processes making one directory, the second locks the one the first made */
+START_TEST (test_lock_mkdir_made_meanwhile) {
+    char dir[PATH_MAX];
+    struct vflock *lock;
+
+    n_snprintf(dir, sizeof(dir), "%s", NTEST_TMPPATH("vflock-meanwhile"));
+    rmdir(dir);
+    mkdir_meanwhile = dir;
+    lock = vf_lock_mkdir(dir);
+    fail_if(mkdir_meanwhile != NULL, "%s: mkdir() not called", dir);
+    fail_if(lock == NULL, "%s: no lock of the directory made meanwhile", dir);
+    vf_lock_release(lock);
+    rmdir(dir);
+}
+END_TEST
+
+
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_as_path_percent, test_url_hidepasswd,
              test_url_hidepasswd_short_buffer, test_fetcha_ext_multi_dirbn,
-             test_url_type_scheme, test_open_errno);
+             test_url_type_scheme, test_open_errno,
+             test_lock_mkdir_made_meanwhile);
