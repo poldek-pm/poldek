@@ -220,6 +220,32 @@ testDirIndexWriteError()
     [ "$(cksum < $dirindex)" != "$before" ] || fail "dirindex not written again"
 }
 
+# a record of the directory index that cannot be read (its value length set
+# past the end, the index signed again) is reported, and the directory index
+# is made again, rather than the record read as a package without directories
+testDirIndexBrokenRecord()
+{
+    skip_if_rpm_testing_off && return
+
+    build a 1-1 -f /opt/zzdir/data      # so that its directories follow the key map
+    index
+    $POLDEK up                          # to create dirindex
+
+    local dirindex=$(ls $CACHEDIR/*/dirindex.pndir.tndb)
+    [ -f "$dirindex" ] || fail "no dirindex"
+    python3 -I $SHLIBDIR/tndb-set-vlen $dirindex '_\a#' 0xffffffff ||
+        fail "tndb-set-vlen failed"
+    local broken=$(cksum < $dirindex)
+
+    # in testing mode poldek aborts at a broken dirindex
+    local out=$(env -u POLDEK_TESTING $POLDEK -Oauto_directory_dependencies=y ls 2>&1)
+    echo "$out" | grep -q 'invalid directory index' ||
+        fail "no error for the broken record: $out"
+    [ "$(cksum < $dirindex)" != "$broken" ] || fail "the broken dirindex was kept"
+    $POLDEK -Oauto_directory_dependencies=y ls > /dev/null 2>&1 ||
+        fail "the dirindex made again does not verify"
+}
+
 # an index made with --mo=nodesc keeps no package info: ls --qf shows (none)
 # for the summary, desc -L no changelog
 testIndexWithoutPackageInfo()
