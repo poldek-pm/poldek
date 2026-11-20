@@ -411,7 +411,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     vlen = 1024;
     vlen_max = vlen;
     val = n_malloc(vlen);
-    if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
+    if (tndb_it_rget(&it, key, &klen, (void**)&val, &vlen) <= 0) {
         logn(LOGERR, _("%s: not a poldek index file"), pkgdir->idxpath);
         nerr++;
         goto l_end;
@@ -430,7 +430,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         else
             vlen_max = vlen;
 
-        if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
+        if (tndb_it_rget(&it, key, &klen, (void**)&val, &vlen) <= 0) {
             logn(LOGERR, _("%s: not a poldek index file"), pkgdir->idxpath);
             nerr++;
             goto l_end;
