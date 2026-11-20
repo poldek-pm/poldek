@@ -321,88 +321,6 @@ static void pkg_data_free(tn_alloc *na, void *ptr)
 }
 #endif
 
-static struct vfile *zstd2gz(struct vfile *vf)
-{
-    char gzpath[PATH_MAX];
-    char *ext;
-
-    DBGF("%s\n", vfile_localpath(vf));
-
-    if ((ext = strrchr(vfile_localpath(vf), '.')) == NULL)
-        return vf;
-
-    if (strcmp(ext, ".zst") != 0)
-        return vf;
-
-    const char *cachedir = vf_cachedir();
-    int clen = strlen(cachedir);
-
-    if (strncmp(vfile_localpath(vf), cachedir, clen) == 0) { /* under cachedir? */
-        n_snprintf(gzpath, sizeof(gzpath), "%s", vfile_localpath(vf));
-
-    } else {
-        char *p, localdir[PATH_MAX];
-        n_strdupap(vfile_localpath(vf), &p);
-        vf_localdirpath(localdir, sizeof(localdir), n_dirname(p));
-
-        if (!vf_valid_path(localdir))
-            return NULL;
-
-        if (!util__isdir(localdir)) {
-            if (mkdir(localdir, 0755) != 0) {
-                logn(LOGERR, "%s: mkdir: %m", localdir);
-                return NULL;
-            }
-        }
-
-        vf_localpath(gzpath, sizeof(gzpath), vfile_localpath(vf));
-    }
-
-    /* set extension to .gz */
-    char *p = strrchr(gzpath, '.');
-    n_assert(p);
-    p++; *p++ = 'g'; *p++ = 'z'; *p = '\0';
-
-    if (access(gzpath, R_OK) == 0) {
-        struct stat st, st2;
-        stat(vfile_localpath(vf), &st);
-        stat(gzpath, &st2);
-
-        if (st.st_mtime == st2.st_mtime) {
-            goto l_end;
-        }
-    }
-    DBGF("gzpath %s -> %s\n", vfile_localpath(vf), gzpath);
-
-    tn_stream *in = n_stream_open(vfile_localpath(vf), "r", TN_STREAM_ZSTDIO);
-    if (!in) {
-        logn(LOGERR, "%s: open error", vfile_localpath(vf));
-        return NULL;
-    }
-
-    tn_stream *out = n_stream_open(gzpath, "w", TN_STREAM_GZIO);
-    if (!out) {
-        n_stream_close(in);
-        logn(LOGERR, "%s: open error", gzpath);
-        return NULL;
-    }
-
-    char buf[4096];
-    int n;
-    while ((n = n_stream_read(in, buf, sizeof(buf))) > 0) {
-        n_stream_write(out, buf, n);
-    }
-    n_stream_close(in);
-    n_stream_close(out);
-
- l_end:
-    vfile_close(vf);
-    if ((vf = vfile_open(gzpath, VFT_TRURLIO, VFM_RO | VFM_NOEMPTY)) == NULL)
-        return NULL;
-
-    return vf;
-}
-
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
@@ -416,11 +334,6 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     vf = open_metadata_file(idx->repomd, pkgdir->path, "primary",
                             vfmode, pkgdir->name, 0);
-    if (vf == NULL)
-        return 0;
-
-    vf = zstd2gz(vf);
-
     if (vf == NULL)
         return 0;
 
