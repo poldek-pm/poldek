@@ -1,9 +1,64 @@
 /*
-  capreq_clone() of a capability made without an allocator copies it in
-  one block; the copy has the same name, epoch, version and release
+  capreq_new() takes version and release of up to CAPREQ_VR_MAX characters
+  together. capreq_clone() of a capability made without an allocator copies
+  it in one block; the copy has the same name, epoch, version and release
   whatever their length.
 */
 #include "test.h"
+#include "capreq_intern.h"
+
+/* a capability "a" of a version of verlen characters */
+static struct capreq *new_versioned(int32_t epoch, int verlen,
+                                    const char *release)
+{
+    char version[256];
+
+    n_assert(verlen < (int)sizeof(version));
+    memset(version, '1', verlen);
+    version[verlen] = '\0';
+
+    return capreq_new(NULL, "a", epoch, version, release, REL_EQ, 0);
+}
+
+/* version and release are counted, the epoch is not; stored, a capability
+   with 250..254 bytes of them hung split_capreq() */
+START_TEST(test_new_vr_limit) {
+    struct capreq *cr;
+
+    expect_notnull(cr = new_versioned(0, CAPREQ_VR_MAX - 1, "1"));
+    capreq_free(cr);
+    expect_null(new_versioned(0, CAPREQ_VR_MAX, "1"));
+
+    expect_notnull(cr = new_versioned(0, CAPREQ_VR_MAX, NULL));
+    capreq_free(cr);
+    expect_null(new_versioned(0, CAPREQ_VR_MAX + 1, NULL));
+
+    expect_notnull(cr = new_versioned(1, CAPREQ_VR_MAX - 1, "1"));
+    capreq_free(cr);
+    expect_null(new_versioned(1, CAPREQ_VR_MAX, "1"));
+
+    expect_null(new_versioned(0, 246, "2"));
+}
+END_TEST
+
+/* nor a package of such a version: no capability of its own version could
+   be made */
+START_TEST(test_pkg_new_vr_limit) {
+    char version[CAPREQ_VR_MAX + 1];
+    struct pkg *pkg;
+
+    memset(version, '1', sizeof(version) - 1);
+    version[sizeof(version) - 1] = '\0';
+    expect_null(pkg_new("a", 0, version, "1", "noarch", "linux"));
+
+    version[CAPREQ_VR_MAX - 1] = '\0';
+    pkg = pkg_new("a", 1, version, "1", "noarch", "linux");
+    expect_notnull(pkg);
+    pkg_add_selfcap(pkg);
+    expect_int(n_array_size(pkg->caps), 1);
+    pkg_free(pkg);
+}
+END_TEST
 
 static void check_clone(int namelen, int32_t epoch, const char *version,
                         const char *release)
@@ -47,18 +102,17 @@ END_TEST
 
 /* a long version: name and version together take more than 255 bytes */
 START_TEST(test_clone_long_version) {
-    char version[151];
+    char version[121];
 
     memset(version, '1', sizeof(version) - 1);
     version[sizeof(version) - 1] = '\0';
-    check_clone(150, 0, version, "1");
+    check_clone(200, 0, version, "1");
 }
 END_TEST
 
-/* epoch, version and release that capreq_new() takes, more than 255
-   bytes with the header and a short name */
+/* the longest epoch, version and release capreq_new() takes */
 START_TEST(test_clone_long_evr) {
-    char version[225];
+    char version[CAPREQ_VR_MAX];
 
     memset(version, '1', sizeof(version) - 1);
     version[sizeof(version) - 1] = '\0';
@@ -72,5 +126,6 @@ START_TEST(test_clone_short) {
 }
 END_TEST
 
-NTEST_RUNNER("capreq", test_clone_long_name, test_clone_long_version,
+NTEST_RUNNER("capreq", test_new_vr_limit, test_pkg_new_vr_limit,
+             test_clone_long_name, test_clone_long_version,
              test_clone_long_evr, test_clone_short);

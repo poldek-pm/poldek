@@ -32,6 +32,7 @@
 #include "log.h"
 #include "misc.h"
 #include "capreq.h"
+#include "capreq_intern.h"
 #include "pkgfl.h"
 #include "pkgu.h"
 #include "pkg.h"
@@ -236,6 +237,10 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 
     release_len = strlen(release);
     len += release_len + 1;
+
+    /* no capability of the package's own version could be made */
+    if (!capreq__check_vr_limit(name, version_len + release_len))
+        return NULL;
 
     if (fn && arch) {           /* compare filename with "standard" name */
         //fn = n_basenam(fn);
