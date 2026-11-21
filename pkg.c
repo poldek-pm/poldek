@@ -110,6 +110,8 @@ int pkg__registry_init(void)
 }
 #endif
 
+/* the last one registered, read without the mutex: published with release
+   once filled in, so a reader that acquires it sees it whole */
 static struct an_arch *last_arch = NULL;
 
 static
@@ -117,7 +119,7 @@ int pkgmod_register_arch(const char *arch)
 {
     struct an_arch *an_arch;
 
-    an_arch = __atomic_load_n(&last_arch, __ATOMIC_RELAXED);
+    an_arch = __atomic_load_n(&last_arch, __ATOMIC_ACQUIRE);
     if (an_arch && strcmp(an_arch->arch, arch) == 0) {
         return an_arch->index;
     }
@@ -152,7 +154,7 @@ int pkgmod_register_arch(const char *arch)
         n_assert(an_arch->index < UINT16_MAX);
         n_hash_insert(architecture_h, an_arch->arch, an_arch);
 
-        __atomic_store_n(&last_arch, an_arch, __ATOMIC_RELAXED);
+        __atomic_store_n(&last_arch, an_arch, __ATOMIC_RELEASE);
     }
 
     registry_unlock(&arch_mutex);
@@ -160,26 +162,34 @@ int pkgmod_register_arch(const char *arch)
     return an_arch->index;
 }
 
+/* the array grows (realloc) as a loading thread registers a new arch, so it
+   is read under the mutex too; an entry itself never moves */
+static struct an_arch *arch_entry(int index)
+{
+    struct an_arch *a;
+
+    mutex_lock(&arch_mutex);
+    a = n_array_nth(architecture_a, index - 1);
+    mutex_unlock(&arch_mutex);
+    n_assert(a);
+
+    return a;
+}
+
 const char *pkg_arch(const struct pkg *pkg)
 {
-    if (pkg->_arch) {
-        struct an_arch *a = n_array_nth(architecture_a, pkg->_arch - 1);
-        n_assert(a);
-        return a->arch;
-    }
+    if (pkg->_arch)
+        return arch_entry(pkg->_arch)->arch;
 
     return NULL;
 }
 
 int pkg_arch_score(const struct pkg *pkg)
 {
-    struct an_arch *a;
-
     if (!pkg->_arch)
         return 0;
 
-    a = n_array_nth(architecture_a, pkg->_arch - 1);
-    return a->score;
+    return arch_entry(pkg->_arch)->score;
 }
 
 int pkg_set_arch(struct pkg *pkg, const char *arch)
@@ -194,6 +204,7 @@ struct an_os {
     char os[0];
 };
 
+/* as last_arch */
 static struct an_os *last_os = NULL;
 
 static
@@ -201,7 +212,7 @@ int pkgmod_register_os(const char *os)
 {
     struct an_os *an_os;
 
-    an_os = __atomic_load_n(&last_os, __ATOMIC_RELAXED);
+    an_os = __atomic_load_n(&last_os, __ATOMIC_ACQUIRE);
     if (an_os && strcmp(an_os->os, os) == 0) {
         return an_os->index;
     }
@@ -229,7 +240,7 @@ int pkgmod_register_os(const char *os)
         an_os->index = n_array_size(operatingsystem_a);
         n_hash_insert(operatingsystem_h, an_os->os, an_os);
 
-        __atomic_store_n(&last_os, an_os, __ATOMIC_RELAXED);
+        __atomic_store_n(&last_os, an_os, __ATOMIC_RELEASE);
     }
 
     registry_unlock(&os_mutex);
@@ -237,13 +248,24 @@ int pkgmod_register_os(const char *os)
     return an_os->index;
 }
 
+/* as arch_entry() */
+static struct an_os *os_entry(int index)
+{
+    struct an_os *o;
+
+    mutex_lock(&os_mutex);
+    o = n_array_nth(operatingsystem_a, index - 1);
+    mutex_unlock(&os_mutex);
+    n_assert(o);
+
+    return o;
+}
+
 const char *pkg_os(const struct pkg *pkg)
 {
-    if (pkg->_os) {
-        struct an_os *o = n_array_nth(operatingsystem_a, pkg->_os - 1);
-        n_assert(o);
-        return o->os;
-    }
+    if (pkg->_os)
+        return os_entry(pkg->_os)->os;
+
     return NULL;
 }
 
