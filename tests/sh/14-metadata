@@ -76,6 +76,24 @@ testLoadSha1Checksums()
     done
 }
 
+# a local repository in a directory named as the cache with a suffix is not
+# in the cache: its stub index goes to the cache, not into the repository
+testLoadRepoBesideCache()
+{
+    local dir="${CACHEDIR}-repo"
+    local made
+
+    rm -rf $dir $CACHEDIR/*
+    mkdir -p $dir
+    cp -r metadata/repo_02/repodata $dir/ || fail "cp failed"
+    touch -d '1 hour ago' $dir $dir/repodata $dir/repodata/*
+    $POLDEK -s "m,type=metadata $dir/" desc fake_bash > /dev/null || fail "desc failed"
+    made=$(cd $dir && find . -newer repodata/repomd.xml ! -name . | sort)
+    [ -z "$made" ] || fail "made in the repository: $made"
+    [ -n "$(find $CACHEDIR -name 'stubindex*')" ] || fail "no stub index in the cache"
+    rm -rf $dir
+}
+
 testLoadZst()
 {
     local src="m,type=metadata metadata/repo_02zst/"

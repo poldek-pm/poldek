@@ -233,8 +233,8 @@ int vfile_configure(int param, ...)
 
                 vfile_conf._cachedir = n_strdup(vs);
                 v = strlen(vfile_conf._cachedir);
-                if (vfile_conf._cachedir[v - 1] == '/')
-                    vfile_conf._cachedir[v - 1] = '\0';
+                while (v > 0 && vfile_conf._cachedir[v - 1] == '/')
+                    vfile_conf._cachedir[--v] = '\0';
             }
             break;
 
@@ -421,12 +421,22 @@ static int file_ok(const char *path, int vfmode)
 }
 
 
+/* path is in the cache directory, not one whose name only starts with
+   the name of it */
+static int in_cachedir(const char *path)
+{
+    const char *cachedir = vfile_cachedir();
+    size_t len = strlen(cachedir);
+
+    return strncmp(path, cachedir, len) == 0 &&
+        (path[len] == '/' || path[len] == '\0');
+}
+
 static const char *vfdecompr(const char *path, char *dest, int size)
 {
     char *destdir, destdir_buf[PATH_MAX], uncmpr_path[PATH_MAX];
-    const char *cachedir = NULL;
     struct vflock *vflock;
-    int  len, rc;
+    int  rc;
 
 
     *dest = '\0';
@@ -434,12 +444,7 @@ static const char *vfdecompr(const char *path, char *dest, int size)
     if (!vf_decompressable(path, uncmpr_path, sizeof(uncmpr_path)))
         return path;
 
-    cachedir = vfile_cachedir();
-
-    len = strlen(cachedir);
-
-       /* file under cachedir */
-    if (strncmp(uncmpr_path, cachedir, len) == 0) {
+    if (in_cachedir(uncmpr_path)) {
         char *bn;
         n_snprintf(destdir_buf, sizeof(destdir_buf), "%s", uncmpr_path);
         n_basedirnam(destdir_buf, &destdir, &bn);
@@ -747,15 +752,12 @@ int vf_localdirpath(char *path, size_t size, const char *url)
 
 int vf_cachepath(char *path, size_t size, const char *ofdirpath)
 {
-    const char *cachedir = vfile_cachedir();
-    int n, len;
-
-    len = strlen(cachedir);
+    int n;
 
     n_assert(strlen(ofdirpath) > 0);
     n_assert(ofdirpath[strlen(ofdirpath) - 1] != '/'); /* not a dir */
 
-    if (strncmp(ofdirpath, cachedir, len) == 0) {
+    if (in_cachedir(ofdirpath)) {
         n = n_snprintf(path, size, "%s", ofdirpath);
 
     } else {
@@ -767,8 +769,7 @@ int vf_cachepath(char *path, size_t size, const char *ofdirpath)
 
 int vf_localunlink(const char *path)
 {
-    if (strncmp(path, vfile_cachedir(), strlen(vfile_cachedir())) == 0 &&
-        vf_valid_path(path))
+    if (in_cachedir(path) && vf_valid_path(path))
         return unlink(path) == 0;
 
     return 0;
