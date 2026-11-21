@@ -317,6 +317,7 @@ testVerifyFileConflictsGivenPackages()
 {
     build a -f /opt/x
     build b -f /opt/x
+    build c -f /opt/x
     make_index
 
     for p in a b; do
@@ -330,6 +331,10 @@ testVerifyFileConflictsGivenPackages()
     $POLDEK --verify=file-conflicts a b >$TMP/verify-log.log
     n=$(grep -c '^Path: /opt/x$' $TMP/verify-log.log)
     assertEquals "a and b should report /opt/x" "$n" "1"
+    n=$(sed -n '/^Path: \/opt\/x$/,/^$/p' $TMP/verify-log.log | grep ' shr ' | grep -c 'a-1-1.* b-1-1')
+    assertEquals "a and b should report their pair" "$n" "1"
+    n=$(grep -c 'c-1-1' $TMP/verify-log.log)
+    assertEquals "c, not given, should not be reported" "$n" "0"
 }
 
 # every file a pair of packages has in conflict is reported, not only the first one
