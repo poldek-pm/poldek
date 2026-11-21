@@ -465,7 +465,7 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
     if (tndb_size(db) == 0) /* empty index */
         goto l_end;
 
-    if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
+    if (tndb_it_rget(&it, key, &klen, (void**)&val, &vlen) <= 0) {
         logn(LOGERR, _("%s: invalid directory index"), tndb_path(db));
         nerr++;
         //msgn_i(2, 4, "%s: empty directory index", tndb_path(db));
@@ -492,7 +492,7 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
         else
             vlen_max = vlen;
 
-        if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
+        if (tndb_it_rget(&it, key, &klen, (void**)&val, &vlen) <= 0) {
             /* EOF is possible - packages without files */
             goto l_end;
         }
