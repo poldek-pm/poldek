@@ -1,6 +1,8 @@
 #include "test.h"
 #include "poldek.h"
 #include "pkgdir/source.h"
+#include "pkg.h"
+#include "pkgmisc.h"
 
 static int list_contains(tn_array *list, const char *s)
 {
@@ -60,4 +62,31 @@ START_TEST (test_ignore_merge) {
 }
 END_TEST
 
-NTEST_RUNNER("ignore_merge", test_ignore_merge);
+/* a mask is matched with the whole name-version-release, also of a package
+   with no arch and of one whose name is longer than the matcher's buffer */
+START_TEST (test_mask_long_name_no_arch) {
+    struct pkgscore_s psc;
+    struct pkg *pkg;
+    char name[601], mask[640];
+
+    pkg = pkg_new("foo", 0, "1", "1", NULL, NULL);
+    pkgscore_match_init(&psc, pkg);
+    expect_int(pkgscore_match(&psc, "foo"), 1);
+    expect_int(pkgscore_match(&psc, "foo-1-1"), 1);
+    expect_int(pkgscore_match(&psc, "foo-1"), 0);
+    pkg_free(pkg);
+
+    memset(name, 'n', sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
+    pkg = pkg_new(name, 0, "1", "1", NULL, NULL);
+    pkgscore_match_init(&psc, pkg);
+    expect_int(pkgscore_match(&psc, name), 1);
+    n_snprintf(mask, sizeof(mask), "%s-1-1", name);
+    expect_int(pkgscore_match(&psc, mask), 1);
+    n_snprintf(mask, sizeof(mask), "%s-1", name);
+    expect_int(pkgscore_match(&psc, mask), 0);
+    pkg_free(pkg);
+}
+END_TEST
+
+NTEST_RUNNER("ignore_merge", test_ignore_merge, test_mask_long_name_no_arch);
