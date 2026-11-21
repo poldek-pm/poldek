@@ -98,7 +98,8 @@ static int package_key(char *key, int size, const struct pkg *pkg, int prefix)
      * without release change
      */
     n = pndir_make_pkgkey(&key[PREFIXLEN], size - PREFIXLEN, pkg) + PREFIXLEN;
-    n += n_snprintf(&key[n], size - PREFIXLEN - n, ":%u", pkg->btime);
+    n_assert(n < size);         /* pkg_new() takes no longer package */
+    n += n_snprintf(&key[n], size - n, ":%u", pkg->btime);
 
     return n;
 }
