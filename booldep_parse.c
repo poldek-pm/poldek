@@ -181,6 +181,10 @@ struct node *parse_dep(const char **dep, int chain_type,
             n_strncpy(evr, q, len + 1);
         }
         node = node_new(0, 0, name, evr, relflags);
+        if (node->cap == NULL) {     /* an invalid or too long EVR */
+            node_free(node);
+            return NULL;
+        }
         trace(indent, "IDENTIFIER %s", capreq_snprintf_s(node->cap));
     }
 

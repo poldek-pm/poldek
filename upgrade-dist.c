@@ -157,6 +157,8 @@ int do_poldek_ts_upgrade_dist(struct poldek_ts *ts)
             struct pkg *pkg;
 
             pkg = pkg_new(t.name, t.epoch, t.ver, t.rel, arch, NULL);
+            if (pkg == NULL)    /* version too long */
+                continue;
             pkg->color = t.color;
 
             if (process_pkg(pkg, ts, marked_h, &nmarked) < 0) {

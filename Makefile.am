@@ -44,7 +44,7 @@ libpoldek_core_la_SOURCES = \
 	  pkgfl.c pkgfl.h		\
 	  fileindex.c fileindex.h	\
 	  capreqidx.c capreqidx.h	\
-	  capreq.c capreq.h 		\
+	  capreq.c capreq.h capreq_intern.h \
 	  pkgset-load.c    	        \
 	  pkgset.c pkgset.h 		\
 	  pkgset-req.c			\
