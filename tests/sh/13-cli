@@ -483,6 +483,36 @@ testExternalCommandOnlyAsCommand()
     assertEquals "ls in the shell did not get !a as an argument ($out)" "0" "$?"
 }
 
+# the arguments an alias does not use for its parameters go after its
+# line as the words they are
+testAliasPassesArgumentsAsWords()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build ab
+    build b
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nplainls = ls -q\np1 = ls -q %%1\nrun = %%1\n' > $TMPDIR/home/.poclidekrc
+
+    out=$(HOME=$TMPDIR/home $POLDEK plainls "a'b" 'a|b' 2>&1)
+    assertEquals "plainls did not get a'b and a|b ($out)" "2" \
+        "$(echo "$out" | grep -c -e "a'b: no such package" -e 'a|b: no such package')"
+
+    out=$(HOME=$TMPDIR/home $POLDEK --cmd "plainls 'a b'" 2>&1)
+    echo "$out" | grep -q 'a b: no such package'
+    assertEquals "plainls of a line did not get 'a b' ($out)" "0" "$?"
+
+    # with a parameter used, the rest follow the line with it put in
+    out=$(HOME=$TMPDIR/home $POLDEK --cmd 'p1 a b' 2>&1)
+    assertEquals "p1 a b ($out)" "a-1-1 b-1-1" "$(echo "$out" | grep -o '^[ab]*-1-1' | xargs)"
+
+    out=$(HOME=$TMPDIR/home $POLDEK --cmd 'run ls -q a' 2>&1)
+    assertEquals "run ls -q a ($out)" "a-1-1" "$(echo "$out" | grep -o '^[ab]*-1-1' | xargs)"
+}
+
 # search fails when its pattern does not compile
 testSearchInvalidPattern()
 {

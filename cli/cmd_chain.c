@@ -46,7 +46,8 @@ struct alias_path {
 
 static
 tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line, const struct alias_path *path);
+                          const char *line, tn_array *a_argv,
+                          const struct alias_path *path);
 
 static
 struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
@@ -381,27 +382,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         }
         msgn(2, "%s => %s\n", acmd, cmdline);
 
-        if (n_array_size(a_argv) > 1) { /* any arguments? -> pass them */
-            char *line;
-            int i, n, len;
-
-            len = strlen(cmd->cmdline) + 1;
-            /* from 1 -- skip alias */
-            for (i=1; i < n_array_size(a_argv); i++)
-                /* + quotes + space */
-                len += strlen((char*)n_array_nth(a_argv, i)) + 2 + 1;
-            len++;
-
-            line = alloca(len);
-            n = n_snprintf(line, len, "%s", cmd->cmdline);
-
-            for (i=1; i < n_array_size(a_argv); i++)
-                n += n_snprintf(&line[n], len - n, " '%s'",
-                                (char*)n_array_nth(a_argv, i));
-            cmdline = line;
-        }
-
-        ok = prepare_cmdline(cctx, cmd_chain, cmdline, &here) != NULL;
+        ok = prepare_cmdline(cctx, cmd_chain, cmdline, a_argv, &here) != NULL;
         free(expanded);
         if (!ok)
             return NULL;
@@ -476,16 +457,23 @@ l_end:
     return is_err ? NULL : cmd_chain;
 }
 
+/* the commands of line; the words of a_argv after its first, the arguments
+   an alias got, go after the words of line as they are */
 static
 tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line, const struct alias_path *path)
+                          const char *line, tn_array *a_argv,
+                          const struct alias_path *path)
 {
     tn_array  *tl;
+    int       i;
 
     if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL) {
         logn(LOGERR, _("%s: parse error"), line);
         return NULL;
     }
+
+    for (i=1; a_argv && i < n_array_size(a_argv); i++)
+        n_array_push(tl, n_strdup(n_array_nth(a_argv, i)));
 
 #if ENABLE_TRACE
     printf("line = (%s)\n", line);
@@ -592,7 +580,7 @@ tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
 
     cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
     return finish_cmd_chain(cmd_chain,
-                            prepare_cmdline(cctx, cmd_chain, line, NULL) == NULL);
+                            prepare_cmdline(cctx, cmd_chain, line, NULL, NULL) == NULL);
 }
 
 /* The first argument, and one after a lone ; or |, is parsed as a line: it
