@@ -85,6 +85,70 @@ testLoadZst()
     assertEquals "load failed" "$n" "1"
 }
 
+# primary.xml.zst is read as it is: desc (which loads the whole source,
+# unlike ls) describes its packages, and no decompressed copy of it is
+# left in the cache
+testLoadZstWhole()
+{
+    local src="m,type=metadata metadata/repo_02zst/"
+    local n made
+
+    rm -rf $CACHEDIR/*
+    n=$($POLDEK -s "$src" desc fake_bash | grep -c '^Package: *fake_bash-')
+    assertEquals "fake_bash not described" "1" "$n"
+    made=$(find $CACHEDIR -name '*primary.xml*')
+    [ -z "$made" ] || fail "a copy of primary.xml in the cache: $made"
+}
+
+# a primary.xml.zst that cannot be decompressed whole is reported, and no
+# package of it is loaded
+testLoadZstCut()
+{
+    local dir="$TMPDIR/meta-zst-cut"
+    local primary old new out
+
+    rm -rf $dir $CACHEDIR/*
+    mkdir -p $dir/repo
+    cp -r metadata/repo_02zst/repodata $dir/repo/ || fail "cp failed"
+    primary=$(ls $dir/repo/repodata/*-primary.xml.zst)
+    old=$(sha256sum < $primary | cut -d' ' -f1)
+    head -c 500 $primary > $dir/primary.zst && mv $dir/primary.zst $primary
+    new=$(sha256sum < $primary | cut -d' ' -f1)
+    sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
+
+    out=$($POLDEK -s "m,type=metadata $dir/repo/" ls 2>&1)
+    echo "$out" | grep -q 'primary.xml.zst: cannot be read whole' ||
+        fail "no error for the cut primary.xml.zst: $out"
+    echo "$out" | grep -q '^fake_bash-' && fail "a package of the cut primary.xml.zst listed: $out"
+    [ -z "$(find $CACHEDIR -name '*primary.xml*')" ] ||
+        fail "a copy of the cut primary.xml.zst was left in the cache"
+}
+
+# a primary.xml.zst with the whole document and a cut frame after it is
+# rejected too: libxml2 gets a whole document followed by spaces
+testLoadZstCutAfterDocument()
+{
+    local dir="$TMPDIR/meta-zst-cut-after"
+    local primary old new out
+
+    rm -rf $dir $CACHEDIR/*
+    mkdir -p $dir/repo
+    cp -r metadata/repo_02zst/repodata $dir/repo/ || fail "cp failed"
+    primary=$(ls $dir/repo/repodata/*-primary.xml.zst)
+    old=$(sha256sum < $primary | cut -d' ' -f1)
+    # a frame of 1 MiB of spaces, cut after its first block of them
+    head -c 1048576 /dev/zero | tr '\0' ' ' | zstd -q -c | head -c 20 >> $primary ||
+        fail "cannot cut a frame"
+    new=$(sha256sum < $primary | cut -d' ' -f1)
+    sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
+
+    out=$($POLDEK -s "m,type=metadata $dir/repo/" ls 2>&1)
+    echo "$out" | grep -q 'primary.xml.zst: cannot be read whole' ||
+        fail "no error for the cut frame: $out"
+    echo "$out" | grep -q '^fake_bash-' && fail "a package listed despite the cut frame: $out"
+    return 0
+}
+
 # the load of primary.xml takes no stack per package; with the stack limited
 # to 1 MiB, 8192 packages are enough to show one taking 256 bytes
 testLoadManyPackages()

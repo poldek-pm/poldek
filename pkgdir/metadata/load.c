@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
@@ -409,6 +410,55 @@ l_skip_end:
     return rpkg;
 }
 
+struct zst_input {
+    tn_stream *st;
+    int       failed;
+};
+
+static int zst_read(void *ctx, char *buf, int len)
+{
+    struct zst_input *in = ctx;
+    int n = n_stream_read(in->st, buf, len);
+
+    if (n < 0)
+        in->failed = 1;
+    return n;
+}
+
+/* libxml2 reads plain and gzip files itself; a zstd one, trurlib does */
+static xmlDocPtr read_primary(const char *path, int opts)
+{
+    const char *ext = strrchr(path, '.');
+    struct zst_input in = { NULL, 0 };
+    xmlDocPtr doc;
+
+    if (ext == NULL || strcmp(ext, ".zst") != 0) {
+        if ((doc = xmlReadFile(path, NULL, opts)) == NULL)
+            logn(LOGERR, "%s: parser error", path);
+        return doc;
+    }
+
+    if ((in.st = n_stream_open(path, "r", TN_STREAM_ZSTDIO)) == NULL) {
+        logn(LOGERR, "%s: open failed (%m)", path);
+        return NULL;
+    }
+
+    doc = xmlReadIO(zst_read, NULL, &in, path, NULL, opts);
+
+    /* a cut or broken zstd frame is told by the stream, which libxml2 may
+       not see in what it was given */
+    if (n_stream_close(in.st) != 0 || in.failed) {
+        logn(LOGERR, "%s: cannot be read whole", path);
+        if (doc)
+            xmlFreeDoc(doc);
+        return NULL;
+    }
+
+    if (doc == NULL)
+        logn(LOGERR, "%s: parser error", path);
+    return doc;
+}
+
 tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
 {
     xmlDocPtr doc;
@@ -419,12 +469,8 @@ tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
 #if LIBXML_VERSION >= 21400     /* earlier libxml2 always decompresses */
     opts |= XML_PARSE_UNZIP;
 #endif
-    doc = xmlReadFile(path, NULL, opts);
-
-    if (doc == NULL) {
-        logn(LOGERR, "%s: parser error", path);
+    if ((doc = read_primary(path, opts)) == NULL)
         return NULL;
-    }
 
     if ((root = xmlDocGetRootElement(doc)) == NULL) {
         xmlFreeDoc(doc);
