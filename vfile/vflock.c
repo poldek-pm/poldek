@@ -130,7 +130,25 @@ static struct held_lock *held_locks = NULL;
 #ifdef ENABLE_THREADS
 # include <pthread.h>
 static pthread_mutex_t hl_mutex = PTHREAD_MUTEX_INITIALIZER;
-# define hl_mutex_lock()     pthread_mutex_lock(&hl_mutex)
+static pthread_once_t hl_atfork_once = PTHREAD_ONCE_INIT;
+
+/* a child has only the thread that called fork(): one forked while
+   another thread held the mutex would find it held for good, so fork()
+   waits for it */
+static void hl_atfork_lock(void)   { pthread_mutex_lock(&hl_mutex); }
+static void hl_atfork_unlock(void) { pthread_mutex_unlock(&hl_mutex); }
+
+static void hl_atfork(void)
+{
+    pthread_atfork(hl_atfork_lock, hl_atfork_unlock, hl_atfork_unlock);
+}
+
+static void hl_mutex_lock(void)
+{
+    pthread_once(&hl_atfork_once, hl_atfork);
+    pthread_mutex_lock(&hl_mutex);
+}
+
 # define hl_mutex_unlock()   pthread_mutex_unlock(&hl_mutex)
 #else
 # define hl_mutex_lock()     ((void) 0)

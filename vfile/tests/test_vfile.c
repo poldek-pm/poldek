@@ -740,8 +740,63 @@ START_TEST (test_lock_inherited_released_as_thread_locks) {
     remove_lockdir(dir);
 }
 END_TEST
+
+static void *go_after_a_second(void *arg)
+{
+    sleep(1);
+    return write(hook.go[1], "g", 1) == 1 ? arg : NULL;
+}
+
+/* a child forked while a thread is taking a lock takes one of its own */
+START_TEST (test_lock_fork_while_thread_locks) {
+    char dir[PATH_MAX], other[PATH_MAX], lockpath[PATH_MAX];
+    struct vflock *lock;
+    pthread_t timer;
+    void *thread_lock;
+    pid_t child;
+    int st;
+
+    n_snprintf(dir, sizeof(dir), "%s", NTEST_TMPPATH("vflock-fork"));
+    n_snprintf(other, sizeof(other), "%s", NTEST_TMPPATH("vflock-fork-child"));
+    mkdir(dir, 0755);
+    mkdir(other, 0755);
+    fail_if(pipe(hook.report) != 0 || pipe(hook.opened) != 0 || pipe(hook.go) != 0,
+            "pipe: %s", strerror(errno));
+
+    fail_if((lock = vf_lockdir(dir)) == NULL, "%s: no lock", dir);
+    n_snprintf(lockpath, sizeof(lockpath), "%s", lock->path);
+    vf_lock_release(lock);
+
+    /* the thread stops in its open() of the file of the lock, with the
+       list of the locks held, until the timer lets it go on */
+    hook.open_path = lockpath;
+    hook.thread_rc = pthread_create(&hook.thread, NULL, take_lock, dir);
+    fail_if(hook.thread_rc != 0, "pthread_create: %s", strerror(hook.thread_rc));
+    fail_if(!wrote_within(hook.opened[0], 10000), "the thread opened no lock");
+    fail_if(pthread_create(&timer, NULL, go_after_a_second, NULL) != 0, "pthread_create");
+
+    if ((child = fork()) == 0) {
+        signal(SIGALRM, SIG_DFL);   /* check's handler would kill the test */
+        alarm(2);
+        _exit(vf_lockdir(other) == NULL);
+    }
+    fail_if(child < 0, "fork: %s", strerror(errno));
+    fail_if(waitpid(child, &st, 0) != child, "waitpid: %s", strerror(errno));
+    fail_if(WIFSIGNALED(st) && WTERMSIG(st) == SIGALRM,
+            "the child hung taking a lock");
+    fail_if(!WIFEXITED(st) || WEXITSTATUS(st) != 0, "the child got no lock");
+
+    pthread_join(timer, NULL);
+    pthread_join(hook.thread, &thread_lock);
+    fail_if(thread_lock == NULL, "the thread got no lock");
+    vf_lock_release(thread_lock);
+    remove_lockdir(other);
+    remove_lockdir(dir);
+}
+END_TEST
 # define THREAD_TESTS , test_lock_unlink_error, \
-    test_lock_inherited_released_as_thread_locks
+    test_lock_inherited_released_as_thread_locks, \
+    test_lock_fork_while_thread_locks
 #else
 # define THREAD_TESTS
 #endif
