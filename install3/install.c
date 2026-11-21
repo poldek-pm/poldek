@@ -202,9 +202,21 @@ static int do_install(struct i3ctx *ictx, tn_array *pkgs)
     DBGF("MULTI_UPGRADE %s\n", multi_upgrade_pkg ? pkg_id(multi_upgrade_pkg) : NULL);
 
     const tn_array *unpkgs = iset_packages(ictx->unset);
-    rc = pm_pminstall(ts->db, pkgs, unpkgs, ts);
+    int rm_after = pkg_cmp_name_evr(n_array_nth(pkgs, 0), multi_upgrade_pkg) != 0;
 
-    if (rc && multi_upgrade_pkg && pkg_cmp_name_evr(n_array_nth(pkgs, 0), multi_upgrade_pkg) != 0) {
+    if (rm_after) {
+        /* the old one goes below: a package manager that removes with the
+           installation (pset) would not find it there */
+        tn_array *none = pkgs_array_new(2);
+
+        rc = pm_pminstall(ts->db, pkgs, none, ts);
+        n_array_free(none);
+
+    } else {
+        rc = pm_pminstall(ts->db, pkgs, unpkgs, ts);
+    }
+
+    if (rc && rm_after) {
         n_assert(n_array_size(unpkgs) == 1);
         n_assert(pkg_cmp_name_evr(n_array_nth(unpkgs, 0), multi_upgrade_pkg) == 0);
 
