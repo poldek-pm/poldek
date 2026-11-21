@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <fnmatch.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -699,13 +698,15 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         }
 
         if (ign_patterns) {
+            struct pkgscore_s psc;
             char buf[512];
             int i;
 
-            pkg_snprintf(buf, sizeof(buf), &kpkg);
+            kpkg.pkgdir = pkgdir;   /* its name is the source part of a mask */
+            pkgscore_match_init(&psc, &kpkg);
             for (i=0; i < n_array_size(ign_patterns); i++) {
-                char *p = n_array_nth(ign_patterns, i);
-                if (fnmatch(p, buf, 0) == 0) {
+                if (pkgscore_match(&psc, n_array_nth(ign_patterns, i))) {
+                    pkg_snprintf(buf, sizeof(buf), &kpkg);
                     msgn(3, "pndir: ignored %s", buf);
                     goto l_continue_loop;
                 }

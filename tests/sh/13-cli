@@ -731,6 +731,35 @@ testSourceIgnoreVerbose()
     done
 }
 
+# an ignore mask in a source section hides what it hides in [ global ],
+# whatever the type of the source: a name, a name-version-release, one with
+# the arch, a glob, each also after the name of the source
+testSourceIgnoreMasks()
+{
+    skip_if_rpm_testing_off && return
+
+    local conf="$TMPDIR/source-ignore.conf" type mask shown out rc
+
+    build a
+    build ab
+    index
+
+    for type in pndir dir; do
+        for mask in a a-1-1 a-1-1.noarch 'a-[0-9]*' s:a 's:a-1*' other:a a.noarch; do
+            shown="ab-1-1"
+            case $mask in other:a | a.noarch) shown="a-1-1 ab-1-1" ;; esac
+
+            printf '[source]\nname = s\ntype = %s\npath = %s/\nignore = %s\n' $type $REPO "$mask" > $conf
+            rm -rf $CACHEDIR    # no stub index from the mask before
+            out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n s --cmd ls 2>&1)
+            rc=$?
+            assertEquals "ls of $type with ignore = $mask failed ($out)" "0" "$rc"
+            assertEquals "$type: ignore = $mask ($out)" "$shown" \
+                "$(echo "$out" | grep -o '^ab*-1-1' | xargs)"
+        done
+    done
+}
+
 # what the cache of installed packages leaves out (descriptions, file lists)
 # comes from the --root database, not from the host's
 testDescInstalledRootFromCache()
