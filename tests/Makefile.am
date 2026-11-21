@@ -23,6 +23,8 @@ check_PROGRAMS += test_depdirs
 check_PROGRAMS += test_fileindex
 # pkgfl_ent_new() must leave the rpm header's dirname alone
 check_PROGRAMS += test_pkgfl
+# capreq_clone() of a long capability
+check_PROGRAMS += test_capreq
 
 TESTS = $(check_PROGRAMS)
 
