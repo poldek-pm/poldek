@@ -216,8 +216,54 @@ START_TEST (test_lock_mkdir_made_meanwhile) {
 END_TEST
 
 
+/* a directory whose name only starts with the name of the cache directory
+   is not in it: its cache path is made, and its files are not removed */
+START_TEST (test_cachedir_prefix) {
+    char cache[PATH_MAX], beside[PATH_MAX], path[PATH_MAX], file[PATH_MAX];
+    int verbose = -1;
+    FILE *f;
+
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
+    n_snprintf(cache, sizeof(cache), "%s", NTEST_TMPPATH("vfcache"));
+    n_snprintf(beside, sizeof(beside), "%s-repo", cache);
+    mkdir(cache, 0755);
+    mkdir(beside, 0755);
+    vfile_configure(VFILE_CONF_CACHEDIR, cache);
+
+    vf_cachepath(path, sizeof(path), beside);
+    fail_if(strcmp(path, beside) == 0, "%s: taken for a directory in %s", beside, cache);
+
+    n_snprintf(file, sizeof(file), "%s/sub", cache);
+    vf_cachepath(path, sizeof(path), file);
+    fail_if(strcmp(path, file) != 0, "%s: got %s", file, path);
+
+    n_snprintf(file, sizeof(file), "%s/file", beside);
+    fail_if((f = fopen(file, "w")) == NULL, "%s: %s", file, strerror(errno));
+    fclose(f);
+    fail_if(vf_localunlink(file), "%s: removed as a file of %s", file, cache);
+    fail_if(access(file, F_OK) != 0, "%s: removed", file);
+    unlink(file);
+
+    /* the cache directory given with trailing slashes is the same one */
+    n_snprintf(path, sizeof(path), "%s//", cache);
+    vfile_configure(VFILE_CONF_CACHEDIR, path);
+    n_snprintf(file, sizeof(file), "%s/sub", cache);
+    vf_cachepath(path, sizeof(path), file);
+    fail_if(strcmp(path, file) != 0, "%s: got %s with the cache given as %s//", file, path, cache);
+
+    n_snprintf(file, sizeof(file), "%s/file", cache);
+    fail_if((f = fopen(file, "w")) == NULL, "%s: %s", file, strerror(errno));
+    fclose(f);
+    fail_if(!vf_localunlink(file), "%s: not removed with the cache given as %s//", file, cache);
+
+    rmdir(beside);
+    rmdir(cache);
+}
+END_TEST
+
+
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_as_path_percent, test_url_hidepasswd,
              test_url_hidepasswd_short_buffer, test_fetcha_ext_multi_dirbn,
              test_url_type_scheme, test_open_errno,
-             test_lock_mkdir_made_meanwhile);
+             test_lock_mkdir_made_meanwhile, test_cachedir_prefix);
