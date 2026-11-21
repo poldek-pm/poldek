@@ -6,6 +6,9 @@ check_PROGRAMS = test_vfile test_vopen3 test_vhttp test_valid_path \
 
 TESTS = test_vfile test_vopen3 test_valid_path test_p_open
 
+# the lock tests of test_vfile wait for locks, retried a second or more apart
+AM_TESTS_ENVIRONMENT = CK_DEFAULT_TIMEOUT=30; export CK_DEFAULT_TIMEOUT;
+
 # test_p_open and test_vfile call dlsym()
 test_p_open_LDADD = $(LDADD) $(DL_LIBS)
 test_vfile_LDADD = $(LDADD) $(DL_LIBS)

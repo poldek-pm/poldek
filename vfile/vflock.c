@@ -38,9 +38,11 @@ static
 int vf_lockfile(const char *lockfile)
 {
     struct flock fl;
-    int    fd;
+    struct stat  fst, st;
+    int    fd, rc;
 
     DBGF("%s\n", lockfile);
+ l_again:
     if ((fd = open(lockfile, O_RDWR | O_CREAT, 0644)) < 0) {
         vf_logerr("open %s: %m\n", lockfile);
         return -1;
@@ -64,6 +66,20 @@ int vf_lockfile(const char *lockfile)
 
     } else {
         char buf[64];
+
+        if (fstat(fd, &fst) != 0 ||
+            ((rc = stat(lockfile, &st)) != 0 && errno != ENOENT)) {
+            vf_logerr("stat %s: %m\n", lockfile);
+            close(fd);
+            return -1;
+        }
+
+        /* the lock is of the file under that name only: one opened before
+           its holder removed it on release is not */
+        if (rc != 0 || fst.st_dev != st.st_dev || fst.st_ino != st.st_ino) {
+            close(fd);
+            goto l_again;
+        }
 
         if (ftruncate(fd, 0) != 0)
             vf_logerr("ftruncate %s: %m\n", lockfile);
@@ -129,9 +145,11 @@ int vf_lock_obtain(const char *path)
 void vf_lock_release(struct vflock *vflock)
 {
     DBGF("%d %s\n", vflock->fd, vflock->path);
+    /* the name goes while the lock is held: a process that locks the file
+       after the close finds it is not under the name (see vf_lockfile()) */
+    vf_unlink(vflock->path);
     if (vflock->fd > 0)
         close(vflock->fd);
-    vf_unlink(vflock->path);
     free(vflock);
 }
 
