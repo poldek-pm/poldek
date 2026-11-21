@@ -593,6 +593,47 @@ tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
                             prepare_cmdline(cctx, cmd_chain, line, NULL) == NULL);
 }
 
+/* The first argument, and one after a lone ; or |, is parsed as a line: it
+   may hold a command with its options, or all the commands. Each of the
+   others is one word of the command before it, whatever it holds. */
+tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,
+                                    const char **argv)
+{
+    tn_array  *cmd_chain, *tl;
+    int       i, is_err = 0, is_line = 1;
+
+    tl = n_array_new(argc > 0 ? argc : 1, free, NULL);
+    for (i=0; i < argc; i++) {
+        if (is_line) {
+            tn_array *words;
+
+            words = n_str_etokl_ext(argv[i], "\t ", ";|", "\"'", '\\');
+            if (words == NULL) {
+                logn(LOGERR, _("%s: parse error"), argv[i]);
+                is_err = 1;
+                break;
+            }
+
+            while (n_array_size(words) > 0)
+                n_array_push(tl, n_array_shift(words));
+            n_array_free(words);
+
+        } else if (*argv[i] != '\0') {
+            n_array_push(tl, n_strdup(argv[i]));
+        }
+
+        if (n_array_size(tl) > 0)
+            is_line = is_break(n_array_nth(tl, n_array_size(tl) - 1), ";|");
+    }
+
+    cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
+    if (!is_err)
+        is_err = prepare_words(cctx, cmd_chain, tl, NULL) == NULL;
+    n_array_free(tl);
+
+    return finish_cmd_chain(cmd_chain, is_err);
+}
+
 #if 0                           /* unused */
 int poclidek_has_batch_command(struct poclidek_ctx *cctx, const char *name) {
     struct poclidek_cmd *cmd = find_command(cctx, name, 1);

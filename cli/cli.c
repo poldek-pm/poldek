@@ -930,20 +930,8 @@ int poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 int do_poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, int argc,
                      const char **argv, struct cmd_pipe *pipe)
 {
-    char *cmdline;
-    int  len, n, i ;
-
-    len = 0;
-    for (i=0; i < argc; i++)
-        len += 2 * strlen(argv[i]);
-
-    cmdline = alloca(len + 1);
-    n = 0;
-
-    for (i=0; i < argc; i++)
-        n += n_snprintf(&cmdline[n], len - n, "%s ", argv[i]);
-
-    return do_poclidek_execline(cctx, ts, cmdline, pipe);
+    return exec_cmd_chain(cctx, ts,
+                          poclidek_prepare_cmd_argv(cctx, argc, argv), pipe);
 }
 
 int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts,

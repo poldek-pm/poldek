@@ -401,6 +401,59 @@ testLsExplicitArchOverNvrMultilib()
     assertEquals "m-1-1.i686 should list one package ($out)" "1" "$n"
 }
 
+# a command given as arguments: the first one is parsed as a line (so it may
+# hold the command with its options, or all the commands), each of the others
+# is one word, whatever it holds; a lone | or ; parts commands, and the
+# argument after it is parsed as a line again
+testCmdArgumentsAreWords()
+{
+    skip_if_rpm_testing_off && return
+
+    local shown="grep -o ^[ab]*-1-1"
+
+    build a
+    build ab
+    build b
+    index
+
+    out=$($POLDEK ls -q 'a b' 2>&1)
+    echo "$out" | grep -q 'a b: no such package'
+    assertEquals "'a b' is not one argument ($out)" "0" "$?"
+    assertEquals "'a b' listed packages ($out)" "" "$(echo "$out" | $shown)"
+
+    out=$($POLDEK ls -q 'a;b' 'a|b' 2>&1)
+    assertEquals "'a;b' or 'a|b' is not one argument ($out)" "2" \
+        "$(echo "$out" | grep -c -e 'a;b: no such package' -e 'a|b: no such package')"
+
+    out=$($POLDEK search --perlre '|^ab|' 2>&1)
+    assertEquals "search --perlre '|^ab|' failed ($out)" "0" "$?"
+    assertEquals "ab-1-1 not found ($out)" "ab-1-1" "$(echo "$out" | $shown)"
+
+    # an alias gets the words as they are
+    out=$($POLDEK upgrade --test 'a b' 2>&1)
+    echo "$out" | grep -q 'a b: no such package'
+    assertEquals "the alias did not get 'a b' as one argument ($out)" "0" "$?"
+
+    out=$($POLDEK 'ls -q' a 2>&1)
+    assertEquals "'ls -q' a ($out)" "a-1-1" "$(echo "$out" | $shown | xargs)"
+
+    out=$($POLDEK 'ls -q a' 'a b' 2>&1)
+    echo "$out" | grep -q 'a b: no such package'
+    assertEquals "'ls -q a' 'a b' ($out)" "0" "$?"
+
+    out=$($POLDEK "search -p 'a*' | ls -q" 2>&1)
+    assertEquals "a line with a pipe ($out)" "a-1-1 ab-1-1" "$(echo "$out" | $shown | xargs)"
+
+    out=$($POLDEK search -p 'a*' '|' ls -q 2>&1)
+    assertEquals "a lone | ($out)" "a-1-1 ab-1-1" "$(echo "$out" | $shown | xargs)"
+
+    out=$($POLDEK search -p a ';' 'search -p' b 2>&1)
+    assertEquals "a lone ; ($out)" "a-1-1 b-1-1" "$(echo "$out" | $shown | xargs)"
+
+    out=$($POLDEK ls -q a '' 2>&1)
+    assertEquals "an empty argument ($out)" "a-1-1" "$(echo "$out" | $shown | xargs)"
+}
+
 # search fails when its pattern does not compile
 testSearchInvalidPattern()
 {
