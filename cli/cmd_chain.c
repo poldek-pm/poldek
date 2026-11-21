@@ -408,23 +408,18 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
     return cmd_chain;
 }
 
+/* the commands of the words in tl, where a lone ; or | parts them */
 static
-tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line, const struct alias_path *path)
+tn_array *prepare_words(struct poclidek_ctx *cctx, tn_array *cmd_chain,
+                        tn_array *tl, const struct alias_path *path)
 {
-    tn_array  *arr = NULL, *tl = NULL;
+    tn_array  *arr = NULL;
     int       i, is_err = 0;
-
-    if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL) {
-        logn(LOGERR, _("%s: parse error"), line);
-        return NULL;
-    }
 
     if (n_array_size(tl) == 0)  /* empty token list */
         goto l_end;
 
 #if ENABLE_TRACE
-    printf("line = (%s)\n", line);
     for (i=0; i<n_array_size(tl); i++)
         printf("tl[%d] = %s\n", i, (char*)n_array_nth(tl, i));
 #endif
@@ -476,8 +471,29 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
 l_end:
 
     n_array_cfree(&arr);
-    n_array_cfree(&tl);
     return is_err ? NULL : cmd_chain;
+}
+
+static
+tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
+                          const char *line, const struct alias_path *path)
+{
+    tn_array  *tl;
+
+    if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL) {
+        logn(LOGERR, _("%s: parse error"), line);
+        return NULL;
+    }
+
+#if ENABLE_TRACE
+    printf("line = (%s)\n", line);
+#endif
+
+    if (prepare_words(cctx, cmd_chain, tl, path) == NULL)
+        cmd_chain = NULL;
+
+    n_array_free(tl);
+    return cmd_chain;
 }
 
 
@@ -556,26 +572,25 @@ tn_array *divide_into_pipelines(tn_array *cmd_chain)
     return cmd_chain2;
 }
 
+/* the pipelines of cmd_chain, which goes; NULL for one that was not made */
+static tn_array *finish_cmd_chain(tn_array *cmd_chain, int is_err)
+{
+    tn_array *chain = NULL;
+
+    if (!is_err)
+        chain = divide_into_pipelines(cmd_chain);
+
+    n_array_free(cmd_chain);
+    return chain;
+}
+
 tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
 {
     tn_array  *cmd_chain;
-    int       is_err = 0;
 
     cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
-    if (prepare_cmdline(cctx, cmd_chain, line, NULL) == NULL)
-        is_err = 1;
-
-    if (is_err) {
-        n_array_free(cmd_chain);
-        cmd_chain = NULL;
-
-    } else {
-        tn_array *chain = divide_into_pipelines(cmd_chain);
-        n_array_free(cmd_chain);
-        cmd_chain = chain;
-    }
-
-    return cmd_chain;
+    return finish_cmd_chain(cmd_chain,
+                            prepare_cmdline(cctx, cmd_chain, line, NULL) == NULL);
 }
 
 #if 0                           /* unused */
