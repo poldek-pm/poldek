@@ -692,6 +692,34 @@ testRPMdbcacheDirindexSameSecond() {
     assertEquals "dirindex mtime after update" "$((mtime - 1))" "$(stat -c %Y "$dirindex_path")"
 }
 
+# a record of the directory index of the installed packages that cannot be
+# read is reported, and the directory index is left out, rather than the
+# record read as a package without directories
+testRPMdbcacheDirindexBrokenRecord() {
+    skip_if_rpm_testing_off && return
+
+    local rpmdb_cachedirname="$(echo $DESTINATION_REPO | sed -e 's|^/||' -e 's|/|.|g').var.lib.rpm"
+    local suffix="rpmdbcache$(echo $DESTINATION_REPO | sed 's|/|.|g').var.lib.rpm"
+    local dirindex_path="$CACHEDIR/$rpmdb_cachedirname/dirindex.rpmdb.tndb"
+    local link="$CACHEDIR/dirindex.$suffix.tndb"
+
+    # so that its directories follow the key map
+    rpm_build_installed a 1-1 -f /opt/zzdir/data
+    $RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO --cmd ls -I >/dev/null
+    [ -L "$link" ] || fail "no $link"
+    python3 -I $SHLIBDIR/tndb-set-vlen $dirindex_path '_\a#' 0xffffffff ||
+        fail "tndb-set-vlen failed"
+
+    # in testing mode poldek aborts at a broken dirindex
+    local out=$(env -u POLDEK_TESTING $RAW_POLDEK -Oauto_directory_dependencies=y \
+                    --root $DESTINATION_REPO --cmd ls -I 2>&1)
+    echo "$out" | grep -q 'invalid directory index' ||
+        fail "no error for the broken record: $out"
+    if [ -L "$link" ]; then
+        fail "the link to the broken dirindex was kept"
+    fi
+}
+
 # rpm changes the database in the second poldek cached it
 testRPMdbcacheSameSecond() {
     skip_if_rpm_testing_off && return

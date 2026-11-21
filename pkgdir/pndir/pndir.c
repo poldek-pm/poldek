@@ -749,6 +749,12 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         }
     }
 
+    /* the loop also ends at a record that cannot be read */
+    if (nerr == 0 && rc < 0) {
+        logn(LOGERR, "%s: iteration error, broken file", path);
+        nerr++;
+    }
+
     if (nerr == 0 && (ldflags & PKGDIR_LD_VERIFYDIGEST) && idx->dg) {
         struct pndir_digest dg;
 

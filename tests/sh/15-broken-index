@@ -140,4 +140,36 @@ testCachedMdFailsToOpen()
     check_cached_md_cut_to 20
 }
 
+# a record of the cached index whose value runs past the 32-bit offsets of
+# the file, in an index whose digest matches, as one published that way
+# would be: no package is loaded and poldek says why, rather than loading
+# the packages before the record as all of them
+testCachedIndexRecordPastOffsets()
+{
+    # the tests before remove packages from the repository; "a" and "m" are needed
+    ln -sf $SOURCE_REPO/*.rpm $REPO/ || fail "make symlinks failed"
+    rm -rf $CACHEDIR/*
+    mkidx
+    up
+    index=$(find $CACHEDIR -name packages.ndir$COMPR_EXT)
+    [ -f "$index" ] || fail "no cached index"
+    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    out=$($POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
+          --cmd ls 2>&1)
+    echo "$out" | grep -qx 'a-1-1.noarch' || fail "a-1-1.noarch not listed: $out"
+
+    # "a" comes before "m" in the index
+    python3 -I $SHLIBDIR/tndb-set-vlen $index 'm#' 0xffffffff ||
+        fail "tndb-set-vlen failed"
+
+    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    out=$($POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
+          --cmd ls 2>&1)
+    echo "$out" | grep -q 'iteration error, broken file' ||
+        fail "no error for the broken record: $out"
+    if echo "$out" | grep -qx 'a-1-1.noarch'; then
+        fail "a package before the broken record was loaded"
+    fi
+}
+
 . ./sh/lib/shunit2

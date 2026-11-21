@@ -449,6 +449,7 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
     struct tndb_it  it;
     char            key[TNDB_KEY_MAX + 1] = {0}, *val = NULL;
     unsigned        nerr = 0, klen, vlen, vlen_max;
+    int             rc;
     tn_alloc        *na;
     tn_hash         *keymap;
 
@@ -492,8 +493,12 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
         else
             vlen_max = vlen;
 
-        if (tndb_it_rget(&it, key, &klen, (void**)&val, &vlen) <= 0) {
+        if ((rc = tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) <= 0) {
             /* EOF is possible - packages without files */
+            if (rc < 0) {
+                logn(LOGERR, _("%s: invalid directory index"), tndb_path(db));
+                nerr++;
+            }
             goto l_end;
         }
     }

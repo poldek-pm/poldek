@@ -1,0 +1,65 @@
+#!/usr/bin/python3
+# Sets the value length of the first record whose key starts with PREFIX in
+# a signed tndb database, plain, gzip or zstd, and signs it again, so that
+# the database verifies and only the record is broken.
+# usage: tndb-set-vlen FILE PREFIX LENGTH
+import gzip
+import hashlib
+import struct
+import subprocess
+import sys
+
+path, prefix, length = sys.argv[1], sys.argv[2].encode(), int(sys.argv[3], 0)
+raw = open(path, 'rb').read()
+if raw[:2] == b'\x1f\x8b':
+    compr = 'gz'
+    d = bytearray(gzip.decompress(raw))
+elif raw[:4] == b'\x28\xb5\x2f\xfd':
+    compr = 'zst'
+    d = bytearray(subprocess.run(['zstd', '-q', '-d', '-c'], input=raw,
+                                 stdout=subprocess.PIPE, check=True).stdout)
+else:
+    compr = None
+    d = bytearray(raw)
+
+# header: "tndb1.x\0", flags, size of the signature block, the block
+# (name length, "md", digest length, SHA-1 digest), then ts, nrec, doffs
+if d[:5] != b'tndb1' or d[12:14] != b'md' or struct.unpack('>H', d[14:16])[0] != 20:
+    sys.exit('%s: not a tndb database signed with a digest' % path)
+flags = d[8]
+size16 = struct.unpack('>H', d[9:11])[0]
+ts, nrec, doffs = struct.unpack('>III', d[9 + size16:9 + size16 + 12])
+htt = 9 + size16 + 12
+
+def digest(b):
+    h = hashlib.sha1()
+    h.update(bytes(b[doffs:]))
+    h.update(bytes(b[:8]) + bytes([flags]) + struct.pack('>III', ts, nrec, doffs))
+    h.update(bytes(b[htt:doffs]))
+    return h.digest()
+
+if digest(d) != bytes(d[16:36]):
+    sys.exit('%s: digest does not match' % path)
+
+off = doffs
+for i in range(nrec):
+    klen = d[off]
+    key = bytes(d[off + 1:off + 1 + klen])
+    vlen = struct.unpack('>I', d[off + 1 + klen:off + 5 + klen])[0]
+    if key.startswith(prefix):
+        break
+    off += 1 + klen + 4 + vlen
+else:
+    sys.exit('%s: no key starting with %s' % (path, prefix.decode()))
+
+struct.pack_into('>I', d, off + 1 + klen, length)
+d[16:36] = digest(d)
+
+if compr == 'gz':
+    out = gzip.compress(bytes(d))
+elif compr == 'zst':
+    out = subprocess.run(['zstd', '-q', '-c'], input=bytes(d),
+                         stdout=subprocess.PIPE, check=True).stdout
+else:
+    out = bytes(d)
+open(path, 'wb').write(out)
