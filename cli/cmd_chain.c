@@ -138,7 +138,9 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
 
         if (!is_break(arg, brk)) {
             int external = 0;
-            if (is_external(arg)) {
+
+            /* !command, as the first word of a command only */
+            if (n_array_size(tl) == 0 && is_external(arg)) {
                 n_array_push(tl, n_strdup("!"));
                 arg++;
                 external = 1;

@@ -454,6 +454,35 @@ testCmdArgumentsAreWords()
     assertEquals "an empty argument ($out)" "a-1-1" "$(echo "$out" | $shown | xargs)"
 }
 
+# !command runs an external command where a command stands, which the shell
+# only allows: as an argument a word that begins with ! is a word
+testExternalCommandOnlyAsCommand()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    out=$($POLDEK ls -q '!a' 2>&1)
+    echo "$out" | grep -q '!a: no such package'
+    assertEquals "ls did not get !a as an argument ($out)" "0" "$?"
+
+    out=$($POLDEK --cmd "ls -q '!a'" 2>&1)
+    echo "$out" | grep -q '!a: no such package'
+    assertEquals "ls of a line did not get !a as an argument ($out)" "0" "$?"
+
+    out=$(printf '!echo first\nls -q a; !echo second\n!echo !third\nls -q !a\nquit\n' |
+          timeout 60 script -qec "$POLDEK --noask --shell" /dev/null |
+          tr -d '\r' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')
+    # the shell is not in every build
+    echo "$out" | grep -q 'built without interactive mode' && return
+    assertEquals "!echo as a command ($out)" "1" "$(echo "$out" | grep -cx first)"
+    assertEquals "!echo after ; ($out)" "1" "$(echo "$out" | grep -cx second)"
+    assertEquals "!echo did not get !third as an argument ($out)" "1" "$(echo "$out" | grep -cx '!third')"
+    echo "$out" | grep -q '!a: no such package'
+    assertEquals "ls in the shell did not get !a as an argument ($out)" "0" "$?"
+}
+
 # search fails when its pattern does not compile
 testSearchInvalidPattern()
 {
