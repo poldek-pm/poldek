@@ -804,6 +804,24 @@ testRPMdbcacheRebuilddb() {
     assertEquals "b-2-1 not listed as installed" "1" "$n"
 }
 
+# a ^C while the shell reads the database leaves the installed packages
+# unread, not an empty set the cache keeps for the runs that come next
+testRPMdbcacheInterruptedLoad() {
+    skip_if_rpm_testing_off && return
+
+    rpm_build_installed b 1-1
+    local out=$(printf 'cd /installed\nls\nquit\n' |
+        perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV' \
+             timeout 60 script -qec "env LD_PRELOAD=$PWD/.libs/sigint_at_dbload.so $RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null 2>&1)
+    assertEquals "no SIGINT from sigint_at_dbload.so: $out" "1" \
+                 "$(echo "$out" | grep -c '^sigint_at_dbload: SIGINT')"
+    assertEquals "the interrupted load not reported: $out" "1" \
+                 "$(echo "$out" | grep -c 'Load installed packages failed')"
+
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-1-1')
+    assertEquals "b-1-1 not listed as installed" "1" "$n"
+}
+
 # e.g. openssl multiple instances
 testUpgradeMultipleInstalled() {
     skip_if_rpm_testing_off && return
