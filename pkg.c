@@ -59,6 +59,55 @@ struct an_arch {
 #ifdef ENABLE_THREADS
 static pthread_mutex_t arch_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t os_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int atfork_registered;
+
+/* a name is registered under its mutex whether threads load or not: a
+   fork() waits for it, so a child gets the lists whole */
+# define registry_lock(m)   pthread_mutex_lock(m)
+# define registry_unlock(m) pthread_mutex_unlock(m)
+
+/* a child has only the thread that called fork(): one forked while another
+   thread held a mutex would find it held for good, so fork() waits for them */
+static void registry_atfork_lock(void)
+{
+    pthread_mutex_lock(&arch_mutex);
+    pthread_mutex_lock(&os_mutex);
+}
+
+static void registry_atfork_unlock(void)
+{
+    pthread_mutex_unlock(&os_mutex);
+    pthread_mutex_unlock(&arch_mutex);
+}
+
+/* by poldeklib_init(), so before any name is registered and any thread of
+   the library runs; registered once, however many times the library is
+   set up, and tried again after a failure */
+int pkg__registry_init(void)
+{
+    int rc;
+
+    if (atfork_registered)
+        return 1;
+
+    rc = pthread_atfork(registry_atfork_lock, registry_atfork_unlock,
+                        registry_atfork_unlock);
+    if (rc != 0) {
+        logn(LOGERR, "pthread_atfork: %s", strerror(rc));
+        return 0;
+    }
+    atfork_registered = 1;
+
+    return 1;
+}
+#else
+# define registry_lock(m)   ((void) 0)
+# define registry_unlock(m) ((void) 0)
+
+int pkg__registry_init(void)
+{
+    return 1;
+}
 #endif
 
 static struct an_arch *last_arch = NULL;
@@ -73,7 +122,7 @@ int pkgmod_register_arch(const char *arch)
         return an_arch->index;
     }
 
-    mutex_lock(&arch_mutex);
+    registry_lock(&arch_mutex);
 
     if (architecture_h == NULL) {
         architecture_h = n_hash_new(21, free);
@@ -106,7 +155,7 @@ int pkgmod_register_arch(const char *arch)
         __atomic_store_n(&last_arch, an_arch, __ATOMIC_RELAXED);
     }
 
-    mutex_unlock(&arch_mutex);
+    registry_unlock(&arch_mutex);
 
     return an_arch->index;
 }
@@ -157,7 +206,7 @@ int pkgmod_register_os(const char *os)
         return an_os->index;
     }
 
-    mutex_lock(&os_mutex);
+    registry_lock(&os_mutex);
 
     if (operatingsystem_h == NULL) {
         operatingsystem_h = n_hash_new(21, free);
@@ -183,7 +232,7 @@ int pkgmod_register_os(const char *os)
         __atomic_store_n(&last_os, an_os, __ATOMIC_RELAXED);
     }
 
-    mutex_unlock(&os_mutex);
+    registry_unlock(&os_mutex);
 
     return an_os->index;
 }

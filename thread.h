@@ -10,6 +10,9 @@
 bool poldek_enabled_threads();
 void poldek_disable_threads();
 
+/* pkg.c: makes fork() wait for an arch or os being registered; 0 on error */
+int pkg__registry_init(void);
+
 #ifdef ENABLE_THREADS
 # include <pthread.h>
 
