@@ -118,8 +118,8 @@ testLoadZstWhole()
     [ -z "$made" ] || fail "a copy of primary.xml in the cache: $made"
 }
 
-# a primary.xml.zst that cannot be decompressed whole is reported, and no
-# package of it is loaded
+# a primary.xml.zst that cannot be decompressed whole is reported and fails
+# the load: no package of it is loaded
 testLoadZstCut()
 {
     local dir="$TMPDIR/meta-zst-cut"
@@ -137,6 +137,7 @@ testLoadZstCut()
     out=$($POLDEK -s "m,type=metadata $dir/repo/" ls 2>&1)
     echo "$out" | grep -q 'primary.xml.zst: cannot be read whole' ||
         fail "no error for the cut primary.xml.zst: $out"
+    echo "$out" | grep -q ': load failed' || fail "no load error: $out"
     echo "$out" | grep -q '^fake_bash-' && fail "a package of the cut primary.xml.zst listed: $out"
     [ -z "$(find $CACHEDIR -name '*primary.xml*')" ] ||
         fail "a copy of the cut primary.xml.zst was left in the cache"

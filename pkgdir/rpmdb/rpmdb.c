@@ -180,7 +180,7 @@ int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
     struct pkgdb_it    it;
     const struct pm_dbrec *dbrec;
     char               dbfull_path[PATH_MAX];
-    int                n;
+    int                n, interrupted = 0;
 
     snprintf(dbfull_path, sizeof(dbfull_path), "%s%s",
              *(rootdir + 1) == '\0' ? "" : rootdir,
@@ -188,7 +188,7 @@ int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
 
     db = pkgdb_open(pmctx, rootdir, pkgdir->idxpath, O_RDONLY, NULL);
     if (db == NULL)
-        return 0;
+        return -1;
 
     msg(3, _("Loading db packages%s%s%s..."), *dbfull_path ? " [":"",
         dbfull_path, *dbfull_path ? "]":"");
@@ -206,7 +206,7 @@ int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
             msg(3, "_.");
 
         if (sigint_reached()) {
-            n = 0;
+            interrupted = 1;
             break;
         }
     }
@@ -214,6 +214,10 @@ int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
 
     pkgdb_it_destroy(&it);
     pkgdb_free(db);
+
+    /* the packages read so far are not the installed set */
+    if (interrupted)
+        return -1;
 
     if (n == 0)
         n_array_clean(pkgdir->pkgs);
@@ -262,8 +266,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     DBGF("prev_dir %p\n", pkgdir->prev_pkgdir);
 
-    if (!load_db_packages(pkgdir->mod_data, pkgdir, "/", ldflags))
-        return 0;
+    if (load_db_packages(pkgdir->mod_data, pkgdir, "/", ldflags) < 0)
+        return -1;
 
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
