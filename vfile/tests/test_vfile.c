@@ -9,6 +9,9 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#ifdef ENABLE_THREADS
+# include <pthread.h>
+#endif
 
 #include "test.h"
 
@@ -357,7 +360,28 @@ static struct {
     pid_t      second;
     int        second_locked;
     int        fstat_errno;     /* fstat() fails with it */
-} hook = { -1, NULL, NULL, { -1, -1 }, { -1, -1 }, { -1, -1 }, 0, 0, 0 };
+    int        unlink_errno;    /* unlink() of a file of a lock fails with it */
+    int        thread_close_fd; /* a thread takes the lock before its close */
+    int        thread_rc;       /* of pthread_create() */
+    int        thread_locked;   /* before that close */
+#ifdef ENABLE_THREADS
+    pthread_t  thread;
+#endif
+} hook = {
+    .close_fd = -1, .report = { -1, -1 }, .opened = { -1, -1 }, .go = { -1, -1 },
+    .thread_close_fd = -1,
+};
+
+#ifdef ENABLE_THREADS
+static void *take_lock(void *dir)
+{
+    struct vflock *lock = vf_lockdir(dir);
+
+    if (lock && write(hook.report[1], "t", 1) != 1)
+        return NULL;
+    return lock;
+}
+#endif
 
 /* libvfile calls these */
 __attribute__((visibility("default")))
@@ -368,6 +392,14 @@ int close(int fd)
 
     if (real_close == NULL)
         real_close = (int (*)(int))dlsym(RTLD_NEXT, "close");
+#ifdef ENABLE_THREADS
+    if (hook.thread_close_fd != -1 && fd == hook.thread_close_fd) {
+        hook.thread_close_fd = -1;
+        hook.thread_rc = pthread_create(&hook.thread, NULL, take_lock, (void *)hook.dir);
+        /* unless it waits for the release to end */
+        hook.thread_locked = hook.thread_rc == 0 && wrote_within(hook.report[0], 500);
+    }
+#endif
     rc = real_close(fd);
     if (hook.close_fd != -1 && fd == hook.close_fd) {
         hook.close_fd = -1;
@@ -402,6 +434,20 @@ int open(const char *path, int flags, ...)
             _exit(1);
     }
     return fd;
+}
+
+__attribute__((visibility("default")))
+int unlink(const char *path)
+{
+    static int (*real_unlink)(const char *);
+
+    if (real_unlink == NULL)
+        real_unlink = (int (*)(const char *))dlsym(RTLD_NEXT, "unlink");
+    if (hook.unlink_errno && strstr(path, "/.vflock_") != NULL) {
+        errno = hook.unlink_errno;
+        return -1;
+    }
+    return real_unlink(path);
 }
 
 __attribute__((visibility("default")))
@@ -467,6 +513,239 @@ START_TEST (test_lock_opened_before_release) {
 }
 END_TEST
 
+/* a lock taken again by its holder, as a fetch redirected to another
+   protocol does, stays until the holder lets the first one go */
+START_TEST (test_lock_taken_again) {
+    char dir[PATH_MAX], lockpath[PATH_MAX];
+    struct vflock *outer, *inner;
+    int fds[2];
+    pid_t second;
+
+    n_snprintf(dir, sizeof(dir), "%s", NTEST_TMPPATH("vflock-again"));
+    mkdir(dir, 0755);
+    fail_if(pipe(fds) != 0, "pipe: %s", strerror(errno));
+
+    fail_if((outer = vf_lockdir(dir)) == NULL, "%s: no lock", dir);
+    fail_if((inner = vf_lockdir(dir)) == NULL, "%s: no lock taken again", dir);
+    n_snprintf(lockpath, sizeof(lockpath), "%s", outer->path);
+    vf_lock_release(inner);
+    fail_if(access(lockpath, F_OK) != 0, "%s: removed with the first lock held", lockpath);
+
+    second = lock_holder(dir, fds[1], '2');
+    fail_if(wrote_within(fds[0], 1000), "another process got the lock held");
+    vf_lock_release(outer);
+    fail_if(!wrote_within(fds[0], 15000), "another process got no lock after its release");
+    kill(second, SIGKILL);
+    waitpid(second, NULL, 0);
+    remove_lockdir(dir);
+}
+END_TEST
+
+/* a child releasing the locks it inherits closes their descriptor once,
+   and the lock of its parent stays */
+START_TEST (test_lock_released_in_child) {
+    char dir[PATH_MAX], lockpath[PATH_MAX];
+    struct vflock *outer, *inner;
+    int fds[2], st;
+    pid_t child, second;
+
+    n_snprintf(dir, sizeof(dir), "%s", NTEST_TMPPATH("vflock-child"));
+    mkdir(dir, 0755);
+    fail_if(pipe(fds) != 0, "pipe: %s", strerror(errno));
+    fail_if((outer = vf_lockdir(dir)) == NULL, "%s: no lock", dir);
+    fail_if((inner = vf_lockdir(dir)) == NULL, "%s: no lock taken again", dir);
+    n_snprintf(lockpath, sizeof(lockpath), "%s", outer->path);
+
+    if ((child = fork()) == 0) {
+        int fd;
+
+        vf_lock_release(inner);
+        fd = open("/dev/null", O_RDONLY);   /* the number of a closed one */
+        vf_lock_release(outer);
+        _exit(fcntl(fd, F_GETFD) == -1);
+    }
+    fail_if(child < 0, "fork: %s", strerror(errno));
+    fail_if(waitpid(child, &st, 0) != child, "waitpid: %s", strerror(errno));
+    fail_if(!WIFEXITED(st) || WEXITSTATUS(st) != 0,
+            "the child closed a file of its own releasing the locks it inherited");
+    fail_if(access(lockpath, F_OK) != 0, "%s: removed by the child", lockpath);
+
+    second = lock_holder(dir, fds[1], '2');
+    fail_if(wrote_within(fds[0], 1000), "another process got the lock held");
+    vf_lock_release(inner);
+    vf_lock_release(outer);
+    fail_if(!wrote_within(fds[0], 15000), "another process got no lock after its release");
+    kill(second, SIGKILL);
+    waitpid(second, NULL, 0);
+    remove_lockdir(dir);
+}
+END_TEST
+
+/* a child that took its own lock of the file of an inherited one, which
+   its parent left when it ended, keeps it when it releases the inherited */
+START_TEST (test_lock_inherited_of_own_file) {
+    char dir[PATH_MAX];
+    int fds[2], st;
+    pid_t parent, second, child = 0;
+
+    n_snprintf(dir, sizeof(dir), "%s", NTEST_TMPPATH("vflock-own"));
+    mkdir(dir, 0755);
+    fail_if(pipe(hook.report) != 0 || pipe(fds) != 0, "pipe: %s", strerror(errno));
+
+    if ((parent = fork()) == 0) {
+        struct vflock *inherited;
+
+        if ((inherited = vf_lockdir(dir)) == NULL || (child = fork()) < 0)
+            _exit(1);
+        if (child == 0) {
+            struct vflock *own;
+            int inherited_fd = inherited->fd, own_fd, gst;
+            pid_t grandchild;
+            char c = 'c';
+
+            alarm(60);
+            /* taken once the parent ends, of the file it left */
+            if ((own = vf_lockdir(dir)) == NULL)
+                _exit(1);
+            own_fd = own->fd;
+            vf_lock_release(inherited);
+
+            /* a grandchild releasing the one it inherits closes both */
+            if ((grandchild = fork()) == 0) {
+                vf_lock_release(own);
+                _exit(fcntl(inherited_fd, F_GETFD) != -1 || fcntl(own_fd, F_GETFD) != -1);
+            }
+            if (grandchild < 0 || waitpid(grandchild, &gst, 0) != grandchild ||
+                !WIFEXITED(gst) || WEXITSTATUS(gst) != 0)
+                c = 'g';
+            if (write(hook.report[1], &c, 1) == 1)
+                pause();
+            _exit(1);
+        }
+        if (write(fds[1], &child, sizeof(child)) != sizeof(child))
+            _exit(1);
+        _exit(0);               /* with the lock, its file left */
+    }
+    fail_if(parent < 0, "fork: %s", strerror(errno));
+    fail_if(waitpid(parent, &st, 0) != parent, "waitpid: %s", strerror(errno));
+    fail_if(!WIFEXITED(st) || WEXITSTATUS(st) != 0, "the parent failed");
+    fail_if(read(fds[0], &child, sizeof(child)) != sizeof(child), "no child");
+    {
+        struct pollfd p = { hook.report[0], POLLIN, 0 };
+        char c = 0;
+
+        fail_if(poll(&p, 1, 15000) != 1 || read(hook.report[0], &c, 1) != 1,
+                "the child got no lock of its own");
+        fail_if(c == 'g', "a grandchild left a descriptor of a released lock open");
+    }
+
+    second = lock_holder(dir, fds[1], '2');
+    fail_if(wrote_within(fds[0], 1000), "another process got the lock the child holds");
+    kill(child, SIGKILL);
+    fail_if(!wrote_within(fds[0], 15000), "another process got no lock after the child ended");
+    kill(second, SIGKILL);
+    waitpid(second, NULL, 0);
+    remove_lockdir(dir);
+}
+END_TEST
+
+#ifdef ENABLE_THREADS
+/* with the file of the lock left by a failed removal, a thread that takes
+   the lock as it is released still holds it after the release */
+START_TEST (test_lock_unlink_error) {
+    char dir[PATH_MAX];
+    struct vflock *lock;
+    void *thread_lock;
+    int fds[2], verbose = -1;
+    pid_t second;
+
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
+    n_snprintf(dir, sizeof(dir), "%s", NTEST_TMPPATH("vflock-unlink"));
+    mkdir(dir, 0755);
+    fail_if(pipe(hook.report) != 0 || pipe(fds) != 0, "pipe: %s", strerror(errno));
+
+    fail_if((lock = vf_lockdir(dir)) == NULL, "%s: no lock", dir);
+    hook.dir = dir;
+    hook.unlink_errno = EACCES;
+    hook.thread_close_fd = lock->fd;
+    vf_lock_release(lock);
+    hook.unlink_errno = 0;
+    fail_if(hook.thread_rc != 0, "pthread_create: %s", strerror(hook.thread_rc));
+    if (!hook.thread_locked)
+        fail_if(!wrote_within(hook.report[0], 10000), "the thread got no lock");
+    pthread_join(hook.thread, &thread_lock);
+    fail_if(thread_lock == NULL, "the thread got no lock");
+
+    second = lock_holder(dir, fds[1], '2');
+    fail_if(wrote_within(fds[0], 1000), "another process got the lock the thread holds");
+    vf_lock_release(thread_lock);
+    fail_if(!wrote_within(fds[0], 15000), "another process got no lock after its release");
+    kill(second, SIGKILL);
+    waitpid(second, NULL, 0);
+    remove_lockdir(dir);
+}
+END_TEST
+/* a thread of a child that takes the lock its parent left as the child
+   releases the inherited one still holds it after the release */
+START_TEST (test_lock_inherited_released_as_thread_locks) {
+    char dir[PATH_MAX];
+    int fds[2], go[2], done[2], st;
+    pid_t parent, second, child = 0;
+    char c;
+
+    n_snprintf(dir, sizeof(dir), "%s", NTEST_TMPPATH("vflock-thread"));
+    mkdir(dir, 0755);
+    fail_if(pipe(hook.report) != 0 || pipe(fds) != 0 || pipe(go) != 0 || pipe(done) != 0,
+            "pipe: %s", strerror(errno));
+
+    if ((parent = fork()) == 0) {
+        struct vflock *inherited;
+
+        if ((inherited = vf_lockdir(dir)) == NULL || (child = fork()) < 0)
+            _exit(1);
+        if (child == 0) {
+            void *thread_lock = NULL;
+
+            alarm(60);
+            if (read(go[0], &c, 1) != 1)        /* the parent has ended */
+                _exit(1);
+            hook.dir = dir;
+            hook.thread_close_fd = inherited->fd;
+            vf_lock_release(inherited);
+            if (hook.thread_rc != 0 ||
+                (!hook.thread_locked && !wrote_within(hook.report[0], 10000)) ||
+                pthread_join(hook.thread, &thread_lock) != 0 || thread_lock == NULL)
+                _exit(1);
+            if (write(done[1], "t", 1) == 1)
+                pause();
+            _exit(1);
+        }
+        if (write(fds[1], &child, sizeof(child)) != sizeof(child))
+            _exit(1);
+        _exit(0);               /* with the lock, its file left */
+    }
+    fail_if(parent < 0, "fork: %s", strerror(errno));
+    fail_if(waitpid(parent, &st, 0) != parent, "waitpid: %s", strerror(errno));
+    fail_if(!WIFEXITED(st) || WEXITSTATUS(st) != 0, "the parent failed");
+    fail_if(read(fds[0], &child, sizeof(child)) != sizeof(child), "no child");
+    fail_if(write(go[1], "g", 1) != 1, "write: %s", strerror(errno));
+    fail_if(!wrote_within(done[0], 15000), "the thread of the child got no lock");
+
+    second = lock_holder(dir, fds[1], '2');
+    fail_if(wrote_within(fds[0], 1000), "another process got the lock the thread holds");
+    kill(child, SIGKILL);
+    fail_if(!wrote_within(fds[0], 15000), "another process got no lock after the child ended");
+    kill(second, SIGKILL);
+    waitpid(second, NULL, 0);
+    remove_lockdir(dir);
+}
+END_TEST
+# define THREAD_TESTS , test_lock_unlink_error, \
+    test_lock_inherited_released_as_thread_locks
+#else
+# define THREAD_TESTS
+#endif
+
 /* an error of checking the file of the lock ends the attempt to take it */
 START_TEST (test_lock_fstat_error) {
     char dir[PATH_MAX];
@@ -490,4 +769,6 @@ NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_type_scheme, test_open_errno,
              test_lock_mkdir_made_meanwhile, test_cachedir_prefix,
              test_lock_taken_at_release, test_lock_opened_before_release,
-             test_lock_fstat_error);
+             test_lock_fstat_error, test_lock_taken_again,
+             test_lock_released_in_child, test_lock_inherited_of_own_file
+             THREAD_TESTS);
