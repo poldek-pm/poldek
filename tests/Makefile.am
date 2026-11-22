@@ -27,6 +27,10 @@ check_PROGRAMS += test_pkgfl
 check_PROGRAMS += test_capreq
 # a directory cleaned is not left locked
 check_PROGRAMS += test_pkgdir_clean
+if ENABLE_THREADS
+# a fork() while a thread registers an arch
+check_PROGRAMS += test_pkg_arch
+endif
 
 TESTS = $(check_PROGRAMS)
 
@@ -53,15 +57,18 @@ EXTRA_DIST = test.h poldek_test_conf.conf \
 	sh run-sh-tests.sh metadata \
 	build-test-rpm.sh
 
-# preloaded by sh/01-create-repo, sh/16-hooks, sh/17-interrupt and sh/19-questions
+# preloaded by sh/01-create-repo, sh/08-rpm, sh/16-hooks, sh/17-interrupt and
+# sh/19-questions
 check_LTLIBRARIES = sigint_at_init.la signal_at_fork.la signal_at_restore.la \
-		    library_user.la front_end.la close_error.la
+		    sigint_at_dbload.la library_user.la front_end.la close_error.la
 sigint_at_init_la_SOURCES = sigint_at_init.c
 sigint_at_init_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 signal_at_fork_la_SOURCES = signal_at_fork.c
 signal_at_fork_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 signal_at_restore_la_SOURCES = signal_at_restore.c
 signal_at_restore_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
+sigint_at_dbload_la_SOURCES = sigint_at_dbload.c
+sigint_at_dbload_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 library_user_la_SOURCES = library_user.c
 library_user_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 front_end_la_SOURCES = front_end.c

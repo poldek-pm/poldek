@@ -56,6 +56,33 @@ testLoadLargeSizes()
     assertEquals "sizes should be 4096.0 MB" "$n" "2"
 }
 
+# a package whose name does not fit in an index key is left out with a
+# warning; tndb took such a key for a bug and --mkidx ended in abort()
+testMkidxLongName()
+{
+    local dir="$TMPDIR/meta-long-name"
+    local primary old new long out rc n
+
+    rm -rf $dir
+    mkdir -p $dir/repo $dir/idx
+    cp -r metadata/repo_02/repodata $dir/repo/ || fail "cp failed"
+    primary=$(ls $dir/repo/repodata/*-primary.xml.gz)
+    old=$(sha256sum < $primary | cut -d' ' -f1)
+    long=$(printf '%300s' | tr ' ' a)
+    zcat $primary | sed "s|<name>fake_bash</name>|<name>$long</name>|" | gzip -n > $dir/primary.gz
+    mv $dir/primary.gz $primary
+    new=$(sha256sum < $primary | cut -d' ' -f1)
+    sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
+
+    out=$($POLDEK --st metadata -s $dir/repo/ --mkidx=$dir/idx/ --mt pndir 2>&1)
+    rc=$?
+    assertEquals "--mkidx failed: $out" "0" "$rc"
+    echo "$out" | grep -q "^warn: $long: .*ignored" || fail "no warning: $out"
+
+    n=$($POLDEK -s $dir/idx/ ls 2>/dev/null | grep -c '^super_kernel-')
+    assertEquals "super_kernel not in the index" "1" "$n"
+}
+
 # createrepo names SHA-1 checksums "sha" or "sha1"
 testLoadSha1Checksums()
 {
@@ -118,8 +145,8 @@ testLoadZstWhole()
     [ -z "$made" ] || fail "a copy of primary.xml in the cache: $made"
 }
 
-# a primary.xml.zst that cannot be decompressed whole is reported, and no
-# package of it is loaded
+# a primary.xml.zst that cannot be decompressed whole is reported and fails
+# the load: no package of it is loaded
 testLoadZstCut()
 {
     local dir="$TMPDIR/meta-zst-cut"
@@ -137,6 +164,7 @@ testLoadZstCut()
     out=$($POLDEK -s "m,type=metadata $dir/repo/" ls 2>&1)
     echo "$out" | grep -q 'primary.xml.zst: cannot be read whole' ||
         fail "no error for the cut primary.xml.zst: $out"
+    echo "$out" | grep -q ': load failed' || fail "no load error: $out"
     echo "$out" | grep -q '^fake_bash-' && fail "a package of the cut primary.xml.zst listed: $out"
     [ -z "$(find $CACHEDIR -name '*primary.xml*')" ] ||
         fail "a copy of the cut primary.xml.zst was left in the cache"
@@ -223,6 +251,32 @@ testUpRefreshesStubIndex()
     # ls reads the stub index, which --up refreshes
     n=$($POLDEK_RAW_UP -q -Osource="$src" --cmd ls | grep -c '^fake_zsh-')
     assertEquals "ls should list the renamed package" "1" "$n"
+}
+
+# --up of a primary.xml that passes its digest but cannot be loaded writes
+# no stub index, which would be an empty one
+testUpUnloadableWritesNoStubIndex()
+{
+    local dir="$TMPDIR/meta-up-unloadable"
+    local src="m,type=metadata test://$dir/"
+    local primary old new stub
+
+    rm -rf $dir $CACHEDIR/*
+    mkdir -p $dir
+    cp -r metadata/repo_02/repodata $dir/ || fail "cp failed"
+    primary=$(ls $dir/repodata/*-primary.xml.gz)
+    old=$(sha256sum < $primary | cut -d' ' -f1)
+    echo '<metadata' | gzip -n > $dir/primary.gz
+    new=$(sha256sum < $dir/primary.gz | cut -d' ' -f1)
+    rm -f $primary
+    mv $dir/primary.gz $dir/repodata/$new-primary.xml.gz
+    sed -i "s/$old/$new/g" $dir/repodata/repomd.xml
+
+    $POLDEK_RAW_UP -Osource="$src" --up
+    # this source's only: $CACHEDIR/* leaves the hidden directories of the
+    # other ones (/__w/... of a CI checkout gives ..w...)
+    stub=$(find $CACHEDIR -path '*meta-up-unloadable*' -name 'stubindex*')
+    [ -z "$stub" ] || fail "a stub index of the unloadable primary.xml: $stub"
 }
 
 # a new repomd.xml whose primary.xml cannot be fetched fails the update

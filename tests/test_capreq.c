@@ -1,9 +1,107 @@
 /*
-  capreq_clone() of a capability made without an allocator copies it in
-  one block; the copy has the same name, epoch, version and release
+  capreq_new() takes version and release of up to CAPREQ_VR_MAX characters
+  together. capreq_clone() of a capability made without an allocator copies
+  it in one block; the copy has the same name, epoch, version and release
   whatever their length.
 */
 #include "test.h"
+#include "capreq_intern.h"
+#include <tndb/tndb.h>
+
+/* pkgdir/pndir/pndir.h, which takes -Ipkgdir */
+int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg);
+
+/* a capability "a" of a version of verlen characters */
+static struct capreq *new_versioned(int32_t epoch, int verlen,
+                                    const char *release)
+{
+    char version[256];
+
+    n_assert(verlen < (int)sizeof(version));
+    memset(version, '1', verlen);
+    version[verlen] = '\0';
+
+    return capreq_new(NULL, "a", epoch, version, release, REL_EQ, 0);
+}
+
+/* version and release are counted, the epoch is not; stored, a capability
+   with 250..254 bytes of them hung split_capreq() */
+START_TEST(test_new_vr_limit) {
+    struct capreq *cr;
+
+    expect_notnull(cr = new_versioned(0, CAPREQ_VR_MAX - 1, "1"));
+    capreq_free(cr);
+    expect_null(new_versioned(0, CAPREQ_VR_MAX, "1"));
+
+    expect_notnull(cr = new_versioned(0, CAPREQ_VR_MAX, NULL));
+    capreq_free(cr);
+    expect_null(new_versioned(0, CAPREQ_VR_MAX + 1, NULL));
+
+    expect_notnull(cr = new_versioned(1, CAPREQ_VR_MAX - 1, "1"));
+    capreq_free(cr);
+    expect_null(new_versioned(1, CAPREQ_VR_MAX, "1"));
+
+    expect_null(new_versioned(0, 246, "2"));
+}
+END_TEST
+
+/* nor a package of such a version: no capability of its own version could
+   be made */
+START_TEST(test_pkg_new_vr_limit) {
+    char version[CAPREQ_VR_MAX + 1];
+    struct pkg *pkg;
+
+    memset(version, '1', sizeof(version) - 1);
+    version[sizeof(version) - 1] = '\0';
+    expect_null(pkg_new("a", 0, version, "1", "noarch", "linux"));
+
+    version[CAPREQ_VR_MAX - 1] = '\0';
+    pkg = pkg_new("a", 1, version, "1", "noarch", "linux");
+    expect_notnull(pkg);
+    pkg_add_selfcap(pkg);
+    expect_int(n_array_size(pkg->caps), 1);
+    pkg_free(pkg);
+}
+END_TEST
+
+/* PKG_NEVRA_MAX of pkg.c */
+#define NEVRA_MAX 224
+
+/* a package "aaa...-1-1.x86_64" of an os of its own (not the default one,
+   which the pndir key leaves out), with a name of namelen characters */
+static struct pkg *new_named(int namelen, int32_t epoch)
+{
+    char name[256];
+
+    n_assert(namelen < (int)sizeof(name));
+    memset(name, 'a', namelen);
+    name[namelen] = '\0';
+
+    return pkg_new(name, epoch, "1", "1", "x86_64", "linux2");
+}
+
+/* nor a package whose index keys would not fit in TNDB_KEY_MAX, which tndb
+   took for a bug and ended poldek with: name, "#", epoch and ":", version,
+   "-", release, "#", arch, ":" and os count, the epoch as 12 characters
+   whatever its value */
+START_TEST(test_pkg_new_nevra_limit) {
+    int namelen = NEVRA_MAX - (1 + 1 + 1 + 1 + 7 + 7);
+    char key[512];
+    struct pkg *pkg;
+
+    expect_null(new_named(namelen + 1, 0));
+    expect_notnull(pkg = new_named(namelen, 0));
+    pkg_free(pkg);
+
+    expect_null(new_named(namelen - 12 + 1, 1));
+    expect_notnull(pkg = new_named(namelen - 12, INT32_MAX));
+
+    /* the longest dirindex key: a 2-byte prefix, the pndir key, ":" and the
+       build time */
+    expect_int(pndir_make_pkgkey(key, sizeof(key), pkg) <= TNDB_KEY_MAX - 2 - 11, 1);
+    pkg_free(pkg);
+}
+END_TEST
 
 static void check_clone(int namelen, int32_t epoch, const char *version,
                         const char *release)
@@ -47,18 +145,17 @@ END_TEST
 
 /* a long version: name and version together take more than 255 bytes */
 START_TEST(test_clone_long_version) {
-    char version[151];
+    char version[121];
 
     memset(version, '1', sizeof(version) - 1);
     version[sizeof(version) - 1] = '\0';
-    check_clone(150, 0, version, "1");
+    check_clone(200, 0, version, "1");
 }
 END_TEST
 
-/* epoch, version and release that capreq_new() takes, more than 255
-   bytes with the header and a short name */
+/* the longest epoch, version and release capreq_new() takes */
 START_TEST(test_clone_long_evr) {
-    char version[225];
+    char version[CAPREQ_VR_MAX];
 
     memset(version, '1', sizeof(version) - 1);
     version[sizeof(version) - 1] = '\0';
@@ -72,5 +169,41 @@ START_TEST(test_clone_short) {
 }
 END_TEST
 
-NTEST_RUNNER("capreq", test_clone_long_name, test_clone_long_version,
-             test_clone_long_evr, test_clone_short);
+/* a version too long for a capability, set after pkg_new(): no NULL goes
+   into caps or cnfls */
+START_TEST(test_pkg_long_version_set_later) {
+    char version[CAPREQ_VR_MAX + 1];
+    struct pkg *pkg, *cpkg;
+    struct capreq *req;
+
+    memset(version, '1', sizeof(version) - 1);
+    version[sizeof(version) - 1] = '\0';
+
+    pkg = pkg_new("a", 0, "1", "1", "noarch", "linux");
+    cpkg = pkg_new("b", 0, "1", "1", "noarch", "linux");
+    expect_notnull(pkg);
+    expect_notnull(cpkg);
+    pkg->ver = version;
+    cpkg->ver = version;
+
+    expect_int(pkg_add_selfcap(pkg), 0);
+    expect_int(n_array_size(pkg->caps), 0);
+
+    pkg->cnfls = capreq_arr_new(0);
+    expect_int(pkg_add_pkgcnfl(pkg, cpkg, 0), 0);
+    expect_int(n_array_size(pkg->cnfls), 0);
+
+    req = capreq_new(NULL, "a", 0, "1", NULL, REL_GT, 0);
+    expect_int(pkg_evr_match_req(pkg, req, 0), 0);
+    capreq_free(req);
+
+    pkg_free(cpkg);
+    pkg_free(pkg);
+}
+END_TEST
+
+NTEST_RUNNER("capreq", test_new_vr_limit, test_pkg_new_vr_limit,
+             test_pkg_new_nevra_limit,
+             test_clone_long_name, test_clone_long_version,
+             test_clone_long_evr, test_clone_short,
+             test_pkg_long_version_set_later);

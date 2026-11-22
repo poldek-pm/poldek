@@ -46,7 +46,8 @@ struct alias_path {
 
 static
 tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line, const struct alias_path *path);
+                          const char *line, tn_array *a_argv,
+                          const struct alias_path *path);
 
 static
 struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
@@ -138,7 +139,9 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
 
         if (!is_break(arg, brk)) {
             int external = 0;
-            if (is_external(arg)) {
+
+            /* !command, as the first word of a command only */
+            if (n_array_size(tl) == 0 && is_external(arg)) {
                 n_array_push(tl, n_strdup("!"));
                 arg++;
                 external = 1;
@@ -379,27 +382,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         }
         msgn(2, "%s => %s\n", acmd, cmdline);
 
-        if (n_array_size(a_argv) > 1) { /* any arguments? -> pass them */
-            char *line;
-            int i, n, len;
-
-            len = strlen(cmd->cmdline) + 1;
-            /* from 1 -- skip alias */
-            for (i=1; i < n_array_size(a_argv); i++)
-                /* + quotes + space */
-                len += strlen((char*)n_array_nth(a_argv, i)) + 2 + 1;
-            len++;
-
-            line = alloca(len);
-            n = n_snprintf(line, len, "%s", cmd->cmdline);
-
-            for (i=1; i < n_array_size(a_argv); i++)
-                n += n_snprintf(&line[n], len - n, " '%s'",
-                                (char*)n_array_nth(a_argv, i));
-            cmdline = line;
-        }
-
-        ok = prepare_cmdline(cctx, cmd_chain, cmdline, &here) != NULL;
+        ok = prepare_cmdline(cctx, cmd_chain, cmdline, a_argv, &here) != NULL;
         free(expanded);
         if (!ok)
             return NULL;
@@ -408,23 +391,18 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
     return cmd_chain;
 }
 
+/* the commands of the words in tl, where a lone ; or | parts them */
 static
-tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line, const struct alias_path *path)
+tn_array *prepare_words(struct poclidek_ctx *cctx, tn_array *cmd_chain,
+                        tn_array *tl, const struct alias_path *path)
 {
-    tn_array  *arr = NULL, *tl = NULL;
+    tn_array  *arr = NULL;
     int       i, is_err = 0;
-
-    if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL) {
-        logn(LOGERR, _("%s: parse error"), line);
-        return NULL;
-    }
 
     if (n_array_size(tl) == 0)  /* empty token list */
         goto l_end;
 
 #if ENABLE_TRACE
-    printf("line = (%s)\n", line);
     for (i=0; i<n_array_size(tl); i++)
         printf("tl[%d] = %s\n", i, (char*)n_array_nth(tl, i));
 #endif
@@ -476,8 +454,36 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
 l_end:
 
     n_array_cfree(&arr);
-    n_array_cfree(&tl);
     return is_err ? NULL : cmd_chain;
+}
+
+/* the commands of line; the words of a_argv after its first, the arguments
+   an alias got, go after the words of line as they are */
+static
+tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
+                          const char *line, tn_array *a_argv,
+                          const struct alias_path *path)
+{
+    tn_array  *tl;
+    int       i;
+
+    if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL) {
+        logn(LOGERR, _("%s: parse error"), line);
+        return NULL;
+    }
+
+    for (i=1; a_argv && i < n_array_size(a_argv); i++)
+        n_array_push(tl, n_strdup(n_array_nth(a_argv, i)));
+
+#if ENABLE_TRACE
+    printf("line = (%s)\n", line);
+#endif
+
+    if (prepare_words(cctx, cmd_chain, tl, path) == NULL)
+        cmd_chain = NULL;
+
+    n_array_free(tl);
+    return cmd_chain;
 }
 
 
@@ -556,26 +562,66 @@ tn_array *divide_into_pipelines(tn_array *cmd_chain)
     return cmd_chain2;
 }
 
+/* the pipelines of cmd_chain, which goes; NULL for one that was not made */
+static tn_array *finish_cmd_chain(tn_array *cmd_chain, int is_err)
+{
+    tn_array *chain = NULL;
+
+    if (!is_err)
+        chain = divide_into_pipelines(cmd_chain);
+
+    n_array_free(cmd_chain);
+    return chain;
+}
+
 tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
 {
     tn_array  *cmd_chain;
-    int       is_err = 0;
 
     cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
-    if (prepare_cmdline(cctx, cmd_chain, line, NULL) == NULL)
-        is_err = 1;
+    return finish_cmd_chain(cmd_chain,
+                            prepare_cmdline(cctx, cmd_chain, line, NULL, NULL) == NULL);
+}
 
-    if (is_err) {
-        n_array_free(cmd_chain);
-        cmd_chain = NULL;
+/* The first argument, and one after a lone ; or |, is parsed as a line: it
+   may hold a command with its options, or all the commands. Each of the
+   others is one word of the command before it, whatever it holds. */
+tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,
+                                    const char **argv)
+{
+    tn_array  *cmd_chain, *tl;
+    int       i, is_err = 0, is_line = 1;
 
-    } else {
-        tn_array *chain = divide_into_pipelines(cmd_chain);
-        n_array_free(cmd_chain);
-        cmd_chain = chain;
+    tl = n_array_new(argc > 0 ? argc : 1, free, NULL);
+    for (i=0; i < argc; i++) {
+        if (is_line) {
+            tn_array *words;
+
+            words = n_str_etokl_ext(argv[i], "\t ", ";|", "\"'", '\\');
+            if (words == NULL) {
+                logn(LOGERR, _("%s: parse error"), argv[i]);
+                is_err = 1;
+                break;
+            }
+
+            while (n_array_size(words) > 0)
+                n_array_push(tl, n_array_shift(words));
+            n_array_free(words);
+
+        } else if (*argv[i] != '\0') {
+            n_array_push(tl, n_strdup(argv[i]));
+        }
+
+        if (n_array_size(tl) > 0)
+            is_line = is_break(n_array_nth(tl, n_array_size(tl) - 1), ";|");
     }
 
-    return cmd_chain;
+    cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
+    if (!is_err)
+        is_err = prepare_words(cctx, cmd_chain, tl, NULL) == NULL;
+    n_array_free(tl);
+
+    return finish_cmd_chain(cmd_chain, is_err);
 }
 
 #if 0                           /* unused */

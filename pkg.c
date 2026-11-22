@@ -32,6 +32,7 @@
 #include "log.h"
 #include "misc.h"
 #include "capreq.h"
+#include "capreq_intern.h"
 #include "pkgfl.h"
 #include "pkgu.h"
 #include "pkg.h"
@@ -40,6 +41,11 @@
 #include "pkgcmp.h"
 #include "pkg_ver_cmp.h"
 #include "thread.h"
+
+/* name, epoch, version, release, arch and os of a package together: its
+   pndir key, plus 31 bytes of a language for its description key or 13 of
+   the dirindex prefix and build time, fits in TNDB_KEY_MAX */
+#define PKG_NEVRA_MAX 224
 
 int poldek_conf_PROMOTE_EPOCH = 0;
 int poldek_conf_MULTILIB = 0;
@@ -52,28 +58,80 @@ static tn_array *operatingsystem_a = NULL;
 
 struct an_arch {
     int score;
-    int index;
+    int id;
+    int len;
     char arch[0];
 };
 
 #ifdef ENABLE_THREADS
 static pthread_mutex_t arch_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t os_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int atfork_registered;
+
+/* a name is registered under its mutex whether threads load or not: a
+   fork() waits for it, so a child gets the lists whole */
+# define registry_lock(m)   pthread_mutex_lock(m)
+# define registry_unlock(m) pthread_mutex_unlock(m)
+
+/* a child has only the thread that called fork(): one forked while another
+   thread held a mutex would find it held for good, so fork() waits for them */
+static void registry_atfork_lock(void)
+{
+    pthread_mutex_lock(&arch_mutex);
+    pthread_mutex_lock(&os_mutex);
+}
+
+static void registry_atfork_unlock(void)
+{
+    pthread_mutex_unlock(&os_mutex);
+    pthread_mutex_unlock(&arch_mutex);
+}
+
+/* by poldeklib_init(), so before any name is registered and any thread of
+   the library runs; registered once, however many times the library is
+   set up, and tried again after a failure */
+int pkg__registry_init(void)
+{
+    int rc;
+
+    if (atfork_registered)
+        return 1;
+
+    rc = pthread_atfork(registry_atfork_lock, registry_atfork_unlock,
+                        registry_atfork_unlock);
+    if (rc != 0) {
+        logn(LOGERR, "pthread_atfork: %s", strerror(rc));
+        return 0;
+    }
+    atfork_registered = 1;
+
+    return 1;
+}
+#else
+# define registry_lock(m)   ((void) 0)
+# define registry_unlock(m) ((void) 0)
+
+int pkg__registry_init(void)
+{
+    return 1;
+}
 #endif
 
+/* the last one registered, read without the mutex: published with release
+   once filled in, so a reader that acquires it sees it whole */
 static struct an_arch *last_arch = NULL;
 
 static
-int pkgmod_register_arch(const char *arch)
+struct an_arch *pkgmod_register_arch(const char *arch)
 {
     struct an_arch *an_arch;
 
-    an_arch = __atomic_load_n(&last_arch, __ATOMIC_RELAXED);
+    an_arch = __atomic_load_n(&last_arch, __ATOMIC_ACQUIRE);
     if (an_arch && strcmp(an_arch->arch, arch) == 0) {
-        return an_arch->index;
+        return an_arch;
     }
 
-    mutex_lock(&arch_mutex);
+    registry_lock(&arch_mutex);
 
     if (architecture_h == NULL) {
         architecture_h = n_hash_new(21, free);
@@ -85,6 +143,7 @@ int pkgmod_register_arch(const char *arch)
         int len = strlen(arch);
 
         an_arch = n_malloc(sizeof(*an_arch) + len + 1);
+        an_arch->len = len;
 
         an_arch->score = pm_architecture_score(arch);
         n_assert(an_arch->score >= 0);
@@ -99,65 +158,76 @@ int pkgmod_register_arch(const char *arch)
         n_array_push(architecture_a, an_arch);
 
         /* +1 in fact; 0 means no arch */
-        an_arch->index = n_array_size(architecture_a);
-        n_assert(an_arch->index < UINT16_MAX);
+        an_arch->id = n_array_size(architecture_a);
+        n_assert(an_arch->id < UINT16_MAX);
         n_hash_insert(architecture_h, an_arch->arch, an_arch);
 
-        __atomic_store_n(&last_arch, an_arch, __ATOMIC_RELAXED);
+        __atomic_store_n(&last_arch, an_arch, __ATOMIC_RELEASE);
     }
 
-    mutex_unlock(&arch_mutex);
+    registry_unlock(&arch_mutex);
 
-    return an_arch->index;
+    return an_arch;
+}
+
+/* the array grows (realloc) as a loading thread registers a new arch, so it
+   is read under the mutex too; an entry itself never moves */
+static struct an_arch *arch_entry(int index)
+{
+    struct an_arch *a;
+
+    mutex_lock(&arch_mutex);
+    a = n_array_nth(architecture_a, index - 1);
+    mutex_unlock(&arch_mutex);
+    n_assert(a);
+
+    return a;
 }
 
 const char *pkg_arch(const struct pkg *pkg)
 {
-    if (pkg->_arch) {
-        struct an_arch *a = n_array_nth(architecture_a, pkg->_arch - 1);
-        n_assert(a);
-        return a->arch;
-    }
+    if (pkg->_arch)
+        return arch_entry(pkg->_arch)->arch;
 
     return NULL;
 }
 
 int pkg_arch_score(const struct pkg *pkg)
 {
-    struct an_arch *a;
-
     if (!pkg->_arch)
         return 0;
 
-    a = n_array_nth(architecture_a, pkg->_arch - 1);
-    return a->score;
+    return arch_entry(pkg->_arch)->score;
 }
 
 int pkg_set_arch(struct pkg *pkg, const char *arch)
 {
-    pkg->_arch = pkgmod_register_arch(arch);
+    struct an_arch *an_arch = pkgmod_register_arch(arch);
+    pkg->_arch = an_arch->id;
     return 1;
 }
 
 struct an_os {
     //int score;
-    int index;
+    int id;
+    int len;
     char os[0];
 };
 
+/* as last_arch */
 static struct an_os *last_os = NULL;
 
 static
-int pkgmod_register_os(const char *os)
+struct an_os *pkgmod_register_os(const char *os)
 {
     struct an_os *an_os;
 
-    an_os = __atomic_load_n(&last_os, __ATOMIC_RELAXED);
+    an_os = __atomic_load_n(&last_os, __ATOMIC_ACQUIRE);
     if (an_os && strcmp(an_os->os, os) == 0) {
-        return an_os->index;
+        return an_os;
     }
 
-    mutex_lock(&os_mutex);
+    registry_lock(&os_mutex);
 
     if (operatingsystem_h == NULL) {
         operatingsystem_h = n_hash_new(21, free);
@@ -169,41 +239,70 @@ int pkgmod_register_os(const char *os)
         int len = strlen(os);
 
         an_os = n_malloc(sizeof(*an_os) + len + 1);
-
-        //an_os->score = pm__score(os);
-        //n_assert(an_os->score >= 0);
-        //if (!an_os->score) an_os->score = INT_MAX - 1;
-
+        an_os->len = len;
         memcpy(an_os->os, os, len + 1);
+
         n_array_push(operatingsystem_a, an_os);
         /* +1 in fact; 0 means no os */
-        an_os->index = n_array_size(operatingsystem_a);
+        an_os->id = n_array_size(operatingsystem_a);
+
         n_hash_insert(operatingsystem_h, an_os->os, an_os);
 
-        __atomic_store_n(&last_os, an_os, __ATOMIC_RELAXED);
+        __atomic_store_n(&last_os, an_os, __ATOMIC_RELEASE);
     }
 
-    mutex_unlock(&os_mutex);
+    registry_unlock(&os_mutex);
 
-    return an_os->index;
+    return an_os;
+}
+
+/* as arch_entry() */
+static struct an_os *os_entry(int index)
+{
+    struct an_os *o;
+
+    mutex_lock(&os_mutex);
+    o = n_array_nth(operatingsystem_a, index - 1);
+    mutex_unlock(&os_mutex);
+    n_assert(o);
+
+    return o;
 }
 
 const char *pkg_os(const struct pkg *pkg)
 {
-    if (pkg->_os) {
-        struct an_os *o = n_array_nth(operatingsystem_a, pkg->_os - 1);
-        n_assert(o);
-        return o->os;
-    }
+    if (pkg->_os)
+        return os_entry(pkg->_os)->os;
+
     return NULL;
 }
 
 int pkg_set_os(struct pkg *pkg, const char *os)
 {
-    pkg->_os = pkgmod_register_os(os);
+    struct an_os *an_os = pkgmod_register_os(os);
+    pkg->_os = an_os->id;
     return 1;
 }
 
+/* true if the index keys of a package of these lengths fit: those of
+   pndir_make_pkgkey(), "name#epoch:version-release#arch:os", and in the
+   dirindex that with a prefix and the build time, take up to TNDB_KEY_MAX
+   bytes; logs a warning about name if not */
+static
+int pkg__check_nevra_limit(const char *name, int nl, int32_t e, int vl, int rl,
+                           int al, int ol)
+{
+    int size = nl + 1 + (e ? 12 : 0) + vl + 1 + rl +
+        al + (al == 0 ? 0 : 1) +
+        ol + (ol == 0 ? 0 : 1);
+
+    if (size <= PKG_NEVRA_MAX)
+        return 1;
+
+    logn(LOGWARN, _("%s: name, epoch, version, release, arch and os together "
+                    "longer than %d characters, ignored"), name, PKG_NEVRA_MAX);
+    return 0;
+}
 
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new_ext(tn_alloc *na,
@@ -236,6 +335,10 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 
     release_len = strlen(release);
     len += release_len + 1;
+
+    /* no capability of the package's own version could be made */
+    if (!capreq__check_vr_limit(name, version_len + release_len))
+        return NULL;
 
     if (fn && arch) {           /* compare filename with "standard" name */
         //fn = n_basenam(fn);
@@ -273,9 +376,18 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 
     len += len + 1;             /* for id (nvr) */
 
-    if (poldek_conf_MULTILIB && arch) {
-        arch_len = strlen(arch);
+    const struct an_arch *an_arch = arch ? pkgmod_register_arch(arch) : NULL;
+    const struct an_os *an_os = os ? pkgmod_register_os(os) : NULL;
+
+    if (an_arch)                /* in the pndir key, multilib or not */
+        arch_len = an_arch->len;
+
+    if (poldek_conf_MULTILIB && arch)
         len += arch_len + 1;
+
+    if (!pkg__check_nevra_limit(name, name_len, epoch, version_len, release_len,
+                                arch_len, an_os ? an_os->len : 0)) {
+        return NULL;
     }
 
     len += 1;
@@ -326,11 +438,11 @@ struct pkg *pkg_new_ext(tn_alloc *na,
         *buf++ = '\0';
     }
 
-    if (arch)
-        pkg->_arch = pkgmod_register_arch(arch);
+    if (an_arch)
+        pkg->_arch = an_arch->id;
 
-    if (os)
-        pkg->_os = pkgmod_register_os(os);
+    if (an_os)
+        pkg->_os = an_os->id;
 
     pkg->_nvr = buf;
     memcpy(buf, name, name_len);
@@ -525,8 +637,12 @@ int pkg_add_selfcap(struct pkg *pkg)
         return 1;
     }
 
+    /* NULL only if pkg->ver and pkg->rel were changed after pkg_new_ext(),
+       which refuses a version capreq_new() would not take */
     selfcap = capreq_new(pkg->na, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                          REL_EQ, 0);
+    if (selfcap == NULL)
+        return 0;
 
     n_array_push(pkg->caps, selfcap);
     n_array_isort(pkg->caps);
@@ -683,6 +799,8 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, unsigned 
 
     cap = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                      REL_EQ, 0);
+    if (cap == NULL)            /* see pkg_add_selfcap() */
+        return 0;
 
     if (flags & (POLDEK_MA_PROMOTE_VERSION | POLDEK_MA_PROMOTE_EPOCH)) {
         rc = do_pkg_evr_match_req(cap, req, 0) ? 1 : 0;
@@ -1030,8 +1148,10 @@ int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
                           cpkg->rel, REL_EQ,
                           (isbastard ? CAPREQ_BASTARD : 0));
 
-        n_array_push(pkg->cnfls, cnfl);
-        n_array_sort(pkg->cnfls);
+        if (cnfl) {             /* see pkg_add_selfcap() */
+            n_array_push(pkg->cnfls, cnfl);
+            n_array_sort(pkg->cnfls);
+        }
     }
 
     return cnfl != NULL;

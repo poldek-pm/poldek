@@ -727,8 +727,11 @@ static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
 
         if (poldek_util_parse_evr(p, &epoch, &ver, &rel)) {
             cr = cr_evr = capreq_new(NULL, tmp, epoch, ver, rel, REL_EQ, 0);
-            DBGF("cap=%s\n", capreq_snprintf_s(cr));
+            DBGF("cap=%s\n", cr ? capreq_snprintf_s(cr) : "(null)");
         }
+
+        if (cr == NULL)         /* an invalid or too long EVR: no package */
+            return 0;
     }
 
     if (do_resolve_package(uctx, ts, mask, cr, arch))

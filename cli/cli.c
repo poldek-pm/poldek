@@ -879,18 +879,17 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     return rc;
 }
 
-int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                         const char *cmdline, struct cmd_pipe *cmd_pipe)
+/* runs cmd_chain, which goes; 0 for one that was not made */
+static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
+                          tn_array *cmd_chain, struct cmd_pipe *cmd_pipe)
 {
-    tn_array              *cmd_chain;
     int                   rc = 0, i, verbose;
+
+    if (cmd_chain == NULL)
+        return 0;
 
     /* keep verbose setting as it changes when '-q' option is used */
     verbose = poldek_verbose();
-
-    cmd_chain = poclidek_prepare_cmdline(cctx, cmdline);
-    if (cmd_chain == NULL)
-        return 0;
 
     for (i=0; i < n_array_size(cmd_chain); i++) {
         struct cmd_chain_ent  *ent;
@@ -914,6 +913,13 @@ int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     return rc;
 }
 
+int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
+                         const char *cmdline, struct cmd_pipe *cmd_pipe)
+{
+    return exec_cmd_chain(cctx, ts, poclidek_prepare_cmdline(cctx, cmdline),
+                          cmd_pipe);
+}
+
 int poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                       const char *cmdline)
 {
@@ -924,20 +930,8 @@ int poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 int do_poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, int argc,
                      const char **argv, struct cmd_pipe *pipe)
 {
-    char *cmdline;
-    int  len, n, i ;
-
-    len = 0;
-    for (i=0; i < argc; i++)
-        len += 2 * strlen(argv[i]);
-
-    cmdline = alloca(len + 1);
-    n = 0;
-
-    for (i=0; i < argc; i++)
-        n += n_snprintf(&cmdline[n], len - n, "%s ", argv[i]);
-
-    return do_poclidek_execline(cctx, ts, cmdline, pipe);
+    return exec_cmd_chain(cctx, ts,
+                          poclidek_prepare_cmd_argv(cctx, argc, argv), pipe);
 }
 
 int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts,
