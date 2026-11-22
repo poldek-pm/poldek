@@ -205,6 +205,8 @@ void arg_packages_free(struct arg_packages *aps)
     n_array_free(aps->package_files);
     n_hash_free(aps->resolved_caps);
     n_array_free(aps->resolved_pkgs);
+    if (aps->pset_virtuals)
+        n_hash_free(aps->pset_virtuals);
     if (aps->na)
         n_alloc_free(aps->na);
     free(aps);
@@ -223,6 +225,51 @@ void arg_packages_clean(struct arg_packages *aps)
 void arg_packages__clean_masks(struct arg_packages *aps)
 {
     n_array_clean(aps->package_masks);
+}
+
+static struct pset_virtual_ent *pset_virtual_ent_dup(const struct pset_virtual_ent *ent)
+{
+    struct pset_virtual_ent *dup;
+    int len = strlen(ent->virtname) + 1;
+
+    dup = n_malloc(sizeof(*dup) + len + (ent->mask ? strlen(ent->mask) + 1 : 0));
+    dup->virtname = strcpy(dup->_buf, ent->virtname);
+    dup->mask = ent->mask ? strcpy(&dup->_buf[len], ent->mask) : NULL;
+    return dup;
+}
+
+void arg_packages__copy_args(struct arg_packages *aps, const struct arg_packages *src)
+{
+    int i;
+
+    n_assert(arg_packages_size(aps) == 0);
+
+    /* as src has them: once set up they are not read again, and a list or
+       a file that has changed since gives the copy what it gave src */
+    aps->flags = src->flags;
+    arg_packages_add_pkgs(aps, src->packages);
+
+    for (i=0; i < n_array_size(src->package_masks); i++)
+        n_array_push(aps->package_masks, n_strdup(n_array_nth(src->package_masks, i)));
+
+    for (i=0; i < n_array_size(src->package_lists); i++)
+        n_array_push(aps->package_lists, n_strdup(n_array_nth(src->package_lists, i)));
+
+    for (i=0; i < n_array_size(src->package_files); i++)
+        n_array_push(aps->package_files, n_strdup(n_array_nth(src->package_files, i)));
+
+    if (src->pset_virtuals) {
+        tn_array *keys = n_hash_keys(src->pset_virtuals);
+
+        aps->pset_virtuals = n_hash_new(16, free);
+        for (i=0; i < n_array_size(keys); i++) {
+            struct pset_virtual_ent *ent;
+
+            ent = pset_virtual_ent_dup(n_hash_get(src->pset_virtuals, n_array_nth(keys, i)));
+            n_hash_insert(aps->pset_virtuals, ent->virtname, ent);
+        }
+        n_array_free(keys);
+    }
 }
 
 int arg_packages_size(struct arg_packages *aps)

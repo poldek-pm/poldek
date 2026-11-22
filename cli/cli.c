@@ -38,6 +38,7 @@
 #include "cli.h"
 #include "cmd_chain.h"
 #include "cmd_pipe.h"
+#include "poldek_intern.h"      /* for poldek__ts_new_like() */
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 
@@ -798,10 +799,12 @@ static char **a_argv_to_argv(tn_array *a_argv, char **argv)
     return argv;
 }
 
-/* executes command chain (a pipeline) */
+/* executes command chain (a pipeline); own_ts: the commands do not run on
+   ts but on transactions like it, as others are still to start from ts */
 static
 int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                          struct cmd_chain_ent *ent, struct cmd_pipe *cmd_pipe)
+                          int own_ts, struct cmd_chain_ent *ent,
+                          struct cmd_pipe *cmd_pipe)
 {
     struct cmdctx  cmdctx;
     char **argv;
@@ -819,8 +822,15 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     cmdctx.cmd = ent->cmd;
     cmdctx.cctx = cctx;
 
-    if ((cmdctx.ts = ts) == NULL)
+    /* every command of a line starts from ts as the caller gave it, so the
+       arguments and options of one are not those of the next; the last runs
+       on ts itself, and leaves the caller what it has done */
+    if (ts == NULL)
         cmdctx.ts = poldek_ts_new(cctx->ctx, 0);
+    else if (own_ts || ent->next_piped)
+        cmdctx.ts = poldek__ts_new_like(ts);
+    else
+        cmdctx.ts = ts;
 
     if (ent->next_piped) {
         ent->pipe_right = cmd_pipe_new();
@@ -867,14 +877,14 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     rc = do_exec_cmd_ent(&cmdctx, n_array_size(ent->a_argv), argv);
 
  l_end:
-    if (ts == NULL)
+    if (cmdctx.ts != ts)
         poldek_ts_free(cmdctx.ts);
 
     if (cmdctx.pipe_left)
         cmd_pipe_free(cmdctx.pipe_left);
 
     if (runit && ent->next_piped)
-        return poclidek_exec_cmd_ent(cctx, ts, ent->next_piped, cmd_pipe);
+        return poclidek_exec_cmd_ent(cctx, ts, own_ts, ent->next_piped, cmd_pipe);
 
     return rc;
 }
@@ -900,10 +910,9 @@ static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
             continue;
         }
 
-        if (cmd_pipe && i == n_array_size(cmd_chain) - 1)
-            rc = poclidek_exec_cmd_ent(cctx, ts, ent, cmd_pipe);
-        else
-            rc = poclidek_exec_cmd_ent(cctx, ts, ent, NULL);
+        int last = (i == n_array_size(cmd_chain) - 1);
+
+        rc = poclidek_exec_cmd_ent(cctx, ts, !last, ent, last ? cmd_pipe : NULL);
     }
 
     /* restore verbose setting */

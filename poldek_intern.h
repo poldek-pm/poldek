@@ -79,6 +79,15 @@ void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
 /* register/unregister a TS_CONFIG_LATER ts for sync at poldek_setup() */
 void poldek__ts_defer(struct poldek_ctx *ctx, struct poldek_ts *ts);
+
+#ifndef EXPORT
+#  define EXPORT extern
+#endif
+
+/* a new transaction as ts was handed over: its settings (type, flags,
+   options, directories, rpm options, masks) and the packages it was given,
+   with nothing resolved or run; for the cli library */
+EXPORT struct poldek_ts *poldek__ts_new_like(const struct poldek_ts *ts);
 void poldek__ts_undefer(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
 struct pkgdb;

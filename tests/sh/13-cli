@@ -370,6 +370,42 @@ testCmdQuotedPipeOrSemicolon()
     assertEquals "abc-1-1 not found ($out)" "0" "$?"
 }
 
+# each command of a line starts with the settings poldek was given: neither
+# the packages nor the options of the command before it are its own
+testCmdsOfLineShareNothing()
+{
+    skip_if_rpm_testing_off && return
+
+    local out
+
+    build a
+    build b
+    build c
+    build y -r nosuchcap
+    index
+
+    out=$($POLDEK -q --cmd "ls -q a ; ls -q b ; ls -q c" 2>&1)
+    assertEquals "ls ; ls ; ls" "a-1-1 b-1-1 c-1-1" "$(echo "$out" | grep -o '^[abc]-1-1' | xargs)"
+
+    out=$($POLDEK -q ls -q a ";" ls -q b 2>&1)
+    assertEquals "ls ; ls as arguments" "a-1-1 b-1-1" "$(echo "$out" | grep -o '^[abc]-1-1' | xargs)"
+
+    out=$($POLDEK -q --cmd "ls -q a ; ls -q b | desc" 2>&1)
+    assertEquals "ls ; ls | desc" "b-1-1" "$(echo "$out" | grep '^Package:' | grep -o '[ab]-1-1' | xargs)"
+
+    # --test of the first is not the second's
+    out=$($POLDEK --cmd "install --test a ; install b" 2>&1)
+    rpm_state_check "b" "a"
+
+    # nor is --nodeps
+    out=$($POLDEK --cmd "install --nodeps c ; install y" 2>&1)
+    rpm_state_check "b,c" "y"
+
+    # an option of poldek is every command's
+    out=$($POLDEK --test --cmd "install a ; uninstall b" 2>&1)
+    rpm_state_check "b,c" "a"
+}
+
 # in multilib mode, where package ids end in .ARCH, ls still finds a
 # package by name-version-release
 testLsNvrMultilib()

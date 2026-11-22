@@ -67,6 +67,9 @@ int arg_packages__validate_with_stubs(struct arg_packages *aps, tn_array *stubpk
    flags and see all architectures. */
 unsigned arg_packages_resolv_flags_install(void);
 void arg_packages__clean_masks(struct arg_packages *aps);
+/* gives aps, an empty one, what src was given, set up if src is: not what
+   it was resolved to */
+void arg_packages__copy_args(struct arg_packages *aps, const struct arg_packages *src);
 
 EXPORT int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
                                 struct pkgset *ps, unsigned flags);

@@ -294,6 +294,50 @@ static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     return 1;
 }
 
+static void set_str(char **dst, const char *src)
+{
+    n_cfree(dst);
+    cp_str(dst, src);
+}
+
+static void set_strings(tn_array **dst, const tn_array *src)
+{
+    n_array_cfree(dst);
+    *dst = n_array_dup(src, (tn_fn_dup)strdup);
+}
+
+struct poldek_ts *poldek__ts_new_like(const struct poldek_ts *ts)
+{
+    struct poldek_ts *nts;
+
+    n_assert(ts->ctx);          /* the internal one of a context is its own */
+    nts = poldek_ts_new(ts->ctx, 0);
+
+    nts->type = ts->type;
+    set_str(&nts->typenam, ts->typenam);
+    nts->_flags = ts->_flags;
+    memcpy(nts->_opvect, ts->_opvect, sizeof(nts->_opvect));
+    memcpy(nts->_opvect_touched, ts->_opvect_touched, sizeof(nts->_opvect_touched));
+    nts->uninstall_greedy_deep = ts->uninstall_greedy_deep;
+
+    set_str(&nts->rootdir, ts->rootdir);
+    set_str(&nts->fetchdir, ts->fetchdir);
+    set_str(&nts->cachedir, ts->cachedir);
+    set_str(&nts->dumpfile, ts->dumpfile);
+    set_str(&nts->prifile, ts->prifile);
+    set_str(&nts->depgraph, ts->depgraph);
+
+    set_strings(&nts->rpmopts, ts->rpmopts);
+    set_strings(&nts->rpmacros, ts->rpmacros);
+    set_strings(&nts->hold_patterns, ts->hold_patterns);
+    set_strings(&nts->ign_patterns, ts->ign_patterns);
+    set_strings(&nts->exclude_path, ts->exclude_path);
+
+    arg_packages__copy_args(nts->aps, ts->aps);
+
+    return nts;
+}
+
 static void poldek_ts_destroy(struct poldek_ts *ts)
 {
     if (ts->ctx && (ts->_iflags & TS_CONFIG_LATER))
@@ -315,6 +359,7 @@ static void poldek_ts_destroy(struct poldek_ts *ts)
     n_cfree(&ts->cachedir);
     n_cfree(&ts->dumpfile);
     n_cfree(&ts->prifile);
+    n_cfree(&ts->depgraph);
     n_cfree(&ts->typenam);
 
     n_array_cfree(&ts->rpmopts);
