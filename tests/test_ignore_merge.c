@@ -1,5 +1,6 @@
 #include "test.h"
 #include "poldek.h"
+#include "pkgdir/pkgdir.h"
 #include "pkgdir/source.h"
 #include "pkg.h"
 #include "pkgmisc.h"
@@ -63,28 +64,37 @@ START_TEST (test_ignore_merge) {
 END_TEST
 
 /* a mask is matched with the whole name-version-release, also of a package
-   with no arch and of one whose name is longer than the matcher's buffer */
+   with no arch and of one whose source has a name longer than the matcher's
+   buffer */
 START_TEST (test_mask_long_name_no_arch) {
     struct pkgscore_s psc;
+    struct pkgdir dir;
     struct pkg *pkg;
     char name[601], mask[640];
 
     pkg = pkg_new("foo", 0, "1", "1", NULL, NULL);
+    fail_if(pkg == NULL, "pkg_new failed");
     pkgscore_match_init(&psc, pkg);
     expect_int(pkgscore_match(&psc, "foo"), 1);
     expect_int(pkgscore_match(&psc, "foo-1-1"), 1);
     expect_int(pkgscore_match(&psc, "foo-1"), 0);
-    pkg_free(pkg);
 
     memset(name, 'n', sizeof(name) - 1);
     name[sizeof(name) - 1] = '\0';
-    pkg = pkg_new(name, 0, "1", "1", NULL, NULL);
+    memset(&dir, 0, sizeof(dir));
+    dir.name = name;
+    pkg->pkgdir = &dir;
     pkgscore_match_init(&psc, pkg);
-    expect_int(pkgscore_match(&psc, name), 1);
-    n_snprintf(mask, sizeof(mask), "%s-1-1", name);
+    expect_int(pkgscore_match(&psc, "foo"), 1);
+    expect_int(pkgscore_match(&psc, "foo-1-1"), 1);
+    expect_int(pkgscore_match(&psc, "foo-1"), 0);
+    n_snprintf(mask, sizeof(mask), "%s:foo", name);
     expect_int(pkgscore_match(&psc, mask), 1);
-    n_snprintf(mask, sizeof(mask), "%s-1", name);
+    n_snprintf(mask, sizeof(mask), "%s:foo-1-1", name);
+    expect_int(pkgscore_match(&psc, mask), 1);
+    n_snprintf(mask, sizeof(mask), "%s:foo-1", name);
     expect_int(pkgscore_match(&psc, mask), 0);
+    pkg->pkgdir = NULL;
     pkg_free(pkg);
 }
 END_TEST
