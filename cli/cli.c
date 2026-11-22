@@ -809,6 +809,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     struct cmdctx  cmdctx;
     char **argv;
     int rc = 0, runit = 1;
+    int verbose = poldek_verbose(); /* -q and -v of a command are its own */
 
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
@@ -877,6 +878,8 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     rc = do_exec_cmd_ent(&cmdctx, n_array_size(ent->a_argv), argv);
 
  l_end:
+    poldek_set_verbose(verbose);
+
     if (cmdctx.ts != ts)
         poldek_ts_free(cmdctx.ts);
 
@@ -893,13 +896,10 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                           tn_array *cmd_chain, struct cmd_pipe *cmd_pipe)
 {
-    int                   rc = 0, i, verbose;
+    int                   rc = 0, i;
 
     if (cmd_chain == NULL)
         return 0;
-
-    /* keep verbose setting as it changes when '-q' option is used */
-    verbose = poldek_verbose();
 
     for (i=0; i < n_array_size(cmd_chain); i++) {
         struct cmd_chain_ent  *ent;
@@ -914,9 +914,6 @@ static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
         rc = poclidek_exec_cmd_ent(cctx, ts, !last, ent, last ? cmd_pipe : NULL);
     }
-
-    /* restore verbose setting */
-    poldek_set_verbose(verbose);
 
     n_array_free(cmd_chain);
     return rc;

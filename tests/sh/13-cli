@@ -406,6 +406,26 @@ testCmdsOfLineShareNothing()
     rpm_state_check "b,c" "a"
 }
 
+# -q of a command does not quieten the commands after it
+testCmdQuietOnlyForItself()
+{
+    skip_if_rpm_testing_off && return
+
+    local out
+
+    build a
+    build b
+    index
+
+    out=$($POLDEK --cmd "install -q --test a ; install --test b" 2>&1)
+    echo "$out" | grep -q 'There are 1 package to install'
+    assertEquals "install after install -q said nothing ($out)" "0" "$?"
+
+    out=$($POLDEK --cmd "ls -q a | install --test" 2>&1)
+    echo "$out" | grep -q 'There are 1 package to install'
+    assertEquals "install after ls -q | said nothing ($out)" "0" "$?"
+}
+
 # in multilib mode, where package ids end in .ARCH, ls still finds a
 # package by name-version-release
 testLsNvrMultilib()
