@@ -546,26 +546,34 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
     while (*tl) {
         const char *p, *vv, *v, *var;
         char val[256], buf[PATH_MAX];
-        int  v_len;
+        int  v_len, braced = 0;
 
 
         p = vv = v = *tl;
         DBGF("token: %s\n", *tl);
         tl++;
 
-        if (*vv == '{')
+        if (*vv == '{') {
             v++;
+            braced = 1;
+        }
 
+        /* an environment variable's name takes '_' as the shell's does
+           ($releasever_major); "%1_x" of an alias stays %1 and "_x" */
         vv = v;
-
         v_len = 0;
-        while (isalnum(*vv)) {
+        while (isalnum(*vv) || (varmark == '$' && *vv == '_')) {
             vv++;
             v_len++;
         }
 
-        if (*vv == '}')
+        if (braced) {
+            if (*vv != '}') {   /* "${a" or "${a.b}" is not a variable */
+                n += n_snprintf(&dest[n], size - n, "%c%s", varmark, p);
+                continue;
+            }
             vv++;
+        }
 
         if (v_len + 1 > (int)sizeof(val))
             return src;
