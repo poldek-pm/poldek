@@ -852,6 +852,10 @@ testSourceIgnoreWithStubIndex()
         assertEquals "$type: ignore = a, a warm cache ($out)" "b-1-1" "$shown"
         echo "$out" | grep -q 'Loading \[' && fail "$type: the source was loaded, not its stub index ($out)"
 
+        ls_source $type "ignore = s:a"
+        assertEquals "$type: ignore = s:a, a warm cache ($out)" "b-1-1" "$shown"
+        echo "$out" | grep -q 'Loading \[' && fail "$type: the source was loaded, not its stub index ($out)"
+
         ls_source $type ""
         assertEquals "$type: no mask, a warm cache ($out)" "a-1-1 b-1-1" "$shown"
         echo "$out" | grep -q 'Loading \[' && fail "$type: the source was loaded, not its stub index ($out)"

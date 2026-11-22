@@ -319,3 +319,32 @@ int packages_score_ignore(tn_array *pkgs, tn_array *patterns, int remove)
 
     return n - n_array_size(pkgs);
 }
+
+/* removes from pkgs those the masks hide in the source of that name: for
+   packages with no pkgdir, as those of a stub index */
+void poldek__ignore_packages_of_source(tn_array *pkgs, const tn_array *masks,
+                                       const char *source)
+{
+    char sbuf[512];
+    int i, j;
+
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        size_t size = forms_size(source, pkg), off;
+        char *buf = size > sizeof(sbuf) ? n_malloc(size) : sbuf;
+
+        off = snprintf_forms(buf, size, source, pkg);
+        for (j=0; j < n_array_size(masks); j++) {
+            if (match_forms(buf, off, pkg, n_array_nth(masks, j))) {
+                msgn(3, "ignored %s", pkg_id(pkg));
+                pkg_score(pkg, PKG_IGNORED);
+                break;
+            }
+        }
+
+        if (buf != sbuf)
+            free(buf);
+    }
+
+    n_array_remove_ex(pkgs, NULL, (tn_fn_cmp)cmp_isignored);
+}

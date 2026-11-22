@@ -146,8 +146,11 @@ tn_array *poldek_load_stubs(struct poldek_ctx *ctx)
             return 0;
         }
 
+        /* the packages of a stub index have no pkgdir to take the name
+           of their source from */
         if (do_ignore && n_array_size(src->ign_patterns) > 0)
-            packages_score_ignore(pkgs, src->ign_patterns, 1);
+            poldek__ignore_packages_of_source(pkgs, src->ign_patterns,
+                                              src->name ? src->name : "");
 
         /* as a load of the source: its masks first, then one of each
            package; the stub index has them in the order of that choice */
