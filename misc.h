@@ -23,6 +23,7 @@
 
 #include <vfile/p_open.h>
 #include <trurl/narray.h>
+#include <trurl/nbuf.h>
 
 int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size);
 
@@ -55,6 +56,27 @@ int util__mksubdir(const char *path, const char *dn);
 int util__mkdir_p(const char *path, const char *dn);
 
 char *util__abs_path(/*const */char *path);
+
+/* the syntax util__expand_vars() takes, besides "<mark>{name}" */
+#define UTIL__EXPAND_BARE      (1 << 0) /* <mark>name */
+#define UTIL__EXPAND_DEFAULTS  (1 << 1) /* ${name:-word} and ${name:+word} */
+#define UTIL__EXPAND_ESCAPES   (1 << 2) /* \<mark> is <mark>, \\ is \ */
+
+struct util__expand {
+    char       mark;            /* '$' or '%' */
+    unsigned   flags;           /* UTIL__EXPAND_* */
+    const char *xchars;         /* a name's characters besides alnum */
+    /* the value of name, NULL if it is not set */
+    const char *(*get)(const char *name, void *ctx);
+    /* what an unset name becomes; NULL leaves it as written */
+    void       (*unset)(tn_buf *out, const char *name, void *ctx);
+    void       *ctx;
+};
+
+/* src with its variables expanded, NUL-terminated (n_buf_ptr() is the
+   string); the caller frees it. A "<mark>{" that is not a variable (no '}',
+   a character a name does not take) is left as written. */
+tn_buf *util__expand_vars(const char *src, const struct util__expand *ex);
 
 void packages_display_summary(int verbose_l, const char *prefix, tn_array *pkgs,
                               int parseable);

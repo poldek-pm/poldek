@@ -37,7 +37,11 @@ EXPORT int poldek_util_parse_bool3(const char *v);
 /* remove used variables from varh */
 #define POLDEK_UTIL_EXPANDVARS_RMUSED (1 << 0)
 
-/* expands "foo %{foo} bar */
+/* src with its "<varmark>name" and "<varmark>{name}" expanded into dest:
+   with '$' (or '\0') from the environment, a name of alnum and '_'; with
+   another mark from varh, a name of alnum. An unset name, and a
+   "<varmark>{" with no '}' or with a character a name does not take, are
+   left as written. Returns src when it has no varmark, dest otherwise. */
 EXPORT const char *poldek_util_expand_vars(char *dest, int size, const char *src,
                                     char varmark, tn_hash *varh,
                                     unsigned flags);
