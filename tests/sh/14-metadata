@@ -226,6 +226,32 @@ testUpRefreshesStubIndex()
     assertEquals "ls should list the renamed package" "1" "$n"
 }
 
+# --up of a primary.xml that passes its digest but cannot be loaded writes
+# no stub index, which would be an empty one
+testUpUnloadableWritesNoStubIndex()
+{
+    local dir="$TMPDIR/meta-up-unloadable"
+    local src="m,type=metadata test://$dir/"
+    local primary old new stub
+
+    rm -rf $dir $CACHEDIR/*
+    mkdir -p $dir
+    cp -r metadata/repo_02/repodata $dir/ || fail "cp failed"
+    primary=$(ls $dir/repodata/*-primary.xml.gz)
+    old=$(sha256sum < $primary | cut -d' ' -f1)
+    echo '<metadata' | gzip -n > $dir/primary.gz
+    new=$(sha256sum < $dir/primary.gz | cut -d' ' -f1)
+    rm -f $primary
+    mv $dir/primary.gz $dir/repodata/$new-primary.xml.gz
+    sed -i "s/$old/$new/g" $dir/repodata/repomd.xml
+
+    $POLDEK_RAW_UP -Osource="$src" --up
+    # this source's only: $CACHEDIR/* leaves the hidden directories of the
+    # other ones (/__w/... of a CI checkout gives ..w...)
+    stub=$(find $CACHEDIR -path '*meta-up-unloadable*' -name 'stubindex*')
+    [ -z "$stub" ] || fail "a stub index of the unloadable primary.xml: $stub"
+}
+
 # a new repomd.xml whose primary.xml cannot be fetched fails the update
 testUpFailsWithoutNewPrimary()
 {

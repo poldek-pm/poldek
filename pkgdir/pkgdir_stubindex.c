@@ -265,8 +265,11 @@ void pkgdir__stubindex_update(struct pkgdir *pkgdir)
        the pkgdir loaded, must not change it */
     if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
         int verbosity = poldek_set_verbose(0);
-        pkgdir_load(pkgdir, 0, 0);
+        int loaded = pkgdir_load(pkgdir, 0, 0);
         poldek_set_verbose(verbosity);
+
+        if (!loaded)            /* an empty stub index, not the source's */
+            return;
     }
 
     stubindex_create(pkgdir, path);
