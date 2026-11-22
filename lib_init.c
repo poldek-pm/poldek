@@ -43,6 +43,7 @@
 #include "poldek_term.h"
 #include "pm/pm.h"
 #include "conf_intern.h"
+#include "thread.h"
 
 extern int (*poldek_log_say_goodbye)(const char *msg); /* log.c */
 
@@ -1323,6 +1324,9 @@ int poldeklib_init(void)
 {
     if (poldeklib_init_called)
         return 1;
+
+    if (!pkg__registry_init())
+        return 0;
 
     poldeklib_init_called = 1;
 

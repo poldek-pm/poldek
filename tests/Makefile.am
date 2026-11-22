@@ -25,6 +25,10 @@ check_PROGRAMS += test_fileindex
 check_PROGRAMS += test_pkgfl
 # capreq_clone() of a long capability
 check_PROGRAMS += test_capreq
+if ENABLE_THREADS
+# a fork() while a thread registers an arch
+check_PROGRAMS += test_pkg_arch
+endif
 
 TESTS = $(check_PROGRAMS)
 
