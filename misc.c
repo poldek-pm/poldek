@@ -516,91 +516,210 @@ static char *do_getenv(char *dest, int size, const char *name)
     return NULL;
 }
 
+#define EXPAND_MAX_DEPTH 8     /* of the words of ${name:-word} */
+
+static void expand_vars(tn_buf *out, const char *src,
+                        const struct util__expand *ex, int depth);
+
+static int is_namechar(int c, const char *extra)
+{
+    return isalnum((unsigned char)c) ||
+        (c != '\0' && strchr(extra, c) != NULL);
+}
+
+/* the '}' that closes a "${name:-" whose word starts at p, the "${...}" of
+   the word skipped */
+static const char *word_end(const char *p, char mark)
+{
+    int depth = 0;
+
+    for (; *p; p++) {
+        if (*p == mark && p[1] == '{') {
+            depth++;
+            p++;
+
+        } else if (*p == '}') {
+            if (depth == 0)
+                return p;
+            depth--;
+        }
+    }
+
+    return NULL;
+}
+
+/* the value of name, or what an unset one becomes, or text (of len bytes)
+   as written */
+static void put_var(tn_buf *out, const char *name, const char *text,
+                    size_t len, const struct util__expand *ex)
+{
+    const char *val = ex->get(name, ex->ctx);
+
+    if (val)
+        n_buf_puts(out, val);
+    else if (ex->unset)
+        ex->unset(out, name, ex->ctx);
+    else
+        n_buf_write(out, text, len);
+}
+
+static void expand_word(tn_buf *out, const char *word, size_t len,
+                        const struct util__expand *ex, int depth)
+{
+    char *tmp = n_strdupl(word, len);
+
+    if (depth < EXPAND_MAX_DEPTH)
+        expand_vars(out, tmp, ex, depth + 1);
+    else
+        n_buf_puts(out, tmp);
+    free(tmp);
+}
+
+static void expand_vars(tn_buf *out, const char *src,
+                        const struct util__expand *ex, int depth)
+{
+    const char *p = src;
+
+    while (*p) {
+        const char *name, *name_end, *end, *val;
+        char nam[256];
+        int braced;
+
+        if ((ex->flags & UTIL__EXPAND_ESCAPES) && *p == '\\' &&
+            (p[1] == ex->mark || p[1] == '\\')) {
+            n_buf_putc(out, p[1]);
+            p += 2;
+            continue;
+        }
+
+        if (*p != ex->mark) {
+            n_buf_putc(out, *p);
+            p++;
+            continue;
+        }
+
+        braced = p[1] == '{';
+        name = p + (braced ? 2 : 1);
+        name_end = name;
+        while (is_namechar(*name_end, ex->xchars))
+            name_end++;
+
+        if (name_end == name || name_end - name >= (int)sizeof(nam) ||
+            (!braced && (ex->flags & UTIL__EXPAND_BARE) == 0)) {
+            n_buf_putc(out, *p);  /* not a variable */
+            p++;
+            continue;
+        }
+
+        memcpy(nam, name, name_end - name);
+        nam[name_end - name] = '\0';
+
+        if (!braced) {
+            put_var(out, nam, p, name_end - p, ex);
+            p = name_end;
+            continue;
+        }
+
+        if (*name_end == '}') {
+            end = name_end + 1;
+            put_var(out, nam, p, end - p, ex);
+            p = end;
+            continue;
+        }
+
+        if ((ex->flags & UTIL__EXPAND_DEFAULTS) && name_end[0] == ':' &&
+            (name_end[1] == '-' || name_end[1] == '+') &&
+            (end = word_end(name_end + 2, ex->mark)) != NULL) {
+
+            const char *word = name_end + 2;
+
+            val = ex->get(nam, ex->ctx);
+            if (name_end[1] == '-' ? val == NULL : val != NULL)
+                expand_word(out, word, end - word, ex, depth);
+            else if (val)
+                n_buf_puts(out, val);
+            p = end + 1;
+            continue;
+        }
+
+        n_buf_putc(out, *p);      /* "${a.b}", "${a", "${a:=b}" */
+        p++;
+    }
+}
+
+tn_buf *util__expand_vars(const char *src, const struct util__expand *ex)
+{
+    tn_buf *out = n_buf_new(strlen(src) + 1);
+
+    expand_vars(out, src, ex, 0);
+    n_buf_write_z(out, "", 0);  /* n_buf_ptr() must be NUL-terminated */
+
+    return out;
+}
+
+struct expand_ctx {
+    tn_hash  *varh;
+    tn_array *usedvars;
+    char     buf[PATH_MAX];
+};
+
+static const char *env_var(const char *name, void *ctx)
+{
+    struct expand_ctx *c = ctx;
+
+    return do_getenv(c->buf, sizeof(c->buf), name);
+}
+
+static const char *hash_var(const char *name, void *ctx)
+{
+    struct expand_ctx *c = ctx;
+
+    if (c->varh == NULL)
+        return NULL;
+
+    if (c->usedvars)
+        n_array_push(c->usedvars, n_strdup(name));
+
+    return n_hash_get(c->varh, name);
+}
+
 const char *poldek_util_expand_vars(char *dest, int size, const char *src,
                                     char varmark, tn_hash *varh, unsigned flags)
 {
-    const char **tl, **tl_save;
-    tn_array *usedvars = NULL;
-    char smark[16];
-    int n = 0;
+    struct expand_ctx c = { .varh = varh };
+    struct util__expand ex = {
+        .mark = '$', .flags = UTIL__EXPAND_BARE, .xchars = "",
+        .get = env_var, .ctx = &c,
+    };
+    tn_buf *expanded;
 
-    if (varmark == '\0')
-        varmark = '$';
+    if (varmark != '\0' && varmark != '$') {
+        ex.mark = varmark;
+        ex.get = hash_var;
+    } else {
+        /* an environment variable's name takes '_' as the shell's does
+           ($releasever_major); "%1_x" of an alias stays %1 and "_x" */
+        ex.xchars = "_";
+    }
 
-    n_snprintf(smark, sizeof(smark), "%c", varmark);
-
-    tl = tl_save = n_str_tokl(src, smark);
-    if (*src != varmark && tl[1] == NULL) {
-        n_str_tokl_free(tl);
+    if (strchr(src, ex.mark) == NULL)
         return src;
-    }
 
-    if (flags & POLDEK_UTIL_EXPANDVARS_RMUSED)
-        usedvars = n_array_new(16, free, (tn_fn_cmp)strcmp);
+    if (ex.get == hash_var && (flags & POLDEK_UTIL_EXPANDVARS_RMUSED))
+        c.usedvars = n_array_new(16, free, (tn_fn_cmp)strcmp);
 
-    if (*src != varmark) {
-        n = n_snprintf(dest, size, "%s", *tl);
-        tl++;
-    }
+    expanded = util__expand_vars(src, &ex);
+    n_snprintf(dest, size, "%s", (char *)n_buf_ptr(expanded));
+    n_buf_free(expanded);
 
-    while (*tl) {
-        const char *p, *vv, *v, *var;
-        char val[256], buf[PATH_MAX];
-        int  v_len;
-
-
-        p = vv = v = *tl;
-        DBGF("token: %s\n", *tl);
-        tl++;
-
-        if (*vv == '{')
-            v++;
-
-        vv = v;
-
-        v_len = 0;
-        while (isalnum(*vv)) {
-            vv++;
-            v_len++;
-        }
-
-        if (*vv == '}')
-            vv++;
-
-        if (v_len + 1 > (int)sizeof(val))
-            return src;
-
-        n_snprintf(val, v_len + 1, "%s", v);
-        DBGF("var %c{%s}\n", varmark, val);
-
-        var = NULL;
-        if (varh && varmark != '$') {
-            var = n_hash_get(varh, val);
-            if (usedvars)
-                n_array_push(usedvars, n_strdup(val));
-
-        } else if (varmark == '$') {
-            var = do_getenv(buf, sizeof(buf), val);
-        }
-
-        if (var == NULL) {
-            n += n_snprintf(&dest[n], size - n, "%c%s", varmark, p);
-
-        } else {
-            n += n_snprintf(&dest[n], size - n, "%s", var);
-            n += n_snprintf(&dest[n], size - n, "%s", vv);
-        }
-    }
-
-    n_str_tokl_free(tl_save);
-
-    if (usedvars) {             /* RMUSED is requested */
+    if (c.usedvars) {           /* RMUSED is requested */
         int i;
 
-        n_array_sort(usedvars);
-        n_array_uniq(usedvars);
-        for (i=0; i < n_array_size(usedvars); i++)
-            n_hash_remove(varh, n_array_nth(usedvars, i));
+        n_array_sort(c.usedvars);
+        n_array_uniq(c.usedvars);
+        for (i=0; i < n_array_size(c.usedvars); i++)
+            n_hash_remove(varh, n_array_nth(c.usedvars, i));
+        n_array_free(c.usedvars);
     }
 
     return dest;
