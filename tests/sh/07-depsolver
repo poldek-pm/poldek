@@ -1050,6 +1050,19 @@ installed() {
     ls $DESTINATION_REPO | sed 's/\.[^.]*\.rpm$//' | grep -v '^sh-' | paste -sd' '
 }
 
+# a real upgrade with several instances installed replaces the newest one
+# and keeps the others
+testUpgradeMultipleInstalledForReal() {
+    build_installed a 0.9.8c-1
+    build_installed a 1.0.0o-1
+    build_installed a 1.1.1j-1
+
+    build a 1.1.1k-1
+
+    runpoldek -Oupgrade_multiple_instances=y -u a
+    assertEquals "after -u a" "a-0.9.8c-1 a-1.0.0o-1 a-1.1.1k-1" "$(installed)"
+}
+
 # a package whose installed version is held stays as it is, and the rest of
 # the upgrade goes on (a real run: --test stops before the installed check)
 testUpgradeHeldInstalledVersion() {
