@@ -680,6 +680,37 @@ testIgnoreSourceMaskWithoutName()
     assertEquals "'*:a*' did not ignore only a ($out)" "b-1-1" "$(echo "$out" | grep -o '^[ab]-1-1')"
 }
 
+# a mask is matched with the whole name-version-release of a package, however
+# long the name of its source is
+testIgnoreMaskLongSourceName()
+{
+    skip_if_rpm_testing_off && return
+
+    local conf="$TMPDIR/source-ignore.conf" name type out
+
+    build a
+    build b
+    index
+
+    name=$(printf 's%.0s' $(seq 1 507))
+    for type in pndir dir; do
+        printf '[source]\nname = %s\ntype = %s\npath = %s/\nignore = a-1-1\n' $name $type $REPO > $conf
+        rm -rf $CACHEDIR
+        out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n $name --cmd ls 2>&1)
+        assertEquals "$type: ignore = a-1-1 ($out)" "b-1-1" "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
+
+        printf '[source]\nname = %s\ntype = %s\npath = %s/\nignore = a-1\n' $name $type $REPO > $conf
+        rm -rf $CACHEDIR
+        out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n $name --cmd ls 2>&1)
+        assertEquals "$type: ignore = a-1 ($out)" "a-1-1 b-1-1" "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
+    done
+
+    printf '[source]\nname = %s\ntype = dir\npath = %s/\nignore = %s:b-1-1.noarch\n' $name $REPO $name > $conf
+    rm -rf $CACHEDIR
+    out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n $name --cmd ls 2>&1)
+    assertEquals "dir: ignore = NAME:b-1-1.noarch ($out)" "a-1-1" "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
+}
+
 # -vvv names each package the source ignores in its index, also the first
 testSourceIgnoreVerbose()
 {
@@ -697,6 +728,35 @@ testSourceIgnoreVerbose()
         assertEquals "ls ignoring $mask failed ($out)" "0" "$?"
         assertEquals "the message does not name $mask ($out)" "1" \
             "$(echo "$out" | grep -c "pndir: ignored $mask-1-1$")"
+    done
+}
+
+# an ignore mask in a source section hides what it hides in [ global ],
+# whatever the type of the source: a name, a name-version-release, one with
+# the arch, a glob, each also after the name of the source
+testSourceIgnoreMasks()
+{
+    skip_if_rpm_testing_off && return
+
+    local conf="$TMPDIR/source-ignore.conf" type mask shown out rc
+
+    build a
+    build ab
+    index
+
+    for type in pndir dir; do
+        for mask in a a-1-1 a-1-1.noarch 'a-[0-9]*' s:a 's:a-1*' other:a a.noarch; do
+            shown="ab-1-1"
+            case $mask in other:a | a.noarch) shown="a-1-1 ab-1-1" ;; esac
+
+            printf '[source]\nname = s\ntype = %s\npath = %s/\nignore = %s\n' $type $REPO "$mask" > $conf
+            rm -rf $CACHEDIR    # no stub index from the mask before
+            out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n s --cmd ls 2>&1)
+            rc=$?
+            assertEquals "ls of $type with ignore = $mask failed ($out)" "0" "$rc"
+            assertEquals "$type: ignore = $mask ($out)" "$shown" \
+                "$(echo "$out" | grep -o '^ab*-1-1' | xargs)"
+        done
     done
 }
 
