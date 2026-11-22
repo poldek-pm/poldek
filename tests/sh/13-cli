@@ -401,6 +401,118 @@ testLsExplicitArchOverNvrMultilib()
     assertEquals "m-1-1.i686 should list one package ($out)" "1" "$n"
 }
 
+# a command given as arguments: the first one is parsed as a line (so it may
+# hold the command with its options, or all the commands), each of the others
+# is one word, whatever it holds; a lone | or ; parts commands, and the
+# argument after it is parsed as a line again
+testCmdArgumentsAreWords()
+{
+    skip_if_rpm_testing_off && return
+
+    local shown="grep -o ^[ab]*-1-1"
+
+    build a
+    build ab
+    build b
+    index
+
+    out=$($POLDEK ls -q 'a b' 2>&1)
+    echo "$out" | grep -q 'a b: no such package'
+    assertEquals "'a b' is not one argument ($out)" "0" "$?"
+    assertEquals "'a b' listed packages ($out)" "" "$(echo "$out" | $shown)"
+
+    out=$($POLDEK ls -q 'a;b' 'a|b' 2>&1)
+    assertEquals "'a;b' or 'a|b' is not one argument ($out)" "2" \
+        "$(echo "$out" | grep -c -e 'a;b: no such package' -e 'a|b: no such package')"
+
+    out=$($POLDEK search --perlre '|^ab|' 2>&1)
+    assertEquals "search --perlre '|^ab|' failed ($out)" "0" "$?"
+    assertEquals "ab-1-1 not found ($out)" "ab-1-1" "$(echo "$out" | $shown)"
+
+    # an alias gets the words as they are
+    out=$($POLDEK upgrade --test 'a b' 2>&1)
+    echo "$out" | grep -q 'a b: no such package'
+    assertEquals "the alias did not get 'a b' as one argument ($out)" "0" "$?"
+
+    out=$($POLDEK 'ls -q' a 2>&1)
+    assertEquals "'ls -q' a ($out)" "a-1-1" "$(echo "$out" | $shown | xargs)"
+
+    out=$($POLDEK 'ls -q a' 'a b' 2>&1)
+    echo "$out" | grep -q 'a b: no such package'
+    assertEquals "'ls -q a' 'a b' ($out)" "0" "$?"
+
+    out=$($POLDEK "search -p 'a*' | ls -q" 2>&1)
+    assertEquals "a line with a pipe ($out)" "a-1-1 ab-1-1" "$(echo "$out" | $shown | xargs)"
+
+    out=$($POLDEK search -p 'a*' '|' ls -q 2>&1)
+    assertEquals "a lone | ($out)" "a-1-1 ab-1-1" "$(echo "$out" | $shown | xargs)"
+
+    out=$($POLDEK search -p a ';' 'search -p' b 2>&1)
+    assertEquals "a lone ; ($out)" "a-1-1 b-1-1" "$(echo "$out" | $shown | xargs)"
+
+    out=$($POLDEK ls -q a '' 2>&1)
+    assertEquals "an empty argument ($out)" "a-1-1" "$(echo "$out" | $shown | xargs)"
+}
+
+# !command runs an external command where a command stands, which the shell
+# only allows: as an argument a word that begins with ! is a word
+testExternalCommandOnlyAsCommand()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    out=$($POLDEK ls -q '!a' 2>&1)
+    echo "$out" | grep -q '!a: no such package'
+    assertEquals "ls did not get !a as an argument ($out)" "0" "$?"
+
+    out=$($POLDEK --cmd "ls -q '!a'" 2>&1)
+    echo "$out" | grep -q '!a: no such package'
+    assertEquals "ls of a line did not get !a as an argument ($out)" "0" "$?"
+
+    out=$(printf '!echo first\nls -q a; !echo second\n!echo !third\nls -q !a\nquit\n' |
+          timeout 60 script -qec "$POLDEK --noask --shell" /dev/null |
+          tr -d '\r' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')
+    # the shell is not in every build
+    echo "$out" | grep -q 'built without interactive mode' && return
+    assertEquals "!echo as a command ($out)" "1" "$(echo "$out" | grep -cx first)"
+    assertEquals "!echo after ; ($out)" "1" "$(echo "$out" | grep -cx second)"
+    assertEquals "!echo did not get !third as an argument ($out)" "1" "$(echo "$out" | grep -cx '!third')"
+    echo "$out" | grep -q '!a: no such package'
+    assertEquals "ls in the shell did not get !a as an argument ($out)" "0" "$?"
+}
+
+# the arguments an alias does not use for its parameters go after its
+# line as the words they are
+testAliasPassesArgumentsAsWords()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build ab
+    build b
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nplainls = ls -q\np1 = ls -q %%1\nrun = %%1\n' > $TMPDIR/home/.poclidekrc
+
+    out=$(HOME=$TMPDIR/home $POLDEK plainls "a'b" 'a|b' 2>&1)
+    assertEquals "plainls did not get a'b and a|b ($out)" "2" \
+        "$(echo "$out" | grep -c -e "a'b: no such package" -e 'a|b: no such package')"
+
+    out=$(HOME=$TMPDIR/home $POLDEK --cmd "plainls 'a b'" 2>&1)
+    echo "$out" | grep -q 'a b: no such package'
+    assertEquals "plainls of a line did not get 'a b' ($out)" "0" "$?"
+
+    # with a parameter used, the rest follow the line with it put in
+    out=$(HOME=$TMPDIR/home $POLDEK --cmd 'p1 a b' 2>&1)
+    assertEquals "p1 a b ($out)" "a-1-1 b-1-1" "$(echo "$out" | grep -o '^[ab]*-1-1' | xargs)"
+
+    out=$(HOME=$TMPDIR/home $POLDEK --cmd 'run ls -q a' 2>&1)
+    assertEquals "run ls -q a ($out)" "a-1-1" "$(echo "$out" | grep -o '^[ab]*-1-1' | xargs)"
+}
+
 # search fails when its pattern does not compile
 testSearchInvalidPattern()
 {

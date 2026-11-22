@@ -39,6 +39,13 @@ EXPORT int poclidek_setup(struct poclidek_ctx *cctx);
 
 EXPORT int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags);
 
+/* Runs the command given as argv. argv[0], and an element after a lone "|"
+   or ";", is parsed as a line, as poclidek_execline() parses its one: it
+   may be the command alone ("ls"), with options ("ls -l"), or all the
+   commands ("search foo | install"). Every other element is one word of
+   the command before it, whatever it holds: { "ls", "a b" } asks for the
+   package "a b", { "ls a b" } and { "ls", "a", "b" } for a and b.
+   An element that is "|" or ";" parts commands; an empty one is dropped. */
 EXPORT int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                   int argc, const char **argv);
 
@@ -49,6 +56,7 @@ EXPORT struct poclidek_rcmd *poclidek_rcmd_new(struct poclidek_ctx *cctx,
                                         struct poldek_ts *ts);
 
 EXPORT void poclidek_rcmd_free(struct poclidek_rcmd *rcmd);
+/* argv as poclidek_exec() takes it */
 EXPORT int poclidek_rcmd_exec(struct poclidek_rcmd *rcmd, int argc, const char **argv);
 EXPORT int poclidek_rcmd_execline(struct poclidek_rcmd *rcmd, const char *cmdline);
 
