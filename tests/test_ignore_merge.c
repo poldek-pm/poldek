@@ -1,6 +1,7 @@
 #include "test.h"
 #include "poldek.h"
 #include "pkgdir/source.h"
+#include "pkgdir/pkgdir.h"
 #include "pkg.h"
 #include "pkgmisc.h"
 
@@ -63,11 +64,14 @@ START_TEST (test_ignore_merge) {
 END_TEST
 
 /* a mask is matched with the whole name-version-release, also of a package
-   with no arch and of one whose name is longer than the matcher's buffer */
+   with no arch and of one whose forms ("source:" included) are longer than
+   the matcher's buffer: pkg_new() refuses a name that long, a source's name
+   is not limited */
 START_TEST (test_mask_long_name_no_arch) {
     struct pkgscore_s psc;
+    struct pkgdir pkgdir;
     struct pkg *pkg;
-    char name[601], mask[640];
+    char name[201], srcname[401], mask[640];
 
     pkg = pkg_new("foo", 0, "1", "1", NULL, NULL);
     pkgscore_match_init(&psc, pkg);
@@ -78,13 +82,25 @@ START_TEST (test_mask_long_name_no_arch) {
 
     memset(name, 'n', sizeof(name) - 1);
     name[sizeof(name) - 1] = '\0';
+    memset(srcname, 's', sizeof(srcname) - 1);
+    srcname[sizeof(srcname) - 1] = '\0';
+    memset(&pkgdir, 0, sizeof(pkgdir));
+    pkgdir.name = srcname;
+
     pkg = pkg_new(name, 0, "1", "1", NULL, NULL);
+    fail_if(pkg == NULL, "pkg_new() of a %zu-character name failed", strlen(name));
+    pkg->pkgdir = &pkgdir;
     pkgscore_match_init(&psc, pkg);
+    fail_unless(strlen(srcname) + strlen(name) > sizeof(psc.pkgbuf),
+                "the forms fit pkgbuf: the long path is not tested");
     expect_int(pkgscore_match(&psc, name), 1);
     n_snprintf(mask, sizeof(mask), "%s-1-1", name);
     expect_int(pkgscore_match(&psc, mask), 1);
+    n_snprintf(mask, sizeof(mask), "%s:%s-1-1", srcname, name);
+    expect_int(pkgscore_match(&psc, mask), 1);
     n_snprintf(mask, sizeof(mask), "%s-1", name);
     expect_int(pkgscore_match(&psc, mask), 0);
+    pkg->pkgdir = NULL;
     pkg_free(pkg);
 }
 END_TEST
