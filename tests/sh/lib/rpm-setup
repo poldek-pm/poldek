@@ -24,7 +24,7 @@ rpm_up() {
 
     # every test starts with a clean cache; otherwise a dirindex left by
     # an earlier test can make mtime assertions depend on test order
-    [ -n "$CACHEDIR" ] && $SUDO rm -rf "$CACHEDIR"/*
+    cachedir_clean
 
     local use_sudo="n"
     [ -n "$SUDO" ] && use_sudo=y

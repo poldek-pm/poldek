@@ -615,7 +615,7 @@ testClean()
     typeset n=$(find $CACHEDIR | wc -l)
     assertEquals "$CACHEDIR should be empty" "$n" "1"
 
-    rm -rf $CACHEDIR/*
+    cachedir_clean
     mkdir -p $CACHEDIR/foo/bar/baz
     touch $CACHEDIR/foo/foo.txt
     touch $CACHEDIR/foo/bar/bar.txt

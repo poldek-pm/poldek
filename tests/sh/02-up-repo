@@ -151,7 +151,8 @@ testUpMissingDiffAfterPatch()
 {
     local out rc diff
 
-    rm -rf $REPO/*.* $CACHEDIR/*
+    rm -rf $REPO/*.*
+    cachedir_clean
     mkidx
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
 
@@ -181,7 +182,8 @@ testUpNoDiffList()
 {
     local out rc toc="$REPO/packages.i/packages.ndir.diff.toc$COMPR_EXT"
 
-    rm -rf $REPO/*.* $CACHEDIR/*
+    rm -rf $REPO/*.*
+    cachedir_clean
     mkidx
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
 
@@ -203,7 +205,8 @@ testUpaChangedRepoIsNotUpToDate()
 {
     local out n
 
-    rm -rf $REPO/*.* $CACHEDIR/*
+    rm -rf $REPO/*.*
+    cachedir_clean
     mkidx
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --upa || fail "upa failed"
 
@@ -222,7 +225,8 @@ testUpByName()
 {
     local out rc
 
-    rm -rf $REPO/*.* $CACHEDIR/*
+    rm -rf $REPO/*.*
+    cachedir_clean
     mkidx
 
     out=$($POLDEK_UP -Oautoupa=n -Osource="test,type=pndir,noautoup $REPOURL" up test 2>&1)

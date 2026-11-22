@@ -86,6 +86,15 @@ repo_up() {
     [ -n "$TMPDIR" ] && $SUDO rm -rf $TMPDIR/*.*
 }
 
+# "$CACHEDIR"/* would leave the hidden entries: a local source's directory
+# starts with a dot when its path starts with '_' (/__w/... of a CI checkout
+# gives ..w...)
+cachedir_clean() {
+    [ -n "$CACHEDIR" ] || return 0
+    $SUDO rm -rf "$CACHEDIR"
+    mkdir -p "$CACHEDIR"     # not $SUDO: poldek writes to it as the user
+}
+
 tearDown() {
     repo_up
 }

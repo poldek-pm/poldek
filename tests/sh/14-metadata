@@ -83,7 +83,8 @@ testLoadRepoBesideCache()
     local dir="${CACHEDIR}-repo"
     local made
 
-    rm -rf $dir $CACHEDIR/*
+    rm -rf $dir
+    cachedir_clean
     mkdir -p $dir
     cp -r metadata/repo_02/repodata $dir/ || fail "cp failed"
     touch -d '1 hour ago' $dir $dir/repodata $dir/repodata/*
@@ -111,7 +112,7 @@ testLoadZstWhole()
     local src="m,type=metadata metadata/repo_02zst/"
     local n made
 
-    rm -rf $CACHEDIR/*
+    cachedir_clean
     n=$($POLDEK -s "$src" desc fake_bash | grep -c '^Package: *fake_bash-')
     assertEquals "fake_bash not described" "1" "$n"
     made=$(find $CACHEDIR -name '*primary.xml*')
@@ -125,7 +126,8 @@ testLoadZstCut()
     local dir="$TMPDIR/meta-zst-cut"
     local primary old new out
 
-    rm -rf $dir $CACHEDIR/*
+    rm -rf $dir
+    cachedir_clean
     mkdir -p $dir/repo
     cp -r metadata/repo_02zst/repodata $dir/repo/ || fail "cp failed"
     primary=$(ls $dir/repo/repodata/*-primary.xml.zst)
@@ -150,7 +152,8 @@ testLoadZstCutAfterDocument()
     local dir="$TMPDIR/meta-zst-cut-after"
     local primary old new out
 
-    rm -rf $dir $CACHEDIR/*
+    rm -rf $dir
+    cachedir_clean
     mkdir -p $dir/repo
     cp -r metadata/repo_02zst/repodata $dir/repo/ || fail "cp failed"
     primary=$(ls $dir/repo/repodata/*-primary.xml.zst)
@@ -234,7 +237,8 @@ testUpUnloadableWritesNoStubIndex()
     local src="m,type=metadata test://$dir/"
     local primary old new stub
 
-    rm -rf $dir $CACHEDIR/*
+    rm -rf $dir
+    cachedir_clean
     mkdir -p $dir
     cp -r metadata/repo_02/repodata $dir/ || fail "cp failed"
     primary=$(ls $dir/repodata/*-primary.xml.gz)
@@ -246,9 +250,7 @@ testUpUnloadableWritesNoStubIndex()
     sed -i "s/$old/$new/g" $dir/repodata/repomd.xml
 
     $POLDEK_RAW_UP -Osource="$src" --up
-    # this source's only: $CACHEDIR/* leaves the hidden directories of the
-    # other ones (/__w/... of a CI checkout gives ..w...)
-    stub=$(find $CACHEDIR -path '*meta-up-unloadable*' -name 'stubindex*')
+    stub=$(find $CACHEDIR -name 'stubindex*')
     [ -z "$stub" ] || fail "a stub index of the unloadable primary.xml: $stub"
 }
 
@@ -260,7 +262,8 @@ testUpFailsWithoutNewPrimary()
     local op primary old new
 
     for op in --up --upa; do
-        rm -rf $dir $CACHEDIR/*
+        rm -rf $dir
+        cachedir_clean
         mkdir -p $dir
         cp -r metadata/repo_02/repodata $dir/ || fail "cp failed"
         $POLDEK_RAW_UP -Osource="$src" --up || fail "up failed"
