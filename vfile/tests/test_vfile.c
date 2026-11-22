@@ -360,6 +360,7 @@ static struct {
     pid_t      second;
     int        second_locked;
     int        fstat_errno;     /* fstat() fails with it */
+    int        opendir_errno;   /* opendir() fails with it */
     int        unlink_errno;    /* unlink() of a file of a lock fails with it */
     int        thread_close_fd; /* a thread takes the lock before its close */
     int        thread_rc;       /* of pthread_create() */
@@ -463,6 +464,54 @@ int fstat(int fd, struct stat *st)
     }
     return real_fstat(fd, st);
 }
+
+__attribute__((visibility("default")))
+DIR *opendir(const char *path)
+{
+    static DIR *(*real_opendir)(const char *);
+
+    if (real_opendir == NULL)
+        real_opendir = (DIR *(*)(const char *))dlsym(RTLD_NEXT, "opendir");
+    if (hook.opendir_errno) {
+        errno = hook.opendir_errno;
+        return NULL;
+    }
+    return real_opendir(path);
+}
+
+/* the number of files of locks in dir */
+static int nlockfiles(const char *dir)
+{
+    struct dirent *ent;
+    DIR *d;
+    int n = 0;
+
+    fail_if((d = opendir(dir)) == NULL, "opendir %s: %s", dir, strerror(errno));
+    while ((ent = readdir(d)) != NULL)
+        n += strncmp(ent->d_name, ".vflock_", 8) == 0;
+    closedir(d);
+    return n;
+}
+
+/* a cache directory that cannot be read after it was locked is left
+   unlocked */
+START_TEST (test_cachedir_clean_opendir_error) {
+    char cache[PATH_MAX];
+    int verbose = -1, rc;
+
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
+    n_snprintf(cache, sizeof(cache), "%s", NTEST_TMPPATH("vfcache-opendir"));
+    mkdir(cache, 0755);
+    vfile_configure(VFILE_CONF_CACHEDIR, cache);
+
+    hook.opendir_errno = EMFILE;
+    rc = vfile_cachedir_clean();
+    hook.opendir_errno = 0;
+    expect_int(rc, 3);
+    expect_int(nlockfiles(cache), 0);
+    remove_lockdir(cache);
+}
+END_TEST
 
 /* the second process takes the lock the first releases as soon as it can,
    and the third gets it only when the second ends */
@@ -823,6 +872,7 @@ NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_hidepasswd_short_buffer, test_fetcha_ext_multi_dirbn,
              test_url_type_scheme, test_open_errno,
              test_lock_mkdir_made_meanwhile, test_cachedir_prefix,
+             test_cachedir_clean_opendir_error,
              test_lock_taken_at_release, test_lock_opened_before_release,
              test_lock_fstat_error, test_lock_taken_again,
              test_lock_released_in_child, test_lock_inherited_of_own_file

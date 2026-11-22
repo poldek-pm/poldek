@@ -90,6 +90,7 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
     if ((dir = opendir(dirpath)) == NULL) {
         if (poldek_VERBOSE > 2)
             logn(LOGWARN, "opendir %s: %m", dirpath);
+        vf_lock_release(vflock);
         return 1;
     }
 
