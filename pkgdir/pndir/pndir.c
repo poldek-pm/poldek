@@ -47,6 +47,8 @@
 #include "pkgmisc.h"
 #include "tags.h"
 
+extern int poldek_conf_MULTILIB;
+
 struct pkg_data {
     off_t             off_nodep_files;  /* no dep files offset in index */
 //    off_t             off_pkguinf;
@@ -706,8 +708,14 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             pkgscore_match_init(&psc, &kpkg);
             for (i=0; i < n_array_size(ign_patterns); i++) {
                 if (pkgscore_match(&psc, n_array_nth(ign_patterns, i))) {
-                    pkg_snprintf(buf, sizeof(buf), &kpkg);
-                    msgn(3, "pndir: ignored %s", buf);
+                    const char *arch = pkg_arch(&kpkg);
+                    int n = pkg_snprintf(buf, sizeof(buf), &kpkg);
+
+                    /* named as pkg_id() names a package, for one message
+                       from every way a package is ignored */
+                    if (poldek_conf_MULTILIB && arch)
+                        n_snprintf(&buf[n], sizeof(buf) - n, ".%s", arch);
+                    msgn(3, "ignored %s", buf);
                     goto l_continue_loop;
                 }
             }

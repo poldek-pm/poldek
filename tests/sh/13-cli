@@ -711,23 +711,37 @@ testIgnoreMaskLongSourceName()
     assertEquals "dir: ignore = NAME:b-1-1.noarch ($out)" "a-1-1" "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
 }
 
-# -vvv names each package the source ignores in its index, also the first
+# -vvv names each package the source ignores the same way, however it comes
+# to be ignored: dropped after the load that writes the stub index, left out
+# of the stub index as it is read, or skipped in the index by a later load
 testSourceIgnoreVerbose()
 {
     skip_if_rpm_testing_off && return
 
-    local conf="$TMPDIR/source-ignore.conf" mask out
+    local conf="$TMPDIR/source-ignore.conf" opt name out
 
     build a
     build b
     index
+    touch -d '-1 hour' $REPO/packages.ndir.*    # for the stub index to stay current
+    printf '[source]\nname = s\ntype = pndir\npath = %s/\nignore = a*\n' $REPO > $conf
 
-    for mask in a b; do
-        printf '[source]\nname = s\ntype = pndir\npath = %s/\nignore = %s*\n' $REPO $mask > $conf
-        out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n s -vvv --cmd ls 2>&1)
-        assertEquals "ls ignoring $mask failed ($out)" "0" "$?"
-        assertEquals "the message does not name $mask ($out)" "1" \
-            "$(echo "$out" | grep -c "pndir: ignored $mask-1-1$")"
+    for opt in "" "-Omultilib=0"; do
+        name="a-1-1.noarch"
+        [ -n "$opt" ] && name="a-1-1"
+        rm -rf $CACHEDIR
+
+        # the second run reads the stub index, then loads the source for desc
+        for cmd in ls "desc b"; do
+            out=$($POLDEK_RAW $opt --conf $conf --cachedir $CACHEDIR -n s -vvv --cmd "$cmd" 2>&1)
+            assertEquals "$cmd ignoring a failed, $opt ($out)" "0" "$?"
+            echo "$out" | grep -q "^ *ignored $name$" ||
+                fail "$cmd $opt: no 'ignored $name' ($out)"
+            [ "$cmd" = ls ] || echo "$out" | grep -q 'Loading stub index' ||
+                fail "$cmd $opt: the stub index was not read ($out)"
+            assertEquals "$cmd $opt: a named another way ($out)" "" \
+                "$(echo "$out" | grep 'ignored a-' | grep -v "^ *ignored $name$")"
+        done
     done
 }
 
