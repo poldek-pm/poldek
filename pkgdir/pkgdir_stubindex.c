@@ -52,6 +52,11 @@
 
 const char *pkgdir_stubindex_basename = "stubindex";
 
+/* the first line of a stub index that lists every package of its index;
+   one without it may have been written without the ignored ones, and is
+   not read: the next load of the whole source writes over it */
+static const char stubindex_header[] = "%stubindex whole";
+
 static int stubindex_path(char *path, int size, const struct pkgdir *pkgdir)
 {
     char tmp[PATH_MAX];
@@ -118,7 +123,10 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
         return 0;
     }
 
-    for (int i=0; i < n_array_size(pkgdir->pkgs); i++) {
+    if (n_stream_printf(st, "%s\n", stubindex_header) < 0)
+        ok = 0;
+
+    for (int i=0; ok && i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         char key[PATH_MAX];
 
@@ -162,7 +170,7 @@ tn_array *load_stubindex(const char *path)
     struct stat sb;
     char *buf;
     size_t size;
-    int n;
+    int n, whole = 0;
 
     /* a stub index, even an empty one, holds a zstd frame: an empty file is
        one cut before its first write, which trurlib reads as a whole stream */
@@ -182,6 +190,13 @@ tn_array *load_stubindex(const char *path)
     while ((n = n_stream_getline(st, &buf, &size)) > 0) {
         while (n > 0 && isspace((unsigned char)buf[n - 1]))
             buf[--n] = '\0';
+
+        if (!whole) {           /* the first line */
+            if (strcmp(buf, stubindex_header) != 0)
+                break;
+            whole = 1;
+            continue;
+        }
 
         char *csb = strrchr(buf, '^');
         if (csb != NULL) {
@@ -203,6 +218,9 @@ tn_array *load_stubindex(const char *path)
     if (n_stream_close(st) != 0) {
         n_array_cfree(&pkgs);
         unlink(path);
+
+    } else if (!whole) {    /* stays until the next load writes over it */
+        n_array_cfree(&pkgs);
     }
 
     return pkgs;
@@ -244,33 +262,90 @@ tn_array *source_stubload(struct source *src)
     return pkgs;
 }
 
-void pkgdir__stubindex_update(struct pkgdir *pkgdir)
+/* the file starts with the line that says it lists every package */
+static int stubindex_is_whole(const char *path)
 {
-    time_t idx_mtime, mtime;
+    tn_stream *st;
+    char *buf = NULL;
+    size_t size = 0;
+    int n, whole = 0;
+
+    if ((st = n_stream_open(path, "r", TN_STREAM_UNKNOWN)) == NULL)
+        return 0;
+
+    if ((n = n_stream_getline(st, &buf, &size)) > 0) {
+        while (n > 0 && isspace((unsigned char)buf[n - 1]))
+            buf[--n] = '\0';
+        whole = strcmp(buf, stubindex_header) == 0;
+    }
+    n_free(buf);
+    n_stream_close(st);
+
+    return whole;
+}
+
+int pkgdir__stubindex_is_current(const struct pkgdir *pkgdir)
+{
     char path[1024];
 
     stubindex_path(path, sizeof(path), pkgdir);
-    DBGF("%s\n", path);
 
-    idx_mtime = pkgdir_mtime(pkgdir);
-    mtime = poldek_util_mtime(path);
+    return poldek_util_mtime(path) == pkgdir_mtime(pkgdir) &&
+        stubindex_is_whole(path);
+}
 
-    if (mtime == idx_mtime) {
+/* pkgdir holds every package of its source, none ignored or dropped as a
+   duplicate: the readers of the stub index do both, as a load does, and of
+   duplicates keep the first */
+void pkgdir__stubindex_write(struct pkgdir *pkgdir)
+{
+    char path[1024];
+
+    stubindex_path(path, sizeof(path), pkgdir);
+    msgn_i(2, 2, "updating stub index of %s...", pkgdir_idstr_s(pkgdir));
+    pkgdir__sort_for_uniq(pkgdir);
+    stubindex_create(pkgdir, path);
+}
+
+/* has a loaded pkgdir every package of its source? */
+static int is_whole(const struct pkgdir *pkgdir)
+{
+    /* a module that ignores as it reads may have skipped some, with the
+       masks its source had then */
+    if ((pkgdir->_ldflags & PKGDIR_LD_DOIGNORE) &&
+        (pkgdir->mod->cap_flags & PKGDIR_CAP_HANDLEIGNORE))
+        return 0;
+
+    /* _unsorted_pkgs keeps what was read */
+    return pkgdir->_unsorted_pkgs &&
+        n_array_size(pkgdir->pkgs) == n_array_size(pkgdir->_unsorted_pkgs);
+}
+
+void pkgdir__stubindex_update(struct pkgdir *pkgdir)
+{
+    if (pkgdir__stubindex_is_current(pkgdir))
+        return;
+
+    /* a loaded pkgdir that lost packages cannot write the stub index: it
+       is written from a load of its own, when there is a source to load */
+    if ((pkgdir->flags & PKGDIR_LOADED) && !is_whole(pkgdir)) {
+        struct pkgdir *whole = pkgdir->src ? pkgdir_srcopen(pkgdir->src, 0) : NULL;
+
+        if (whole != NULL) {
+            pkgdir__stubindex_update(whole);
+            pkgdir_free(whole);
+        }
         return;
     }
 
-    msgn_i(2, 2, "updating stub index of %s...", pkgdir_idstr_s(pkgdir));
-
-    /* the verbosity is process-wide: the load threads, which come here with
-       the pkgdir loaded, must not change it */
     if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
         int verbosity = poldek_set_verbose(0);
-        int loaded = pkgdir_load(pkgdir, 0, 0);
-        poldek_set_verbose(verbosity);
+        int loaded = pkgdir_load(pkgdir, 0, PKGDIR_LD_NOUNIQ);
 
-        if (!loaded)            /* an empty stub index, not the source's */
+        poldek_set_verbose(verbosity);
+        if (!loaded)            /* no packages to list: not a source of none */
             return;
     }
 
-    stubindex_create(pkgdir, path);
+    pkgdir__stubindex_write(pkgdir);
 }

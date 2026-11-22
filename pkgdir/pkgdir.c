@@ -641,10 +641,6 @@ void pkgdir_free(struct pkgdir *pkgdir)
 
 static void do_ignore(struct pkgdir *pkgdir)
 {
-    /* module handles "ignore" itself  */
-    if (pkgdir->mod->cap_flags & PKGDIR_CAP_HANDLEIGNORE)
-        return;
-
     if (pkgdir->src && n_array_size(pkgdir->src->ign_patterns))
         packages_score_ignore(pkgdir->pkgs, pkgdir->src->ign_patterns, 1);
 }
@@ -702,9 +698,26 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
             msgn(2, _("Loading [%s]%s..."), pkgdir->type, t_url_slim(pkgdir->idxpath, 20));
     }
 
+    /* the stub index lists the whole source, so the load that writes it
+       takes every package and ignores afterwards; other loads let a module
+       that can (PKGDIR_CAP_HANDLEIGNORE) skip the ignored ones as it reads */
+    int write_stub = (ldflags & PKGDIR_LD_UPDATE_STUBINDEX) != 0;
+    int mod_ignores = 0;
+    unsigned mod_ldflags = ldflags;
+
+    if ((ldflags & PKGDIR_LD_DOIGNORE) &&
+        (pkgdir->mod->cap_flags & PKGDIR_CAP_HANDLEIGNORE)) {
+        if (write_stub)
+            write_stub = !pkgdir__stubindex_is_current(pkgdir);
+        mod_ignores = !write_stub;
+    }
+
+    if (!mod_ignores)
+        mod_ldflags &= ~PKGDIR_LD_DOIGNORE;
+
     rc = 0;
     uint32_t nth = 1;
-    if (pkgdir->mod->load(pkgdir, ldflags) >= 0) {
+    if (pkgdir->mod->load(pkgdir, mod_ldflags) >= 0) {
         int i;
 
         rc = 1;
@@ -722,7 +735,13 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
         n_array_sort(pkgdir->pkgs);
         n_array_freeze(pkgdir->_unsorted_pkgs);
 
-        if (ldflags & PKGDIR_LD_DOIGNORE)
+        /* of every package, before any is ignored or dropped as a
+           duplicate: the readers of the stub index do both, in this order;
+           the time of a source that is not a file is known once loaded */
+        if (write_stub && !pkgdir__stubindex_is_current(pkgdir))
+            pkgdir__stubindex_write(pkgdir);
+
+        if ((ldflags & PKGDIR_LD_DOIGNORE) && !mod_ignores)
             do_ignore(pkgdir);
 
         if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
@@ -747,10 +766,6 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
 
         if (ldflags & PKGDIR_LD_DIRINDEX)
             do_open_dirindex(pkgdir, ldflags);
-
-        if (ldflags & PKGDIR_LD_UPDATE_STUBINDEX)
-            pkgdir__stubindex_update(pkgdir);
-
     }
 
     return rc;
@@ -785,6 +800,13 @@ int deepcmp_nevr_rev_verify(const struct pkg *p1, const struct pkg *p2)
 }
 
 
+/* the order in which the first of the packages that
+   pkg_cmp_uniq_name_evr_arch() takes for one is the one to keep */
+void pkgdir__sort_for_uniq(struct pkgdir *pkgdir)
+{
+    n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)deepcmp_nevr_rev_verify);
+}
+
 int pkgdir__uniq(struct pkgdir *pkgdir)
 {
     int n = 0;
@@ -799,7 +821,7 @@ int pkgdir__uniq(struct pkgdir *pkgdir)
 #endif
 
     n = n_array_size(pkgdir->pkgs);
-    n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)deepcmp_nevr_rev_verify);
+    pkgdir__sort_for_uniq(pkgdir);
     n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name_evr_arch);
     n -= n_array_size(pkgdir->pkgs);
 

@@ -23,5 +23,7 @@ struct pkgdir;
 // tn_array *source_stubload(struct source *src);
 
 void pkgdir__stubindex_update(struct pkgdir *pkgdir);
+int pkgdir__stubindex_is_current(const struct pkgdir *pkgdir);
+void pkgdir__stubindex_write(struct pkgdir *pkgdir);
 
 #endif

@@ -37,6 +37,7 @@ void pkgdir__setup_depdirs(struct pkgdir *pkgdir);
 char *pkgdir__setup_pkgprefix(const char *path);
 void pkgdir__set_compr(struct pkgdir *pkgdir, const char *compr);
 int  pkgdir__uniq(struct pkgdir *pkgdir);
+void pkgdir__sort_for_uniq(struct pkgdir *pkgdir);
 
 char *pkgdir__make_idxpath(char *dpath, int dsize,
                      const char *path, const char *type, const char *compress);

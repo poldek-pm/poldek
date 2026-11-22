@@ -134,10 +134,10 @@ testUpdate()
     if [ ! -f "$stubindex" ]; then
         fail "no stubindex $stubindex!"
     else
-        assertEquals $(zstdcat "$stubindex" | wc -l) "5"
+        assertEquals $(zstdcat "$stubindex" | grep -vc "^%") "5"
         rm -f $stubindex
         if ls_expect 5; then
-            assertEquals $(zstdcat "$stubindex" | wc -l) "5" # recreated at load
+            assertEquals $(zstdcat "$stubindex" | grep -vc "^%") "5" # recreated at load
         fi
 
     fi
