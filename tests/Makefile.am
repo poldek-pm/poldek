@@ -66,6 +66,9 @@ front_end_la_SOURCES = front_end.c
 front_end_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 close_error_la_SOURCES = close_error.c
 close_error_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
+# libc is all they use: the libraries of LIBS would only tie them to the
+# SONAMEs they were linked with, and nothing relinks them when those change
+$(check_LTLIBRARIES): LIBS = $(DL_LIBS)
 
 # runs of sh/ scripts at a time: make check-sh CHECK_SH_JOBS=4
 CHECK_SH_JOBS = 1
