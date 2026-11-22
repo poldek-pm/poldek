@@ -34,7 +34,7 @@ desc_sh() {
 # cut the cached index to $1 bytes ("half": half of it), change the
 # repository, load, change it once more and update
 check_cached_index_cut_to() {
-    rm -rf $CACHEDIR/*
+    cachedir_clean
     mkidx
     up
     index=$(find $CACHEDIR -name packages.ndir$COMPR_EXT)
@@ -59,7 +59,7 @@ check_cached_index_cut_to() {
 # cut the cached descriptions to $1 bytes ("half": half of it), change the
 # repository, load a description, and check that desc still works
 check_cached_dscr_cut_to() {
-    rm -rf $CACHEDIR/*
+    cachedir_clean
     mkidx
     up
 
@@ -117,7 +117,7 @@ testCachedIndexFailsVerification()
 
 # cut the cached digest, change the repository and load it again
 check_cached_md_cut_to() {
-    rm -rf $CACHEDIR/*
+    cachedir_clean
     mkidx
     up
 
@@ -148,7 +148,7 @@ testCachedIndexRecordPastOffsets()
 {
     # the tests before remove packages from the repository; "a" and "m" are needed
     ln -sf $SOURCE_REPO/*.rpm $REPO/ || fail "make symlinks failed"
-    rm -rf $CACHEDIR/*
+    cachedir_clean
     mkidx
     up
     index=$(find $CACHEDIR -name packages.ndir$COMPR_EXT)

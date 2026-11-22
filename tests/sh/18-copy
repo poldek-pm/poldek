@@ -9,7 +9,8 @@ ORIGREPO=
 setUp() {
     [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
     [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
-    rm -rf $ORIGREPO/* $CACHEDIR/*
+    rm -rf $ORIGREPO/*
+    cachedir_clean
 
     REPO="$ORIGREPO/src"
     DESTINATION_REPO="$ORIGREPO/dest"
