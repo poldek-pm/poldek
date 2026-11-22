@@ -25,6 +25,7 @@
 #include "compiler.h"
 #include "i18n.h"
 #include "capreq.h"
+#include "capreq_intern.h"
 #include "log.h"
 #include "misc.h"
 #include "pkgmisc.h"
@@ -268,6 +269,19 @@ char *capreq_str(char *str, size_t size, const struct capreq *cr)
     return NULL;
 }
 
+/* a stored capability takes up to UINT8_MAX bytes and splits only its name,
+   so its version and release (the epoch takes 4 bytes) must leave room for
+   one */
+int capreq__check_vr_limit(const char *name, size_t vr_len)
+{
+    if (vr_len <= CAPREQ_VR_MAX)
+        return 1;
+
+    logn(LOGWARN, _("%s: version and release longer than %d characters, "
+                    "ignored"), name, CAPREQ_VR_MAX);
+    return 0;
+}
+
 struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t relflags, int32_t flags)
@@ -329,6 +343,9 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         release_len = strlen(release);
         len += release_len + 1;
     }
+
+    if (!capreq__check_vr_limit(name, version_len + release_len))
+        return NULL;
 
     if (na)
         cr = na->na_malloc(na, sizeof(*cr) + len);

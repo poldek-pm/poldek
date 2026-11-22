@@ -1,6 +1,7 @@
 #include "test.h"
 #include "poldek_intern.h"
 #include "capreq.h"
+#include "capreq_intern.h"
 
 static struct capreq *new_capreq(tn_alloc *na, char *name, int e, char *v, char *r)
 {
@@ -79,7 +80,24 @@ END_TEST
 
 
 
+/* the longest epoch, version and release capreq_new() takes, with a name
+   long enough to split the record */
+START_TEST(test_longest_evr) {
+    tn_alloc *na = n_alloc_new(4, TN_ALLOC_OBSTACK);
+    char version[CAPREQ_VR_MAX];
+    tn_array *arr = capreq_arr_new(2);
+
+    memset(version, '1', sizeof(version) - 1);
+    version[sizeof(version) - 1] = '\0';
+    n_array_push(arr, new_capreq(na, LONG_NAME, 1, version, "1"));
+    do_test_capreq_store(na, arr);
+    n_array_free(arr);
+    n_alloc_free(na);
+}
+END_TEST
+
 NTEST_RUNNER("store",
              test_cap,
-             test_long_capname
+             test_long_capname,
+             test_longest_evr
     );

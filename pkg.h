@@ -135,6 +135,8 @@ struct pkg {
 };
 
 
+/* NULL for a version and release longer than 128 characters together:
+   capreq_new() would not make a capability of them */
 EXPORT struct pkg *pkg_new_ext(tn_alloc *na,
                         const char *name, int32_t epoch,
                         const char *version, const char *release,
