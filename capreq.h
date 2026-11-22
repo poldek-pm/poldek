@@ -109,6 +109,8 @@ EXPORT extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 EXPORT struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
                                      int32_t relflags, int32_t flags);
 
+/* NULL for an epoch or a release without a version, a version without
+   relflags, or version and release longer than 128 characters together */
 EXPORT struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                                  const char *version, const char *release,
                                  int32_t relflags, int32_t flags);

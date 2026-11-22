@@ -126,6 +126,40 @@ START_TEST(test_clone_short) {
 }
 END_TEST
 
+/* a version too long for a capability, set after pkg_new(): no NULL goes
+   into caps or cnfls */
+START_TEST(test_pkg_long_version_set_later) {
+    char version[CAPREQ_VR_MAX + 1];
+    struct pkg *pkg, *cpkg;
+    struct capreq *req;
+
+    memset(version, '1', sizeof(version) - 1);
+    version[sizeof(version) - 1] = '\0';
+
+    pkg = pkg_new("a", 0, "1", "1", "noarch", "linux");
+    cpkg = pkg_new("b", 0, "1", "1", "noarch", "linux");
+    expect_notnull(pkg);
+    expect_notnull(cpkg);
+    pkg->ver = version;
+    cpkg->ver = version;
+
+    expect_int(pkg_add_selfcap(pkg), 0);
+    expect_int(n_array_size(pkg->caps), 0);
+
+    pkg->cnfls = capreq_arr_new(0);
+    expect_int(pkg_add_pkgcnfl(pkg, cpkg, 0), 0);
+    expect_int(n_array_size(pkg->cnfls), 0);
+
+    req = capreq_new(NULL, "a", 0, "1", NULL, REL_GT, 0);
+    expect_int(pkg_evr_match_req(pkg, req, 0), 0);
+    capreq_free(req);
+
+    pkg_free(cpkg);
+    pkg_free(pkg);
+}
+END_TEST
+
 NTEST_RUNNER("capreq", test_new_vr_limit, test_pkg_new_vr_limit,
              test_clone_long_name, test_clone_long_version,
-             test_clone_long_evr, test_clone_short);
+             test_clone_long_evr, test_clone_short,
+             test_pkg_long_version_set_later);

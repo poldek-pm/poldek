@@ -530,8 +530,12 @@ int pkg_add_selfcap(struct pkg *pkg)
         return 1;
     }
 
+    /* NULL only if pkg->ver and pkg->rel were changed after pkg_new_ext(),
+       which refuses a version capreq_new() would not take */
     selfcap = capreq_new(pkg->na, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                          REL_EQ, 0);
+    if (selfcap == NULL)
+        return 0;
 
     n_array_push(pkg->caps, selfcap);
     n_array_isort(pkg->caps);
@@ -688,6 +692,8 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, unsigned 
 
     cap = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                      REL_EQ, 0);
+    if (cap == NULL)            /* see pkg_add_selfcap() */
+        return 0;
 
     if (flags & (POLDEK_MA_PROMOTE_VERSION | POLDEK_MA_PROMOTE_EPOCH)) {
         rc = do_pkg_evr_match_req(cap, req, 0) ? 1 : 0;
@@ -1035,8 +1041,10 @@ int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
                           cpkg->rel, REL_EQ,
                           (isbastard ? CAPREQ_BASTARD : 0));
 
-        n_array_push(pkg->cnfls, cnfl);
-        n_array_sort(pkg->cnfls);
+        if (cnfl) {             /* see pkg_add_selfcap() */
+            n_array_push(pkg->cnfls, cnfl);
+            n_array_sort(pkg->cnfls);
+        }
     }
 
     return cnfl != NULL;
