@@ -87,6 +87,7 @@ static int do_cachedir_clean(const char *dirpath)
 
     if ((dir = opendir(dirpath)) == NULL) {
 	vf_logerr("opendir %s: failed", dirpath);
+	vf_lock_release(vflock);
 	return 3;
     }
 

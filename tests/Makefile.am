@@ -25,6 +25,8 @@ check_PROGRAMS += test_fileindex
 check_PROGRAMS += test_pkgfl
 # capreq_clone() of a long capability
 check_PROGRAMS += test_capreq
+# a directory cleaned is not left locked
+check_PROGRAMS += test_pkgdir_clean
 if ENABLE_THREADS
 # a fork() while a thread registers an arch
 check_PROGRAMS += test_pkg_arch
@@ -39,6 +41,9 @@ AM_TESTS_ENVIRONMENT = GLIBC_TUNABLES=glibc.malloc.tcache_count=0; \
 
 # pndir.h includes its siblings by name
 test_pndir_CPPFLAGS = -I$(top_srcdir)/pkgdir
+
+# pkgdir__rmf() is declared in pkgdir_intern.h
+test_pkgdir_clean_CPPFLAGS = -I$(top_srcdir)/pkgdir
 
 # pkg_dent_cmp_bday() is part of the CLI library
 test_dent_LDADD = $(top_builddir)/cli/libpoclidek.la @CHECK_LIBS@
