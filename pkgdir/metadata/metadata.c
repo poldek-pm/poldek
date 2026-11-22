@@ -335,7 +335,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     vf = open_metadata_file(idx->repomd, pkgdir->path, "primary",
                             vfmode, pkgdir->name, 0);
     if (vf == NULL)
-        return 0;
+        return -1;
 
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
@@ -363,6 +363,9 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     }
 
     metadata_loadmod_destroy();
+
+    if (pkgs == NULL)           /* primary unreadable */
+        return -1;
 
     return n_array_size(pkgdir->pkgs);
 }
