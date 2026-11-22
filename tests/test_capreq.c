@@ -6,6 +6,10 @@
 */
 #include "test.h"
 #include "capreq_intern.h"
+#include <tndb/tndb.h>
+
+/* pkgdir/pndir/pndir.h, which takes -Ipkgdir */
+int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg);
 
 /* a capability "a" of a version of verlen characters */
 static struct capreq *new_versioned(int32_t epoch, int verlen,
@@ -56,6 +60,45 @@ START_TEST(test_pkg_new_vr_limit) {
     expect_notnull(pkg);
     pkg_add_selfcap(pkg);
     expect_int(n_array_size(pkg->caps), 1);
+    pkg_free(pkg);
+}
+END_TEST
+
+/* PKG_NEVRA_MAX of pkg.c */
+#define NEVRA_MAX 224
+
+/* a package "aaa...-1-1.x86_64" of an os of its own (not the default one,
+   which the pndir key leaves out), with a name of namelen characters */
+static struct pkg *new_named(int namelen, int32_t epoch)
+{
+    char name[256];
+
+    n_assert(namelen < (int)sizeof(name));
+    memset(name, 'a', namelen);
+    name[namelen] = '\0';
+
+    return pkg_new(name, epoch, "1", "1", "x86_64", "linux2");
+}
+
+/* nor a package whose index keys would not fit in TNDB_KEY_MAX, which tndb
+   took for a bug and ended poldek with: name, "#", epoch and ":", version,
+   "-", release, "#", arch, ":" and os count, the epoch as 12 characters
+   whatever its value */
+START_TEST(test_pkg_new_nevra_limit) {
+    int namelen = NEVRA_MAX - (1 + 1 + 1 + 1 + 7 + 7);
+    char key[512];
+    struct pkg *pkg;
+
+    expect_null(new_named(namelen + 1, 0));
+    expect_notnull(pkg = new_named(namelen, 0));
+    pkg_free(pkg);
+
+    expect_null(new_named(namelen - 12 + 1, 1));
+    expect_notnull(pkg = new_named(namelen - 12, INT32_MAX));
+
+    /* the longest dirindex key: a 2-byte prefix, the pndir key, ":" and the
+       build time */
+    expect_int(pndir_make_pkgkey(key, sizeof(key), pkg) <= TNDB_KEY_MAX - 2 - 11, 1);
     pkg_free(pkg);
 }
 END_TEST
@@ -160,6 +203,7 @@ START_TEST(test_pkg_long_version_set_later) {
 END_TEST
 
 NTEST_RUNNER("capreq", test_new_vr_limit, test_pkg_new_vr_limit,
+             test_pkg_new_nevra_limit,
              test_clone_long_name, test_clone_long_version,
              test_clone_long_evr, test_clone_short,
              test_pkg_long_version_set_later);
