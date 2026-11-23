@@ -84,6 +84,7 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
             rc = do_unlink(dirpath, test);
             vf_lock_release(tmp_vflock);
         }
+        vf_lock_release(vflock);
         return rc;
     }
 
