@@ -116,46 +116,58 @@ static const char *arch_of(const struct pkg *pkg)
     return arch ? arch : "(null)";
 }
 
+/* the name of pkg's source: "" of one given as a bare path (-s PATH), NULL
+   for a package of no source */
+static const char *source_of(const struct pkg *pkg)
+{
+    if (pkg->pkgdir == NULL)
+        return NULL;
+
+    return pkg->pkgdir->name ? pkg->pkgdir->name : "";
+}
+
 /* "source:name-version-release.arch" in buf, which fits it; the length of
-   "source:": 0 for a package of no source */
-static size_t snprintf_forms(char *buf, size_t size, const struct pkg *pkg)
+   "source:": 0 with no source */
+static size_t snprintf_forms(char *buf, size_t size, const char *source,
+                             const struct pkg *pkg)
 {
     size_t n = 0;
 
-    /* a source given as a bare path (-s PATH) has no name */
-    if (pkg->pkgdir)
-        n = n_snprintf(buf, size, "%s:",
-                       pkg->pkgdir->name ? pkg->pkgdir->name : "");
+    if (source)
+        n = n_snprintf(buf, size, "%s:", source);
 
     n_snprintf(&buf[n], size - n, "%s-%s-%s.%s", pkg->name, pkg->ver,
                pkg->rel, arch_of(pkg));
     return n;
 }
 
-static size_t forms_size(const struct pkg *pkg)
+static size_t forms_size(const char *source, const struct pkg *pkg)
 {
     size_t n = strlen(pkg->name) + strlen(pkg->ver) + strlen(pkg->rel) +
         strlen(arch_of(pkg)) + 4;
 
-    if (pkg->pkgdir)
-        n += (pkg->pkgdir->name ? strlen(pkg->pkgdir->name) : 0) + 1;
+    if (source)
+        n += strlen(source) + 1;
 
     return n;
 }
 
 void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg)
 {
+    const char *source = source_of(pkg);
+
     psc->pkg = pkg;
 
     /* pkgname_off: the length of "source:", or -1 with pkgbuf too small
        for the forms, which pkgscore_match() then makes itself */
-    if (forms_size(pkg) > sizeof(psc->pkgbuf)) {
+    if (forms_size(source, pkg) > sizeof(psc->pkgbuf)) {
         psc->pkgbuf[0] = '\0';
         psc->pkgname_off = -1;
         return;
     }
 
-    psc->pkgname_off = snprintf_forms(psc->pkgbuf, sizeof(psc->pkgbuf), pkg);
+    psc->pkgname_off = snprintf_forms(psc->pkgbuf, sizeof(psc->pkgbuf),
+                                      source, pkg);
 }
 
 /* fnmatch() against buf from start, cut after end for the call */
@@ -193,6 +205,7 @@ static int match_forms(char *buf, size_t off, const struct pkg *pkg,
 // return 0 if not match
 int pkgscore_match(struct pkgscore_s *psc, const char *mask)
 {
+    const char *source;
     size_t size, off;
     char *buf;
     int rc;
@@ -200,9 +213,10 @@ int pkgscore_match(struct pkgscore_s *psc, const char *mask)
     if (psc->pkgname_off >= 0)
         return match_forms(psc->pkgbuf, psc->pkgname_off, psc->pkg, mask);
 
-    size = forms_size(psc->pkg);
+    source = source_of(psc->pkg);
+    size = forms_size(source, psc->pkg);
     buf = n_malloc(size);
-    off = snprintf_forms(buf, size, psc->pkg);
+    off = snprintf_forms(buf, size, source, psc->pkg);
     rc = match_forms(buf, off, psc->pkg, mask);
     free(buf);
 
@@ -304,4 +318,33 @@ int packages_score_ignore(tn_array *pkgs, tn_array *patterns, int remove)
         n_array_remove_ex(pkgs, NULL, (tn_fn_cmp)cmp_isignored);
 
     return n - n_array_size(pkgs);
+}
+
+/* removes from pkgs those the masks hide in the source of that name: for
+   packages with no pkgdir, as those of a stub index */
+void poldek__ignore_packages_of_source(tn_array *pkgs, const tn_array *masks,
+                                       const char *source)
+{
+    char sbuf[512];
+    int i, j;
+
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        size_t size = forms_size(source, pkg), off;
+        char *buf = size > sizeof(sbuf) ? n_malloc(size) : sbuf;
+
+        off = snprintf_forms(buf, size, source, pkg);
+        for (j=0; j < n_array_size(masks); j++) {
+            if (match_forms(buf, off, pkg, n_array_nth(masks, j))) {
+                msgn(3, "ignored %s", pkg_id(pkg));
+                pkg_score(pkg, PKG_IGNORED);
+                break;
+            }
+        }
+
+        if (buf != sbuf)
+            free(buf);
+    }
+
+    n_array_remove_ex(pkgs, NULL, (tn_fn_cmp)cmp_isignored);
 }

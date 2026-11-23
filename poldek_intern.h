@@ -140,5 +140,7 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx);
 /* pkgscore.c */
 void poldek__add_source_holds(tn_array *holds, const char *source,
                               const tn_array *masks);
+void poldek__ignore_packages_of_source(tn_array *pkgs, const tn_array *masks,
+                                       const char *source);
 
 #endif

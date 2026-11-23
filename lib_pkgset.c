@@ -146,18 +146,30 @@ tn_array *poldek_load_stubs(struct poldek_ctx *ctx)
             return 0;
         }
 
+        /* the packages of a stub index have no pkgdir to take the name
+           of their source from */
         if (do_ignore && n_array_size(src->ign_patterns) > 0)
-            packages_score_ignore(pkgs, src->ign_patterns, 1);
+            poldek__ignore_packages_of_source(pkgs, src->ign_patterns,
+                                              src->name ? src->name : "");
 
+        /* as a load of the source: its masks first, then one of each
+           package; the stub index has them in the order of that choice */
+        tn_array *left = n_array_clone(pkgs);
+        n_array_ctl_set_cmpfn(left, NULL);
         while (n_array_size(pkgs) > 0) {
             struct pkg *pkg = n_array_shift(pkgs);
 
             if (pkg_is_scored(pkg, PKG_IGNORED))
                 pkg_free(pkg);
             else
-                n_array_push(stubpkgs, pkg);
+                n_array_push(left, pkg);
         }
         n_array_free(pkgs);
+
+        n_array_uniq_ex(left, (tn_fn_cmp)pkg_cmp_uniq_name_evr_arch);
+        while (n_array_size(left) > 0)
+            n_array_push(stubpkgs, n_array_shift(left));
+        n_array_free(left);
     }
     n_array_sort_ex(stubpkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
 

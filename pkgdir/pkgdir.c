@@ -641,10 +641,6 @@ void pkgdir_free(struct pkgdir *pkgdir)
 
 static void do_ignore(struct pkgdir *pkgdir)
 {
-    /* module handles "ignore" itself  */
-    if (pkgdir->mod->cap_flags & PKGDIR_CAP_HANDLEIGNORE)
-        return;
-
     if (pkgdir->src && n_array_size(pkgdir->src->ign_patterns))
         packages_score_ignore(pkgdir->pkgs, pkgdir->src->ign_patterns, 1);
 }
@@ -722,6 +718,13 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
         n_array_sort(pkgdir->pkgs);
         n_array_freeze(pkgdir->_unsorted_pkgs);
 
+        /* of every package read, before any is ignored or dropped as a
+           duplicate: the readers of the stub index do both; the time of a
+           source that is not a file is known once loaded */
+        if ((ldflags & PKGDIR_LD_UPDATE_STUBINDEX) &&
+            !pkgdir__stubindex_is_current(pkgdir))
+            pkgdir__stubindex_write(pkgdir);
+
         if (ldflags & PKGDIR_LD_DOIGNORE)
             do_ignore(pkgdir);
 
@@ -747,10 +750,6 @@ int pkgdir_load(struct pkgdir *pkgdir, const tn_array *depdirs, unsigned ldflags
 
         if (ldflags & PKGDIR_LD_DIRINDEX)
             do_open_dirindex(pkgdir, ldflags);
-
-        if (ldflags & PKGDIR_LD_UPDATE_STUBINDEX)
-            pkgdir__stubindex_update(pkgdir);
-
     }
 
     return rc;
@@ -785,6 +784,13 @@ int deepcmp_nevr_rev_verify(const struct pkg *p1, const struct pkg *p2)
 }
 
 
+/* the order in which the first of the packages that
+   pkg_cmp_uniq_name_evr_arch() takes for one is the one to keep */
+void pkgdir__sort_for_uniq(tn_array *pkgs)
+{
+    n_array_isort_ex(pkgs, (tn_fn_cmp)deepcmp_nevr_rev_verify);
+}
+
 int pkgdir__uniq(struct pkgdir *pkgdir)
 {
     int n = 0;
@@ -799,7 +805,7 @@ int pkgdir__uniq(struct pkgdir *pkgdir)
 #endif
 
     n = n_array_size(pkgdir->pkgs);
-    n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)deepcmp_nevr_rev_verify);
+    pkgdir__sort_for_uniq(pkgdir->pkgs);
     n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name_evr_arch);
     n -= n_array_size(pkgdir->pkgs);
 

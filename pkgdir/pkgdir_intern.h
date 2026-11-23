@@ -37,6 +37,7 @@ void pkgdir__setup_depdirs(struct pkgdir *pkgdir);
 char *pkgdir__setup_pkgprefix(const char *path);
 void pkgdir__set_compr(struct pkgdir *pkgdir, const char *compr);
 int  pkgdir__uniq(struct pkgdir *pkgdir);
+void pkgdir__sort_for_uniq(tn_array *pkgs);
 
 char *pkgdir__make_idxpath(char *dpath, int dsize,
                      const char *path, const char *type, const char *compress);
@@ -62,7 +63,6 @@ time_t pkgdir_mtime(const struct pkgdir *pkgdir);
 /* internal module capabilities */
 #define PKGDIR_CAP_INTERNALTYPE  (1 << 8) /* do not show it outside  */
 #define PKGDIR_CAP_NOSAVAFTUP    (1 << 9) /* needn't saving after update() */
-#define PKGDIR_CAP_HANDLEIGNORE  (1 << 10) /* handles ign_patterns internally */
 
 
 /*  module methods */

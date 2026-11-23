@@ -35,6 +35,7 @@
 #include "conf.h"
 #include "conf_intern.h"
 #include "poldek_util.h"
+#include "misc.h"
 #include "repo_intern.h"
 #include "pm/rpmorg/arch.h"
 
@@ -135,138 +136,58 @@ static tn_hash *macros_new(void)
     return htconf;
 }
 
-/* the value of dnf's $name, i.e. the _name macro */
-static const char *macro_get(tn_hash *macros, const char *name, size_t len)
+struct dnf_vars {
+    tn_hash *macros;
+    char    buf[260];
+};
+
+/* a set dnf variable $name becomes the macro %{_name}, which
+   conf__expand_value() expands */
+static const char *dnf_var(const char *name, void *ctx)
 {
+    struct dnf_vars *v = ctx;
     char key[256];
 
-    if (len + 2 > sizeof(key))
+    if (strlen(name) + 2 > sizeof(key))
         return NULL;
 
-    key[0] = '_';
-    memcpy(key + 1, name, len);
-    key[len + 1] = '\0';
+    n_snprintf(key, sizeof(key), "_%s", name);
+    if (poldek_conf_get(v->macros, key, NULL) == NULL)
+        return NULL;
 
-    return poldek_conf_get(macros, key, NULL);
+    n_snprintf(v->buf, sizeof(v->buf), "%%{_%s}", name);
+    return v->buf;
 }
 
-#define EXPAND_MAX_DEPTH 8
-
-static char *expand_vars_depth(const char *src, tn_hash *macros, int depth);
-
-/* dnf's ${var:-word} and ${var:+word}: word is expanded on its own */
-static void expand_add_word(tn_buf *out, const char *word, size_t len,
-                            tn_hash *macros, int depth)
+/* an unknown one too, so that conf.c does not take it from the
+   environment (source.path is CONF_TYPE_F_ENV) */
+static void dnf_unset(tn_buf *out, const char *name, void *ctx)
 {
-    char *tmp = n_strdupl(word, len);
-    char *expanded = expand_vars_depth(tmp, macros, depth + 1);
-
-    n_buf_puts(out, expanded);
-    free(expanded);
-    free(tmp);
+    (void)ctx;
+    n_buf_printf(out, "%%{_%s}", name);
 }
 
 /* rewrite dnf's $arch, $basearch, $releasever into poldek macros
    (%{_arch}, ...) and resolve ${var:-word}/${var:+word}, which conf.c
-   cannot; unknown variables become %{_name} too, so that conf.c does
-   not take them from the environment (source.path is CONF_TYPE_F_ENV) */
-static char *expand_vars_depth(const char *src, tn_hash *macros, int depth)
-{
-    tn_buf *out;
-    const char *p = src;
-    char *re;
-
-    if (depth > EXPAND_MAX_DEPTH)
-        return n_strdup(src);
-
-    out = n_buf_new(strlen(src) + 1);
-
-    while (*p) {
-        const char *name, *name_end, *end, *colon;
-
-        /* dnf's substitution unescapes only '\$' and '\\'; any other
-           backslash is left for the option's list parser */
-        if (*p == '\\' && (p[1] == '$' || p[1] == '\\')) {
-            n_buf_putc(out, p[1]);
-            p += 2;
-            continue;
-        }
-
-        if (*p != '$') {
-            n_buf_putc(out, *p);
-            p++;
-            continue;
-        }
-
-        if (p[1] == '{') {
-            const char *close = strchr(p + 2, '}');
-
-            if (close == NULL) {
-                n_buf_putc(out, *p);
-                p++;
-                continue;
-            }
-            name = p + 2;
-            name_end = close;
-            end = close + 1;
-            colon = memchr(name, ':', close - name);
-
-        } else {
-            name = p + 1;
-            end = name;
-            while (isalnum((unsigned char)*end) || *end == '_')
-                end++;
-            name_end = end;
-            colon = NULL;
-        }
-
-        if (name_end == name) {
-            n_buf_putc(out, *p);
-            p++;
-            continue;
-        }
-
-        if (colon && colon + 1 < end &&
-            (colon[1] == '-' || colon[1] == '+')) {
-
-            const char *word = colon + 2;
-            int is_set = macro_get(macros, name, colon - name) != NULL;
-
-            if (colon[1] == '+' ? is_set : !is_set)
-                expand_add_word(out, word, end - 1 - word, macros, depth);
-            else if (colon[1] == '-')
-                n_buf_printf(out, "%%{_%.*s}", (int)(colon - name), name);
-
-            p = end;
-            continue;
-        }
-
-        n_buf_printf(out, "%%{_%.*s}", (int)((colon ? colon : name_end) - name),
-                     name);
-        if (colon)       /* an unknown expansion mode stays literal */
-            n_buf_printf(out, ":%.*s", (int)(end - 1 - (colon + 1)), colon + 1);
-        p = end;
-    }
-
-    n_buf_write_z(out, "", 0);  /* n_buf_ptr() must be NUL-terminated */
-    re = n_strdup(n_buf_ptr(out));
-    n_buf_free(out);
-    return re;
-}
-
+   cannot; dnf's substitution unescapes only '\$' and '\\', any other
+   backslash is left for the option's list parser */
 static char *expand_vars(const char *src, tn_hash *macros)
 {
-    char expanded[PATH_MAX];
+    struct dnf_vars v = { .macros = macros };
+    struct util__expand ex = {
+        .mark = '$',
+        .flags = UTIL__EXPAND_BARE | UTIL__EXPAND_DEFAULTS |
+                 UTIL__EXPAND_ESCAPES,
+        .xchars = "_", .get = dnf_var, .unset = dnf_unset, .ctx = &v,
+    };
+    char expanded[PATH_MAX], *re;
 
-    char *rewritten = expand_vars_depth(src, macros, 0);
-    const char *value = conf__expand_value(expanded, sizeof(expanded),
-                                           NULL, macros, rewritten);
-    if (value != rewritten) {
-        free(rewritten);
-        rewritten = n_strdup(value);
-    }
+    tn_buf *rewritten = util__expand_vars(src, &ex);
+    re = n_strdup(conf__expand_value(expanded, sizeof(expanded), NULL, macros,
+                                     n_buf_ptr(rewritten)));
+    n_buf_free(rewritten);
 
-    return rewritten;
+    return re;
 }
 
 /* the section name of "[id]"; NULL if the header is malformed or the id

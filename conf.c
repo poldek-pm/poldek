@@ -256,68 +256,27 @@ static int find_tag(const char *sectname, const char *key,
     return -1;
 }
 
+static const char *conf_macro(const char *name, void *ht)
+{
+    return poldek_conf_get(ht, name, NULL);
+}
+
 /* expand %{...} macros */
 static const char *expand_macros(char *dest, int size, const char *str,
                                  const tn_hash *ht)
 {
-    const char **tl, **tl_save;
-    int n = 0;
+    struct util__expand ex = {
+        .mark = '%', .xchars = "_-", .get = conf_macro, .ctx = (void *)ht,
+    };
+    tn_buf *expanded;
 
-
-    tl = tl_save = n_str_tokl(str, "%");
-    if (*str != '%' && tl[1] == NULL) {
-        n_str_tokl_free(tl);
+    if (strchr(str, '%') == NULL)
         return str;
-    }
 
-    if (*str != '%') {
-        n = n_snprintf(dest, size, "%s", *tl);
-        tl++;
-    }
+    expanded = util__expand_vars(str, &ex);
+    n_snprintf(dest, size, "%s", (char *)n_buf_ptr(expanded));
+    n_buf_free(expanded);
 
-    while (*tl) {
-        const char *p,  *vv, *v, *var;
-        char val[256];
-        int  v_len;
-
-
-        p = v = *tl;
-        DBGF("token: %s\n", *tl);
-        tl++;
-
-        if (*v != '{') {
-            n += n_snprintf(&dest[n], size - n, "%%%s", v);
-            continue;
-        }
-
-        v++;
-
-        vv = v;
-        v_len = 0;
-        while (isalnum(*vv) || *vv == '_' || *vv == '-') {
-            vv++;
-            v_len++;
-        }
-
-        if (*vv == '}')
-            vv++;
-
-        if (v_len + 1 > (int)sizeof(val))
-            return str;
-
-        n_snprintf(val, v_len + 1, "%s", v);
-        DBGF("var (%s)\n", val);
-
-        if ((var = poldek_conf_get(ht, val, NULL)) == NULL) {
-            n += n_snprintf(&dest[n], size - n, "%%%s", p);
-
-        } else {
-            n += n_snprintf(&dest[n], size - n, "%s", var);
-            n += n_snprintf(&dest[n], size - n, "%s", vv);
-        }
-    }
-
-    n_str_tokl_free(tl_save);
     return dest;
 }
 
