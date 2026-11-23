@@ -775,6 +775,34 @@ testAliasParameterIsOneWord()
                  "error: p1: apply arguments failed (not enough arguments?)" "$out"
 }
 
+# a % of an alias's line that names no argument's number is left as written
+testAliasLiteralPercent()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nlit = ls -q %%{NAME} 100%%x\nlitp = ls -q %%{NAME} %%1\nbad = ls -q %%1x\n' \
+           > $TMPDIR/home/.poclidekrc
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'lit a' 2>&1)
+    assertEquals "lit a ($out)" "2" \
+        "$(echo "$out" | grep -c -e '^error: %{NAME}: no such package' -e '^error: 100%x: no such package')"
+    echo "$out" | grep -q '^a-1-1'
+    assertEquals "lit did not pass a on ($out)" "0" "$?"
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'litp a' 2>&1)
+    echo "$out" | grep -q '^error: %{NAME}: no such package' && echo "$out" | grep -q '^a-1-1'
+    assertEquals "litp a ($out)" "0" "$?"
+
+    # a number followed by letters is a mistyped parameter
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'bad a' 2>&1)
+    assertEquals "bad a ($out)" \
+                 "error: bad: apply arguments failed (not enough arguments?)" "$out"
+}
+
 # search fails when its pattern does not compile
 testSearchInvalidPattern()
 {

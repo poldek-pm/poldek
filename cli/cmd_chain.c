@@ -283,6 +283,10 @@ static const char *alias_arg(const char *name, void *ctx)
     char *end;
     long no = strtol(name, &end, 10);
 
+    /* a name that is no number is not a parameter: "--qf %{NAME}" */
+    if (end == name)
+        return NULL;
+
     if (*end != '\0' || no >= n_array_size(args->a_argv)) {
         args->missing = 1;
         return NULL;
