@@ -426,8 +426,10 @@ static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
     if (src->flags & (PKGSOURCE_VRFY_SIGN | PKGSOURCE_VRFY_GPG | PKGSOURCE_VRFY_PGP))
         poldek_conf_add_to_section(sect, "signed", "yes");
 
-    if (src->flags & PKGSOURCE_COMPR)
-        poldek_conf_add_to_section(sect, "compr", src->compr ? src->compr : "yes");
+    /* set only with a value after "compr=" today; the field can be zeroed
+       later (source_set_compr()), and no value of it means none */
+    if ((src->flags & PKGSOURCE_COMPR) && src->compr && *src->compr)
+        poldek_conf_add_to_section(sect, "compr", src->compr);
 
     if (src->dscr)
         poldek_conf_add_to_section(sect, "lang", src->dscr);
