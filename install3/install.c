@@ -207,7 +207,7 @@ static int do_install(struct i3ctx *ictx, tn_array *pkgs)
     if (rm_after) {
         /* the old one goes below: a package manager that removes with the
            installation (pset) would not find it there */
-        tn_array *none = pkgs_array_new(2);
+        tn_array *none = n_array_new(2, NULL, NULL);
 
         rc = pm_pminstall(ts->db, pkgs, none, ts);
         n_array_free(none);

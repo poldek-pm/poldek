@@ -41,6 +41,7 @@
 #include "pkgcmp.h"
 #include "pkg_ver_cmp.h"
 #include "thread.h"
+#include "poldek_intern.h"      /* PKG_NEVRA_MAX */
 #include "symtab.h"
 
 /* name, epoch, version, release, arch and os of a package together: its

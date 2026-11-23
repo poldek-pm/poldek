@@ -6,6 +6,7 @@
 */
 #include "test.h"
 #include "capreq_intern.h"
+#include "poldek_intern.h"
 #include <tndb/tndb.h>
 
 /* pkgdir/pndir/pndir.h, which takes -Ipkgdir */
@@ -64,9 +65,6 @@ START_TEST(test_pkg_new_vr_limit) {
 }
 END_TEST
 
-/* PKG_NEVRA_MAX of pkg.c */
-#define NEVRA_MAX 224
-
 /* a package "aaa...-1-1.x86_64" of an os of its own (not the default one,
    which the pndir key leaves out), with a name of namelen characters */
 static struct pkg *new_named(int namelen, int32_t epoch)
@@ -85,7 +83,7 @@ static struct pkg *new_named(int namelen, int32_t epoch)
    "-", release, "#", arch, ":" and os count, the epoch as 12 characters
    whatever its value */
 START_TEST(test_pkg_new_nevra_limit) {
-    int namelen = NEVRA_MAX - (1 + 1 + 1 + 1 + 7 + 7);
+    int namelen = PKG_NEVRA_MAX - (1 + 1 + 1 + 1 + 7 + 7);
     char key[512];
     struct pkg *pkg;
 

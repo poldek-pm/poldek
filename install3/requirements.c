@@ -746,6 +746,11 @@ static int process_req(int indent, struct i3ctx *ictx,
     return rc;
 }
 
+/* the answers the tests give in POLDEK_TESTING_WITH_SUGGESTS (07-depsolver),
+   besides the name of the one suggested package to take */
+#define AUTOCHOICE_ALL   "all"    /* every suggested package */
+#define AUTOCHOICE_ABORT "abort"  /* as 'q' to the question */
+
 static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 {
     tn_array *suggests = NULL, *choices = NULL;
@@ -815,7 +820,8 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
             continue;
         }
 
-        if (autochoice && n_str_ne(autochoice, "all") && n_str_ne(autochoice, "abort") &&
+        if (autochoice && n_str_ne(autochoice, AUTOCHOICE_ALL) &&
+            n_str_ne(autochoice, AUTOCHOICE_ABORT) &&
             n_str_ne(autochoice, capreq_name(req))) {
             trace(indent, "- %s: skipped by autochoice (%s)", reqstr, autochoice);
             continue;
@@ -830,13 +836,12 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
         return NULL;
     }
 
-    if (autochoice && n_str_ne(autochoice, "abort"))
+    if (autochoice && n_str_ne(autochoice, AUTOCHOICE_ABORT))
         return suggests;
 
     choices = n_array_clone(suggests);
     n_array_ctl_set_freefn(choices, NULL); /* 'weak' ref */
 
-    /* autochoice "abort" simulates answering 'q' */
     answer = autochoice ? POLDEK_ANSWER_ABORT : poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0);
     switch (answer) {
 	/* do not install any of suggested packages */

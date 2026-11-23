@@ -48,6 +48,10 @@ EXPORT time_t pm_dbmtime(struct pm_ctx *ctx, const char *path);
    NULL if there is none or the module cannot tell */
 EXPORT char *pm_dbstamp(struct pm_ctx *ctx, const char *path);
 
+/* pkgs_toremove are the installed packages the installation of pkgs
+   replaces: rpm takes them as its own upgrades do and is not given them,
+   pset (a directory as the destination) removes them with the installation;
+   a caller that removes them itself after passes none */
 EXPORT int pm_pminstall(struct pkgdb *db, const tn_array *pkgs,
                  const tn_array *pkgs_toremove, struct poldek_ts *ts);
 

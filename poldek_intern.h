@@ -13,8 +13,26 @@
 #ifndef POLDEK_INTERNAL_H
 #define POLDEK_INTERNAL_H
 
+#ifndef EXPORT
+#  define EXPORT extern
+#endif
+
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
+#include <tndb/tndb.h>          /* TNDB_KEY_MAX */
+
+/* The index keys of a package are its pndir key, "name#epoch:version-
+   release#arch:os" (pndir_make_pkgkey()), and a suffix: the language of its
+   description (pndir/save.c) or the dirindex's 2-byte prefix, ':' and the
+   build time (pkgdir_dirindex.c:package_key()). pkg_new() refuses a package
+   whose name, epoch, version, release, arch and os leave no room for the
+   longer of them. */
+#define PKG_KEY_LANG_RESERVE      31
+#define PKG_KEY_DIRINDEX_RESERVE  (2 + 1 + 10)
+#if PKG_KEY_DIRINDEX_RESERVE > PKG_KEY_LANG_RESERVE
+# error "PKG_NEVRA_MAX leaves no room for a dirindex key"
+#endif
+#define PKG_NEVRA_MAX  (TNDB_KEY_MAX - PKG_KEY_LANG_RESERVE)
 
 
 // pkgdir.h structures
@@ -79,10 +97,6 @@ void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
 /* register/unregister a TS_CONFIG_LATER ts for sync at poldek_setup() */
 void poldek__ts_defer(struct poldek_ctx *ctx, struct poldek_ts *ts);
-
-#ifndef EXPORT
-#  define EXPORT extern
-#endif
 
 /* a new transaction as ts was handed over: its settings (type, flags,
    options, directories, rpm options, masks) and the packages it was given,

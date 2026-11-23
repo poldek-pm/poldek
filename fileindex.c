@@ -335,8 +335,6 @@ void file_conflict_print(int flags, const struct file_ent *e1,
     if (flags & FILE_CONFLICT_SHRD)
         prefix = "shr";
 
-    //n_assert(cnfl->flags & (FILE_CONFLICT_ADDED_RIGTH | FILE_CONFLICT_ADDED_LEFT));
-
     msg(0, " %-5s %s(%c m%o s%u) %c-%c %s(%c m%o s%u)\n", prefix,
         pkg_snprintf_s(e1->pkg),
         S_ISDIR(e1->flfile->mode) ? 'D' : 'F',
@@ -346,26 +344,6 @@ void file_conflict_print(int flags, const struct file_ent *e1,
         pkg_snprintf_s0(e2->pkg),
         S_ISDIR(e2->flfile->mode) ? 'D' : 'F',
         e2->flfile->mode, e2->flfile->size);
-
-#if 0
-    if (ent1->pkg->cnfls) {
-        int i;
-        printf("1 %d: (", pkg_has_pkgcnfl(ent1->pkg, ent2->pkg));
-
-        for (i=0; i<n_array_size(ent1->pkg->cnfls); i++)
-            printf("%s, ", capreq_snprintf_s(n_array_nth(ent1->pkg->cnfls, i)));
-        printf(")\n");
-    }
-
-    if (ent2->pkg->cnfls) {
-        int i;
-        printf("2 %d: (", pkg_has_pkgcnfl(ent2->pkg, ent1->pkg));
-        for (i=0; i<n_array_size(ent2->pkg->cnfls); i++)
-            printf("%s, ", capreq_snprintf_s(n_array_nth(ent2->pkg->cnfls, i)));
-        printf(")\n");
-    }
-#endif
-
 }
 
 

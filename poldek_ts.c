@@ -313,6 +313,8 @@ struct poldek_ts *poldek__ts_new_like(const struct poldek_ts *ts)
     n_assert(ts->ctx);          /* the internal one of a context is its own */
     nts = poldek_ts_new(ts->ctx, 0);
 
+    /* as ts has it, which may be none: poldek_ts_set_type() takes no 0, and
+       sets an option of an uninstall that is copied below as ts has it */
     nts->type = ts->type;
     set_str(&nts->typenam, ts->typenam);
     nts->_flags = ts->_flags;

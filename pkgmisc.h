@@ -23,6 +23,10 @@
 #endif
 
 /*  === pkgscore ===  */
+/* filled in by pkgscore_match_init() for pkgscore_match(), which alone reads
+   it: pkgbuf holds "[source:]name-version-release.arch" and pkgname_off is
+   the length of "source:" in it; for forms longer than pkgbuf it is -1 and
+   pkgbuf empty, and each match makes the forms itself */
 struct pkgscore_s {
     char        pkgbuf[512];
     int         pkgname_off;
