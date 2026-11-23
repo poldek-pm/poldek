@@ -327,7 +327,7 @@ static void third_waits_for_second(const char *dir, pid_t second)
 
     fail_if(pipe(fds) != 0, "pipe: %s", strerror(errno));
     third = lock_holder(dir, fds[1], '3');
-    fail_if(wrote_within(fds[0], 1000), "the third process got the lock the second holds");
+    fail_if(wrote_within(fds[0], 300), "the third process got the lock the second holds");
 
     kill(second, SIGKILL);
     waitpid(second, NULL, 0);
@@ -398,7 +398,7 @@ int close(int fd)
         hook.thread_close_fd = -1;
         hook.thread_rc = pthread_create(&hook.thread, NULL, take_lock, (void *)hook.dir);
         /* unless it waits for the release to end */
-        hook.thread_locked = hook.thread_rc == 0 && wrote_within(hook.report[0], 500);
+        hook.thread_locked = hook.thread_rc == 0 && wrote_within(hook.report[0], 300);
     }
 #endif
     rc = real_close(fd);
@@ -582,7 +582,7 @@ START_TEST (test_lock_taken_again) {
     fail_if(access(lockpath, F_OK) != 0, "%s: removed with the first lock held", lockpath);
 
     second = lock_holder(dir, fds[1], '2');
-    fail_if(wrote_within(fds[0], 1000), "another process got the lock held");
+    fail_if(wrote_within(fds[0], 300), "another process got the lock held");
     vf_lock_release(outer);
     fail_if(!wrote_within(fds[0], 15000), "another process got no lock after its release");
     kill(second, SIGKILL);
@@ -621,7 +621,7 @@ START_TEST (test_lock_released_in_child) {
     fail_if(access(lockpath, F_OK) != 0, "%s: removed by the child", lockpath);
 
     second = lock_holder(dir, fds[1], '2');
-    fail_if(wrote_within(fds[0], 1000), "another process got the lock held");
+    fail_if(wrote_within(fds[0], 300), "another process got the lock held");
     vf_lock_release(inner);
     vf_lock_release(outer);
     fail_if(!wrote_within(fds[0], 15000), "another process got no lock after its release");
@@ -690,7 +690,7 @@ START_TEST (test_lock_inherited_of_own_file) {
     }
 
     second = lock_holder(dir, fds[1], '2');
-    fail_if(wrote_within(fds[0], 1000), "another process got the lock the child holds");
+    fail_if(wrote_within(fds[0], 300), "another process got the lock the child holds");
     kill(child, SIGKILL);
     fail_if(!wrote_within(fds[0], 15000), "another process got no lock after the child ended");
     kill(second, SIGKILL);
@@ -727,7 +727,7 @@ START_TEST (test_lock_unlink_error) {
     fail_if(thread_lock == NULL, "the thread got no lock");
 
     second = lock_holder(dir, fds[1], '2');
-    fail_if(wrote_within(fds[0], 1000), "another process got the lock the thread holds");
+    fail_if(wrote_within(fds[0], 300), "another process got the lock the thread holds");
     vf_lock_release(thread_lock);
     fail_if(!wrote_within(fds[0], 15000), "another process got no lock after its release");
     kill(second, SIGKILL);
@@ -782,7 +782,7 @@ START_TEST (test_lock_inherited_released_as_thread_locks) {
     fail_if(!wrote_within(done[0], 15000), "the thread of the child got no lock");
 
     second = lock_holder(dir, fds[1], '2');
-    fail_if(wrote_within(fds[0], 1000), "another process got the lock the thread holds");
+    fail_if(wrote_within(fds[0], 300), "another process got the lock the thread holds");
     kill(child, SIGKILL);
     fail_if(!wrote_within(fds[0], 15000), "another process got no lock after the child ended");
     kill(second, SIGKILL);
