@@ -276,7 +276,7 @@ testUpUnloadableWritesNoStubIndex()
     mv $dir/primary.gz $dir/repodata/$new-primary.xml.gz
     sed -i "s/$old/$new/g" $dir/repodata/repomd.xml
 
-    $POLDEK_RAW_UP -Osource="$src" --up
+    $POLDEK_RAW_UP -Osource="$src" --up 2>&1
     stub=$(find $CACHEDIR -name 'stubindex*')
     [ -z "$stub" ] || fail "a stub index of the unloadable primary.xml: $stub"
 }

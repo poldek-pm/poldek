@@ -139,7 +139,7 @@ testInstallStubIndexCut()
     skip_if_rpm_testing_off && return
 
     index_with_cut_stub
-    $POLDEK install -v b
+    $POLDEK install -v b 2>&1
     assertEquals "install failed" "$?" "0"
     rpm_state_check "b" ""
 }
@@ -400,7 +400,7 @@ testShippedAliases()
     # those that run an external command have no help
     local aliases=$(sed -n '/^\[aliases\]/,$p' ../conf/cli.conf |
                     sed -n '/= *!/d; s/^\([a-zA-Z][^ =]*\) *=.*/\1/p')
-    assertNotNull "no aliases read from ../conf/cli.conf" "$aliases"
+    [ -n "$aliases" ] || fail "no aliases read from ../conf/cli.conf"
 
     for alias in $aliases; do
         out=$(HOME=$TMPDIR/home $POLDEK_NOCONF -q --cmd "$alias --help" 2>&1)

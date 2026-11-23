@@ -20,7 +20,7 @@ up() {
 ls_count() {
     # without the stub index poldek loads the index itself
     find $CACHEDIR -name stubindex.pndir.zst -delete
-    $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test --cmd ls |
+    $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test --cmd ls 2>/dev/null |
         grep -cP '^\w+-\d+-\d+\.\w+$'
 }
 
