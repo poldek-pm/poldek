@@ -38,5 +38,12 @@ struct poclidek_ctx;
 tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line);
 tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,
                                     const char **argv);
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
+/* exported for the shell, which is not a part of the library */
+EXPORT struct poclidek_cmd *poclidek__command_with_options(struct poclidek_ctx *cctx,
+                                                           const char *name);
 
 #endif
