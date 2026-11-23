@@ -395,7 +395,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     if ((flags & PKGDIR_OPEN_REFRESH) == 0)
         vfmode |= VFM_CACHE;
 
-    DBGF("%s [%s]\n", pkgdir->idxpath, pkgdir->name);
+    DBGF("%s [%s]\n", pkgdir->idxpath, pkgdir->name ? pkgdir->name : "-");
     if (!pndir_open_retry(&idx, pkgdir, vfmode, flags))
         return 0;
 
