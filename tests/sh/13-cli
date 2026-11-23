@@ -730,7 +730,7 @@ testExternalCommandOnlyAsCommand()
     echo "$out" | grep -q '!a: no such package'
     assertEquals "ls of a line did not get !a as an argument ($out)" "0" "$?"
 
-    out=$(printf '!echo first\nls -q a; !echo second\n!echo !third\nls -q !a\nquit\n' |
+    out=$(printf '!echo first\nls -q a; !echo second\n!echo !third\nls -q !a\n!echo fourth -h\n! echo fifth --help\n! -q echo sixth --usage\n! -q echo seventh -h\n! echo -- eighth\nquit\n' |
           timeout 60 script -qec "$POLDEK --noask --shell" /dev/null |
           tr -d '\r' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')
     # the shell is not in every build
@@ -740,6 +740,26 @@ testExternalCommandOnlyAsCommand()
     assertEquals "!echo did not get !third as an argument ($out)" "1" "$(echo "$out" | grep -cx '!third')"
     echo "$out" | grep -q '!a: no such package'
     assertEquals "ls in the shell did not get !a as an argument ($out)" "0" "$?"
+    assertEquals "!echo did not get -h as an argument ($out)" "1" "$(echo "$out" | grep -cx 'fourth -h')"
+    assertEquals "! echo did not get --help as an argument ($out)" "1" "$(echo "$out" | grep -cx 'fifth --help')"
+    assertEquals "echo after an option of ! did not get --usage ($out)" "1" "$(echo "$out" | grep -cx 'sixth --usage')"
+    assertEquals "echo after an option of ! did not get -h ($out)" "1" "$(echo "$out" | grep -cx 'seventh -h')"
+    assertEquals "echo did not get -- as an argument ($out)" "1" "$(echo "$out" | grep -cx -- '-- eighth')"
+    assertEquals "help of ! where an argument of its program was -h ($out)" "0" "$(echo "$out" | grep -c 'Execute external command\|^Usage: !')"
+
+    # a request for help among the options of ! is its help, and runs nothing
+    out=$(printf '! --help\n! -q --help echo MARKER\n! -q? echo MARKER -h\n! --hel echo MARKER --help\nquit\n' |
+          timeout 60 script -qec "$POLDEK --noask --shell" /dev/null |
+          tr -d '\r' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')
+    assertEquals "help of ! ($out)" "4" "$(echo "$out" | grep -c 'Execute external command')"
+    assertEquals "the program was run after the help of ! ($out)" "0" "$(echo "$out" | grep -c '^MARKER')"
+
+    # where options end at the first argument, too
+    out=$(printf '! echo ninth\n! echo -- tenth\nquit\n' |
+          POSIXLY_CORRECT=1 timeout 60 script -qec "$POLDEK --noask --shell" /dev/null |
+          tr -d '\r' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')
+    assertEquals "POSIXLY_CORRECT: ! echo ($out)" "1" "$(echo "$out" | grep -cx ninth)"
+    assertEquals "POSIXLY_CORRECT: ! echo -- ($out)" "1" "$(echo "$out" | grep -cx -- '-- tenth')"
 }
 
 # TAB after "--" in the shell completes the options of the command the
