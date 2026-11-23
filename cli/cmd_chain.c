@@ -205,29 +205,43 @@ inline bool skip_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
 }
 
 static
-struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name, int quiet)
+struct poclidek_cmd *command_by_name(struct poclidek_ctx *cctx,
+                                     const char *name, int *ambiguous);
+
+static
+struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name)
+{
+    struct poclidek_cmd *cmd;
+    int ambiguous;
+
+    if ((cmd = command_by_name(cctx, name, &ambiguous)) == NULL)
+        logn(LOGERR, ambiguous ? _("%s: ambiguous command") :
+             _("%s: no such command"), name);
+
+    return cmd;
+}
+
+/* the command name stands for where commands are run from (the shell or
+   not): the one called so, or the only one whose name begins with it. NULL
+   if there is none, with *ambiguous set if it begins the name of several. */
+static
+struct poclidek_cmd *command_by_name(struct poclidek_ctx *cctx,
+                                     const char *name, int *ambiguous)
 {
     struct poclidek_cmd *cmd, tmpcmd;
 
+    *ambiguous = 0;
     n_array_sort(cctx->commands);
     tmpcmd.name = (char*)name;
 
-    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd))) {
-        if (skip_command(cctx, cmd)) {
-            logn(LOGERR, _("%s: no such command"), name);
-            return NULL;
-        }
-
-        return cmd;
-    }
+    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)))
+        return skip_command(cctx, cmd) ? NULL : cmd;
 
     int i = n_array_bsearch_idx_ex(cctx->commands, &tmpcmd,
                                    (tn_fn_cmp)poclidek_cmd_ncmp);
 
-    if (i < 0) {
-        logn(LOGERR, _("%s: no such command"), name);
+    if (i < 0)
         return NULL;
-    }
 
     int n = 0;
     struct poclidek_cmd *selected = NULL;
@@ -246,11 +260,9 @@ struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name, i
         i++;
     }
 
-    if (n == 1) {
-        n_assert(selected);
-    } else if (!quiet) {
+    if (n != 1) {
+        *ambiguous = 1;
         selected = NULL;
-        logn(LOGERR, _("%s: ambiguous command"), name);
     }
 
     if (selected)
@@ -378,7 +390,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         acmd = n_array_nth(a_argv, 0);
     }
 
-    if ((cmd = find_command(cctx, acmd, 0)) == NULL)
+    if ((cmd = find_command(cctx, acmd)) == NULL)
         return NULL;
 
     if ((cmd->flags & COMMAND_IS_ALIAS) == 0) {
@@ -660,13 +672,71 @@ tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,
     return finish_cmd_chain(cmd_chain, is_err);
 }
 
-#if 0                           /* unused */
-int poclidek_has_batch_command(struct poclidek_ctx *cctx, const char *name) {
-    struct poclidek_cmd *cmd = find_command(cctx, name, 1);
+/* the word each command of line begins with, as it is written there; NULL if
+   the line does not parse */
+static tn_array *line_commands(const char *line)
+{
+    tn_array *tl, *names;
+    int i, begins = 1;
 
-    if (cmd && (cmd->flags & COMMAND_INTERACTIVE) == 0)
-        return 1;
+    if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL)
+        return NULL;
 
-    return 0;
+    names = n_array_new(2, free, NULL);
+    for (i=0; i < n_array_size(tl); i++) {
+        const char *arg = n_array_nth(tl, i);
+
+        if (is_break(arg, ";|")) {
+            begins = 1;
+
+        } else if (begins) {
+            n_array_push(names, n_strdup(arg));
+            begins = 0;
+        }
+    }
+
+    n_array_free(tl);
+    return names;
 }
-#endif
+
+/* the command the options typed after an alias go to: the last one of its
+   line, where the arguments it is given follow. NULL if there is none, or if
+   the line does not tell: a %N of a line with several commands may put them
+   into another one. What the alias is listed as an alias of is not asked:
+   that is the beginning of its line. */
+static struct poclidek_cmd *alias_target(struct poclidek_ctx *cctx,
+                                         const struct poclidek_cmd *alias)
+{
+    tn_array *names = line_commands(alias->cmdline);
+    struct poclidek_cmd *cmd = NULL;
+    int n, ambiguous;
+
+    if (names == NULL)
+        return NULL;
+
+    n = n_array_size(names);
+    if (n == 1 || (n > 1 && strchr(alias->cmdline, '%') == NULL))
+        cmd = command_by_name(cctx, n_array_nth(names, n - 1), &ambiguous);
+
+    n_array_free(names);
+    return cmd;
+}
+
+/* the command whose options a line that begins with name takes: the one name
+   stands for when the line is run, or the one its alias leads to, through
+   other aliases too; NULL if there is none (an alias to an external command,
+   to its own argument, to itself; an ambiguous name) */
+struct poclidek_cmd *poclidek__command_with_options(struct poclidek_ctx *cctx,
+                                                    const char *name)
+{
+    int ambiguous, n = n_array_size(cctx->commands); /* aliases in a loop end with it */
+    struct poclidek_cmd *cmd = command_by_name(cctx, name, &ambiguous);
+
+    while (cmd && (cmd->flags & COMMAND_IS_ALIAS) && n-- > 0)
+        cmd = alias_target(cctx, cmd);
+
+    if (cmd == NULL || (cmd->flags & COMMAND_IS_ALIAS) || cmd->argp_opts == NULL)
+        return NULL;
+
+    return cmd;
+}

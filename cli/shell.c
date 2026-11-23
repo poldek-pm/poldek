@@ -41,6 +41,7 @@
 #include "pkg.h"
 #include "poldek_term.h"
 #include "cmd.h"
+#include "cmd_chain.h"
 #define POCLIDEK_ITSELF
 #include "poclidek.h"
 
@@ -185,44 +186,30 @@ static char *command_generator(const char *text, int state)
     return name;
 }
 
+/* the first word of line, where its command is; *len is its length */
+static const char *first_word(const char *line, int *len)
+{
+    while (isspace((unsigned char)*line))
+        line++;
+
+    *len = strcspn(line, " \t");
+    return line;
+}
+
 static char *command_options_generator(const char *text, int state)
 {
     static tn_array *opts_table = NULL;
 
     if (state == 0) {
-        struct poclidek_cmd *command = NULL;
-        char *p, *e = NULL, line[64];
+        struct poclidek_cmd *command;
+        const char *word;
+        char *name;
         int i, len;
 
-        p = rl_line_buffer;
-
-        if ((e = strchr(p, ' ')) == NULL)
-            return NULL;
-
-        n_assert(e - p + 1 <= 64);
-
-        n_strncpy(line, p, e - p + 1);
-
-        for (i = 0; i < n_array_size(sh_ctx.commands); i++) {
-            struct poclidek_cmd *cmd = n_array_nth(sh_ctx.commands, i);
-
-            if (cmd->flags & COMMAND_BATCH)
-                continue;
-
-            if (n_str_eq(cmd->name, line)) {
-                if (cmd->aliasto) {
-                    struct poclidek_cmd tmpcmd;
-
-                    tmpcmd.name = cmd->aliasto;
-                    command = n_array_bsearch(sh_ctx.commands, &tmpcmd);
-
-                } else {
-                    command = cmd;
-                }
-
-                break;
-            }
-        }
+        word = first_word(rl_line_buffer, &len);
+        name = n_strdupl(word, len);
+        command = poclidek__command_with_options(sh_ctx.cctx, name);
+        free(name);
 
         if (command == NULL)
             return NULL;
@@ -423,15 +410,13 @@ static char **poldek_completion(const char *text, int start, int end)
 {
     char **matches = NULL;
     char *p;
+    int wordlen;
 
     start = start;
     end = end;
     matches = NULL;
 
-    p = rl_line_buffer;
-
-    while (isspace(*p))
-        p++;
+    p = (char *)first_word(rl_line_buffer, &wordlen);
 
     if (*p) {  /* XXX: alias context should be configurable, TODO */
         if (strncmp(p, "un", 2) == 0 || strncmp(p, "rem", 3) == 0) /* uninstall|remove cmd */
@@ -459,7 +444,7 @@ static char **poldek_completion(const char *text, int start, int end)
             sh_ctx.completion_ctx = COMPLETION_CTX_NONE;
     }
 
-    if (start == 0 || strchr(p, ' ') == NULL) {
+    if (start == 0 || p[wordlen] == '\0') {
         matches = rl_completion_matches(text, command_generator);
 
     } else if (strncmp(text, "--", 2) == 0) {

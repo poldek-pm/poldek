@@ -714,6 +714,92 @@ testExternalCommandOnlyAsCommand()
     assertEquals "ls in the shell did not get !a as an argument ($out)" "0" "$?"
 }
 
+# TAB after "--" in the shell completes the options of the command the
+# line's first word leads to, and offers none where there is no such command
+testShellOptionCompletion()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nla = ls a\npla = la\nself = self a\nrun = %%1\nvia = sear\ntwice = via\nzza = ls\nzzb = ls\namb = zz\nchain = ls -q a ; search\ntabbed = search\t-p\npipecase = ls -q a | des\np1 = ls -q %%1\nearg = search %%1 a ; ls -q a\n' \
+           > $TMPDIR/home/.poclidekrc
+
+    # what the shell shows when $1 (a printf format) is typed at its prompt:
+    # typed earlier, it would be the terminal that reads the control characters
+    shell() {
+        local in=$TMPDIR/shell.in out=$TMPDIR/shell.out i=0
+
+        rm -f $in $out
+        mkfifo $in
+        HOME=$TMPDIR/home timeout 60 script -qec "$POLDEK --noask --shell" /dev/null \
+            < $in > $out 2>&1 &
+        exec 9> $in
+        while ! grep -q -e 'poldek:' -e 'built without interactive mode' $out && [ $i -lt 300 ]; do
+            sleep 0.1
+            i=$((i + 1))
+        done
+        printf "$1" >&9
+        exec 9>&-
+        wait
+        tr -d '\r' < $out | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g'
+    }
+
+    out=$(shell 'quit\n')
+    # the shell is not in every build
+    if echo "$out" | grep -q 'built without interactive mode'; then
+        startSkipping
+        fail # to count skipping tests
+        endSkipping
+        return
+    fi
+
+    # a command, an alias, an alias of an alias; spaces before the command;
+    # an alias that puts its argument into its one command
+    local line
+    for line in 'ls --rev' 'la --rev' 'pla --rev' '  ls --rev' 'p1 --rev'; do
+        out=$(shell "$line"'\t\nquit\n')
+        echo "$out" | grep -q -- "$line"'erse'
+        assertEquals "<$line>: --reverse not completed ($out)" "0" "$?"
+    done
+
+    # an alias to a command by the beginning of its name, as a line runs
+    # it; the command itself so; an alias of several commands, whose last
+    # one gets the options; a tab in an alias's line; a tab (typed after ^V)
+    # after the command
+    for line in 'via --summ' 'twice --summ' 'sear --summ' 'chain --summ' 'tabbed --summ'; do
+        out=$(shell "$line"'\t\nquit\n')
+        echo "$out" | grep -q -- "$line"'ary'
+        assertEquals "<$line>: --summary not completed ($out)" "0" "$?"
+    done
+
+    # a pipe, whose last command is named by the beginning of its name
+    out=$(shell 'pipecase --confl\t\nquit\n')
+    echo "$out" | grep -q -- 'pipecase --conflicts'
+    assertEquals "<pipecase --confl>: --conflicts not completed ($out)" "0" "$?"
+
+    out=$(shell 'ls\026\t--rev\t\nquit\n')
+    echo "$out" | grep -q -- '--reverse'
+    assertEquals "ls, a tab, --rev: --reverse not completed ($out)" "0" "$?"
+
+    # nothing to offer: an alias to itself, to its argument, a command
+    # without options, no command at all, the beginning of several names (as
+    # an alias's line and typed), a word longer than any command, an option
+    # of an alias's command that is not its last, an alias of several
+    # commands that puts its argument into one of them
+    local long=$(printf 'x%.0s' $(seq 1 70))
+    for line in 'self --rev' 'run --rev' 'alias --rev' 'nosuch --rev' 'amb --rev' 'zz --rev' \
+                "$long --rev" 'chain --rev' 'earg --rev' 'earg --summ'; do
+        out=$(shell "$line"'\t\t\n!echo alive\nquit\n')
+        assertEquals "<$line> and TAB: the shell did not go on ($out)" \
+                     "1" "$(echo "$out" | grep -cx alive)"
+        echo "$out" | grep -q -e '--reverse' -e '--summary'
+        assertEquals "<$line>: an option offered ($out)" "1" "$?"
+    done
+}
+
 # the arguments an alias does not use for its parameters go after its
 # line as the words they are
 testAliasPassesArgumentsAsWords()
