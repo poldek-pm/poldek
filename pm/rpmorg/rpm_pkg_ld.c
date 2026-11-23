@@ -383,8 +383,11 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
        range as broken, too */
     memset(fentdirs_items, 0, sizeof(*fentdirs_items) * dirs.count);
     for (j=0; j < rpmtdCount(&names); j++) {
-        uint32_t idx = *uint32_at(&diridxs, j);
+        uint32_t *idxp = uint32_at(&diridxs, j);
+        uint32_t idx;
 
+        n_assert(idxp != NULL);
+        idx = *idxp;
         if (idx >= rpmtdCount(&dirs)) {
             logn(LOGERR, "%s: DIRINDEXES entry %u out of range (%u DIRNAMES)",
                  pkgname, idx, dirs.count);

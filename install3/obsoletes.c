@@ -164,7 +164,7 @@ static int get_orphaned(int indent, struct i3ctx *ictx,
 static
 int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec, void *apkg)
 {
-    struct pkg dbpkg, *pkg = apkg;
+    struct pkg dbpkg = { 0 }, *pkg = apkg;
     const char *arch;
 
     db = db;

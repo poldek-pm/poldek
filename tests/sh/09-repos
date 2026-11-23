@@ -167,7 +167,7 @@ testThreadedLoadKeepsMessages()
 
     msgn "Testing..."
     for i in 1 2 3; do
-        rm -f $CACHEDIR/*/stubindex.pndir.zst # each load writes them again
+        find $CACHEDIR -name stubindex.pndir.zst -delete # each load writes them again
         LC_ALL=C $RAW_POLDEK $sources --cmd ls 2>&1 | grep -qx '8 packages read' ||
             missing=$((missing + 1))
     done
