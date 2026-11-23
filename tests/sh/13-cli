@@ -419,8 +419,8 @@ testAliasBackThroughArgument()
     mkdir -p $TMPDIR/home
     printf '[aliases]\nrun = %%1\n' > $TMPDIR/home/.poclidekrc
 
-    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd "run 'run ls'" 2>&1)
-    assertEquals "run 'run ls' failed ($out)" "0" "$?"
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd "run run ls" 2>&1)
+    assertEquals "run run ls failed ($out)" "0" "$?"
     echo "$out" | grep -q '^a-1-1'
     assertEquals "a-1-1 not listed ($out)" "0" "$?"
 }
@@ -723,6 +723,56 @@ testAliasPassesArgumentsAsWords()
 
     out=$(HOME=$TMPDIR/home $POLDEK --cmd 'run ls -q a' 2>&1)
     assertEquals "run ls -q a ($out)" "a-1-1" "$(echo "$out" | grep -o '^[ab]*-1-1' | xargs)"
+}
+
+# the argument put in for an alias's %N stays within the word that names
+# it, whatever it contains: it is not parsed as a part of the alias's line
+testAliasParameterIsOneWord()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build ab
+    build b
+    index
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\np1 = ls -q %%1\nglob = ls -q %%1*\nnm = ls -q %%1 %%0\nsuffix = ls -q "%%1"b\ndigit = ls -q "%%1"2\n' \
+           > $TMPDIR/home/.poclidekrc
+
+    local arg
+    for arg in 'a b' 'a|b' 'a;b' 'a ; ls -q b' "a'b" 'a"b' 'a%b'; do
+        out=$(HOME=$TMPDIR/home $POLDEK -q p1 "$arg" 2>&1)
+        assertEquals "p1 with <$arg> as a word ($out)" \
+                     "error: $arg: no such package or directory" "$out"
+    done
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd "p1 'a b'" 2>&1)
+    assertEquals "p1 'a b' of a line ($out)" \
+                 "error: a b: no such package or directory" "$out"
+
+    # within a word
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'glob a' 2>&1)
+    assertEquals "glob a ($out)" "a-1-1 ab-1-1" "$(echo "$out" | grep -o '^[ab]*-1-1' | xargs)"
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q glob 'a b' 2>&1)
+    assertEquals "glob with <a b> ($out)" "error: a b*: no such package or directory" "$out"
+
+    # a quote of the alias's line ends the parameter's number
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'suffix a' 2>&1)
+    assertEquals "suffix a ($out)" \
+                 "$(HOME=$TMPDIR/home $POLDEK -q --cmd 'ls -q ab' 2>&1)" "$out"
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'digit a' 2>&1)
+    assertEquals "digit a ($out)" "error: a2: no such package or directory" "$out"
+
+    # the arguments left follow, also when the alias uses its own name
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'nm a b' 2>&1)
+    assertEquals "nm a b ($out)" "a-1-1 b-1-1" "$(echo "$out" | grep -o '^[ab]*-1-1' | xargs)"
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'p1' 2>&1)
+    assertEquals "p1 without an argument ($out)" \
+                 "error: p1: apply arguments failed (not enough arguments?)" "$out"
 }
 
 # search fails when its pattern does not compile
