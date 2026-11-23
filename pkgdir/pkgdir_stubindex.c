@@ -99,7 +99,8 @@ static int stubindex_path(char *path, int size, const struct pkgdir *pkgdir)
     return n;
 }
 
-static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
+static int stubindex_create(const struct pkgdir *pkgdir, const tn_array *pkgs,
+                            const char *path)
 {
     struct vflock *lock;
     tn_stream     *st;
@@ -126,8 +127,8 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
     if (n_stream_printf(st, "%s\n", stubindex_header) < 0)
         ok = 0;
 
-    for (int i=0; ok && i < n_array_size(pkgdir->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+    for (int i=0; ok && i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
         char key[PATH_MAX];
 
         int n = pndir_make_pkgkey(key, sizeof(key), pkg);
@@ -294,31 +295,33 @@ int pkgdir__stubindex_is_current(const struct pkgdir *pkgdir)
         stubindex_is_whole(path);
 }
 
-/* pkgdir holds every package of its source, none ignored or dropped as a
-   duplicate: the readers of the stub index do both, as a load does, and of
-   duplicates keep the first */
+/* the packages of pkgdir's source as they were read, before the masks and
+   the choice among duplicates; NULL if pkgdir no longer knows them */
+static const tn_array *read_pkgs(const struct pkgdir *pkgdir)
+{
+    /* a patch or a change leaves pkgs newer than what was read, as for the
+       dirindex; they are the whole source if no mask was applied */
+    if (pkgdir->flags & (PKGDIR_PATCHED | PKGDIR_CHANGED))
+        return (pkgdir->_ldflags & PKGDIR_LD_DOIGNORE) ? NULL : pkgdir->pkgs;
+
+    return pkgdir->_unsorted_pkgs;
+}
+
+/* in the order in which the first of duplicates is the one a load keeps:
+   the readers of the stub index apply the masks, then keep one of each */
 void pkgdir__stubindex_write(struct pkgdir *pkgdir)
 {
+    tn_array *pkgs;
     char path[1024];
+
+    n_assert(read_pkgs(pkgdir));
+    pkgs = n_array_dup(read_pkgs(pkgdir), (tn_fn_dup)pkg_link);
+    pkgdir__sort_for_uniq(pkgs);
 
     stubindex_path(path, sizeof(path), pkgdir);
     msgn_i(2, 2, "updating stub index of %s...", pkgdir_idstr_s(pkgdir));
-    pkgdir__sort_for_uniq(pkgdir);
-    stubindex_create(pkgdir, path);
-}
-
-/* has a loaded pkgdir every package of its source? */
-static int is_whole(const struct pkgdir *pkgdir)
-{
-    /* a module that ignores as it reads may have skipped some, with the
-       masks its source had then */
-    if ((pkgdir->_ldflags & PKGDIR_LD_DOIGNORE) &&
-        (pkgdir->mod->cap_flags & PKGDIR_CAP_HANDLEIGNORE))
-        return 0;
-
-    /* _unsorted_pkgs keeps what was read */
-    return pkgdir->_unsorted_pkgs &&
-        n_array_size(pkgdir->pkgs) == n_array_size(pkgdir->_unsorted_pkgs);
+    stubindex_create(pkgdir, pkgs, path);
+    n_array_free(pkgs);
 }
 
 void pkgdir__stubindex_update(struct pkgdir *pkgdir)
@@ -326,9 +329,18 @@ void pkgdir__stubindex_update(struct pkgdir *pkgdir)
     if (pkgdir__stubindex_is_current(pkgdir))
         return;
 
-    /* a loaded pkgdir that lost packages cannot write the stub index: it
-       is written from a load of its own, when there is a source to load */
-    if ((pkgdir->flags & PKGDIR_LOADED) && !is_whole(pkgdir)) {
+    if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
+        int verbosity = poldek_set_verbose(0);
+        int loaded = pkgdir_load(pkgdir, 0, 0);
+
+        poldek_set_verbose(verbosity);
+        if (!loaded)            /* no packages to list: not a source of none */
+            return;
+    }
+
+    /* the packages the masks hid are gone from a pkgdir patched after
+       they were applied: the stub index is written from a load of its own */
+    if (read_pkgs(pkgdir) == NULL) {
         struct pkgdir *whole = pkgdir->src ? pkgdir_srcopen(pkgdir->src, 0) : NULL;
 
         if (whole != NULL) {
@@ -336,15 +348,6 @@ void pkgdir__stubindex_update(struct pkgdir *pkgdir)
             pkgdir_free(whole);
         }
         return;
-    }
-
-    if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
-        int verbosity = poldek_set_verbose(0);
-        int loaded = pkgdir_load(pkgdir, 0, PKGDIR_LD_NOUNIQ);
-
-        poldek_set_verbose(verbosity);
-        if (!loaded)            /* no packages to list: not a source of none */
-            return;
     }
 
     pkgdir__stubindex_write(pkgdir);
