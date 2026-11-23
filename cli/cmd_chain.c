@@ -394,13 +394,6 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
     n_assert(a_argv_contains_break(a_argv) == 0);
 
     acmd = n_array_nth(a_argv, 0);
-    if (is_external(acmd)) {
-        char *p = n_array_shift(a_argv);
-        n_array_unshift(a_argv, n_strdup("--"));
-        n_array_unshift(a_argv, n_strdup(p + 1));
-        n_array_unshift(a_argv, n_strdup("!"));
-        acmd = n_array_nth(a_argv, 0);
-    }
 
     if ((cmd = find_command(cctx, acmd)) == NULL)
         return NULL;
