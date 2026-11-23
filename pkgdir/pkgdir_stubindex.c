@@ -52,10 +52,11 @@
 
 const char *pkgdir_stubindex_basename = "stubindex";
 
-/* the first line of a stub index that lists every package of its index;
-   one without it may have been written without the ignored ones, and is
-   not read: the next load of the whole source writes over it */
-static const char stubindex_header[] = "%stubindex whole";
+/* the first line of a stub index: the version of its format. A file with
+   another first line is not read, and the next load of its source writes
+   over it: one from before v2 has none, and may have been written without
+   the ignored packages, while v2 lists every package of its source */
+static const char stubindex_header[] = "%stubindex v2";
 
 static int stubindex_path(char *path, int size, const struct pkgdir *pkgdir)
 {
@@ -171,7 +172,7 @@ tn_array *load_stubindex(const char *path)
     struct stat sb;
     char *buf;
     size_t size;
-    int n, whole = 0;
+    int n, header = 0;
 
     /* a stub index, even an empty one, holds a zstd frame: an empty file is
        one cut before its first write, which trurlib reads as a whole stream */
@@ -192,10 +193,10 @@ tn_array *load_stubindex(const char *path)
         while (n > 0 && isspace((unsigned char)buf[n - 1]))
             buf[--n] = '\0';
 
-        if (!whole) {           /* the first line */
+        if (!header) {          /* the first line */
             if (strcmp(buf, stubindex_header) != 0)
                 break;
-            whole = 1;
+            header = 1;
             continue;
         }
 
@@ -220,7 +221,7 @@ tn_array *load_stubindex(const char *path)
         n_array_cfree(&pkgs);
         unlink(path);
 
-    } else if (!whole) {    /* stays until the next load writes over it */
+    } else if (!header) {   /* stays until the next load writes over it */
         n_array_cfree(&pkgs);
     }
 
@@ -263,13 +264,13 @@ tn_array *source_stubload(struct source *src)
     return pkgs;
 }
 
-/* the file starts with the line that says it lists every package */
-static int stubindex_is_whole(const char *path)
+/* the file is of the version of the format written here */
+static int stubindex_is_this_version(const char *path)
 {
     tn_stream *st;
     char *buf = NULL;
     size_t size = 0;
-    int n, whole = 0;
+    int n, same = 0;
 
     if ((st = n_stream_open(path, "r", TN_STREAM_UNKNOWN)) == NULL)
         return 0;
@@ -277,12 +278,12 @@ static int stubindex_is_whole(const char *path)
     if ((n = n_stream_getline(st, &buf, &size)) > 0) {
         while (n > 0 && isspace((unsigned char)buf[n - 1]))
             buf[--n] = '\0';
-        whole = strcmp(buf, stubindex_header) == 0;
+        same = strcmp(buf, stubindex_header) == 0;
     }
     n_free(buf);
     n_stream_close(st);
 
-    return whole;
+    return same;
 }
 
 int pkgdir__stubindex_is_current(const struct pkgdir *pkgdir)
@@ -292,7 +293,7 @@ int pkgdir__stubindex_is_current(const struct pkgdir *pkgdir)
     stubindex_path(path, sizeof(path), pkgdir);
 
     return poldek_util_mtime(path) == pkgdir_mtime(pkgdir) &&
-        stubindex_is_whole(path);
+        stubindex_is_this_version(path);
 }
 
 /* the packages of pkgdir's source as they were read, before the masks and

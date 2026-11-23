@@ -866,7 +866,15 @@ testSourceIgnoreWithStubIndex()
         mv -f $stub.old $stub
         ls_source $type ""
         assertEquals "$type: no mask, a stub index without a left ($out)" "a-1-1 b-1-1" "$shown"
-        assertEquals "$type: the stub index was not written again" "%stubindex whole" "$(zstdcat $stub | head -1)"
+        assertEquals "$type: the stub index was not written again" "%stubindex v2" "$(zstdcat $stub | head -1)"
+
+        # one of another version of the format
+        zstdcat $stub | sed -e '1s/.*/%stubindex v3/' -e '/^a#/d' | zstd -q -c > $stub.old
+        touch -r $stub $stub.old
+        mv -f $stub.old $stub
+        ls_source $type ""
+        assertEquals "$type: no mask, a stub index of v3 without a ($out)" "a-1-1 b-1-1" "$shown"
+        assertEquals "$type: the stub index of v3 was not written again" "%stubindex v2" "$(zstdcat $stub | head -1)"
     done
 }
 
