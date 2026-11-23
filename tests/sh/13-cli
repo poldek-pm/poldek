@@ -356,6 +356,25 @@ testAliasLoop()
     done
 }
 
+# the aliases of the cli.conf that is installed name options their commands have
+testShippedAliases()
+{
+    mkdir -p $TMPDIR/home
+    cp ../conf/cli.conf $TMPDIR/home/.poclidekrc
+
+    # those that run an external command have no help
+    local aliases=$(sed -n '/^\[aliases\]/,$p' ../conf/cli.conf |
+                    sed -n '/= *!/d; s/^\([a-zA-Z][^ =]*\) *=.*/\1/p')
+    assertNotNull "no aliases read from ../conf/cli.conf" "$aliases"
+
+    for alias in $aliases; do
+        out=$(HOME=$TMPDIR/home $POLDEK_NOCONF -q --cmd "$alias --help" 2>&1)
+        assertEquals "$alias --help: exit code ($out)" "0" "$?"
+        echo "$out" | grep -q -e 'invalid option' -e 'unrecognized option' -e 'no such command'
+        assertEquals "$alias --help ($out)" "1" "$?"
+    done
+}
+
 # an alias may use another alias more than once
 testAliasUsedTwice()
 {
