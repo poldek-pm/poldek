@@ -73,6 +73,7 @@ libpoldek_core_la_SOURCES = \
 	  poldek_intern.h \
 	  pkg_ver_cmp.h \
 	  thread.c thread.h \
+	  symtab.c symtab.h \
 	  booldep_parse.c booldep_eval.c booldep.h
 
 pkgincludedir = $(includedir)/poldek

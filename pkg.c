@@ -41,6 +41,7 @@
 #include "pkgcmp.h"
 #include "pkg_ver_cmp.h"
 #include "thread.h"
+#include "symtab.h"
 
 /* name, epoch, version, release, arch and os of a package together: its
    pndir key, plus 31 bytes of a language for its description key or 13 of
@@ -50,41 +51,39 @@
 int poldek_conf_PROMOTE_EPOCH = 0;
 int poldek_conf_MULTILIB = 0;
 
-static tn_hash *architecture_h = NULL;
-static tn_array *architecture_a = NULL;
+static int arch_score(const char *arch, unsigned id)
+{
+    int score = pm_architecture_score(arch);
 
-static tn_hash *operatingsystem_h = NULL;
-static tn_array *operatingsystem_a = NULL;
+    n_assert(score >= 0);
+    if (score == 0) {
+        /* make it most less preferred, but differ from other zero-scored
+           archs (i686 and x86_64 on x32 case) */
+        score = INT_MAX - (int)id;
+    }
+    DBGF("register %s with score %d\n", arch, score);
+    return score;
+}
 
-struct an_arch {
-    int score;
-    int id;
-    int len;
-    char arch[0];
-};
+static struct symtab arch_symtab = SYMTAB_INITIALIZER(arch_score);
+static struct symtab os_symtab = SYMTAB_INITIALIZER(NULL);
 
 #ifdef ENABLE_THREADS
-static pthread_mutex_t arch_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t os_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int atfork_registered;
 
-/* a name is registered under its mutex whether threads load or not: a
-   fork() waits for it, so a child gets the lists whole */
-# define registry_lock(m)   pthread_mutex_lock(m)
-# define registry_unlock(m) pthread_mutex_unlock(m)
-
 /* a child has only the thread that called fork(): one forked while another
-   thread held a mutex would find it held for good, so fork() waits for them */
+   thread held a table's lock would find it held for good, so fork() waits
+   for them */
 static void registry_atfork_lock(void)
 {
-    pthread_mutex_lock(&arch_mutex);
-    pthread_mutex_lock(&os_mutex);
+    symtab_lock(&arch_symtab);
+    symtab_lock(&os_symtab);
 }
 
 static void registry_atfork_unlock(void)
 {
-    pthread_mutex_unlock(&os_mutex);
-    pthread_mutex_unlock(&arch_mutex);
+    symtab_unlock(&os_symtab);
+    symtab_unlock(&arch_symtab);
 }
 
 /* by poldeklib_init(), so before any name is registered and any thread of
@@ -108,180 +107,68 @@ int pkg__registry_init(void)
     return 1;
 }
 #else
-# define registry_lock(m)   ((void) 0)
-# define registry_unlock(m) ((void) 0)
-
 int pkg__registry_init(void)
 {
     return 1;
 }
 #endif
 
-/* the last one registered, read without the mutex: published with release
-   once filled in, so a reader that acquires it sees it whole */
-static struct an_arch *last_arch = NULL;
-
-static
-struct an_arch *pkgmod_register_arch(const char *arch)
+/* NULL, with a warning, if the table is full: the package of one more arch
+   or os is refused */
+static const struct symtab_ent *register_name(struct symtab *t,
+                                              const char *pkgname,
+                                              const char *what,
+                                              const char *name)
 {
-    struct an_arch *an_arch;
+    const struct symtab_ent *e = symtab_add(t, name);
 
-    an_arch = __atomic_load_n(&last_arch, __ATOMIC_ACQUIRE);
-    if (an_arch && strcmp(an_arch->arch, arch) == 0) {
-        return an_arch;
-    }
-
-    registry_lock(&arch_mutex);
-
-    if (architecture_h == NULL) {
-        architecture_h = n_hash_new(21, free);
-        architecture_a = n_array_new(16, NULL, NULL);
-        n_hash_ctl(architecture_h, TN_HASH_NOCPKEY);
-    }
-
-    if ((an_arch = n_hash_get(architecture_h, arch)) == NULL) {
-        int len = strlen(arch);
-
-        an_arch = n_malloc(sizeof(*an_arch) + len + 1);
-        an_arch->len = len;
-
-        an_arch->score = pm_architecture_score(arch);
-        n_assert(an_arch->score >= 0);
-        if (an_arch->score == 0) {
-            /* make it most less preferred, but differ from other zero-scored
-               archs (i686 and x86_64 on x32 case) */
-            an_arch->score = INT_MAX - n_array_size(architecture_a) - 1;
-        }
-        DBGF("register %s with score %d\n", arch, an_arch->score);
-
-        memcpy(an_arch->arch, arch, len + 1);
-        n_array_push(architecture_a, an_arch);
-
-        /* +1 in fact; 0 means no arch */
-        an_arch->id = n_array_size(architecture_a);
-        n_assert(an_arch->id < UINT16_MAX);
-        n_hash_insert(architecture_h, an_arch->arch, an_arch);
-
-        __atomic_store_n(&last_arch, an_arch, __ATOMIC_RELEASE);
-    }
-
-    registry_unlock(&arch_mutex);
-
-    return an_arch;
-}
-
-/* the array grows (realloc) as a loading thread registers a new arch, so it
-   is read under the mutex too; an entry itself never moves */
-static struct an_arch *arch_entry(int index)
-{
-    struct an_arch *a;
-
-    mutex_lock(&arch_mutex);
-    a = n_array_nth(architecture_a, index - 1);
-    mutex_unlock(&arch_mutex);
-    n_assert(a);
-
-    return a;
+    if (e == NULL)
+        logn(LOGWARN, _("%s: %s %s: more than %d different ones, ignored"),
+             pkgname, what, name, SYMTAB_MAX_ID);
+    return e;
 }
 
 const char *pkg_arch(const struct pkg *pkg)
 {
-    if (pkg->_arch)
-        return arch_entry(pkg->_arch)->arch;
+    if (pkg->_arch) {
+        const char *arch = symtab_str(&arch_symtab, pkg->_arch);
+        n_assert(arch);
+        return arch;
+    }
 
     return NULL;
 }
 
 int pkg_arch_score(const struct pkg *pkg)
 {
-    if (!pkg->_arch)
-        return 0;
-
-    return arch_entry(pkg->_arch)->score;
+    return pkg->_arch ? symtab_value(&arch_symtab, pkg->_arch) : 0;
 }
 
 int pkg_set_arch(struct pkg *pkg, const char *arch)
 {
-    struct an_arch *an_arch = pkgmod_register_arch(arch);
-    pkg->_arch = an_arch->id;
-    return 1;
-}
+    const struct symtab_ent *e = register_name(&arch_symtab, pkg->name, "arch", arch);
 
-struct an_os {
-    //int score;
-    int id;
-    int len;
-    char os[0];
-};
-
-/* as last_arch */
-static struct an_os *last_os = NULL;
-
-static
-struct an_os *pkgmod_register_os(const char *os)
-{
-    struct an_os *an_os;
-
-    an_os = __atomic_load_n(&last_os, __ATOMIC_ACQUIRE);
-    if (an_os && strcmp(an_os->os, os) == 0) {
-        return an_os;
-    }
-
-    registry_lock(&os_mutex);
-
-    if (operatingsystem_h == NULL) {
-        operatingsystem_h = n_hash_new(21, free);
-        operatingsystem_a = n_array_new(16, NULL, NULL);
-        n_hash_ctl(operatingsystem_h, TN_HASH_NOCPKEY);
-    }
-
-    if ((an_os = n_hash_get(operatingsystem_h, os)) == NULL) {
-        int len = strlen(os);
-
-        an_os = n_malloc(sizeof(*an_os) + len + 1);
-        an_os->len = len;
-        memcpy(an_os->os, os, len + 1);
-
-        n_array_push(operatingsystem_a, an_os);
-        /* +1 in fact; 0 means no os */
-        an_os->id = n_array_size(operatingsystem_a);
-
-        n_hash_insert(operatingsystem_h, an_os->os, an_os);
-
-        __atomic_store_n(&last_os, an_os, __ATOMIC_RELEASE);
-    }
-
-    registry_unlock(&os_mutex);
-
-    return an_os;
-}
-
-/* as arch_entry() */
-static struct an_os *os_entry(int index)
-{
-    struct an_os *o;
-
-    mutex_lock(&os_mutex);
-    o = n_array_nth(operatingsystem_a, index - 1);
-    mutex_unlock(&os_mutex);
-    n_assert(o);
-
-    return o;
+    pkg->_arch = e ? e->id : 0;
+    return e != NULL;
 }
 
 const char *pkg_os(const struct pkg *pkg)
 {
-    if (pkg->_os)
-        return os_entry(pkg->_os)->os;
+    if (pkg->_os) {
+        const char *os = symtab_str(&os_symtab, pkg->_os);
+        n_assert(os);
+        return os;
+    }
 
     return NULL;
 }
 
 int pkg_set_os(struct pkg *pkg, const char *os)
 {
-    struct an_os *an_os = pkgmod_register_os(os);
-    pkg->_os = an_os->id;
-    return 1;
+    const struct symtab_ent *e = register_name(&os_symtab, pkg->name, "os", os);
+
+    pkg->_os = e ? e->id : 0;
+    return e != NULL;
 }
 
 /* true if the index keys of a package of these lengths fit: those of
@@ -376,8 +263,13 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 
     len += len + 1;             /* for id (nvr) */
 
-    const struct an_arch *an_arch = arch ? pkgmod_register_arch(arch) : NULL;
-    const struct an_os *an_os = os ? pkgmod_register_os(os) : NULL;
+    const struct symtab_ent *an_arch = NULL, *an_os = NULL;
+
+    if (arch && (an_arch = register_name(&arch_symtab, name, "arch", arch)) == NULL)
+        return NULL;
+
+    if (os && (an_os = register_name(&os_symtab, name, "os", os)) == NULL)
+        return NULL;
 
     if (an_arch)                /* in the pndir key, multilib or not */
         arch_len = an_arch->len;

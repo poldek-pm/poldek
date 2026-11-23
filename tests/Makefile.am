@@ -25,6 +25,8 @@ check_PROGRAMS += test_fileindex
 check_PROGRAMS += test_pkgfl
 # capreq_clone() of a long capability
 check_PROGRAMS += test_capreq
+# the table of arch and os names
+check_PROGRAMS += test_symtab
 # a directory cleaned is not left locked
 check_PROGRAMS += test_pkgdir_clean
 if ENABLE_THREADS
