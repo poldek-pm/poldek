@@ -52,6 +52,13 @@ EXPORT int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 EXPORT int poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                       const char *cmdline);
 
+/* The commands of a line, of the functions above and of rcmd's, do not
+   share a transaction: each runs on a new one made like ts, with its
+   settings and the packages given to it, so the arguments and options of
+   a command are not those of the next. The last command, the right end of
+   the last pipeline, runs on ts itself and leaves it what it was given and
+   what it did. With ts NULL every command gets a new transaction. */
+
 EXPORT struct poclidek_rcmd *poclidek_rcmd_new(struct poclidek_ctx *cctx,
                                         struct poldek_ts *ts);
 
@@ -60,6 +67,7 @@ EXPORT void poclidek_rcmd_free(struct poclidek_rcmd *rcmd);
 EXPORT int poclidek_rcmd_exec(struct poclidek_rcmd *rcmd, int argc, const char **argv);
 EXPORT int poclidek_rcmd_execline(struct poclidek_rcmd *rcmd, const char *cmdline);
 
+/* what the last command of the line gave, packages or text */
 EXPORT tn_array *poclidek_rcmd_get_packages(struct poclidek_rcmd *rcmd);
 EXPORT tn_buf *poclidek_rcmd_get_buf(struct poclidek_rcmd *rcmd);
 EXPORT const char *poclidek_rcmd_get_output(struct poclidek_rcmd *rcmd);

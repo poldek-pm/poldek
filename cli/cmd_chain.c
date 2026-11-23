@@ -571,6 +571,19 @@ static tn_array *finish_cmd_chain(tn_array *cmd_chain, int is_err)
         chain = divide_into_pipelines(cmd_chain);
 
     n_array_free(cmd_chain);
+
+    /* the last command of the line is the tail of its last pipeline, as the
+       chain holds the pipelines' first commands only */
+    if (chain && n_array_size(chain) > 0) {
+        struct cmd_chain_ent *ent;
+
+        ent = n_array_nth(chain, n_array_size(chain) - 1);
+        while (ent->next_piped)
+            ent = ent->next_piped;
+
+        ent->flags |= CMD_CHAIN_ENT_LAST;
+    }
+
     return chain;
 }
 

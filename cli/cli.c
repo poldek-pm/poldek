@@ -38,6 +38,7 @@
 #include "cli.h"
 #include "cmd_chain.h"
 #include "cmd_pipe.h"
+#include "poldek_intern.h"      /* for poldek__ts_new_like() */
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 
@@ -798,7 +799,8 @@ static char **a_argv_to_argv(tn_array *a_argv, char **argv)
     return argv;
 }
 
-/* executes command chain (a pipeline) */
+/* executes command chain (a pipeline); the one marked CMD_CHAIN_ENT_LAST
+   runs on the caller's ts and leaves it the result */
 static
 int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                           struct cmd_chain_ent *ent, struct cmd_pipe *cmd_pipe)
@@ -806,6 +808,12 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     struct cmdctx  cmdctx;
     char **argv;
     int rc = 0, runit = 1;
+    int last = (ent->flags & CMD_CHAIN_ENT_LAST) != 0;
+    int verbose = poldek_verbose(); /* -q and -v of a command are its own */
+
+    /* LAST marks the tail of the last pipeline, which has nothing to its
+       right */
+    n_assert(!(last && ent->next_piped));
 
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
@@ -819,14 +827,21 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     cmdctx.cmd = ent->cmd;
     cmdctx.cctx = cctx;
 
-    if ((cmdctx.ts = ts) == NULL)
+    /* every command of a line starts from ts as the caller gave it, so the
+       arguments and options of one are not those of the next; the last runs
+       on ts itself, and leaves the caller what it has done */
+    if (ts == NULL)
         cmdctx.ts = poldek_ts_new(cctx->ctx, 0);
+    else if (!last)
+        cmdctx.ts = poldek__ts_new_like(ts);
+    else
+        cmdctx.ts = ts;
 
     if (ent->next_piped) {
         ent->pipe_right = cmd_pipe_new();
         cmdctx.pipe_right = ent->pipe_right;
 
-    } else if (cmd_pipe) {
+    } else if (cmd_pipe && last) {
         DBGF("piped %s\n", ent->cmd->name);
         ent->pipe_right = cmd_pipe_link(cmd_pipe);
         cmdctx.pipe_right = ent->pipe_right;
@@ -867,7 +882,9 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     rc = do_exec_cmd_ent(&cmdctx, n_array_size(ent->a_argv), argv);
 
  l_end:
-    if (ts == NULL)
+    poldek_set_verbose(verbose);
+
+    if (cmdctx.ts != ts)
         poldek_ts_free(cmdctx.ts);
 
     if (cmdctx.pipe_left)
@@ -883,13 +900,10 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                           tn_array *cmd_chain, struct cmd_pipe *cmd_pipe)
 {
-    int                   rc = 0, i, verbose;
+    int                   rc = 0, i;
 
     if (cmd_chain == NULL)
         return 0;
-
-    /* keep verbose setting as it changes when '-q' option is used */
-    verbose = poldek_verbose();
 
     for (i=0; i < n_array_size(cmd_chain); i++) {
         struct cmd_chain_ent  *ent;
@@ -900,14 +914,8 @@ static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
             continue;
         }
 
-        if (cmd_pipe && i == n_array_size(cmd_chain) - 1)
-            rc = poclidek_exec_cmd_ent(cctx, ts, ent, cmd_pipe);
-        else
-            rc = poclidek_exec_cmd_ent(cctx, ts, ent, NULL);
+        rc = poclidek_exec_cmd_ent(cctx, ts, ent, cmd_pipe);
     }
-
-    /* restore verbose setting */
-    poldek_set_verbose(verbose);
 
     n_array_free(cmd_chain);
     return rc;

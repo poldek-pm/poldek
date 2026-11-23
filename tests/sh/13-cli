@@ -409,6 +409,144 @@ testCmdQuotedPipeOrSemicolon()
     assertEquals "abc-1-1 not found ($out)" "0" "$?"
 }
 
+# each command of a line starts with the settings poldek was given: neither
+# the packages nor the options of the command before it are its own
+testCmdsOfLineShareNothing()
+{
+    skip_if_rpm_testing_off && return
+
+    local out
+
+    build a
+    build b
+    build c
+    build y -r nosuchcap
+    index
+
+    out=$($POLDEK -q --cmd "ls -q a ; ls -q b ; ls -q c" 2>&1)
+    assertEquals "ls ; ls ; ls" "a-1-1 b-1-1 c-1-1" "$(echo "$out" | grep -o '^[abc]-1-1' | xargs)"
+
+    out=$($POLDEK -q ls -q a ";" ls -q b 2>&1)
+    assertEquals "ls ; ls as arguments" "a-1-1 b-1-1" "$(echo "$out" | grep -o '^[abc]-1-1' | xargs)"
+
+    out=$($POLDEK -q --cmd "ls -q a ; ls -q b | desc" 2>&1)
+    assertEquals "ls ; ls | desc" "b-1-1" "$(echo "$out" | grep '^Package:' | grep -o '[ab]-1-1' | xargs)"
+
+    # --test of the first is not the second's
+    out=$($POLDEK --cmd "install --test a ; install b" 2>&1)
+    rpm_state_check "b" "a"
+
+    # nor is --nodeps
+    out=$($POLDEK --cmd "install --nodeps c ; install y" 2>&1)
+    rpm_state_check "b,c" "y"
+
+    # an option of poldek is every command's
+    out=$($POLDEK --test --cmd "install a ; uninstall b" 2>&1)
+    rpm_state_check "b,c" "a"
+}
+
+# -q of a command does not quieten the commands after it
+testCmdQuietOnlyForItself()
+{
+    skip_if_rpm_testing_off && return
+
+    local out
+
+    build a
+    build b
+    index
+
+    out=$($POLDEK --cmd "install -q --test a ; install --test b" 2>&1)
+    echo "$out" | grep -q 'There are 1 package to install'
+    assertEquals "install after install -q said nothing ($out)" "0" "$?"
+
+    out=$($POLDEK --cmd "ls -q a | install --test" 2>&1)
+    echo "$out" | grep -q 'There are 1 package to install'
+    assertEquals "install after ls -q | said nothing ($out)" "0" "$?"
+}
+
+# a pipeline in the middle of a line: its commands run on transactions of
+# their own, so its packages are not the next command's
+testCmdPipelineInTheMiddle()
+{
+    skip_if_rpm_testing_off && return
+
+    local out
+
+    build a
+    build b
+    index
+
+    out=$($POLDEK -q --cmd "ls -q a | desc ; ls -q b" 2>&1)
+    assertEquals "ls | desc ; ls" "b-1-1" \
+        "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
+    assertEquals "ls | desc ; ls, what desc described" "a-1-1" \
+        "$(echo "$out" | grep '^Package:' | grep -o '[ab]-1-1' | xargs)"
+
+    out=$($POLDEK -q --cmd "ls -q a | install --test ; ls -q b" 2>&1)
+    assertEquals "ls | install ; ls" "b-1-1" \
+        "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
+}
+
+# runs $1 as --cmd through rcmd (tests/rcmd_user.c), on a transaction with
+# the mask $2 if given; what it prints in $out
+rcmd_line() {
+    out=$(env ${2:+RCMD_MASK=$2} LD_PRELOAD=$PWD/.libs/rcmd_user.so \
+              $POLDEK -q --cmd "$1" 2>&1)
+}
+
+# the packages of $out the line left in the caller's pipe
+rcmd_packages() {
+    echo "$out" | sed -n 's/^rcmd package: \([abc]-1-1\).*/\1/p' | xargs
+}
+
+# the packages desc described into the caller's pipe
+rcmd_described() {
+    echo "$out" | grep '^rcmd output: Package:' | grep -o '[abc]-1-1' | xargs
+}
+
+# the arguments the caller's transaction is left with
+rcmd_arguments() {
+    echo "$out" | sed -n 's/^rcmd argument: //p' | xargs
+}
+
+# a line run through rcmd on the caller's transaction: what the last command
+# of the line gives goes to the caller, also when it is the right side of a
+# pipe, and nothing of the commands before it; the packages the caller gave
+# go to every command, and the transaction is left with the last one's
+testCmdLineThroughRcmd()
+{
+    skip_if_rpm_testing_off && return
+
+    local out
+
+    build a
+    build b
+    build c
+    index
+
+    rcmd_line "ls -q a ; ls -q b"
+    assertEquals "ls ; ls, packages ($out)" "b-1-1" "$(rcmd_packages)"
+
+    rcmd_line "ls -q a ; search -q b | ls -q"
+    assertEquals "ls ; search | ls, packages ($out)" "b-1-1" "$(rcmd_packages)"
+
+    rcmd_line "ls -q a ; ls -q b | desc"
+    assertEquals "ls ; ls | desc, described ($out)" "b-1-1" "$(rcmd_described)"
+
+    rcmd_line "ls -q a | desc ; ls -q b"
+    assertEquals "ls | desc ; ls, packages ($out)" "b-1-1" "$(rcmd_packages)"
+    assertEquals "ls | desc ; ls, described ($out)" "" "$(rcmd_described)"
+
+    rcmd_line "ls -q b ; ls -q c" a
+    assertEquals "mask a, ls b ; ls c, the first ($out)" "a-1-1 b-1-1" \
+        "$(echo "$out" | grep -o '^[abc]-1-1' | xargs)"
+    assertEquals "mask a, ls b ; ls c, packages ($out)" "a-1-1 c-1-1" \
+        "$(rcmd_packages)"
+    assertEquals "mask a, ls b ; ls c, arguments left ($out)" "a c" \
+        "$(rcmd_arguments)"
+}
+
 # in multilib mode, where package ids end in .ARCH, ls still finds a
 # package by name-version-release
 testLsNvrMultilib()
