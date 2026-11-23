@@ -52,6 +52,12 @@
 
 const char *pkgdir_stubindex_basename = "stubindex";
 
+/* the first line of a stub index: the version of its format. A file with
+   another first line is not read, and the next load of its source writes
+   over it: one from before v2 has none, and may have been written without
+   the ignored packages, while v2 lists every package of its source */
+static const char stubindex_header[] = "%stubindex v2";
+
 static int stubindex_path(char *path, int size, const struct pkgdir *pkgdir)
 {
     char tmp[PATH_MAX];
@@ -94,7 +100,8 @@ static int stubindex_path(char *path, int size, const struct pkgdir *pkgdir)
     return n;
 }
 
-static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
+static int stubindex_create(const struct pkgdir *pkgdir, const tn_array *pkgs,
+                            const char *path)
 {
     struct vflock *lock;
     tn_stream     *st;
@@ -118,8 +125,11 @@ static int stubindex_create(const struct pkgdir *pkgdir, const char *path)
         return 0;
     }
 
-    for (int i=0; i < n_array_size(pkgdir->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+    if (n_stream_printf(st, "%s\n", stubindex_header) < 0)
+        ok = 0;
+
+    for (int i=0; ok && i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
         char key[PATH_MAX];
 
         int n = pndir_make_pkgkey(key, sizeof(key), pkg);
@@ -162,7 +172,7 @@ tn_array *load_stubindex(const char *path)
     struct stat sb;
     char *buf;
     size_t size;
-    int n;
+    int n, header = 0;
 
     /* a stub index, even an empty one, holds a zstd frame: an empty file is
        one cut before its first write, which trurlib reads as a whole stream */
@@ -182,6 +192,13 @@ tn_array *load_stubindex(const char *path)
     while ((n = n_stream_getline(st, &buf, &size)) > 0) {
         while (n > 0 && isspace((unsigned char)buf[n - 1]))
             buf[--n] = '\0';
+
+        if (!header) {          /* the first line */
+            if (strcmp(buf, stubindex_header) != 0)
+                break;
+            header = 1;
+            continue;
+        }
 
         char *csb = strrchr(buf, '^');
         if (csb != NULL) {
@@ -203,6 +220,9 @@ tn_array *load_stubindex(const char *path)
     if (n_stream_close(st) != 0) {
         n_array_cfree(&pkgs);
         unlink(path);
+
+    } else if (!header) {   /* stays until the next load writes over it */
+        n_array_cfree(&pkgs);
     }
 
     return pkgs;
@@ -244,33 +264,92 @@ tn_array *source_stubload(struct source *src)
     return pkgs;
 }
 
-void pkgdir__stubindex_update(struct pkgdir *pkgdir)
+/* the file is of the version of the format written here */
+static int stubindex_is_this_version(const char *path)
 {
-    time_t idx_mtime, mtime;
+    tn_stream *st;
+    char *buf = NULL;
+    size_t size = 0;
+    int n, same = 0;
+
+    if ((st = n_stream_open(path, "r", TN_STREAM_UNKNOWN)) == NULL)
+        return 0;
+
+    if ((n = n_stream_getline(st, &buf, &size)) > 0) {
+        while (n > 0 && isspace((unsigned char)buf[n - 1]))
+            buf[--n] = '\0';
+        same = strcmp(buf, stubindex_header) == 0;
+    }
+    n_free(buf);
+    n_stream_close(st);
+
+    return same;
+}
+
+int pkgdir__stubindex_is_current(const struct pkgdir *pkgdir)
+{
     char path[1024];
 
     stubindex_path(path, sizeof(path), pkgdir);
-    DBGF("%s\n", path);
 
-    idx_mtime = pkgdir_mtime(pkgdir);
-    mtime = poldek_util_mtime(path);
+    return poldek_util_mtime(path) == pkgdir_mtime(pkgdir) &&
+        stubindex_is_this_version(path);
+}
 
-    if (mtime == idx_mtime) {
-        return;
-    }
+/* the packages of pkgdir's source as they were read, before the masks and
+   the choice among duplicates; NULL if pkgdir no longer knows them */
+static const tn_array *read_pkgs(const struct pkgdir *pkgdir)
+{
+    /* a patch or a change leaves pkgs newer than what was read, as for the
+       dirindex; they are the whole source if no mask was applied */
+    if (pkgdir->flags & (PKGDIR_PATCHED | PKGDIR_CHANGED))
+        return (pkgdir->_ldflags & PKGDIR_LD_DOIGNORE) ? NULL : pkgdir->pkgs;
 
+    return pkgdir->_unsorted_pkgs;
+}
+
+/* in the order in which the first of duplicates is the one a load keeps:
+   the readers of the stub index apply the masks, then keep one of each */
+void pkgdir__stubindex_write(struct pkgdir *pkgdir)
+{
+    tn_array *pkgs;
+    char path[1024];
+
+    n_assert(read_pkgs(pkgdir));
+    pkgs = n_array_dup(read_pkgs(pkgdir), (tn_fn_dup)pkg_link);
+    pkgdir__sort_for_uniq(pkgs);
+
+    stubindex_path(path, sizeof(path), pkgdir);
     msgn_i(2, 2, "updating stub index of %s...", pkgdir_idstr_s(pkgdir));
+    stubindex_create(pkgdir, pkgs, path);
+    n_array_free(pkgs);
+}
 
-    /* the verbosity is process-wide: the load threads, which come here with
-       the pkgdir loaded, must not change it */
+void pkgdir__stubindex_update(struct pkgdir *pkgdir)
+{
+    if (pkgdir__stubindex_is_current(pkgdir))
+        return;
+
     if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
         int verbosity = poldek_set_verbose(0);
         int loaded = pkgdir_load(pkgdir, 0, 0);
-        poldek_set_verbose(verbosity);
 
-        if (!loaded)            /* an empty stub index, not the source's */
+        poldek_set_verbose(verbosity);
+        if (!loaded)            /* no packages to list: not a source of none */
             return;
     }
 
-    stubindex_create(pkgdir, path);
+    /* the packages the masks hid are gone from a pkgdir patched after
+       they were applied: the stub index is written from a load of its own */
+    if (read_pkgs(pkgdir) == NULL) {
+        struct pkgdir *whole = pkgdir->src ? pkgdir_srcopen(pkgdir->src, 0) : NULL;
+
+        if (whole != NULL) {
+            pkgdir__stubindex_update(whole);
+            pkgdir_free(whole);
+        }
+        return;
+    }
+
+    pkgdir__stubindex_write(pkgdir);
 }

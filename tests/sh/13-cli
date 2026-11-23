@@ -152,7 +152,7 @@ testStubIndexCutWrittenAgain()
 
     index_with_cut_stub
     $POLDEK ls > /dev/null 2>&1
-    assertEquals "packages in the stub index" "2" "$(zstdcat $STUB | wc -l)"
+    assertEquals "packages in the stub index" "2" "$(zstdcat $STUB | grep -vc "^%")"
 }
 
 # so is one cut before its first write, an empty file
@@ -162,7 +162,7 @@ testStubIndexEmptyWrittenAgain()
 
     index_with_cut_stub empty
     $POLDEK ls > /dev/null 2>&1
-    assertEquals "packages in the stub index" "2" "$(zstdcat $STUB | wc -l)"
+    assertEquals "packages in the stub index" "2" "$(zstdcat $STUB | grep -vc "^%")"
 }
 
 # a stub index that could not be written is left as it was: its time is the
@@ -178,18 +178,57 @@ testStubIndexWriteError()
 
     local stub=$(ls $CACHEDIR/*/stubindex.pndir.zst)
     [ -f "$stub" ] || fail "no stub index"
-    assertEquals "packages in the stub index" "1" "$(zstdcat $stub | wc -l)"
+    assertEquals "packages in the stub index" "1" "$(zstdcat $stub | grep -vc "^%")"
 
     build b
     index
     env LD_PRELOAD=$PWD/.libs/close_error.so WRITE_ERROR=stubindex.pndir.zst \
         $POLDEK ls > /dev/null 2>&1
-    assertEquals "stub index replaced" "1" "$(zstdcat $stub | wc -l)"
+    assertEquals "stub index replaced" "1" "$(zstdcat $stub | grep -vc "^%")"
     left=$(find $(dirname $stub) -name '.*.tmp.??????')
     [ -z "$left" ] || fail "temporary files left: $left"
 
     $POLDEK ls > /dev/null 2>&1
-    assertEquals "packages in the stub index" "2" "$(zstdcat $stub | wc -l)"
+    assertEquals "packages in the stub index" "2" "$(zstdcat $stub | grep -vc "^%")"
+}
+
+# of two packages a source takes for one it gives one, after its masks, which
+# may tell them apart by how the version is written; with the stub index the
+# choice is the same
+testStubIndexOfDuplicates()
+{
+    skip_if_rpm_testing_off && return
+
+    local conf=$TMPDIR/source-dup.conf mask left cold out cmd
+
+    SOURCE_DATE_EPOCH=$(date -u -d 2021-05-03 +%s)
+    export SOURCE_DATE_EPOCH
+    build a
+    mv $REPO/a-1-1.noarch.rpm $REPO/older.rpm
+    build same 1-1
+    SOURCE_DATE_EPOCH=$(date -u -d 2024-07-03 +%s)
+    build a
+    build same 01-1
+    unset SOURCE_DATE_EPOCH
+
+    for mask in "" same-01-1 same-1-1; do
+        left="same-01-1"
+        [ "$mask" = "same-01-1" ] && left="same-1-1"
+        printf '[source]\nname = s\ntype = dir\npath = %s/\n' $REPO > $conf
+        [ -n "$mask" ] && echo "ignore = $mask" >> $conf
+        rm -rf $CACHEDIR
+
+        for cmd in "ls -l a" "ls same" "desc same"; do
+            cold=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n s -q --cmd "$cmd" 2>&1 |
+                   grep -e '^a-1-1' -e '^same-' -e '^Package:')
+            [ -n "$cold" ] || fail "ignore = $mask: $cmd shows nothing"
+            out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n s -q --cmd "$cmd" 2>&1 |
+                  grep -e '^a-1-1' -e '^same-' -e '^Package:')
+            assertEquals "ignore = $mask: $cmd with the stub index" "$cold" "$out"
+            [ "$cmd" = "ls -l a" ] && continue
+            echo "$out" | grep -q "$left" || fail "ignore = $mask: $cmd does not show $left ($out)"
+        done
+    done
 }
 
 # a directory index that could not be written is left as it was, with its
@@ -823,23 +862,37 @@ testIgnoreMaskLongSourceName()
     assertEquals "dir: ignore = NAME:b-1-1.noarch ($out)" "a-1-1" "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
 }
 
-# -vvv names each package the source ignores in its index, also the first
+# -vvv names each package the source ignores the same way, however it comes
+# to be ignored: dropped after the load that writes the stub index, left out
+# of the stub index as it is read, or skipped in the index by a later load
 testSourceIgnoreVerbose()
 {
     skip_if_rpm_testing_off && return
 
-    local conf="$TMPDIR/source-ignore.conf" mask out
+    local conf="$TMPDIR/source-ignore.conf" opt name out
 
     build a
     build b
     index
+    touch -d '-1 hour' $REPO/packages.ndir.*    # for the stub index to stay current
+    printf '[source]\nname = s\ntype = pndir\npath = %s/\nignore = a*\n' $REPO > $conf
 
-    for mask in a b; do
-        printf '[source]\nname = s\ntype = pndir\npath = %s/\nignore = %s*\n' $REPO $mask > $conf
-        out=$($POLDEK_RAW --conf $conf --cachedir $CACHEDIR -n s -vvv --cmd ls 2>&1)
-        assertEquals "ls ignoring $mask failed ($out)" "0" "$?"
-        assertEquals "the message does not name $mask ($out)" "1" \
-            "$(echo "$out" | grep -c "pndir: ignored $mask-1-1$")"
+    for opt in "" "-Omultilib=0"; do
+        name="a-1-1.noarch"
+        [ -n "$opt" ] && name="a-1-1"
+        rm -rf $CACHEDIR
+
+        # the second run reads the stub index, then loads the source for desc
+        for cmd in ls "desc b"; do
+            out=$($POLDEK_RAW $opt --conf $conf --cachedir $CACHEDIR -n s -vvv --cmd "$cmd" 2>&1)
+            assertEquals "$cmd ignoring a failed, $opt ($out)" "0" "$?"
+            echo "$out" | grep -q "^ *ignored $name$" ||
+                fail "$cmd $opt: no 'ignored $name' ($out)"
+            [ "$cmd" = ls ] || echo "$out" | grep -q 'Loading stub index' ||
+                fail "$cmd $opt: the stub index was not read ($out)"
+            assertEquals "$cmd $opt: a named another way ($out)" "" \
+                "$(echo "$out" | grep 'ignored a-' | grep -v "^ *ignored $name$")"
+        done
     done
 }
 
@@ -869,6 +922,71 @@ testSourceIgnoreMasks()
             assertEquals "$type: ignore = $mask ($out)" "$shown" \
                 "$(echo "$out" | grep -o '^ab*-1-1' | xargs)"
         done
+    done
+}
+
+# ls of a source: $1 its type, $2 the ignore line of its section, or none;
+# the output in $out, the packages shown in $shown
+ls_source()
+{
+    printf '[source]\nname = s\ntype = %s\npath = %s/\n%s\n' $1 $REPO "$2" > $TMPDIR/source-ignore.conf
+    out=$($POLDEK_RAW --conf $TMPDIR/source-ignore.conf --cachedir $CACHEDIR -n s -vv --cmd ls 2>&1)
+    shown=$(echo "$out" | grep -o '^[ab]-1-1' | xargs)
+}
+
+# ignore of a source hides the same packages with a cold cache and with a
+# stub index in it, whatever masks were set when the stub index was written
+testSourceIgnoreWithStubIndex()
+{
+    skip_if_rpm_testing_off && return
+
+    local type out shown stub
+
+    build a
+    build b
+    index
+    for type in pndir dir; do
+        # a stub index is current while it has the time of its source: of
+        # the index or, with dir, of the directory
+        touch -d '-1 hour' $REPO/packages.ndir.* $REPO
+        rm -rf $CACHEDIR
+        ls_source $type "ignore = a"
+        assertEquals "$type: ignore = a, a cold cache ($out)" "b-1-1" "$shown"
+        stub=$(find $CACHEDIR -name "stubindex.$type.zst")
+        assertEquals "$type: packages in the stub index written with ignore = a" "2" \
+            "$(zstdcat $stub | grep -vc "^%")"
+
+        ls_source $type ""
+        assertEquals "$type: no mask after ignore = a ($out)" "a-1-1 b-1-1" "$shown"
+        echo "$out" | grep -q 'Loading \[' && fail "$type: the source was loaded, not its stub index ($out)"
+
+        ls_source $type "ignore = a"
+        assertEquals "$type: ignore = a, a warm cache ($out)" "b-1-1" "$shown"
+        echo "$out" | grep -q 'Loading \[' && fail "$type: the source was loaded, not its stub index ($out)"
+
+        ls_source $type "ignore = s:a"
+        assertEquals "$type: ignore = s:a, a warm cache ($out)" "b-1-1" "$shown"
+        echo "$out" | grep -q 'Loading \[' && fail "$type: the source was loaded, not its stub index ($out)"
+
+        ls_source $type ""
+        assertEquals "$type: no mask, a warm cache ($out)" "a-1-1 b-1-1" "$shown"
+        echo "$out" | grep -q 'Loading \[' && fail "$type: the source was loaded, not its stub index ($out)"
+
+        # a stub index of a version that wrote it without the ignored packages
+        zstdcat $stub | grep -v -e '^%' -e '^a#' | zstd -q -c > $stub.old
+        touch -r $stub $stub.old
+        mv -f $stub.old $stub
+        ls_source $type ""
+        assertEquals "$type: no mask, a stub index without a left ($out)" "a-1-1 b-1-1" "$shown"
+        assertEquals "$type: the stub index was not written again" "%stubindex v2" "$(zstdcat $stub | head -1)"
+
+        # one of another version of the format
+        zstdcat $stub | sed -e '1s/.*/%stubindex v3/' -e '/^a#/d' | zstd -q -c > $stub.old
+        touch -r $stub $stub.old
+        mv -f $stub.old $stub
+        ls_source $type ""
+        assertEquals "$type: no mask, a stub index of v3 without a ($out)" "a-1-1 b-1-1" "$shown"
+        assertEquals "$type: the stub index of v3 was not written again" "%stubindex v2" "$(zstdcat $stub | head -1)"
     done
 }
 
