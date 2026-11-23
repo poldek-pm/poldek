@@ -167,7 +167,11 @@ int add_alias(struct poclidek_ctx *cctx,
                 logn(LOGWARN, _("%s (%s) overwrites %s"), aliasname, cmdline,
                      cmd->cmdline);
 
+            /* of the new line, not of the one it replaces */
+            cmd->flags &= ~(COMMAND_INTERACTIVE | COMMAND_PARAMETERIZED);
             cmd->flags |= flags;
+            if (strchr(cmdline, '%'))
+                cmd->flags |= COMMAND_PARAMETERIZED;
 
             free(cmd->name);
             cmd->name = n_strdup(aliasname);
