@@ -49,16 +49,17 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(vo
     return __register_atfork(prepare, parent, child, __dso_handle);
 }
 
-/* first of the tests: with CK_FORK=no the handlers stay registered */
-START_TEST(test_init_again_after_atfork_error) {
+/* a failed pthread_atfork() leaves the library set up, with a warning;
+   first of the tests: with CK_FORK=no the handlers stay registered */
+START_TEST(test_init_after_atfork_error) {
     atfork_fail_once = 1;
-    expect_int(poldeklib_init(), 0);
+    expect_int(poldeklib_init(), 1);
     expect_int(atfork_fail_once, 0);
     expect_int(poldeklib_init(), 1);
     poldeklib_destroy();
 }
 END_TEST
-# define INIT_TESTS test_init_again_after_atfork_error,
+# define INIT_TESTS test_init_after_atfork_error,
 #else
 # define INIT_TESTS
 #endif

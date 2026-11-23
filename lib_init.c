@@ -1325,8 +1325,10 @@ int poldeklib_init(void)
     if (poldeklib_init_called)
         return 1;
 
+    /* rare (ENOMEM) and narrow: the rest works without it */
     if (!pkg__registry_init())
-        return 0;
+        logn(LOGWARN, _("a fork() while another thread registers an arch or "
+                        "os may leave the child waiting"));
 
     poldeklib_init_called = 1;
 
