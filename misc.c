@@ -528,13 +528,18 @@ static int is_namechar(int c, const char *extra)
 }
 
 /* the '}' that closes a "${name:-" whose word starts at p, the "${...}" of
-   the word skipped */
-static const char *word_end(const char *p, char mark)
+   the word skipped, and what expand_vars() takes as escaped */
+static const char *word_end(const char *p, const struct util__expand *ex)
 {
+    char mark = ex->mark;
     int depth = 0;
 
     for (; *p; p++) {
-        if (*p == mark && p[1] == '{') {
+        if ((ex->flags & UTIL__EXPAND_ESCAPES) && *p == '\\' &&
+            (p[1] == mark || p[1] == '\\')) {
+            p++;
+
+        } else if (*p == mark && p[1] == '{') {
             depth++;
             p++;
 
@@ -629,7 +634,7 @@ static void expand_vars(tn_buf *out, const char *src,
 
         if ((ex->flags & UTIL__EXPAND_DEFAULTS) && name_end[0] == ':' &&
             (name_end[1] == '-' || name_end[1] == '+') &&
-            (end = word_end(name_end + 2, ex->mark)) != NULL) {
+            (end = word_end(name_end + 2, ex)) != NULL) {
 
             const char *word = name_end + 2;
 

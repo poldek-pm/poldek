@@ -196,6 +196,8 @@ START_TEST (test_util_vars_dnf) {
     check_vars(&ex, "${a:+w$a}/${nosuch:+w}/", "wA//");
     check_vars(&ex, "${nosuch:-${nosuch2:-${a}}}/", "A/");
     check_vars(&ex, "\\$a/\\\\$a/\\x", "$a/\\A/\\x");
+    /* an escaped mark in a word opens nothing */
+    check_vars(&ex, "${nosuch:-x\\${y}/", "x${y/");
     check_vars(&ex, "${a:=w}/${a.b}/${a/$/${}", "${a:=w}/${a.b}/${a/$/${}");
 
     /* a name longer than 255 characters is not one */
