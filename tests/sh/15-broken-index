@@ -19,14 +19,14 @@ up() {
 
 ls_count() {
     # without the stub index poldek loads the index itself
-    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    find $CACHEDIR -name stubindex.pndir.zst -delete
     $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test --cmd ls |
         grep -cP '^\w+-\d+-\d+\.\w+$'
 }
 
 desc_sh() {
     # descriptions are loaded lazily, only by desc
-    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    find $CACHEDIR -name stubindex.pndir.zst -delete
     $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
         --cmd "desc -L sh" 2>&1
 }
@@ -153,7 +153,7 @@ testCachedIndexRecordPastOffsets()
     up
     index=$(find $CACHEDIR -name packages.ndir$COMPR_EXT)
     [ -f "$index" ] || fail "no cached index"
-    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    find $CACHEDIR -name stubindex.pndir.zst -delete
     out=$($POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
           --cmd ls 2>&1)
     echo "$out" | grep -qx 'a-1-1.noarch' || fail "a-1-1.noarch not listed: $out"
@@ -162,7 +162,7 @@ testCachedIndexRecordPastOffsets()
     python3 -I $SHLIBDIR/tndb-set-vlen $index 'm#' 0xffffffff ||
         fail "tndb-set-vlen failed"
 
-    rm -f $CACHEDIR/*/stubindex.pndir.zst
+    find $CACHEDIR -name stubindex.pndir.zst -delete
     out=$($POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
           --cmd ls 2>&1)
     echo "$out" | grep -q 'iteration error, broken file' ||

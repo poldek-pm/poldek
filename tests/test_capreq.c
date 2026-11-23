@@ -101,6 +101,32 @@ START_TEST(test_pkg_new_nevra_limit) {
 }
 END_TEST
 
+/* a package of one more arch than poldek keeps is refused, not an abort();
+   one of an arch it has goes on */
+START_TEST(test_pkg_new_arch_limit) {
+    struct pkg *pkg = NULL, *last = NULL;
+    char arch[32];
+    int i;
+
+    for (i = 0; i <= 64; i++) {
+        snprintf(arch, sizeof(arch), "arch%d", i);
+        if ((pkg = pkg_new("foo", 0, "1", "1", arch, "linux")) == NULL)
+            break;
+        if (last)
+            pkg_free(last);
+        last = pkg;
+    }
+    fail_unless(pkg == NULL, "a package of each of %d arches", i);
+    fail_unless(last != NULL);
+
+    expect_notnull(pkg = pkg_new("foo", 0, "1", "1", pkg_arch(last), "linux"));
+    expect_int(pkg_set_arch(pkg, "one-more"), 0);
+    expect_null(pkg_arch(pkg));
+    pkg_free(pkg);
+    pkg_free(last);
+}
+END_TEST
+
 static void check_clone(int namelen, int32_t epoch, const char *version,
                         const char *release)
 {
@@ -201,7 +227,7 @@ START_TEST(test_pkg_long_version_set_later) {
 END_TEST
 
 NTEST_RUNNER("capreq", test_new_vr_limit, test_pkg_new_vr_limit,
-             test_pkg_new_nevra_limit,
+             test_pkg_new_nevra_limit, test_pkg_new_arch_limit,
              test_clone_long_name, test_clone_long_version,
              test_clone_long_evr, test_clone_short,
              test_pkg_long_version_set_later);

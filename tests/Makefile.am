@@ -25,6 +25,8 @@ check_PROGRAMS += test_fileindex
 check_PROGRAMS += test_pkgfl
 # capreq_clone() of a long capability
 check_PROGRAMS += test_capreq
+# the table of arch and os names
+check_PROGRAMS += test_symtab
 # a directory cleaned is not left locked
 check_PROGRAMS += test_pkgdir_clean
 if ENABLE_THREADS
@@ -79,7 +81,8 @@ close_error_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 rcmd_user_la_SOURCES = rcmd_user.c
 rcmd_user_la_LDFLAGS = -module -avoid-version -shared -rpath /nowhere
 # libc is all they use: the libraries of LIBS would only tie them to the
-# SONAMEs they were linked with, and nothing relinks them when those change
+# SONAMEs they were linked with, and nothing relinks them when those change;
+# a target-specific variable of GNU make, which other makes ignore
 $(check_LTLIBRARIES): LIBS = $(DL_LIBS)
 
 # runs of sh/ scripts at a time: make check-sh CHECK_SH_JOBS=4

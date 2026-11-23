@@ -65,6 +65,23 @@ END_TEST
 
 /* poldek_select_sources() picks loaded sources by name pattern without
    changing their flags */
+/* the options of a source given as "name,options path" set only their
+   PKGSOURCE_* bits, those without a value as those with one */
+START_TEST (test_pathspec_flags) {
+    struct source *src;
+    unsigned expected = PKGSOURCE_NAMED | PKGSOURCE_NOAUTO |
+        PKGSOURCE_VRFY_GPG | PKGSOURCE_PRI;
+
+    poldeklib_init();
+    src = source_new_pathspec(NULL, "testsrc,noauto,gpg,pri=3 /tmp/poldek-test-nonexistent", NULL);
+    fail_if(src == NULL, "no source");
+    fail_unless((src->flags & ~PKGSOURCE_AUTOUPA) == expected,
+                "flags 0x%x, expected 0x%x", src->flags, expected);
+    fail_unless(src->pri == 3, "pri %d, expected 3", src->pri);
+    source_free(src);
+}
+END_TEST
+
 START_TEST (test_select_sources) {
     const char *path = "poldek_test_source_select.conf";
     FILE *f = fopen(path, "w");
@@ -112,4 +129,4 @@ START_TEST (test_select_sources) {
 }
 END_TEST
 
-NTEST_RUNNER("source", test_source_flags, test_select_sources);
+NTEST_RUNNER("source", test_source_flags, test_pathspec_flags, test_select_sources);

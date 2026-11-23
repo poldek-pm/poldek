@@ -457,7 +457,12 @@ int32_t capreq_epoch_(const struct capreq *cr)
 tn_array *capreq_arr_new_ex(int size, void **data)
 {
     tn_array *arr;
-    arr = n_array_new_ex(size > 0 ? size : 2,
+
+    /* the size of data is the number of its items, which trurlib checks */
+    if (data == NULL && size <= 0)
+        size = 2;
+
+    arr = n_array_new_ex(size,
                          (tn_fn_free)capreq_free,
                          (tn_fn_cmp)capreq_cmp_name_evr,
                          data);

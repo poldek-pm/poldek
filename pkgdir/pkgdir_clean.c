@@ -84,6 +84,7 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
             rc = do_unlink(dirpath, test);
             vf_lock_release(tmp_vflock);
         }
+        vf_lock_release(vflock);
         return rc;
     }
 
@@ -128,19 +129,24 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
 
         snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchr, ent->d_name);
         if (stat(path, &st) == 0) {
-            if (S_ISREG(st.st_mode))
-                do_unlink(path, test);
+            if (S_ISREG(st.st_mode)) {
+                if (!do_unlink(path, test))
+                    rc = 0;
 
-            else if (S_ISDIR(st.st_mode))
-                pkgdir__rmf(path, mask, test);
+            } else if (S_ISDIR(st.st_mode)) {
+                if (!pkgdir__rmf(path, mask, test))
+                    rc = 0;
+            }
         }
     }
 
-    if (errno)      /* readdir() failed, not the end of the directory */
+    if (errno) {    /* readdir() failed, not the end of the directory */
         logn(LOGWARN, "readdir %s: %m", dirpath);
+        rc = 0;
+    }
 
     if (vflock)
         vf_lock_release(vflock);
     closedir(dir);
-    return 1;
+    return rc;
 }

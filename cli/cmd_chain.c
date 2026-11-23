@@ -33,6 +33,7 @@
 #include "cli.h"
 #include "cmd_chain.h"
 #include "cmd_pipe.h"
+#include "misc.h"               /* for util__expand_vars() */
 
 /* the alias being expanded and the ones that led to it */
 struct alias_path {
@@ -40,14 +41,13 @@ struct alias_path {
     const struct alias_path   *up;
 };
 
-/* an argument can end an alias's way back into itself (run = %1: run 'run ls'),
+/* an argument can end an alias's way back into itself (run = %1: run run ls),
    so only coming back more often than this is taken for a loop */
 #define ALIAS_COMEBACK_MAX 16
 
 static
-tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line, tn_array *a_argv,
-                          const struct alias_path *path);
+tn_array *prepare_words(struct poclidek_ctx *cctx, tn_array *cmd_chain,
+                        tn_array *tl, const struct alias_path *path);
 
 static
 struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
@@ -259,69 +259,105 @@ struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name, i
     return selected;
 }
 
-/* returns the alias line with the arguments put in, to be freed */
-static char *apply_params(const char *cmdline, tn_array *a_argv)
+/* the words of line, to be freed */
+static tn_array *line_words(const char *line)
 {
-    tn_hash *vars;
-    tn_array *new_a_argv = NULL;
-    const char *line, *p;
-    char *newline;
-    int i, size, maxlen = 0;
+    tn_array *tl;
 
-    n_assert(n_array_size(a_argv) > 0);
+    if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL)
+        logn(LOGERR, _("%s: parse error"), line);
 
-    vars = n_hash_new(n_array_size(a_argv) < 16 ? 16:n_array_size(a_argv) * 2,
-                      NULL);
+    return tl;
+}
 
-    for (i=0; i < n_array_size(a_argv); i++) {
-        char no[64], *arg = n_array_nth(a_argv, i);
-        n_snprintf(no, sizeof(no), "%d", i);
+/* the arguments an alias got, the alias's name first */
+struct alias_args {
+    tn_array *a_argv;
+    char     *used;             /* by a %N, of each argument */
+    int      missing;           /* a %N without its argument */
+};
 
-        n_hash_insert(vars, no, arg);
-        if ((int)strlen(arg) > maxlen)
-            maxlen = strlen(arg);
+static const char *alias_arg(const char *name, void *ctx)
+{
+    struct alias_args *args = ctx;
+    char *end;
+    long no = strtol(name, &end, 10);
+
+    /* a name that is no number is not a parameter: "--qf %{NAME}" */
+    if (end == name)
+        return NULL;
+
+    if (*end != '\0' || no >= n_array_size(args->a_argv)) {
+        args->missing = 1;
+        return NULL;
     }
 
-    /* each % may become the longest argument */
-    size = strlen(cmdline) + 1;
-    for (p = cmdline; (p = strchr(p, '%')) != NULL; p++)
-        size += maxlen;
+    args->used[no] = 1;
+    return n_array_nth(args->a_argv, no);
+}
 
-    newline = n_malloc(size);
-    line = poldek_util_expand_vars(newline, size, cmdline, '%', vars,
-                                   POLDEK_UTIL_EXPANDVARS_RMUSED);
+/* a %N of an alias's line as %{N}: what ends the number may be a quote,
+   which is gone once the line is parsed ("%1"b) */
+static const char *braced_param(const char *name, void *ctx)
+{
+    char *braced = ctx;
 
-    if (strchr(line, '%')) {/* still unexpanded vars */
-        n_cfree(&newline);
-        goto l_end;
+    if (*name < '0' || *name > '9')
+        return NULL;
+
+    n_snprintf(braced, 256 + 4, "%%{%s}", name); /* a name is under 256 bytes */
+    return braced;
+}
+
+/* the words of an alias's line followed by its arguments; each %N of a word
+   becomes its argument within that word, whatever the argument contains,
+   and the arguments no %N names follow as words. NULL on error. */
+static tn_array *alias_words(const struct poclidek_cmd *alias, tn_array *a_argv)
+{
+    struct alias_args args = { a_argv, NULL, 0 };
+    struct util__expand ex = {
+        .mark = '%', .flags = UTIL__EXPAND_BARE, .xchars = "",
+        .get = alias_arg, .ctx = &args,
+    };
+    char braced[256 + 4];
+    struct util__expand brace = {
+        .mark = '%', .flags = UTIL__EXPAND_BARE, .xchars = "",
+        .get = braced_param, .ctx = braced,
+    };
+    tn_buf *line;
+    tn_array *tl;
+    int i, nwords;
+
+    line = util__expand_vars(alias->cmdline, &brace);
+    tl = line_words(n_buf_ptr(line));
+    n_buf_free(line);
+    if (tl == NULL)
+        return NULL;
+
+    args.used = n_calloc(n_array_size(a_argv), 1);
+    args.used[0] = 1;           /* the name is not an argument to pass on */
+
+    nwords = (alias->flags & COMMAND_PARAMETERIZED) ? n_array_size(tl) : 0;
+    for (i=0; i < nwords; i++) {
+        tn_buf *word = util__expand_vars(n_array_nth(tl, i), &ex);
+
+        n_array_set_nth(tl, i, n_strdup(n_buf_ptr(word)));
+        n_buf_free(word);
     }
 
-    if (line != newline)        /* nothing to expand, line is cmdline */
-        n_snprintf(newline, size, "%s", line);
+    if (args.missing) {
+        logn(LOGERR, _("%s: apply arguments failed (not enough arguments?)"),
+             alias->name);
+        n_array_cfree(&tl);
 
-    /* remove used args from a_argv  */
-    new_a_argv = n_array_clone(a_argv);
-    n_assert(n_array_ctl_get_freefn(a_argv) == free);
-
-    i = 0;
-    while (n_array_size(a_argv) > 0) {
-        char no[64], *arg = n_array_shift(a_argv);
-
-        n_snprintf(no, sizeof(no), "%d", i++);
-        if (n_hash_exists(vars, no))
-            n_array_push(new_a_argv, arg);
-        else
-            free(arg);
+    } else {
+        for (i=0; i < n_array_size(a_argv); i++)
+            if (!args.used[i])
+                n_array_push(tl, n_strdup(n_array_nth(a_argv, i)));
     }
-    n_assert(n_array_size(a_argv) == 0);
-    while (n_array_size(new_a_argv) > 0)
-        n_array_push(a_argv, n_array_shift(new_a_argv));
-    n_array_free(new_a_argv);
 
-
- l_end:
-    n_hash_free(vars);
-    return newline;
+    free(args.used);
+    return tl;
 }
 
 static
@@ -353,8 +389,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
     } else {                    /* alias */
         struct alias_path here = { cmd, path };
         const struct alias_path *p;
-        const char *cmdline;
-        char *expanded = NULL;
+        tn_array *tl;
         int ok, comebacks = 0;
 
         for (p = path; p; p = p->up)
@@ -364,26 +399,22 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
             }
 
         n_assert(cmd->cmdline);
-        cmdline = cmd->cmdline;
+        if ((tl = alias_words(cmd, a_argv)) == NULL)
+            return NULL;
 
-        if (cmd->flags & COMMAND_PARAMETERIZED) {
-            if (n_array_size(a_argv) == 0) {
-                logn(LOGERR, _("%s: alias needs an arguments"), acmd);
-                return NULL;
-            }
+        if (poldek_VERBOSE > 1) {
+            tn_buf *line = n_buf_new(256);
+            int i;
 
-            if ((expanded = apply_params(cmdline, a_argv)) == NULL) {
-                logn(LOGERR,
-                     _("%s: apply arguments failed (not enough arguments?)"),
-                     acmd);
-                return NULL;
-            }
-            cmdline = expanded;
+            for (i=0; i < n_array_size(tl); i++)
+                n_buf_printf(line, "%s%s", i ? " " : "", (char*)n_array_nth(tl, i));
+            n_buf_write_z(line, "", 0);
+            msgn(2, "%s => %s\n", acmd, (char*)n_buf_ptr(line));
+            n_buf_free(line);
         }
-        msgn(2, "%s => %s\n", acmd, cmdline);
 
-        ok = prepare_cmdline(cctx, cmd_chain, cmdline, a_argv, &here) != NULL;
-        free(expanded);
+        ok = prepare_words(cctx, cmd_chain, tl, &here) != NULL;
+        n_array_free(tl);
         if (!ok)
             return NULL;
     }
@@ -457,29 +488,21 @@ l_end:
     return is_err ? NULL : cmd_chain;
 }
 
-/* the commands of line; the words of a_argv after its first, the arguments
-   an alias got, go after the words of line as they are */
+/* the commands of line */
 static
 tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
-                          const char *line, tn_array *a_argv,
-                          const struct alias_path *path)
+                          const char *line)
 {
     tn_array  *tl;
-    int       i;
 
-    if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL) {
-        logn(LOGERR, _("%s: parse error"), line);
+    if ((tl = line_words(line)) == NULL)
         return NULL;
-    }
-
-    for (i=1; a_argv && i < n_array_size(a_argv); i++)
-        n_array_push(tl, n_strdup(n_array_nth(a_argv, i)));
 
 #if ENABLE_TRACE
     printf("line = (%s)\n", line);
 #endif
 
-    if (prepare_words(cctx, cmd_chain, tl, path) == NULL)
+    if (prepare_words(cctx, cmd_chain, tl, NULL) == NULL)
         cmd_chain = NULL;
 
     n_array_free(tl);
@@ -593,7 +616,7 @@ tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
 
     cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
     return finish_cmd_chain(cmd_chain,
-                            prepare_cmdline(cctx, cmd_chain, line, NULL, NULL) == NULL);
+                            prepare_cmdline(cctx, cmd_chain, line) == NULL);
 }
 
 /* The first argument, and one after a lone ; or |, is parsed as a line: it

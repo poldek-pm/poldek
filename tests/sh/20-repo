@@ -824,6 +824,18 @@ EOF
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "no .conf expected after a broken .repo" "0" "$n"
+
+    # a line longer than poldek reads (4094 bytes) is refused, not cut
+    printf '[long-19]\nbaseurl = http://example.com/long/\ngpgkey = https://example.com/%s.asc\n' \
+        "$(head -c 5000 /dev/zero | tr '\0' k)" > $tmp/dnf-bad-19/long.repo
+    out=$($POLDEK repo add $tmp/dnf-bad-19/long.repo 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "a .repo with a too long line should fail"
+    fi
+    echo "$out" | grep -q "long.repo:3: line longer than" || fail "no reason given: $out"
+
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no .conf expected after a too long line" "0" "$n"
 }
 
 # A repository id with a character dnf does not allow is a fatal error

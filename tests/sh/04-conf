@@ -84,6 +84,16 @@ compr = zst
 
     out=$($POLDEK --conf $TMPDIR/compr.conf -l 2>&1) || fail "-l failed with exit $?: $out"
     echo "$out" | grep -qF 'compr=zst' || fail "compr=zst not listed: $out"
+
+    # a value poldek does not know is refused when the configuration is
+    # read, and the source keeps the default
+    sed -i 's/^compr = zst$/compr = bogus/' $TMPDIR/compr.conf
+    out=$($POLDEK --conf $TMPDIR/compr.conf -l 2>&1)
+    echo "$out" | grep -qF "invalid value 'bogus' of 'source::compr'" ||
+        fail "compr = bogus not refused: $out"
+    if echo "$out" | grep -qF 'compr=bogus'; then
+        fail "compr=bogus listed: $out"
+    fi
 }
 
 # [source] has only "signed", which stands for gpg and pgp too

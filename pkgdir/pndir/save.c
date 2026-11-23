@@ -420,8 +420,8 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg)
     pkg->epoch = epoch;
     pkg->ver = (char*)ver;
     pkg->rel = (char*)rel;
-    pkg_set_arch(pkg, arch);
-    pkg_set_os(pkg, os);
+    if (!pkg_set_arch(pkg, arch) || !pkg_set_os(pkg, os))
+        return NULL;
     return pkg;
 }
 

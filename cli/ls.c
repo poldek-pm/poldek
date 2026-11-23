@@ -500,7 +500,8 @@ static
 int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 {
     char                 hdr[256];
-    int                  i, size, err = 0, npkgs = 0;
+    int                  i, err = 0, npkgs = 0;
+    uint64_t             size;       /* in KB */
     register int         incstep = 0;
     int                  term_width, term_width_div2;
     unsigned             flags;

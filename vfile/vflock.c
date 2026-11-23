@@ -138,9 +138,14 @@ static pthread_once_t hl_atfork_once = PTHREAD_ONCE_INIT;
 static void hl_atfork_lock(void)   { pthread_mutex_lock(&hl_mutex); }
 static void hl_atfork_unlock(void) { pthread_mutex_unlock(&hl_mutex); }
 
+/* pthread_once() does not run it again: after a failure a fork() while
+   another thread holds the mutex may leave the child waiting for it */
 static void hl_atfork(void)
 {
-    pthread_atfork(hl_atfork_lock, hl_atfork_unlock, hl_atfork_unlock);
+    int rc = pthread_atfork(hl_atfork_lock, hl_atfork_unlock, hl_atfork_unlock);
+
+    if (rc != 0)
+        vf_log(VFILE_LOG_WARN, "pthread_atfork: %s\n", strerror(rc));
 }
 
 static void hl_mutex_lock(void)
@@ -326,15 +331,22 @@ void vf_lock_release(struct vflock *vflock)
     free(vflock);
 }
 
+/* the directory is the scope of its lock: the name of the file is the same
+   whichever path the directory is reached by, and short however deep it is */
+static const char lockfile_name[] = ".vflock";
+
 struct vflock *vf_lockdir(const char *path)
 {
-    char lockpath[PATH_MAX], lockfile[PATH_MAX];
+    char lockpath[PATH_MAX];
     struct vflock *vflock = NULL;
     int fd, n;
 
-    vf_url_as_dirpath(lockfile, sizeof(lockfile), path);
-    n = n_snprintf(lockpath, sizeof(lockpath), "%s/.vflock_%s", path, lockfile);
-    n_assert(n > 10 && n < (int)sizeof(lockpath) - 5);
+    if (strlen(path) + sizeof(lockfile_name) + 1 > sizeof(lockpath)) {
+        vf_logerr(_("%s: unable to obtain lock: %s\n"), path, strerror(ENAMETOOLONG));
+        return NULL;
+    }
+
+    n = n_snprintf(lockpath, sizeof(lockpath), "%s/%s", path, lockfile_name);
     if (!(fd = vf_lock_obtain(lockpath))) {
         vf_logerr(_("%s: unable to obtain lock\n"), path);
         return NULL;

@@ -174,6 +174,8 @@ EXPORT void pkg_free(struct pkg *pkg);
 
 EXPORT struct pkg *pkg_link(struct pkg *pkg);
 
+/* 0, the package left with no arch (or os), for one more than the 64
+   different ones poldek keeps */
 EXPORT int pkg_set_arch(struct pkg *pkg, const char *arch);
 EXPORT const char *pkg_arch(const struct pkg *pkg);
 EXPORT int pkg_arch_score(const struct pkg *pkg);

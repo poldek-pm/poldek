@@ -269,8 +269,7 @@ static tn_hash *parse_file(const char *url, const char *path)
     tn_hash *cur_opts = NULL;
     char *cur_key = NULL;
     tn_buf *cur_val = NULL;
-    char *line = NULL;
-    size_t linelen = 0;
+    char line[4096];            /* a .repo line is far shorter */
     int nline = 0;
 
     if (f == NULL) {
@@ -280,10 +279,15 @@ static tn_hash *parse_file(const char *url, const char *path)
 
     sections = n_hash_new(8, (tn_fn_free)n_hash_free);
 
-    while (getline(&line, &linelen, f) != -1) {
+    while (fgets(line, sizeof(line), f) != NULL) {
         char *begin, *p, *key, *value;
 
         nline++;
+        if (strchr(line, '\n') == NULL && !feof(f)) {
+            logn(LOGERR, _("%s:%d: line longer than %d bytes"), url, nline,
+                 (int)sizeof(line) - 2);
+            goto l_err;
+        }
 
         begin = line;
         if (nline == 1 && strncmp(line, "\xEF\xBB\xBF", 3) == 0)
@@ -352,14 +356,17 @@ static tn_hash *parse_file(const char *url, const char *path)
         n_buf_puts(cur_val, value);
     }
 
+    if (ferror(f)) {            /* not the end of the file: a cut one */
+        logn(LOGERR, _("%s: read error"), url);
+        goto l_err;
+    }
+
     pending_flush(&cur_key, &cur_val, cur_opts);
-    free(line);
     fclose(f);
     return sections;
 
  l_err:
     pending_flush(&cur_key, &cur_val, cur_opts);
-    free(line);
     fclose(f);
     n_hash_free(sections);
     return NULL;

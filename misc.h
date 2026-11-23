@@ -73,10 +73,15 @@ struct util__expand {
     void       *ctx;
 };
 
+#ifndef EXPORT
+#  define EXPORT extern
+#endif
+
 /* src with its variables expanded, NUL-terminated (n_buf_ptr() is the
    string); the caller frees it. A "<mark>{" that is not a variable (no '}',
-   a character a name does not take) is left as written. */
-tn_buf *util__expand_vars(const char *src, const struct util__expand *ex);
+   a character a name does not take) is left as written. Exported for the
+   cli library. */
+EXPORT tn_buf *util__expand_vars(const char *src, const struct util__expand *ex);
 
 void packages_display_summary(int verbose_l, const char *prefix, tn_array *pkgs,
                               int parseable);

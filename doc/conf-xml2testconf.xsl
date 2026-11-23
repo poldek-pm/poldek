@@ -31,6 +31,9 @@
             <xsl:when test="string-length(@default) > 0">
               <xsl:value-of select="@name"/> = <xsl:value-of select="@default"/>
             </xsl:when>
+            <xsl:when test="value">
+              <xsl:value-of select="@name"/> = <xsl:value-of select="value[1]"/>
+            </xsl:when>
             <xsl:otherwise>
               <xsl:value-of select="@name"/> = <xsl:value-of select="translate(@name,' ','_')"/>
             </xsl:otherwise>
