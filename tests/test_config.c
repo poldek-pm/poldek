@@ -55,7 +55,10 @@ START_TEST (test_config) {
 
             dv = t->defaultv;
 
-            if (t->defaultv == NULL) { /* the xsl sets it to op name */
+            if (t->defaultv == NULL && (t->flags & CONF_TYPE_ENUM)) {
+                dv = t->enums[0];   /* the xsl sets it to the first value */
+
+            } else if (t->defaultv == NULL) { /* the xsl sets it to op name */
                 char *p;
                 p = n_strdup(t->name);
                 dv = p;

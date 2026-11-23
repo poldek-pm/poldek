@@ -201,6 +201,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
   </option>
 
   <option name="default index compr" type="string" default="gz">
+    <value>gz</value><value>zst</value><value>none</value>
     <description>
     Default repository index compression
     </description>
@@ -581,6 +582,7 @@ Every repository is configured in its own [ source ] section.
   </option>
 
   <option name="compr" type="string" required="no" value="gz">
+    <value>gz</value><value>zst</value><value>none</value>
     <description>
       Repository compression method ('none', 'gz' or 'zst')
     </description>
