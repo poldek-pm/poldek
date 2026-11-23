@@ -449,6 +449,65 @@ testCmdPipelineInTheMiddle()
         "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
 }
 
+# runs $1 as --cmd through rcmd (tests/rcmd_user.c), on a transaction with
+# the mask $2 if given; what it prints in $out
+rcmd_line() {
+    out=$(env ${2:+RCMD_MASK=$2} LD_PRELOAD=$PWD/.libs/rcmd_user.so \
+              $POLDEK -q --cmd "$1" 2>&1)
+}
+
+# the packages of $out the line left in the caller's pipe
+rcmd_packages() {
+    echo "$out" | sed -n 's/^rcmd package: \([abc]-1-1\).*/\1/p' | xargs
+}
+
+# the packages desc described into the caller's pipe
+rcmd_described() {
+    echo "$out" | grep '^rcmd output: Package:' | grep -o '[abc]-1-1' | xargs
+}
+
+# the arguments the caller's transaction is left with
+rcmd_arguments() {
+    echo "$out" | sed -n 's/^rcmd argument: //p' | xargs
+}
+
+# a line run through rcmd on the caller's transaction: what the last command
+# of the line gives goes to the caller, also when it is the right side of a
+# pipe, and nothing of the commands before it; the packages the caller gave
+# go to every command, and the transaction is left with the last one's
+testCmdLineThroughRcmd()
+{
+    skip_if_rpm_testing_off && return
+
+    local out
+
+    build a
+    build b
+    build c
+    index
+
+    rcmd_line "ls -q a ; ls -q b"
+    assertEquals "ls ; ls, packages ($out)" "b-1-1" "$(rcmd_packages)"
+
+    rcmd_line "ls -q a ; search -q b | ls -q"
+    assertEquals "ls ; search | ls, packages ($out)" "b-1-1" "$(rcmd_packages)"
+
+    rcmd_line "ls -q a ; ls -q b | desc"
+    assertEquals "ls ; ls | desc, described ($out)" "b-1-1" "$(rcmd_described)"
+
+    rcmd_line "ls -q a | desc ; ls -q b"
+    assertEquals "ls | desc ; ls, packages ($out)" "b-1-1" "$(rcmd_packages)"
+    assertEquals "ls | desc ; ls, described ($out)" "" "$(rcmd_described)"
+
+    rcmd_line "ls -q b ; ls -q c" a
+    assertEquals "mask a, ls b ; ls c, the first ($out)" "a-1-1 b-1-1" \
+        "$(echo "$out" | grep -o '^[abc]-1-1' | xargs)"
+    assertEquals "mask a, ls b ; ls c, packages ($out)" "a-1-1 c-1-1" \
+        "$(rcmd_packages)"
+    assertEquals "mask a, ls b ; ls c, arguments left ($out)" "a c" \
+        "$(rcmd_arguments)"
+}
+
 # in multilib mode, where package ids end in .ARCH, ls still finds a
 # package by name-version-release
 testLsNvrMultilib()
