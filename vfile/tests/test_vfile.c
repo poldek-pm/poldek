@@ -791,9 +791,23 @@ START_TEST (test_lock_inherited_released_as_thread_locks) {
 }
 END_TEST
 
-static void *go_after_a_second(void *arg)
+static int forking[2] = { -1, -1 };
+
+/* registered after the handler of vflock.c, so run before it */
+static void fork_prepare(void)
 {
-    sleep(1);
+    if (forking[1] != -1 && write(forking[1], "f", 1) == 1)
+        forking[1] = -1;
+}
+
+/* a fork() that does not wait for the thread has made its child by then */
+static void *go_after_fork(void *arg)
+{
+    char c;
+
+    if (read(forking[0], &c, 1) != 1)
+        return NULL;
+    usleep(200000);
     return write(hook.go[1], "g", 1) == 1 ? arg : NULL;
 }
 
@@ -810,8 +824,8 @@ START_TEST (test_lock_fork_while_thread_locks) {
     n_snprintf(other, sizeof(other), "%s", NTEST_TMPPATH("vflock-fork-child"));
     mkdir(dir, 0755);
     mkdir(other, 0755);
-    fail_if(pipe(hook.report) != 0 || pipe(hook.opened) != 0 || pipe(hook.go) != 0,
-            "pipe: %s", strerror(errno));
+    fail_if(pipe(hook.report) != 0 || pipe(hook.opened) != 0 || pipe(hook.go) != 0 ||
+            pipe(forking) != 0, "pipe: %s", strerror(errno));
 
     fail_if((lock = vf_lockdir(dir)) == NULL, "%s: no lock", dir);
     n_snprintf(lockpath, sizeof(lockpath), "%s", lock->path);
@@ -823,7 +837,8 @@ START_TEST (test_lock_fork_while_thread_locks) {
     hook.thread_rc = pthread_create(&hook.thread, NULL, take_lock, dir);
     fail_if(hook.thread_rc != 0, "pthread_create: %s", strerror(hook.thread_rc));
     fail_if(!wrote_within(hook.opened[0], 10000), "the thread opened no lock");
-    fail_if(pthread_create(&timer, NULL, go_after_a_second, NULL) != 0, "pthread_create");
+    fail_if(pthread_atfork(fork_prepare, NULL, NULL) != 0, "pthread_atfork");
+    fail_if(pthread_create(&timer, NULL, go_after_fork, NULL) != 0, "pthread_create");
 
     if ((child = fork()) == 0) {
         signal(SIGALRM, SIG_DFL);   /* check's handler would kill the test */
