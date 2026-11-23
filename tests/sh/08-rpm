@@ -812,7 +812,7 @@ testRPMdbcacheInterruptedLoad() {
     rpm_build_installed b 1-1
     local out=$(printf 'cd /installed\nls\nquit\n' |
         perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV' \
-             timeout 60 script -qec "env LD_PRELOAD=$PWD/.libs/sigint_at_dbload.so $RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null 2>&1)
+             timeout 60 script -qec "env LD_PRELOAD=$PWD/preload/.libs/sigint_at_dbload.so $RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null 2>&1)
     assertEquals "no SIGINT from sigint_at_dbload.so: $out" "1" \
                  "$(echo "$out" | grep -c '^sigint_at_dbload: SIGINT')"
     assertEquals "the interrupted load not reported: $out" "1" \

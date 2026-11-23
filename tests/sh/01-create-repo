@@ -13,7 +13,7 @@ setUp() {
 }
 
 # preloaded into poldek to make the close of a file fail
-CLOSE_ERROR_SO="$PWD/.libs/close_error.so"
+CLOSE_ERROR_SO="$PWD/preload/.libs/close_error.so"
 
 # the files of an index are replaced from a hidden .<name>.tmp.XXXXXX,
 # which neither a finished nor a failed write may leave

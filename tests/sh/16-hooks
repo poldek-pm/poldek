@@ -42,8 +42,8 @@ setUp() {
 
     POLDEK_ON_ROOT="$RAW_POLDEK --pmcmd $FAKE_RPM --st dir -s $REPO --root /"
     POLDEK_HOOKS="$POLDEK_ON_ROOT -Ohooks_dir=$HOOKS"
-    SIGNAL_AT_RESTORE="$PWD/.libs/signal_at_restore.so"
-    LIBRARY_USER="$PWD/.libs/library_user.so"
+    SIGNAL_AT_RESTORE="$PWD/preload/.libs/signal_at_restore.so"
+    LIBRARY_USER="$PWD/preload/.libs/library_user.so"
 }
 
 # hook <subdir> <name> <word to log> [exit code]

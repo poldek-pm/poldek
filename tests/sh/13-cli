@@ -182,7 +182,7 @@ testStubIndexWriteError()
 
     build b
     index
-    env LD_PRELOAD=$PWD/.libs/close_error.so WRITE_ERROR=stubindex.pndir.zst \
+    env LD_PRELOAD=$PWD/preload/.libs/close_error.so WRITE_ERROR=stubindex.pndir.zst \
         $POLDEK ls > /dev/null 2>&1
     assertEquals "stub index replaced" "1" "$(zstdcat $stub | grep -vc "^%")"
     left=$(find $(dirname $stub) -name '.*.tmp.??????')
@@ -248,7 +248,7 @@ testDirIndexWriteError()
 
     build b
     index
-    env LD_PRELOAD=$PWD/.libs/close_error.so WRITE_ERROR=dirindex.pndir.tndb \
+    env LD_PRELOAD=$PWD/preload/.libs/close_error.so WRITE_ERROR=dirindex.pndir.tndb \
         $POLDEK up > /dev/null 2>&1
     assertEquals "dirindex replaced" "$before" "$(cksum < $dirindex)"
     assertEquals "time of the old dirindex changed" "$mtime" "$(stat -c %Y $dirindex)"
@@ -542,10 +542,10 @@ testCmdPipelineInTheMiddle()
         "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
 }
 
-# runs $1 as --cmd through rcmd (tests/rcmd_user.c), on a transaction with
+# runs $1 as --cmd through rcmd (tests/preload/rcmd_user.c), on a transaction with
 # the mask $2 if given; what it prints in $out
 rcmd_line() {
-    out=$(env ${2:+RCMD_MASK=$2} LD_PRELOAD=$PWD/.libs/rcmd_user.so \
+    out=$(env ${2:+RCMD_MASK=$2} LD_PRELOAD=$PWD/preload/.libs/rcmd_user.so \
               $POLDEK -q --cmd "$1" 2>&1)
 }
 

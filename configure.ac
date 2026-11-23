@@ -446,6 +446,7 @@ AC_CONFIG_FILES([
         Makefile
         poldek.spec
         tests/Makefile
+        tests/preload/Makefile
         cli/Makefile
 	])
 AC_OUTPUT
