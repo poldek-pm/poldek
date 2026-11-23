@@ -683,7 +683,6 @@ Packages can be specified in five ways:
 &poldek-prompt; ... --caplookup webserver
 &poldek-prompt; ... --caplookup smtpdaemon
      </screen>
-     <option>--caplookup</option> is available in command line mode only.
      </para> 
   </listitem>
   <listitem>
