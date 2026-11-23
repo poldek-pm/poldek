@@ -38,6 +38,5 @@ struct poclidek_ctx;
 tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line);
 tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,
                                     const char **argv);
-int poclidek_has_batch_command(struct poclidek_ctx *cctx, const char *name);
 
 #endif

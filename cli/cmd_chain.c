@@ -205,29 +205,43 @@ inline bool skip_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
 }
 
 static
-struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name, int quiet)
+struct poclidek_cmd *command_by_name(struct poclidek_ctx *cctx,
+                                     const char *name, int *ambiguous);
+
+static
+struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name)
+{
+    struct poclidek_cmd *cmd;
+    int ambiguous;
+
+    if ((cmd = command_by_name(cctx, name, &ambiguous)) == NULL)
+        logn(LOGERR, ambiguous ? _("%s: ambiguous command") :
+             _("%s: no such command"), name);
+
+    return cmd;
+}
+
+/* the command name stands for where commands are run from (the shell or
+   not): the one called so, or the only one whose name begins with it. NULL
+   if there is none, with *ambiguous set if it begins the name of several. */
+static
+struct poclidek_cmd *command_by_name(struct poclidek_ctx *cctx,
+                                     const char *name, int *ambiguous)
 {
     struct poclidek_cmd *cmd, tmpcmd;
 
+    *ambiguous = 0;
     n_array_sort(cctx->commands);
     tmpcmd.name = (char*)name;
 
-    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd))) {
-        if (skip_command(cctx, cmd)) {
-            logn(LOGERR, _("%s: no such command"), name);
-            return NULL;
-        }
-
-        return cmd;
-    }
+    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)))
+        return skip_command(cctx, cmd) ? NULL : cmd;
 
     int i = n_array_bsearch_idx_ex(cctx->commands, &tmpcmd,
                                    (tn_fn_cmp)poclidek_cmd_ncmp);
 
-    if (i < 0) {
-        logn(LOGERR, _("%s: no such command"), name);
+    if (i < 0)
         return NULL;
-    }
 
     int n = 0;
     struct poclidek_cmd *selected = NULL;
@@ -246,11 +260,9 @@ struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name, i
         i++;
     }
 
-    if (n == 1) {
-        n_assert(selected);
-    } else if (!quiet) {
+    if (n != 1) {
+        *ambiguous = 1;
         selected = NULL;
-        logn(LOGERR, _("%s: ambiguous command"), name);
     }
 
     if (selected)
@@ -342,7 +354,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         acmd = n_array_nth(a_argv, 0);
     }
 
-    if ((cmd = find_command(cctx, acmd, 0)) == NULL)
+    if ((cmd = find_command(cctx, acmd)) == NULL)
         return NULL;
 
     if ((cmd->flags & COMMAND_IS_ALIAS) == 0) {
@@ -636,14 +648,3 @@ tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,
 
     return finish_cmd_chain(cmd_chain, is_err);
 }
-
-#if 0                           /* unused */
-int poclidek_has_batch_command(struct poclidek_ctx *cctx, const char *name) {
-    struct poclidek_cmd *cmd = find_command(cctx, name, 1);
-
-    if (cmd && (cmd->flags & COMMAND_INTERACTIVE) == 0)
-        return 1;
-
-    return 0;
-}
-#endif
