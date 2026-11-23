@@ -138,9 +138,14 @@ static pthread_once_t hl_atfork_once = PTHREAD_ONCE_INIT;
 static void hl_atfork_lock(void)   { pthread_mutex_lock(&hl_mutex); }
 static void hl_atfork_unlock(void) { pthread_mutex_unlock(&hl_mutex); }
 
+/* pthread_once() does not run it again: after a failure a fork() while
+   another thread holds the mutex may leave the child waiting for it */
 static void hl_atfork(void)
 {
-    pthread_atfork(hl_atfork_lock, hl_atfork_unlock, hl_atfork_unlock);
+    int rc = pthread_atfork(hl_atfork_lock, hl_atfork_unlock, hl_atfork_unlock);
+
+    if (rc != 0)
+        vf_log(VFILE_LOG_WARN, "pthread_atfork: %s\n", strerror(rc));
 }
 
 static void hl_mutex_lock(void)
