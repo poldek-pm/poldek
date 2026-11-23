@@ -9,10 +9,10 @@
 #
 # Names inside `#if 0` are ignored (nothing builds them, e.g. pkgdir_clean_cache()).
 LC_ALL=C; export LC_ALL       # byte order for sort/comm, no perl locale warnings
-libs="../.libs/libpoldek.so ../cli/.libs/libpoclidek.so ../vfile/.libs/libvfile.so"
-for lib in $libs; do
-    [ -f "$lib" ] || { echo "$lib: not built, skipped"; exit 77; }
-done
+# every shared library built here, so a new one is not left out
+libs=$(find .. \( -name .git -o -path ../trurlib -o -path ../tndb -o -path ../tests \) -prune \
+            -o -path '*/.libs/lib*.so' -print | sort)
+[ -n "$libs" ] || { echo "no libraries built, skipped"; exit 77; }
 # without nm there is nothing to compare against and the test would pass vacuously
 command -v nm >/dev/null || { echo "nm: not found, skipped"; exit 77; }
 
