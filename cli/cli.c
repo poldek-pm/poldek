@@ -799,17 +799,21 @@ static char **a_argv_to_argv(tn_array *a_argv, char **argv)
     return argv;
 }
 
-/* executes command chain (a pipeline); own_ts: the commands do not run on
-   ts but on transactions like it, as others are still to start from ts */
+/* executes command chain (a pipeline); the one marked CMD_CHAIN_ENT_LAST
+   runs on the caller's ts and leaves it the result */
 static
 int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                          int own_ts, struct cmd_chain_ent *ent,
-                          struct cmd_pipe *cmd_pipe)
+                          struct cmd_chain_ent *ent, struct cmd_pipe *cmd_pipe)
 {
     struct cmdctx  cmdctx;
     char **argv;
     int rc = 0, runit = 1;
+    int last = (ent->flags & CMD_CHAIN_ENT_LAST) != 0;
     int verbose = poldek_verbose(); /* -q and -v of a command are its own */
+
+    /* LAST marks the tail of the last pipeline, which has nothing to its
+       right */
+    n_assert(!(last && ent->next_piped));
 
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
@@ -828,7 +832,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
        on ts itself, and leaves the caller what it has done */
     if (ts == NULL)
         cmdctx.ts = poldek_ts_new(cctx->ctx, 0);
-    else if (own_ts || ent->next_piped)
+    else if (!last)
         cmdctx.ts = poldek__ts_new_like(ts);
     else
         cmdctx.ts = ts;
@@ -837,7 +841,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
         ent->pipe_right = cmd_pipe_new();
         cmdctx.pipe_right = ent->pipe_right;
 
-    } else if (cmd_pipe) {
+    } else if (cmd_pipe && last) {
         DBGF("piped %s\n", ent->cmd->name);
         ent->pipe_right = cmd_pipe_link(cmd_pipe);
         cmdctx.pipe_right = ent->pipe_right;
@@ -887,7 +891,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
         cmd_pipe_free(cmdctx.pipe_left);
 
     if (runit && ent->next_piped)
-        return poclidek_exec_cmd_ent(cctx, ts, own_ts, ent->next_piped, cmd_pipe);
+        return poclidek_exec_cmd_ent(cctx, ts, ent->next_piped, cmd_pipe);
 
     return rc;
 }
@@ -910,9 +914,7 @@ static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
             continue;
         }
 
-        int last = (i == n_array_size(cmd_chain) - 1);
-
-        rc = poclidek_exec_cmd_ent(cctx, ts, !last, ent, last ? cmd_pipe : NULL);
+        rc = poclidek_exec_cmd_ent(cctx, ts, ent, cmd_pipe);
     }
 
     n_array_free(cmd_chain);

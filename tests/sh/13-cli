@@ -426,6 +426,29 @@ testCmdQuietOnlyForItself()
     assertEquals "install after ls -q | said nothing ($out)" "0" "$?"
 }
 
+# a pipeline in the middle of a line: its commands run on transactions of
+# their own, so its packages are not the next command's
+testCmdPipelineInTheMiddle()
+{
+    skip_if_rpm_testing_off && return
+
+    local out
+
+    build a
+    build b
+    index
+
+    out=$($POLDEK -q --cmd "ls -q a | desc ; ls -q b" 2>&1)
+    assertEquals "ls | desc ; ls" "b-1-1" \
+        "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
+    assertEquals "ls | desc ; ls, what desc described" "a-1-1" \
+        "$(echo "$out" | grep '^Package:' | grep -o '[ab]-1-1' | xargs)"
+
+    out=$($POLDEK -q --cmd "ls -q a | install --test ; ls -q b" 2>&1)
+    assertEquals "ls | install ; ls" "b-1-1" \
+        "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
+}
+
 # in multilib mode, where package ids end in .ARCH, ls still finds a
 # package by name-version-release
 testLsNvrMultilib()

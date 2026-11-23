@@ -19,6 +19,9 @@
 #define CMD_CHAIN_ENT_PIPE       (1 << 1)
 #define CMD_CHAIN_ENT_SEMICOLON  (1 << 2)
 #define CMD_CHAIN_ENT_AND        (1 << 3)
+/* the last command of the line: the tail of its last pipeline, the one that
+   runs on the transaction the caller gave and leaves it the result */
+#define CMD_CHAIN_ENT_LAST       (1 << 4)
 
 struct cmd_pipe;
 struct cmd_chain_ent {
