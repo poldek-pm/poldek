@@ -249,28 +249,38 @@ static int lock_once(const char *path)
 static
 int vf_lock_obtain(const char *path)
 {
-    int fd = 0, i;
+    int fd = 0, waited = 0, delay = 100;   /* ms */
+    char *dirname;
 
-    i = 1;
+    n_strdupap(path, &dirname);
+    dirname = n_dirname(dirname);
+
     while (fd == 0) {
         if (vfile_sigint_reached(0)) {
             fd = 0;
             break;
         }
-        i++;
         if ((fd = lock_once(path)) == 0) {
-            char *buf;
-            n_strdupap(path, &buf);
-            buf = n_dirname(buf);
-            vf_loginfo(_("Waiting for lock %s...\n"), buf);
-            sleep((int)((1 * i)/2));
+            if (waited == 1000)
+                vf_loginfo(_("Waiting for lock %s...\n"), dirname);
+
+            if (waited >= 1000) {
+                delay *= 2;
+                if (delay > 1000)
+                    delay = 1000; /* const delay after first second */
+            }
+
+            if (waited <= 1000)
+                waited += delay;
+
+            usleep(delay * 1000);
 
         } else if (fd < 0) {
             fd = 0;
             break;
         }
     }
-    //vf_loginfo("vf_lock_obtain %d (%s)\n", fd, path);
+
     return fd;
 }
 
