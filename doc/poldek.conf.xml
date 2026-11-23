@@ -349,7 +349,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
     <alias name="no proxy" />
   </option>
 
-  <option name="vfile retries" type="integer" default="128">
+  <option name="vfile retries" type="integer" default="100">
     <description>
     Internal HTTP and FTP client is stubborn, it retries to retrive
     file if connection breaks. This option tells it how many times
