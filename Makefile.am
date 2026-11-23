@@ -124,6 +124,14 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 conf_sections.c: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl
 	         	 doc/conf-xml2.sh c doc/poldek.conf.xml > $@
 
+# the tests of trurlib and tndb are run by check-all only
+check-recursive: private SUBDIRS := $(filter-out $(TRURL_DIR) $(TNDB_DIR),$(SUBDIRS))
+check-recursive: all-recursive
+
+.PHONY: check-all
+check-all: check
+	for d in $(TRURL_DIR) $(TNDB_DIR); do $(MAKE) -C $$d check || exit 1; done
+
 .PHONY: check-sh
 check-sh:
 	$(MAKE) -C tests check-sh
