@@ -33,7 +33,7 @@ static int nlockfiles(const char *dir)
 
     fail_if((d = opendir(dir)) == NULL, "opendir %s: %s", dir, strerror(errno));
     while ((ent = readdir(d)) != NULL)
-        n += strncmp(ent->d_name, ".vflock_", 8) == 0;
+        n += strcmp(ent->d_name, ".vflock") == 0;
     closedir(d);
     return n;
 }

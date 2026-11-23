@@ -308,7 +308,7 @@ static void remove_lockdir(const char *dir)
 
     if ((d = opendir(dir)) != NULL) {
         while ((ent = readdir(d)) != NULL) {
-            if (strncmp(ent->d_name, ".vflock_", 8) == 0) {
+            if (strcmp(ent->d_name, ".vflock") == 0) {
                 n_snprintf(path, sizeof(path), "%s/%s", dir, ent->d_name);
                 unlink(path);
             }
@@ -441,10 +441,11 @@ __attribute__((visibility("default")))
 int unlink(const char *path)
 {
     static int (*real_unlink)(const char *);
+    const char *bn = strrchr(path, '/');
 
     if (real_unlink == NULL)
         real_unlink = (int (*)(const char *))dlsym(RTLD_NEXT, "unlink");
-    if (hook.unlink_errno && strstr(path, "/.vflock_") != NULL) {
+    if (hook.unlink_errno && bn && strcmp(bn, "/.vflock") == 0) {
         errno = hook.unlink_errno;
         return -1;
     }
@@ -488,7 +489,7 @@ static int nlockfiles(const char *dir)
 
     fail_if((d = opendir(dir)) == NULL, "opendir %s: %s", dir, strerror(errno));
     while ((ent = readdir(d)) != NULL)
-        n += strncmp(ent->d_name, ".vflock_", 8) == 0;
+        n += strcmp(ent->d_name, ".vflock") == 0;
     closedir(d);
     return n;
 }
@@ -867,6 +868,48 @@ START_TEST (test_lock_fstat_error) {
 }
 END_TEST
 
+/* a directory deeper than NAME_MAX is locked: the name of the lock's file
+   held its whole path, ~250 bytes of it made it too long to create */
+START_TEST (test_lock_long_path) {
+    char dir[PATH_MAX], name[121], sub[PATH_MAX];
+    struct vflock *lock;
+
+    memset(name, 'd', sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
+    n_snprintf(dir, sizeof(dir), "%s", NTEST_TMPPATH("vflock-long"));
+    mkdir(dir, 0755);
+    n_snprintf(sub, sizeof(sub), "%s/%s", dir, name);
+    mkdir(sub, 0755);
+    n_snprintf(sub, sizeof(sub), "%s/%s/%s", dir, name, name);
+    mkdir(sub, 0755);
+    fail_if(strlen(sub) < 260, "%s: a path of %zu bytes", sub, strlen(sub));
+
+    fail_if((lock = vf_lockdir(sub)) == NULL, "%s: no lock", sub);
+    expect_int(nlockfiles(sub), 1);
+    vf_lock_release(lock);
+    expect_int(nlockfiles(sub), 0);
+
+    rmdir(sub);
+    n_snprintf(sub, sizeof(sub), "%s/%s", dir, name);
+    rmdir(sub);
+    rmdir(dir);
+}
+END_TEST
+
+/* a path with no room for the name of the lock's file is refused, not an
+   abort() */
+START_TEST (test_lock_path_too_long) {
+    char dir[PATH_MAX];
+    int verbose = -1;
+
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
+    memset(dir, 'd', sizeof(dir) - 5);
+    dir[0] = '/';
+    dir[sizeof(dir) - 5] = '\0';
+    fail_if(vf_lockdir(dir) != NULL, "a lock of a %zu-byte path", strlen(dir));
+}
+END_TEST
+
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_as_path_percent, test_url_hidepasswd,
              test_url_hidepasswd_short_buffer, test_fetcha_ext_multi_dirbn,
@@ -875,5 +918,6 @@ NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_cachedir_clean_opendir_error,
              test_lock_taken_at_release, test_lock_opened_before_release,
              test_lock_fstat_error, test_lock_taken_again,
-             test_lock_released_in_child, test_lock_inherited_of_own_file
+             test_lock_released_in_child, test_lock_inherited_of_own_file,
+             test_lock_long_path, test_lock_path_too_long
              THREAD_TESTS);
