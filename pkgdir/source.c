@@ -518,7 +518,7 @@ struct source *source_new_pathspec(const char *type, const char *pathspec,
                     }
 
                 } else if (strcmp(*t, opt->name) == 0) {
-                    src->flags |= opt->flag;
+                    src->flags |= opt->flag & ~PKGSRC_OPTION_OPTMASK;
                     break;
                 }
 
