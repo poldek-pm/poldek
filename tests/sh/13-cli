@@ -317,6 +317,41 @@ testIndexWithoutPackageInfo()
     assertEquals "desc -L failed ($out)" "$?" "0"
 }
 
+# an alias that replaces another one is what its own line makes it: with
+# parameters, of the shell only (an external command) or neither
+testAliasRedefined()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    # only an alias of the system's cli.conf can be replaced. Does the poldek
+    # under test have "ll = ls -l" and a less of the shell only there? The
+    # list shows the first; an alias to less is found, and not listed
+    mkdir -p $TMPDIR/probe
+    printf '[aliases]\nprobe = less\n' > $TMPDIR/probe/.poclidekrc
+    out=$(HOME=$TMPDIR/probe $POLDEK -q --cmd alias 2>&1)
+    if ! echo "$out" | grep -q '^ll  *= ls -l$' ||
+       echo "$out" | grep -q -e 'could not determine aliased command' -e '^less ' -e '^probe '; then
+        startSkipping
+        fail # to count skipping tests
+        endSkipping
+        return
+    fi
+
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nll = ls -q %%1*\nless = ls -q\n' > $TMPDIR/home/.poclidekrc
+
+    local listed=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'ls -q a' 2>&1)
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'll a' 2>&1)
+    assertEquals "ll a ($out)" "$listed" "$out"
+
+    out=$(HOME=$TMPDIR/home $POLDEK -q --cmd 'less a' 2>&1)
+    assertEquals "less a ($out)" "$listed" "$out"
+}
+
 # an alias with a parameter passes its argument whole, a long one too
 testAliasParameterLongArgument()
 {
