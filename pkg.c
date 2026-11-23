@@ -44,11 +44,6 @@
 #include "poldek_intern.h"      /* PKG_NEVRA_MAX */
 #include "symtab.h"
 
-/* name, epoch, version, release, arch and os of a package together: its
-   pndir key, plus 31 bytes of a language for its description key or 13 of
-   the dirindex prefix and build time, fits in TNDB_KEY_MAX */
-#define PKG_NEVRA_MAX 224
-
 int poldek_conf_PROMOTE_EPOCH = 0;
 int poldek_conf_MULTILIB = 0;
 
