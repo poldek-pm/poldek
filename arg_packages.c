@@ -244,8 +244,10 @@ void arg_packages__copy_args(struct arg_packages *aps, const struct arg_packages
 
     n_assert(arg_packages_size(aps) == 0);
 
-    /* as src has them: once set up they are not read again, and a list or
-       a file that has changed since gives the copy what it gave src */
+    /* as src has them, ARG_PACKAGES_SETUPDONE too: a set-up src holds what
+       its lists, files and @virt entries gave in packages, package_masks
+       and pset_virtuals, copied below, so the copy does not read them
+       again, and a list or a file changed since gives it what it gave src */
     aps->flags = src->flags;
     arg_packages_add_pkgs(aps, src->packages);
 
