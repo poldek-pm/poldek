@@ -47,8 +47,6 @@
 #include "pkgmisc.h"
 #include "tags.h"
 
-extern int poldek_conf_MULTILIB;
-
 struct pkg_data {
     off_t             off_nodep_files;  /* no dep files offset in index */
 //    off_t             off_pkguinf;
@@ -73,8 +71,7 @@ int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff);
 
 struct pkgdir_module pkgdir_module_pndir = {
     NULL,
-    PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE |
-    PKGDIR_CAP_HANDLEIGNORE,
+    PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE,
     "pndir",
     NULL,
     "Native poldek's index format",
@@ -661,7 +658,6 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     struct pkg_data    *pkgd;
     struct tndb_it     it;
     tn_stream          *st;
-    tn_array           *ign_patterns = NULL;
     unsigned           klen, vlen;
     int                rc, nerr = 0;
     char               key[TNDB_KEY_MAX + 1], path[PATH_MAX];
@@ -675,13 +671,6 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     it._off = idx->_tndb_first_pkg_offs;
 
     vf_url_slim(path, sizeof(path), pkgdir->idxpath, 0);
-
-    if ((ldflags & PKGDIR_LD_DOIGNORE) && pkgdir->src &&
-        n_array_size(pkgdir->src->ign_patterns)) {
-        ign_patterns = pkgdir->src->ign_patterns;
-    }
-
-    DBGF("ign_patterns %p\n", ign_patterns);
 
     st = tndb_it_stream(&it);
 
@@ -697,28 +686,6 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             logn(LOGERR, "%s: parse error", key);
             nerr++;
             goto l_continue_loop;
-        }
-
-        if (ign_patterns) {
-            struct pkgscore_s psc;
-            char buf[512];
-            int i;
-
-            kpkg.pkgdir = pkgdir;   /* its name is the source part of a mask */
-            pkgscore_match_init(&psc, &kpkg);
-            for (i=0; i < n_array_size(ign_patterns); i++) {
-                if (pkgscore_match(&psc, n_array_nth(ign_patterns, i))) {
-                    const char *arch = pkg_arch(&kpkg);
-                    int n = pkg_snprintf(buf, sizeof(buf), &kpkg);
-
-                    /* named as pkg_id() names a package, for one message
-                       from every way a package is ignored */
-                    if (poldek_conf_MULTILIB && arch)
-                        n_snprintf(&buf[n], sizeof(buf) - n, ".%s", arch);
-                    msgn(3, "ignored %s", buf);
-                    goto l_continue_loop;
-                }
-            }
         }
 
         pkg = pkg_restore_st(st, pkgdir->na, &kpkg, pkgdir->foreign_depdirs,
