@@ -30,7 +30,7 @@ tmp=$tmpdir/list
 # EXPORT declarations of functions (name followed by '(') and of variables
 # (name followed by '[' or ';')
 (cd "${srcdir:-.}/.." &&
-    find . -name '*.h' ! -path './trurlib/*' ! -path './tndb/*' ! -path './tests/*' ! -path './Cellar/*' |
+    find . -name '*.h' ! -name '.#*' ! -path './trurlib/*' ! -path './tndb/*' ! -path './tests/*' ! -path './Cellar/*' |
     xargs perl -0ne 's{/\*.*?\*/}{}gs; s{^[ \t]*#[ \t]*if[ \t]+0\b.*?^[ \t]*#[ \t]*endif\b}{}gms;
                    print "$1\n" while /^\s*EXPORT\s[^;{(]*?\b(\w+)\s*(?:[\(\[]|;)/mg') |
     sort -u > $tmp.declared
