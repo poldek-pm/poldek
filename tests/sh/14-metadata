@@ -52,8 +52,9 @@ testLoadLargeSizes()
     mv $dir/primary.gz $primary
     new=$(sha256sum < $primary | cut -d' ' -f1)
     sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
-    n=$($POLDEK -s "m,type=metadata $dir/repo/" desc fake_bash | grep -E '^(Size|Package size): +4096.0 MB' | wc -l)
-    assertEquals "sizes should be 4096.0 MB" "$n" "2"
+    n=$($POLDEK -s "m,type=metadata $dir/repo/" desc fake_bash |
+        grep -E '^(Size|Package size): +4096.0 MB \(4294967295 B\)$' | wc -l)
+    assertEquals "sizes should be 4096.0 MB (4294967295 B)" "$n" "2"
 }
 
 # a package whose name does not fit in an index key is left out with a
