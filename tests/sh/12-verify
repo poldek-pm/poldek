@@ -285,7 +285,8 @@ testRequiredPackagesSelfRequirer()
     assertEquals "b should require a" "$?" "0"
 }
 
-# a file shared by two packages is reported wherever the index put it
+# a file shared by two packages is reported wherever the index put it; the
+# bug of c7983de1 shows only in a directory no lookup has sorted before
 testVerifyFileConflictsShared()
 {
     build a -f /opt/x -f /opt/y
@@ -310,6 +311,8 @@ testVerifyFileConflictsSharedByThree()
     $POLDEK --verify=file-conflicts >$TMP/verify-log.log
     n=$(sed -n '/^Path: \/opt\/x$/,/^$/p' $TMP/verify-log.log | grep -c ' shr ')
     assertEquals "should report 3 pairs sharing /opt/x" "$n" "3"
+    n=$(grep -c '^Path: /opt/x$' $TMP/verify-log.log)
+    assertEquals "/opt/x should be printed once" "$n" "1"
 }
 
 # with packages given, only files shared between them are reported
@@ -348,6 +351,22 @@ testVerifyFileConflictsDifferingFiles()
     $POLDEK -Omultilib=no --verify=file-conflicts >$TMP/verify-log.log
     n=$(grep -A1 -E '^Path: /opt/(x|y)$' $TMP/verify-log.log | grep -c ' cnfl .*a-1-1.*b-1-1')
     assertEquals "should report /opt/x and /opt/y" "$n" "2"
+}
+
+# with multilib files of other colors may share a path: differing files are
+# not reported, shared ones are
+testVerifyFileConflictsMultilib()
+{
+    build a -f /opt/x -f /opt/z
+    build b -fd /opt/x -f /opt/z
+    make_index
+
+    msg "# $POLDEK -Omultilib=yes --verify=file-conflicts"
+    $POLDEK -Omultilib=yes --verify=file-conflicts >$TMP/verify-log.log
+    n=$(grep -c ' cnfl ' $TMP/verify-log.log)
+    assertEquals "differing /opt/x should not be reported" "$n" "0"
+    n=$(grep -A1 '^Path: /opt/z$' $TMP/verify-log.log | grep ' shr ' | grep -c 'a-1-1.* b-1-1')
+    assertEquals "should report /opt/z shared by a and b" "$n" "1"
 }
 
 # a file in the root directory is printed as /name, not as //name
