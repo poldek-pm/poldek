@@ -40,7 +40,8 @@
 #include "cmd_pipe.h"
 #include "poldek_intern.h"      /* for poldek__ts_new_like() */
 
-static unsigned argp_parse_flags = ARGP_NO_EXIT;
+/* the help options are our own, see help_parse_opt() */
+static unsigned argp_parse_flags = ARGP_NO_EXIT | ARGP_NO_HELP;
 
 static int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
@@ -89,7 +90,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
         case ARGP_KEY_INIT:
             state->child_inputs[0] = cmdctx;
-            state->child_inputs[1] = NULL;
+            /* help_argp, which a command that parses its own options lacks */
+            if (cmdctx->cmd->cmd_fn == NULL)
+                state->child_inputs[1] = cmdctx;
             break;
 
         case 'v': {
@@ -126,6 +129,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'h':
             argp_state_help(state, stdout, ARGP_HELP_LONG | ARGP_HELP_USAGE);
+            cmdctx->rtflags |= CMDCTX_ISHELP;
             return EINVAL;
             break;
 
@@ -270,6 +274,44 @@ static struct argp_option common_options[] = {
 };
 
 
+#define OPT_USAGE    1024
+#define OPT_PROGNAME 1025
+
+/* argp's own --help, --usage and --program-name, with its texts */
+static struct argp_option help_options[] = {
+    {"help",  '?',       0, 0, "Give this help list", -1 },
+    {"usage", OPT_USAGE, 0, 0, "Give a short usage message", -1 },
+    {"program-name", OPT_PROGNAME, "NAME", OPTION_HIDDEN, "Set the program name", -1 },
+    { 0, 0, 0, 0, 0, 0 },
+};
+
+/* argp's parser of them tells nobody that help was asked for */
+static error_t help_parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct cmdctx *cmdctx = state->input;
+
+    switch (key) {
+        case OPT_PROGNAME:      /* the name help and usage print */
+            state->name = n_basenam(arg);
+            return 0;
+
+        case '?':
+            argp_state_help(state, state->out_stream, ARGP_HELP_STD_HELP);
+            break;
+
+        case OPT_USAGE:
+            argp_state_help(state, state->out_stream,
+                            ARGP_HELP_USAGE | ARGP_HELP_EXIT_OK);
+            break;
+
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+
+    cmdctx->rtflags |= CMDCTX_ISHELP;
+    return 0;
+}
+
 static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
 {
     int                  rc = 1;
@@ -279,7 +321,10 @@ static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
                                       cmd->arg,
                                       cmd->doc, 0, 0, 0};
 
-    struct argp_child cmd_argp_child[2] = { { &cmd_argp, 0, NULL, 0 },
+    struct argp          help_argp = { help_options, help_parse_opt, 0, 0, 0, 0, 0 };
+
+    struct argp_child cmd_argp_child[3] = { { &cmd_argp, 0, NULL, 0 },
+                                            { &help_argp, 0, NULL, 0 },
                                             { NULL, 0, NULL, 0 },   };
 
     struct argp argp = { common_options, parse_opt, 0, 0,
@@ -290,11 +335,6 @@ static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
         return 0;
 
     cmd = cmdctx->cmd;
-    if (poclidek_argv_is_help(argc, (const char**)argv)) {
-        cmdctx->rtflags |= CMDCTX_ISHELP;
-        DBGF("is_help!\n");
-    }
-
     if (poldek_verbose() < 0)
         cmdctx->rtflags |= CMDCTX_NOCTRLMSGS;
 
@@ -303,6 +343,11 @@ static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
         cmdctx->_data = cmd->init_cmd_arg_d();
 
     if (cmd->cmd_fn) { /* option parses its args itself */
+        /* with argp's own help options, which tell it nothing */
+        cmd_argp_child[1].argp = NULL;
+        if (poclidek_argv_is_help(argc, (const char**)argv))
+            cmdctx->rtflags |= CMDCTX_ISHELP;
+
         DBGF("run cmd_fn(arc, argv)\n");
         rc = cmd->cmd_fn(cmdctx, argc, (const char**)argv, &argp);
         goto l_end;
@@ -338,7 +383,7 @@ static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
     return rc;
 }
 
-/* argp workaround */
+/* for the options of poldek itself and for commands that parse their own */
 int poclidek_argv_is_help(int argc, const char **argv)
 {
     int i, is_help = 0;

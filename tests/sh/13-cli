@@ -462,6 +462,35 @@ testCmdQuotedPipeOrSemicolon()
     assertEquals "abc-1-1 not found ($out)" "0" "$?"
 }
 
+# a command asked for help shows it and does nothing else, however the
+# option is written
+testCmdHelpRunsNoCommand()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    for opt in --help --hel --usage '-?' '-q?' -h; do
+        out=$($POLDEK -q --cmd "ls $opt a" 2>&1)
+        assertEquals "ls $opt: no usage ($out)" "1" "$(echo "$out" | grep -c '^Usage: ls')"
+        assertEquals "ls $opt listed a package ($out)" "0" "$(echo "$out" | grep -c '^a-1-1')"
+    done
+
+    # argp's hidden option of the name to show works as before
+    out=$($POLDEK -q --cmd "ls --program-name=list --usage" 2>&1)
+    assertEquals "ls --program-name=list --usage failed ($out)" "0" "$?"
+    assertEquals "ls --program-name=list --usage ($out)" "1" "$(echo "$out" | grep -c '^Usage: list ')"
+    out=$($POLDEK -q --cmd "ls --program-name=/bin/list --usage" 2>&1)
+    assertEquals "ls --program-name=/bin/list --usage ($out)" "1" "$(echo "$out" | grep -c '^Usage: list ')"
+
+    # past "--" it is an argument
+    out=$($POLDEK -q --cmd "ls -- --help" 2>&1)
+    assertEquals "ls -- --help ($out)" "0" "$(echo "$out" | grep -c '^Usage: ls')"
+    echo "$out" | grep -q -- '--help: no such package'
+    assertEquals "ls did not get --help as an argument ($out)" "0" "$?"
+}
+
 # each command of a line starts with the settings poldek was given: neither
 # the packages nor the options of the command before it are its own
 testCmdsOfLineShareNothing()
