@@ -13,6 +13,9 @@
 # include <pthread.h>
 #endif
 
+#include <trurl/nbuf.h>
+#include <trurl/nstr.h>
+
 #include "test.h"
 
 void append(const char *path, int vft_io)
@@ -365,6 +368,7 @@ static struct {
     int        thread_close_fd; /* a thread takes the lock before its close */
     int        thread_rc;       /* of pthread_create() */
     int        thread_locked;   /* before that close */
+    FILE       *fclose_error;   /* its fclose() fails with ENOSPC */
 #ifdef ENABLE_THREADS
     pthread_t  thread;
 #endif
@@ -478,6 +482,22 @@ DIR *opendir(const char *path)
         return NULL;
     }
     return real_opendir(path);
+}
+
+__attribute__((visibility("default")))
+int fclose(FILE *stream)
+{
+    static int (*real_fclose)(FILE *);
+
+    if (real_fclose == NULL)
+        real_fclose = (int (*)(FILE *))dlsym(RTLD_NEXT, "fclose");
+    if (stream == hook.fclose_error) {
+        hook.fclose_error = NULL;
+        real_fclose(stream);
+        errno = ENOSPC;
+        return EOF;
+    }
+    return real_fclose(stream);
 }
 
 /* the number of files of locks in dir */
@@ -925,6 +945,55 @@ START_TEST (test_lock_path_too_long) {
 }
 END_TEST
 
+/* what vfile logged other than errors */
+static tn_buf *logged_info;
+
+static void log_info_cb(int pri, const char *fmt, va_list ap)
+{
+    if ((pri & VFILE_LOG_ERR) == 0)
+        n_buf_vprintf(logged_info, fmt, ap);
+}
+
+static const char *logged(const tn_buf *buf)
+{
+    return n_buf_size(buf) ? n_buf_ptr(buf) : "";
+}
+
+/* a file written uncompressed to be compressed at its close is not
+   compressed when the close fails, as it may be cut short; the compressor
+   is not installed in the tree, so its start shows whether it ran */
+START_TEST (test_close_error_not_compressed) {
+    char path[PATH_MAX], plain[PATH_MAX], compressing[PATH_MAX];
+    struct vfile *vf;
+    int v = 1;
+
+    vfile_configure(VFILE_CONF_VERBOSE, &v);
+    vfile_configure(VFILE_CONF_LOGCB, log_info_cb);
+    logged_info = n_buf_new(0);
+    n_snprintf(path, sizeof(path), "%s", NTEST_TMPPATH("close-compr.gz"));
+    n_snprintf(plain, sizeof(plain), "%s", NTEST_TMPPATH("close-compr"));
+    n_snprintf(compressing, sizeof(compressing), "Compressing %s...", n_basenam(plain));
+
+    fail_if((vf = vfile_open(path, VFT_STDIO, VFM_RW | VFM_UNCOMPR)) == NULL);
+    fail_unless(vfile_close(vf), "close: %s", strerror(errno));
+    fail_if(strstr(logged(logged_info), compressing) == NULL,
+            "not compressed after a good close: %s", logged(logged_info));
+
+    n_buf_clean(logged_info);
+    fail_if((vf = vfile_open(path, VFT_STDIO, VFM_RW | VFM_UNCOMPR)) == NULL);
+    hook.fclose_error = vf->vf_stream;
+    fail_if(vfile_close(vf), "a failed close succeeded");
+    expect_int(errno, ENOSPC);
+    fail_if(strstr(logged(logged_info), compressing) != NULL,
+            "compressed after a failed close: %s", logged(logged_info));
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    n_buf_free(logged_info);
+    unlink(plain);
+    unlink(path);
+}
+END_TEST
+
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_as_path_percent, test_url_hidepasswd,
              test_url_hidepasswd_short_buffer, test_fetcha_ext_multi_dirbn,
@@ -934,5 +1003,6 @@ NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_lock_taken_at_release, test_lock_opened_before_release,
              test_lock_fstat_error, test_lock_taken_again,
              test_lock_released_in_child, test_lock_inherited_of_own_file,
-             test_lock_long_path, test_lock_path_too_long
+             test_lock_long_path, test_lock_path_too_long,
+             test_close_error_not_compressed
              THREAD_TESTS);
