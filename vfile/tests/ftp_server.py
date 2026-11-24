@@ -18,6 +18,9 @@ SIZE/MDTM, which poldek sends before PASV):
   /retr-cut-reply/<name>
                         - close the control connection in the middle of the
                           reply to RETR; fires once per path
+  /retr-long-reply/<name>
+                        - reply to RETR with a line longer than vfff's
+                          4096-byte line buffer
   /ctrl-close-idle/<name>
                         - reply 226, then close the control connection
                           without a 421, like a server dropping it as idle
@@ -179,6 +182,13 @@ class FTPSession:
             self.datasock.close()
             self.datasock = None
             self.dropped = True
+            return
+
+        if 'retr-long-reply' in self.path:
+            self.log("!! a reply line longer than vfff's buffer")
+            self.send("150 %s\r\n" % ("a" * 5000))
+            self.datasock.close()
+            self.datasock = None
             return
 
         size = os.path.getsize(self.localpath())

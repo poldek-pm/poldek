@@ -143,6 +143,5 @@ while read d rest; do
 done < $RUNS
 
 wait $reporter || exit 1
-# the scripts make some of their files as root when they test with sudo
-sh -c '. ./sh/lib/repo-setup; SUDO_INFO_LOGGED=1; sudo_up; $SUDO rm -rf "$1"' sh $TOP ||
+rm -rf $TOP ||
     echo "$0: could not remove $TOP" >&2

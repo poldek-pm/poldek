@@ -5,6 +5,9 @@
 #include "test.h"
 #include "pkgu.h"
 
+#include <rpm/header.h>
+#include <rpm/rpmtag.h>
+
 extern time_t pkgu__parse_datetime(const char *str);
 
 START_TEST (test_parse_datetime_uses_utc) {
@@ -77,6 +80,37 @@ START_TEST (test_changelog_entry_without_space) {
 }
 END_TEST
 
-NTEST_RUNNER("pkgu", test_parse_datetime_uses_utc,
+/* a bare "Revision" line of a PLD changelog is an entry without a revision
+   and a date, not read past its end */
+START_TEST (test_pld_changelog_bare_revision) {
+    tn_alloc *na = n_alloc_new(8, TN_ALLOC_OBSTACK);
+    Header h = headerNew();
+    uint32_t t = 1893456000;
+    struct pkguinf *inf;
+    const char *log;
+
+    headerPutString(h, RPMTAG_NAME, "a");
+    headerPutString(h, RPMTAG_VERSION, "1");
+    headerPutString(h, RPMTAG_RELEASE, "1");
+    headerPutString(h, RPMTAG_CHANGELOGNAME, "PLD Team <feedback@pld-linux.org>");
+    headerPutUint32(h, RPMTAG_CHANGELOGTIME, &t, 1);
+    headerPutString(h, RPMTAG_CHANGELOGTEXT,
+                    "Revision 1.2 2030-01-01 00:00:00 someone\n- dated entry\n"
+                    "Revision\n- bare entry\n");
+
+    inf = pkguinf_ldrpmhdr(na, h, NULL);
+    fail_unless(inf != NULL);
+    log = pkguinf_get(inf, PKGUINF_CHANGELOG);
+    fail_unless(log != NULL);
+    ck_assert_str_eq(log, "* r1.2 2030-01-01 00:00:00 someone\n- dated entry\n\n"
+                          "* r \n- bare entry\n\n");
+
+    pkguinf_free(inf);
+    headerFree(h);
+    n_alloc_free(na);
+}
+END_TEST
+
+NTEST_RUNNER("pkgu", test_parse_datetime_uses_utc, test_pld_changelog_bare_revision,
              test_parse_datetime_rejects_invalid,
              test_changelog_entry_without_space);

@@ -665,7 +665,7 @@ testRPMdbcacheDirindexSameSecond() {
 
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
     local mtime=$(( $(date +%s) + 3600 ))
-    $SUDO touch -d @$mtime $dbfiles || fail "cannot touch rpmdb files"
+    touch -d @$mtime $dbfiles || fail "cannot touch rpmdb files"
 
     $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO \
         --root $DESTINATION_REPO --cmd ls -u >/dev/null
@@ -680,7 +680,7 @@ testRPMdbcacheDirindexSameSecond() {
     local md5=$(md5sum "$dirindex_path" | cut -f1 -d' ')
 
     try_install a "a-1-1" ""
-    $SUDO touch -d @$mtime $dbfiles || fail "cannot touch rpmdb files"
+    touch -d @$mtime $dbfiles || fail "cannot touch rpmdb files"
 
     $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO \
         --root $DESTINATION_REPO --cmd ls -u >/dev/null
@@ -728,12 +728,12 @@ testRPMdbcacheSameSecond() {
     # made before it, however long the run takes
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
     local mtime=$(( $(date +%s) + 3600 ))
-    $SUDO touch -d @$mtime $dbfiles
+    touch -d @$mtime $dbfiles
 
     $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
 
     rpm_build_installed b 1-1
-    $SUDO touch -d @$mtime $dbfiles  # changed within the same second
+    touch -d @$mtime $dbfiles  # changed within the same second
 
     local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-1-1')
     assertEquals "b-1-1 not listed as installed" "1" "$n"
@@ -746,13 +746,13 @@ testRPMdbcacheChangedWhileRunning() {
 
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
     local mtime=$(( $(date +%s) - 3600 ))
-    $SUDO touch -d @$mtime $dbfiles
+    touch -d @$mtime $dbfiles
 
     mkdir -p $DESTINATION_REPO/RPMS/
     rm -f $DESTINATION_REPO/RPMS/*.rpm
     build_package $DESTINATION_REPO/RPMS/ b 1-1
     local change="$TMPDIR/08-rpm-change.sh"
-    echo "$RPM -i --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm && $SUDO touch -d @$mtime.5 $dbfiles" > $change
+    echo "$RPM -i --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm && touch -d @$mtime.5 $dbfiles" > $change
 
     printf 'cd /installed\nls\n!sh %s\nquit\n' "$change" |
         timeout 60 script -qec "$RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null >/dev/null
@@ -776,7 +776,7 @@ testRPMdbcacheOwnInstallAfterChange() {
     local dbfiles="$DESTINATION_REPO$($RPM --eval %_dbpath)/*"
     local change="$TMPDIR/08-rpm-change.sh" age="$TMPDIR/08-rpm-age.sh"
     echo "$RPM -i --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm" > $change
-    echo "$SUDO touch -d '-1 hour' $dbfiles" > $age  # as if the session went on long
+    echo "touch -d '-1 hour' $dbfiles" > $age  # as if the session went on long
 
     printf 'cd /installed\nls\n!sh %s\ncd /all-avail\ninstall --justdb c\n!sh %s\nquit\n' \
            "$change" "$age" |
@@ -812,7 +812,7 @@ testRPMdbcacheInterruptedLoad() {
     rpm_build_installed b 1-1
     local out=$(printf 'cd /installed\nls\nquit\n' |
         perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV' \
-             timeout 60 script -qec "env LD_PRELOAD=$PWD/.libs/sigint_at_dbload.so $RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null 2>&1)
+             timeout 60 script -qec "env LD_PRELOAD=$PWD/preload/.libs/sigint_at_dbload.so $RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null 2>&1)
     assertEquals "no SIGINT from sigint_at_dbload.so: $out" "1" \
                  "$(echo "$out" | grep -c '^sigint_at_dbload: SIGINT')"
     assertEquals "the interrupted load not reported: $out" "1" \
@@ -847,8 +847,8 @@ testUpgradeMultipleInstalledInterrupted() {
 
     # rpm that gets poldek interrupted as it installs
     local rpm="$TMPDIR/rpm-then-sigint"
-    printf '#!/bin/sh\n%s rpm "$@"\nrc=$?\ncase "$*" in *--install*|*--upgrade*) kill -INT $PPID;; esac\nexit $rc\n' \
-           "$SUDO" > $rpm
+    printf '#!/bin/sh\nrpm "$@"\nrc=$?\ncase "$*" in *--install*|*--upgrade*) kill -INT $PPID;; esac\nexit $rc\n' \
+           > $rpm
     chmod 755 $rpm
 
     perl -e '$SIG{INT} = "DEFAULT"; exec @ARGV' \

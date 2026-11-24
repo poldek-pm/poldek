@@ -18,10 +18,7 @@ setUp() {
     # provide /bin/sh auto requirement
     rpm_build_installed sh -p /bin/sh
 
-    local use_sudo="n"
-    [ -n "$SUDO" ] && use_sudo=y
-
-    RAW_POLDEK="$POLDEK_NOCONF -Ouse_sudo=$use_sudo"
+    RAW_POLDEK="$POLDEK_NOCONF -Ouse_sudo=n"
     POLDEK="$RAW_POLDEK --st pndir -s $REPO --root $DESTINATION_REPO --justdb"
 
     $RAW_POLDEK clean
@@ -139,7 +136,7 @@ testInstallStubIndexCut()
     skip_if_rpm_testing_off && return
 
     index_with_cut_stub
-    $POLDEK install -v b
+    $POLDEK install -v b 2>&1
     assertEquals "install failed" "$?" "0"
     rpm_state_check "b" ""
 }
@@ -182,8 +179,10 @@ testStubIndexWriteError()
 
     build b
     index
-    env LD_PRELOAD=$PWD/.libs/close_error.so WRITE_ERROR=stubindex.pndir.zst \
-        $POLDEK ls > /dev/null 2>&1
+    local out=$(env LC_ALL=C LD_PRELOAD=$PWD/preload/.libs/close_error.so \
+                WRITE_ERROR=stubindex.pndir.zst $POLDEK ls 2>&1)
+    echo "$out" | grep -q 'stubindex.pndir.zst: write failed (No space left on device)' ||
+        fail "no write error: $out"
     assertEquals "stub index replaced" "1" "$(zstdcat $stub | grep -vc "^%")"
     left=$(find $(dirname $stub) -name '.*.tmp.??????')
     [ -z "$left" ] || fail "temporary files left: $left"
@@ -248,7 +247,7 @@ testDirIndexWriteError()
 
     build b
     index
-    env LD_PRELOAD=$PWD/.libs/close_error.so WRITE_ERROR=dirindex.pndir.tndb \
+    env LD_PRELOAD=$PWD/preload/.libs/close_error.so WRITE_ERROR=dirindex.pndir.tndb \
         $POLDEK up > /dev/null 2>&1
     assertEquals "dirindex replaced" "$before" "$(cksum < $dirindex)"
     assertEquals "time of the old dirindex changed" "$mtime" "$(stat -c %Y $dirindex)"
@@ -400,7 +399,7 @@ testShippedAliases()
     # those that run an external command have no help
     local aliases=$(sed -n '/^\[aliases\]/,$p' ../conf/cli.conf |
                     sed -n '/= *!/d; s/^\([a-zA-Z][^ =]*\) *=.*/\1/p')
-    assertNotNull "no aliases read from ../conf/cli.conf" "$aliases"
+    [ -n "$aliases" ] || fail "no aliases read from ../conf/cli.conf"
 
     for alias in $aliases; do
         out=$(HOME=$TMPDIR/home $POLDEK_NOCONF -q --cmd "$alias --help" 2>&1)
@@ -542,10 +541,10 @@ testCmdPipelineInTheMiddle()
         "$(echo "$out" | grep -o '^[ab]-1-1' | xargs)"
 }
 
-# runs $1 as --cmd through rcmd (tests/rcmd_user.c), on a transaction with
+# runs $1 as --cmd through rcmd (tests/preload/rcmd_user.c), on a transaction with
 # the mask $2 if given; what it prints in $out
 rcmd_line() {
-    out=$(env ${2:+RCMD_MASK=$2} LD_PRELOAD=$PWD/.libs/rcmd_user.so \
+    out=$(env ${2:+RCMD_MASK=$2} LD_PRELOAD=$PWD/preload/.libs/rcmd_user.so \
               $POLDEK -q --cmd "$1" 2>&1)
 }
 
@@ -1023,12 +1022,6 @@ testUninstall()
 testUninstallAsRootWithoutSudo()
 {
     skip_if_rpm_testing_off && return
-    if ! is_root; then          # the tests use sudo as an ordinary user
-        startSkipping
-        fail
-        endSkipping
-        return
-    fi
 
     build a
     index
@@ -1355,7 +1348,7 @@ testDescInstalledRootFromCache()
     build_installed a -f /usr/bin/zzroot
     # a cache made within a second of a database change counts as stale;
     # back-date the database so the cache made below counts as current
-    $SUDO touch -d '-1 hour' $DESTINATION_REPO$($RPM --eval %_dbpath)/* || fail "back-dating the rpm database failed"
+    touch -d '-1 hour' $DESTINATION_REPO$($RPM --eval %_dbpath)/* || fail "back-dating the rpm database failed"
 
     for src in rpmdb rpmdbcache; do
         out=$($RAW_POLDEK --root $DESTINATION_REPO desc -d -f a)

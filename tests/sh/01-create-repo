@@ -7,13 +7,8 @@
 . ./sh/lib/compr-setup
 . ./sh/lib/rpm-setup
 
-setUp() {
-    #repo_up
-    sudo_up
-}
-
 # preloaded into poldek to make the close of a file fail
-CLOSE_ERROR_SO="$PWD/.libs/close_error.so"
+CLOSE_ERROR_SO="$PWD/preload/.libs/close_error.so"
 
 # the files of an index are replaced from a hidden .<name>.tmp.XXXXXX,
 # which neither a finished nor a failed write may leave
@@ -527,21 +522,42 @@ testCreateRemovesStaleTmps()
     [ -f $repo/.other.tmp.EEEEEE ] || fail "file of no index removed"
 }
 
+# the translated descriptions are read from where they were written, also
+# for an index named *.i, an extension found in ".i18n" too
+testCreateTranslatedDescriptions()
+{
+    local idx="$TMPDIR/idx-i18n/packages.ndir.i" out
+
+    rm -rf $TMPDIR/idx-i18n
+    mkdir $TMPDIR/idx-i18n
+    $POLDEK_NOCONF --st dir -s $REPO --mkidx=$idx --mt pndir || fail "mkidx failed"
+
+    out=$(env LC_ALL=pl_PL.UTF-8 $POLDEK_NOCONF --skip-installed --st pndir -s $idx \
+              -q --cmd "desc a" 2>&1)
+    echo "$out" | grep -q '^Summary: *pl a$' || fail "no Polish summary: $out"
+    echo "$out" | grep -q '^(pl)Package build by .*langPL$' ||
+        fail "no Polish description: $out"
+
+    out=$(env LC_ALL=C $POLDEK_NOCONF --skip-installed --st pndir -s $idx \
+              -q --cmd "desc a" 2>&1)
+    echo "$out" | grep -q '^Summary: *a$' || fail "no summary in C: $out"
+}
+
 #  b) --st rpmdb -s /foo          =>  rpmdb -> default type
 testCreateFromRpmdb() {
     skip_if_rpm_testing_off && return
 
     rm -rf $TMPDIR/tmproot
     mkdir $TMPDIR/tmproot
-    $SUDO rpm --root=$TMPDIR/tmproot --initdb
+    rpm --root=$TMPDIR/tmproot --initdb
 
     local rpmop=
     test is_verbose_mode && rpmop="v"
 
     msgn "prep: rpm install"
-    $SUDO rpm --root=$TMPDIR/tmproot -U$rpmop $SOURCE_REPO/sh-*.rpm --noscripts
+    rpm --root=$TMPDIR/tmproot -U$rpmop $SOURCE_REPO/sh-*.rpm --noscripts
     for p in $(ls $SOURCE_REPO/a*.rpm); do
-        $SUDO rpm --root=$TMPDIR/tmproot -U$rpmop $p --noscripts
+        rpm --root=$TMPDIR/tmproot -U$rpmop $p --noscripts
     done
 
     msgn "test"

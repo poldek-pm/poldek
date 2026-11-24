@@ -1,8 +1,7 @@
 /*
   Preloaded into poldek by sh/17-interrupt: a SIGTERM that comes while poldek
-  starts rpm, after the fork and before poldek has rpm's pid, and an rpm slow
-  to get to its exec. Only a fork with SIGTERM caught counts, as when poldek
-  on the command line starts rpm.
+  starts rpm, after the fork and before poldek has rpm's pid. Only a fork
+  with SIGTERM caught counts, as when poldek on the command line starts rpm.
 */
 #include <dlfcn.h>
 #include <signal.h>
@@ -31,8 +30,6 @@ pid_t fork(void)
     if (pid > 0) {
         fputs("signal_at_fork: SIGTERM\n", stderr);
         raise(SIGTERM);
-    } else if (pid == 0) {
-        sleep(1);
     }
     return pid;
 }

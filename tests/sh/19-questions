@@ -12,7 +12,7 @@
 ORIGREPO=
 DESTINATION_REPO=
 DEPENDENCY_SOLVER=3
-FRONT_END_SO="$PWD/.libs/front_end.so"
+FRONT_END_SO="$PWD/preload/.libs/front_end.so"
 
 setUp() {
     is_rpm_testing_off && return
@@ -185,7 +185,7 @@ testSuggestionEnterIsNo()
 }
 
 # fe_run [VAR=VALUE...] ARGS: poldek ARGS with questions answered by the
-# preloaded front end (tests/front_end.c), as VAR say; output in $FE_OUT, exit
+# preloaded front end (tests/preload/front_end.c), as VAR say; output in $FE_OUT, exit
 # code in $FE_RC
 fe_run() {
     FE_OUT=$TMPDIR/fe.out

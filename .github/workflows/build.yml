@@ -62,10 +62,12 @@ jobs:
         else
           echo "no cache yet (first run or miss)"
         fi
+    # --enable-strict is -Werror: a new warning is fixed in the code, not by
+    # dropping the flag; -k shows all of them in one run
     - name: autogen
       run: ./autogen.sh --enable-strict
     - name: make
-      run: make CFLAGS="-O0"
+      run: make -k CFLAGS="-O0"
     - name: make lint
       run: make lint LINT_JOBS=$(nproc)
     - name: make check

@@ -39,8 +39,8 @@ setUp() {
     printf '#!/bin/sh\necho rpm "$@" >> %s\nkill -INT $PPID\n' "$RUNS" > $FAKE_RPM
     chmod 755 $FAKE_RPM
 
-    SIGINT_AT_INIT="$PWD/.libs/sigint_at_init.so"
-    SIGNAL_AT_FORK="$PWD/.libs/signal_at_fork.so"
+    SIGINT_AT_INIT="$PWD/preload/.libs/sigint_at_init.so"
+    SIGNAL_AT_FORK="$PWD/preload/.libs/signal_at_fork.so"
     TERMINAL_RPM="$TMPDIR/terminal-rpm"
 }
 
@@ -293,14 +293,16 @@ testHangupAndKillLetRpmRun()
     done
 }
 
-# a SIGTERM that comes while poldek starts rpm, before it has rpm's pid, and
-# rpm slow to get to its exec: rpm is asked to stop and does not run
+# a SIGTERM that comes while poldek starts rpm, before it has rpm's pid: rpm
+# is asked to stop and does not run; it is slow to start, so poldek's SIGTERM
+# ends it before it gets anywhere, however long poldek takes to send it
 testSignalWhileRpmStartsStopsIt()
 {
     skip_if_rpm_testing_off && return
 
     build a
     signal_rpm TERM poldek > $TERMINAL_RPM
+    sed -i '1a sleep 5 </dev/null >/dev/null 2>\&1' $TERMINAL_RPM
     chmod 755 $TERMINAL_RPM
 
     # the outer 2>/dev/null keeps the shell's own "Terminated" out of the

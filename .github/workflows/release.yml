@@ -113,7 +113,7 @@ jobs:
           cd /tmp/dist-test/${{ steps.dist.outputs.basename }}
           ./configure
           make CFLAGS="-O0"
-          make CFLAGS="-O0" check
+          make CFLAGS="-O0" check-all
           make CFLAGS="-O0" check-sh
 
       - name: upload tarball as artifact

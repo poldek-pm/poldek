@@ -16,6 +16,7 @@
 #include "../vfile.h"
 #include "test.h"
 #include <trurl/nstr.h>
+#include <trurl/nbuf.h>
 
 static char server_host[256] = "127.0.0.1";
 static int ftp_port = 0;
@@ -25,6 +26,15 @@ static char tmpdir[PATH_MAX];
 #define TEST_FILE_SMALL "small.txt"
 
 static int vfile_initialized = 0;
+
+/* what vfile logged as errors */
+static tn_buf *logged_err;
+
+static void log_cb(int pri, const char *fmt, va_list ap)
+{
+    if (pri & VFILE_LOG_ERR)
+        n_buf_vprintf(logged_err, fmt, ap);
+}
 
 static void net_setup(void)
 {
@@ -230,6 +240,24 @@ START_TEST(test_ftp_reply_cut_short)
 }
 END_TEST
 
+/* a reply line longer than vfff's line buffer is named as such, as it is
+   over HTTP */
+START_TEST(test_ftp_reply_line_too_long)
+{
+    fail_if(ftp_port == 0);
+
+    logged_err = n_buf_new(0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+    fail_if(fetch_ftp("retr-long-reply/" TEST_FILE_SMALL) != 0);
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+
+    fail_if(n_buf_size(logged_err) == 0 ||
+            strstr(n_buf_ptr(logged_err), "vfff: response line too long\n") == NULL,
+            "%s", n_buf_size(logged_err) ? (char *)n_buf_ptr(logged_err) : "");
+    n_buf_free(logged_err);
+}
+END_TEST
+
 /* control connection lost after the whole file arrived: the stale-connection
    retry must not kick in and silently download everything again; the fetch
    fails and is left to the resuming retry */
@@ -259,6 +287,7 @@ static Suite *vftp_suite(void)
     tcase_add_test(tc, test_relative_redirect_keeps_port);
     tcase_add_test(tc, test_ftp_ctrl_closed_idle);
     tcase_add_test(tc, test_ftp_reply_cut_short);
+    tcase_add_test(tc, test_ftp_reply_line_too_long);
     tcase_add_test(tc, test_ftp_ctrl_drop_after_data);
     suite_add_tcase(s, tc);
 

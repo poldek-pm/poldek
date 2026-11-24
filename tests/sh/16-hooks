@@ -42,8 +42,8 @@ setUp() {
 
     POLDEK_ON_ROOT="$RAW_POLDEK --pmcmd $FAKE_RPM --st dir -s $REPO --root /"
     POLDEK_HOOKS="$POLDEK_ON_ROOT -Ohooks_dir=$HOOKS"
-    SIGNAL_AT_RESTORE="$PWD/.libs/signal_at_restore.so"
-    LIBRARY_USER="$PWD/.libs/library_user.so"
+    SIGNAL_AT_RESTORE="$PWD/preload/.libs/signal_at_restore.so"
+    LIBRARY_USER="$PWD/preload/.libs/library_user.so"
 }
 
 # hook <subdir> <name> <word to log> [exit code]
@@ -224,11 +224,13 @@ sleep 1
 EOF
     rm -f $TMPDIR/hup-sent
 
-    printf 'install hooka\ninstall hookb\n' | timeout 60 script -qec \
+    # quit, not the end of input: under load the shell at times missed the ^D
+    # script sends for it and waited at its prompt for the timeout
+    printf 'install hooka\ninstall hookb\nquit\n' | timeout 60 script -qec \
         "env LD_PRELOAD=$LIBRARY_USER CALLER_LOG=$HOOKS_LOG $POLDEK_HOOKS -Ouse_sudo=n --shell" \
         /dev/null >/dev/null 2>&1
     rc=$?
-    assertEquals "exit code" "0" "$rc"
+    assertEquals "exit code $rc" "0" "$rc"
     assertRuns "pre rpm rpm-stopped post caller pre rpm post"
 }
 

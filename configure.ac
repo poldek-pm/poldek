@@ -95,7 +95,7 @@ fi
 
 PKG_PROG_PKG_CONFIG()
 
-PKG_CHECK_MODULES(CHECK, check >= 0.9.4, have_check=yes, have_check=no)
+PKG_CHECK_MODULES(CHECK, check >= 0.13.0, have_check=yes, have_check=no)
 
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[
@@ -446,6 +446,7 @@ AC_CONFIG_FILES([
         Makefile
         poldek.spec
         tests/Makefile
+        tests/preload/Makefile
         cli/Makefile
 	])
 AC_OUTPUT

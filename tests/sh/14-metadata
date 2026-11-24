@@ -31,7 +31,7 @@ testRepoNotReadDirectly()
 {
     local out
 
-    out=$($POLDEK -s metadata/02.repo ls 2>&1)
+    out=$($POLDEK --skip-installed -s metadata/02.repo ls 2>&1)
     echo "$out" | grep -q "a .repo file is not read directly; use 'poldek repo add" || \
         fail "no hint about repo add: $out"
 }
@@ -52,8 +52,9 @@ testLoadLargeSizes()
     mv $dir/primary.gz $primary
     new=$(sha256sum < $primary | cut -d' ' -f1)
     sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
-    n=$($POLDEK -s "m,type=metadata $dir/repo/" desc fake_bash | grep -E '^(Size|Package size): +4096.0 MB' | wc -l)
-    assertEquals "sizes should be 4096.0 MB" "$n" "2"
+    n=$($POLDEK -s "m,type=metadata $dir/repo/" desc fake_bash |
+        grep -E '^(Size|Package size): +4096.0 MB \(4294967295 B\)$' | wc -l)
+    assertEquals "sizes should be 4096.0 MB (4294967295 B)" "$n" "2"
 }
 
 # a package whose name does not fit in an index key is left out with a
@@ -163,7 +164,7 @@ testLoadZstCut()
     new=$(sha256sum < $primary | cut -d' ' -f1)
     sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
 
-    out=$($POLDEK -s "m,type=metadata $dir/repo/" ls 2>&1)
+    out=$($POLDEK --skip-installed -s "m,type=metadata $dir/repo/" ls 2>&1)
     echo "$out" | grep -q 'primary.xml.zst: cannot be read whole' ||
         fail "no error for the cut primary.xml.zst: $out"
     echo "$out" | grep -q ': load failed' || fail "no load error: $out"
@@ -191,7 +192,7 @@ testLoadZstCutAfterDocument()
     new=$(sha256sum < $primary | cut -d' ' -f1)
     sed -i "s/>$old</>$new</" $dir/repo/repodata/repomd.xml
 
-    out=$($POLDEK -s "m,type=metadata $dir/repo/" ls 2>&1)
+    out=$($POLDEK --skip-installed -s "m,type=metadata $dir/repo/" ls 2>&1)
     echo "$out" | grep -q 'primary.xml.zst: cannot be read whole' ||
         fail "no error for the cut frame: $out"
     echo "$out" | grep -q '^fake_bash-' && fail "a package listed despite the cut frame: $out"
@@ -276,7 +277,7 @@ testUpUnloadableWritesNoStubIndex()
     mv $dir/primary.gz $dir/repodata/$new-primary.xml.gz
     sed -i "s/$old/$new/g" $dir/repodata/repomd.xml
 
-    $POLDEK_RAW_UP -Osource="$src" --up
+    $POLDEK_RAW_UP -Osource="$src" --up 2>&1
     stub=$(find $CACHEDIR -name 'stubindex*')
     [ -z "$stub" ] || fail "a stub index of the unloadable primary.xml: $stub"
 }

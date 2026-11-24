@@ -1,7 +1,7 @@
 poldek test suite
 
 BuildRequires: check-devel
-Reqires: fakeroot, python3 (for sh/lib/tndb-set-vlen), sudo (for sh/08-rpm tests)
+Reqires: fakeroot, python3 (for sh/lib/tndb-set-vlen), root or unshare -Urm (for the rpm tests)
 
 To run all tests:
 
