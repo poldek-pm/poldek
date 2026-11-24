@@ -165,6 +165,27 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.close_connection = True
             return
 
+        # C1 in UTF-8, DEL and a tab in a status line
+        if path == "/ctl-more":
+            self.wfile.write(b"HTTP/1.1 500 \xc2\x9bC1\x7fDEL\tTAB\r\n"
+                             b"Content-Length: 0\r\nConnection: close\r\n\r\n")
+            self.close_connection = True
+            return
+
+        # a status line whose escapes run past the end of vfff's message
+        if path == "/ctl-cut":
+            self.wfile.write(b"HTTP/1.1 500 " + b"a" * 471 + b"\x1b" * 10 + b"\r\n"
+                             b"Content-Length: 0\r\nConnection: close\r\n\r\n")
+            self.close_connection = True
+            return
+
+        # a header line without a colon
+        if path == "/no-colon":
+            self.wfile.write(b"HTTP/1.1 200 OK\r\nX-Bad\r\n"
+                             b"Content-Length: 0\r\nConnection: close\r\n\r\n")
+            self.close_connection = True
+            return
+
         # and in a redirect target
         if path == "/ctl-redirect":
             self.wfile.write(b"HTTP/1.1 302 Found\r\n"

@@ -355,6 +355,23 @@ START_TEST(test_http_status_line_without_space)
 }
 END_TEST
 
+/* a status line with an error code and nothing after it */
+START_TEST(test_http_status_line_without_space_error)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/status/503/nospace", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    ck_assert_str_eq(logged(logged_err), "vfff: /status/503/nospace: HTTP 503\n");
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+}
+END_TEST
+
 START_TEST(test_http_bad_status_line_named)
 {
     char url[512];
@@ -481,6 +498,65 @@ START_TEST(test_http_redirect_control_bytes_refused)
 
     ck_assert_str_eq(logged(logged_err),
                      "vfff: \\x1b[31mRED\\x1b[0m: invalid redirect URI\n");
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+}
+END_TEST
+
+/* C1 in UTF-8 and DEL are written as their bytes, a tab as \t */
+START_TEST(test_http_control_bytes_c1_del_tab)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/ctl-more", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    ck_assert_str_eq(logged(logged_err),
+                     "vfff: /ctl-more: HTTP 500 \\xc2\\x9bC1\\x7fDEL\\tTAB\n");
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+}
+END_TEST
+
+/* "/ctl-cut: HTTP 500 " and 471 bytes take 490 of the message's 511, five
+   escapes 20 more: the sixth is left out whole, not cut in half */
+START_TEST(test_http_control_bytes_cut_whole)
+{
+    char url[512], a[472], expected[1024];
+
+    fail_if(http_port == 0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/ctl-cut", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    memset(a, 'a', sizeof(a) - 1);
+    a[sizeof(a) - 1] = '\0';
+    snprintf(expected, sizeof(expected), "vfff: /ctl-cut: HTTP 500 %s%s\n", a,
+             "\\x1b\\x1b\\x1b\\x1b\\x1b");
+    ck_assert_str_eq(logged(logged_err), expected);
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+}
+END_TEST
+
+/* the header block a parse error shows is one line */
+START_TEST(test_http_parse_error_one_line)
+{
+    char url[512];
+
+    fail_if(http_port == 0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "http://%s:%d/no-colon", server_host, http_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    ck_assert_str_eq(logged(logged_err),
+                     "vfff: HTTP/1.1 200 OK\\r\\nX-Bad\\r\\nContent-Length: 0\\r\\n"
+                     "Connection: close\\r\\n\\r\\n: response parse error\n");
 
     vfile_configure(VFILE_CONF_LOGCB, NULL);
 }
@@ -1016,12 +1092,16 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_error_status_without_reason);
     tcase_add_test(tc_http, test_http_reason_phrase_as_sent);
     tcase_add_test(tc_http, test_http_status_line_without_space);
+    tcase_add_test(tc_http, test_http_status_line_without_space_error);
     tcase_add_test(tc_http, test_http_bad_status_line_named);
     tcase_add_test(tc_http, test_http_response_line_too_long);
     tcase_add_test(tc_http, test_http_redirect_302);
     tcase_add_test(tc_http, test_http_redirect_chain);
     tcase_add_test(tc_http, test_http_stat_redirect_failed);
     tcase_add_test(tc_http, test_http_server_control_bytes_escaped);
+    tcase_add_test(tc_http, test_http_control_bytes_c1_del_tab);
+    tcase_add_test(tc_http, test_http_control_bytes_cut_whole);
+    tcase_add_test(tc_http, test_http_parse_error_one_line);
     tcase_add_test(tc_http, test_http_redirect_control_bytes_refused);
     tcase_add_test(tc_http, test_http_redirect_no_scheme_refused);
     tcase_add_test(tc_http, test_http_label_control_bytes_escaped);

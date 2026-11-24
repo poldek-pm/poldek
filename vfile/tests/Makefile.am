@@ -31,8 +31,8 @@ check-http: test_vhttp$(EXEEXT)
 check-ssl-verify:
 	$(SHELL) $(srcdir)/run_http_tests.sh $(SHELL) $(srcdir)/test_ssl_verify.sh
 
-# test_vftp needs its own FTP server plus HTTP redirector, so it is not part
-# of "make check"; run it with: make check-ftp
+# test_vftp needs its own FTP server plus HTTP redirector; make check runs it
+# through check-local, make check-ftp alone
 check-ftp: test_vftp$(EXEEXT)
 	$(SHELL) $(srcdir)/run_ftp_tests.sh ./test_vftp$(EXEEXT)
 
