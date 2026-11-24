@@ -6,39 +6,15 @@ is_root() {
    test $(id -u) = "0"
 }
 
-SUDO=
-SUDO_INFO_LOGGED=
 USERNS_INFO_LOGGED= # set by sh/lib/setup when the tests run in a user namespace
 RPM_TESTING_OFF_LOGGED=
 RPM_TESTING_OFF_COUNTED= # test that a skip was already counted for (10-booldeps helpers)
 
-sudo_up() {
-    [ -n "$SUDO" ] && return
-
-    is_root && return
-    command -v sudo 2>&1 >/dev/null || return
-    sudo -n rpm --version >/dev/null 2>/dev/null || return
-
-    if [ -z "$SUDO_INFO_LOGGED" ]; then
-        msgn "Will use SUDO to test with /bin/rpm"
-        SUDO_INFO_LOGGED=1
-    fi
-
-    SUDO="sudo"
-}
-
-# rpm --root DIR and poldek --install-dist=DIR call chroot(), so we need to be a root/ have
-# sudo for such tests.
-#
-# sh/lib/setup re-runs the test inside a user namespace, where we are uid 0 without being
-# root on the host. $SUDO then stays empty, but the test below looks at $(id -u), so these
-# tests do run -- and say so when verbose.
+# rpm --root DIR and poldek --install-dist=DIR call chroot(), so such tests need
+# uid 0: root, or the user namespace sh/lib/setup re-runs the test in
 is_rpm_testing_off() {
-    sudo_up
-
-    if [ -n "$SUDO" ] || [ $(id -u) = "0" ]; then
-        # run as root, without root via a userns, or with (passwordless) sudo
-        if [ -z "$SUDO" -a "${POLDEK_TEST_USERNS:-}" = "1" -a -z "$USERNS_INFO_LOGGED" ]; then
+    if is_root; then
+        if [ "${POLDEK_TEST_USERNS:-}" = "1" -a -z "$USERNS_INFO_LOGGED" ]; then
             force_msg "## rpm tests run without root (user namespace, uid $(id -u))"
             USERNS_INFO_LOGGED=1
         fi
@@ -46,7 +22,7 @@ is_rpm_testing_off() {
     fi
 
     if [ -z "$RPM_TESTING_OFF_LOGGED" ]; then
-        force_msg "## rpm tests NOT run (need root, passwordless sudo, or unshare -Urm)"
+        force_msg "## rpm tests NOT run (need root or unshare -Urm)"
         RPM_TESTING_OFF_LOGGED=1
     fi
 
@@ -79,11 +55,9 @@ skip_rpm_testing_off_once() {
 }
 
 repo_up() {
-    sudo_up
-
     POLDEK_TESTING_DENIED_FILES=""
-    [ -n "$REPO" ] && $SUDO rm -rf $REPO/packages.*
-    [ -n "$TMPDIR" ] && $SUDO rm -rf $TMPDIR/*.*
+    [ -n "$REPO" ] && rm -rf $REPO/packages.*
+    [ -n "$TMPDIR" ] && rm -rf $TMPDIR/*.*
 }
 
 # "$CACHEDIR"/* would leave the hidden entries: a local source's directory
@@ -91,8 +65,8 @@ repo_up() {
 # gives ..w...)
 cachedir_clean() {
     [ -n "$CACHEDIR" ] || return 0
-    $SUDO rm -rf "$CACHEDIR"
-    mkdir -p "$CACHEDIR"     # not $SUDO: poldek writes to it as the user
+    rm -rf "$CACHEDIR"
+    mkdir -p "$CACHEDIR"
 }
 
 tearDown() {
@@ -169,7 +143,6 @@ build_package() {
 }
 
 oneTimeSetUp() {
-    sudo_up
     ensure_commands "grep" "zgrep" "zstdgrep" "perl" "python3" "fakeroot" "rpm" "rpmbuild" "timeout" "gpg" "gpgconf" "gpg-agent" "rpmsign" "script"
 
     [ ! -d "$PWD/sh/lib" ] && abort "$PWD is not a tests directory (missing sh/lib)"
@@ -189,7 +162,7 @@ oneTimeSetUp() {
 
     export TMP TMPDIR
 
-    $SUDO rm -rf $TMPDIR
+    rm -rf $TMPDIR
     mkdir -p $TMPDIR
     [ ! -d $TMPDIR ] && abort "$TMPDIR: no such directory"
 
