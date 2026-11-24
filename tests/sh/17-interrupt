@@ -293,14 +293,16 @@ testHangupAndKillLetRpmRun()
     done
 }
 
-# a SIGTERM that comes while poldek starts rpm, before it has rpm's pid, and
-# rpm slow to get to its exec: rpm is asked to stop and does not run
+# a SIGTERM that comes while poldek starts rpm, before it has rpm's pid: rpm
+# is asked to stop and does not run; it is slow to start, so poldek's SIGTERM
+# ends it before it gets anywhere, however long poldek takes to send it
 testSignalWhileRpmStartsStopsIt()
 {
     skip_if_rpm_testing_off && return
 
     build a
     signal_rpm TERM poldek > $TERMINAL_RPM
+    sed -i '1a sleep 5 </dev/null >/dev/null 2>\&1' $TERMINAL_RPM
     chmod 755 $TERMINAL_RPM
 
     # the outer 2>/dev/null keeps the shell's own "Terminated" out of the
