@@ -106,6 +106,31 @@ static int have_file(const char *name)
     return access(dest, F_OK) == 0;
 }
 
+/* is the fetched file what the server has? */
+static int file_as_served(const char *name)
+{
+    char path[PATH_MAX], got[4096], served[4096];
+    int ngot, nserved;
+    FILE *f;
+
+    if ((size_t)snprintf(path, sizeof(path), "%s/%s", tmpdir, name) >= sizeof(path))
+        ck_abort_msg("path truncated");
+    if ((f = fopen(path, "r")) == NULL)
+        return 0;
+    ngot = fread(got, 1, sizeof(got), f);
+    fclose(f);
+
+    if ((size_t)snprintf(path, sizeof(path), "%s/%s", getenv("TEST_DATA_DIR"),
+                         name) >= sizeof(path))
+        ck_abort_msg("path truncated");
+    if ((f = fopen(path, "r")) == NULL)
+        return 0;
+    nserved = fread(served, 1, sizeof(served), f);
+    fclose(f);
+
+    return ngot > 0 && ngot == nserved && memcmp(got, served, ngot) == 0;
+}
+
 static void drop_file(const char *name)
 {
     char dest[PATH_MAX];
@@ -317,6 +342,16 @@ START_TEST(test_ftp_retr_421_retried)
 }
 END_TEST
 
+/* a server may begin the transfer with 125 as well as with 150 */
+START_TEST(test_ftp_retr_125)
+{
+    fail_if(ftp_port == 0);
+
+    fail_if(fetch_ftp("retr-125/" TEST_FILE_SMALL) == 0);
+    fail_if(!file_as_served(TEST_FILE_SMALL));
+}
+END_TEST
+
 static Suite *vftp_suite(void)
 {
     Suite *s = suite_create("vftp");
@@ -336,6 +371,7 @@ static Suite *vftp_suite(void)
     tcase_add_test(tc, test_ftp_ctrl_drop_after_data);
     tcase_add_test(tc, test_ftp_retr_450_retried);
     tcase_add_test(tc, test_ftp_retr_421_retried);
+    tcase_add_test(tc, test_ftp_retr_125);
     suite_add_tcase(s, tc);
 
     return s;

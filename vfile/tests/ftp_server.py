@@ -21,6 +21,7 @@ SIZE/MDTM, which poldek sends before PASV):
   /retr-long-reply/<name>
                         - reply to RETR with a line longer than vfff's
                           4096-byte line buffer
+  /retr-125/<name>      - begin the transfer with 125 rather than 150
   /retr-busy/<name>     - reply 450 to RETR; fires once per path
   /retr-421/<name>      - reply 421 to RETR and close the control
                           connection; fires once per path
@@ -212,7 +213,10 @@ class FTPSession:
             return
 
         size = os.path.getsize(self.localpath())
-        self.send("150 Opening BINARY mode data connection (%d bytes)\r\n" % size)
+        if 'retr-125' in self.path:
+            self.send("125 Data connection already open; transfer starting\r\n")
+        else:
+            self.send("150 Opening BINARY mode data connection (%d bytes)\r\n" % size)
         conn, _ = self.datasock.accept()
 
         if 'data-reset' in self.path:

@@ -740,7 +740,8 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
     if (!vftpcn_resp_readln(cn))
         goto l_err;
 
-    if (resp_code(cn) != 150) {
+    /* 125: over the data connection that is open already */
+    if (resp_code(cn) != 150 && resp_code(cn) != 125) {
         /* 4yz: not now, the request may be sent again (RFC 959, 4.2) */
         if (CODE_BETWEEN(resp_code(cn), 400, 499)) {
             vfff_set_err(EIO, "%s: FTP %d %s", req->uri, resp_code(cn),
