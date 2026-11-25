@@ -272,6 +272,51 @@ START_TEST(test_ftp_ctrl_drop_after_data)
 }
 END_TEST
 
+/* a reply to RETR that says "not now" (4yz) is reported as the server gave
+   it and the fetch is tried again; "no such file" is for a file that is not
+   there, and is final */
+START_TEST(test_ftp_retr_450_retried)
+{
+    const char *err;
+
+    fail_if(ftp_port == 0);
+
+    logged_err = n_buf_new(0);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+    vfile_configure(VFILE_CONF_STUBBORN_RETR, 1);
+    vfile_configure(VFILE_CONF_STUBBORN_NRETRIES, 2);
+
+    fail_if(fetch_ftp("retr-busy/" TEST_FILE_SMALL) == 0, "not retried after 450");
+    fail_if(!have_file(TEST_FILE_SMALL));
+    err = n_buf_size(logged_err) ? (char *)n_buf_ptr(logged_err) : "";
+    ck_assert_str_eq(err, "vfff: /retr-busy/" TEST_FILE_SMALL ": FTP 450 File busy\n");
+
+    n_buf_clean(logged_err);
+    fail_if(fetch_ftp("no-such-file") != 0);
+    err = n_buf_size(logged_err) ? (char *)n_buf_ptr(logged_err) : "";
+    ck_assert_str_eq(err, "vfff: /no-such-file: no such file (serv said: no such file)\n");
+
+    vfile_configure(VFILE_CONF_STUBBORN_RETR, 0);
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    n_buf_free(logged_err);
+}
+END_TEST
+
+/* with a 421 the server closes the connection: the next try needs a new one */
+START_TEST(test_ftp_retr_421_retried)
+{
+    fail_if(ftp_port == 0);
+
+    vfile_configure(VFILE_CONF_STUBBORN_RETR, 1);
+    vfile_configure(VFILE_CONF_STUBBORN_NRETRIES, 2);
+
+    fail_if(fetch_ftp("retr-421/" TEST_FILE_SMALL) == 0, "not retried after 421");
+    fail_if(!have_file(TEST_FILE_SMALL));
+
+    vfile_configure(VFILE_CONF_STUBBORN_RETR, 0);
+}
+END_TEST
+
 static Suite *vftp_suite(void)
 {
     Suite *s = suite_create("vftp");
@@ -289,6 +334,8 @@ static Suite *vftp_suite(void)
     tcase_add_test(tc, test_ftp_reply_cut_short);
     tcase_add_test(tc, test_ftp_reply_line_too_long);
     tcase_add_test(tc, test_ftp_ctrl_drop_after_data);
+    tcase_add_test(tc, test_ftp_retr_450_retried);
+    tcase_add_test(tc, test_ftp_retr_421_retried);
     suite_add_tcase(s, tc);
 
     return s;

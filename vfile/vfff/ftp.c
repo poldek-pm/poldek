@@ -741,8 +741,14 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
         goto l_err;
 
     if (resp_code(cn) != 150) {
-        vfff_set_err(ENOENT, _("%s: no such file (serv said: %s)"),
-                     req->uri, resp_msg(cn));
+        /* 4yz: not now, the request may be sent again (RFC 959, 4.2) */
+        if (CODE_BETWEEN(resp_code(cn), 400, 499)) {
+            vfff_set_err(EIO, "%s: FTP %d %s", req->uri, resp_code(cn),
+                         resp_msg(cn));
+        } else {
+            vfff_set_err(ENOENT, _("%s: no such file (serv said: %s)"),
+                         req->uri, resp_msg(cn));
+        }
         goto l_err;
     }
 

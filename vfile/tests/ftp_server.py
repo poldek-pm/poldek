@@ -21,6 +21,9 @@ SIZE/MDTM, which poldek sends before PASV):
   /retr-long-reply/<name>
                         - reply to RETR with a line longer than vfff's
                           4096-byte line buffer
+  /retr-busy/<name>     - reply 450 to RETR; fires once per path
+  /retr-421/<name>      - reply 421 to RETR and close the control
+                          connection; fires once per path
   /ctrl-close-idle/<name>
                         - reply 226, then close the control connection
                           without a 421, like a server dropping it as idle
@@ -177,6 +180,23 @@ class FTPSession:
             FIRED.add(self.path)
             self.log("!! closing control connection mid-reply")
             self.stream.write(b"150 Opening")
+            self.stream.close()
+            self.sock.close()
+            self.datasock.close()
+            self.datasock = None
+            self.dropped = True
+            return
+
+        if 'retr-busy' in self.path and self.path not in FIRED:
+            FIRED.add(self.path)
+            self.send("450 File busy\r\n")
+            self.datasock.close()
+            self.datasock = None
+            return
+
+        if 'retr-421' in self.path and self.path not in FIRED:
+            FIRED.add(self.path)
+            self.send("421 Too many users, closing control connection\r\n")
             self.stream.close()
             self.sock.close()
             self.datasock.close()
