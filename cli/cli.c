@@ -868,10 +868,14 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
 
-    /* lazy load packages */
-    if (ent->cmd->flags & COMMAND_NEEDAVAIL) {
+    /* lazy load packages; in the shell every command but a COMMAND_NOSETUP
+       one gets them, as --shcmd has not set the shell up */
+    bool setup = ent->cmd->flags & COMMAND_NEEDAVAIL;
+    if (cctx->_flags & POLDEKCLI_UNDERIMODE)
+        setup = (ent->cmd->flags & COMMAND_NOSETUP) == 0;
+
+    if (setup)
         poclidek_setup(cctx);
-    }
 
     memset(&cmdctx, 0, sizeof(cmdctx));
     cmdctx.cmd = ent->cmd;

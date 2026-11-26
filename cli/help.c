@@ -25,7 +25,7 @@
 static int cmd_help(struct cmdctx *cmdctx);
 
 struct poclidek_cmd command_help = {
-    COMMAND_NOOPTS | COMMAND_NOHELP | COMMAND_NOARGS,
+    COMMAND_NOOPTS | COMMAND_NOHELP | COMMAND_NOARGS | COMMAND_NOSETUP,
     "help", NULL, N_("Display this help"),
     NULL, NULL, NULL, cmd_help,
     NULL, NULL, NULL, NULL, NULL, 0, 0,

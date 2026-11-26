@@ -31,7 +31,8 @@ static int external(struct cmdctx *cmdctx);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 struct poclidek_cmd command_external = {
-    COMMAND_SELFARGS | COMMAND_PIPEABLE | COMMAND_HIDDEN | COMMAND_INTERACTIVE,
+    COMMAND_SELFARGS | COMMAND_PIPEABLE | COMMAND_HIDDEN | COMMAND_NOSETUP |
+    COMMAND_INTERACTIVE,
     "!", N_("COMMAND"), N_("Execute external command"),
     NULL, parse_opt, NULL, external,
     NULL, (tn_fn_free)n_array_free, NULL, NULL, NULL, 0, 0,
@@ -105,6 +106,7 @@ static int external(struct cmdctx *cmdctx)
         st = &st_feed;
     }
 
+    fflush(stdout);             /* what the commands before it printed first */
     vopen3_exec(st, stflags);
     DBGF("process..\n");
     vopen3_process(st, 0);

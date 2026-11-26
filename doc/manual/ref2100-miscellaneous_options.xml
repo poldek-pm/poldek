@@ -48,6 +48,13 @@
    </para>
   </listitem>
 </varlistentry>
+<varlistentry><term><option id="ref.cmdl.shcmd">--shcmd=COMMAND </option></term>
+  <listitem>
+   <para>
+      Run poldek shell COMMAND and exit
+   </para>
+  </listitem>
+</varlistentry>
 <varlistentry><term><option id="ref.cmdl.skip-installed">--skip-installed </option></term>
   <listitem>
    <para>

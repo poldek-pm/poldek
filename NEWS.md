@@ -15,6 +15,7 @@
 * Every question names its keys: `q` aborts, `n` skips a set, `r` asks again (@arekm [#132](https://github.com/poldek-pm/poldek/pull/132))
 * Without a terminal a removal that needs a confirmation fails instead of doing nothing; a default answer is shown (@arekm [#133](https://github.com/poldek-pm/poldek/pull/133))
 * `up NAME` works as `-n NAME --up` ([#156](https://github.com/poldek-pm/poldek/pull/156))
+* `--shcmd` runs its line as the shell does: `cd`, `pwd`, `reload` and `!cmd` work, `up`, `clean` and `repo` are refused; a command of the shell only, or not of the shell, says so ([#203](https://github.com/poldek-pm/poldek/pull/203))
 * `$releasever_major` and `${VAR}` are taken from the environment in a `.repo` file; `${a.b}` and `${x:=w}` stay as written, and an escaped `$` in `${name:-word}` no longer starts a nested expansion ([#187](https://github.com/poldek-pm/poldek/pull/187), [#195](https://github.com/poldek-pm/poldek/pull/195))
 * A `.repo` line longer than 4 KB refuses the file, and a read error no longer imports the part before it ([#195](https://github.com/poldek-pm/poldek/pull/195))
 * New predefined macro `%{_arch}` in configuration files, e.g. `path = http://.../PLD/%{_arch}/RPMS/` ([#123](https://github.com/poldek-pm/poldek/pull/123))

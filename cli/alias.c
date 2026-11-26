@@ -33,7 +33,7 @@
 static int alias(struct cmdctx *cmdctx);
 
 struct poclidek_cmd command_alias = {
-    COMMAND_NOARGS | COMMAND_NOOPTS,
+    COMMAND_NOARGS | COMMAND_NOOPTS | COMMAND_NOSETUP,
     "alias", NULL, N_("Print defined command aliases"),
     NULL, NULL, NULL, alias,
     NULL, NULL, NULL, NULL, NULL, 0, 0,

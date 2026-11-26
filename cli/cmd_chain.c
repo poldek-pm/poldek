@@ -223,14 +223,27 @@ struct poclidek_cmd *command_by_name(struct poclidek_ctx *cctx,
 static
 struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name)
 {
-    struct poclidek_cmd *cmd;
+    struct poclidek_cmd *cmd, tmpcmd;
     int ambiguous;
 
-    if ((cmd = command_by_name(cctx, name, &ambiguous)) == NULL)
-        logn(LOGERR, ambiguous ? _("%s: ambiguous command") :
-             _("%s: no such command"), name);
+    cmd = command_by_name(cctx, name, &ambiguous);
+    if (cmd)
+        return cmd;
 
-    return cmd;
+    /* a command of that name is one skip_command() hides */
+    tmpcmd.name = (char*)name;
+    cmd = n_array_bsearch(cctx->commands, &tmpcmd);
+
+    if (ambiguous)
+        logn(LOGERR, _("%s: ambiguous command"), name);
+    else if (cmd && (cmd->flags & COMMAND_BATCH))
+        logn(LOGERR, _("%s: not available in the shell"), name);
+    else if (cmd)
+        logn(LOGERR, _("%s: available in the shell only"), name);
+    else
+        logn(LOGERR, _("%s: no such command"), name);
+
+    return NULL;
 }
 
 /* the command name stands for where commands are run from (the shell or
