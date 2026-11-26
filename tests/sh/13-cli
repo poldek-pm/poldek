@@ -811,7 +811,7 @@ testShcmdRefusesBatchCommands()
     for line in up clean "repo ls" "ls -q; repo ls"; do
         cmd=${line##*; }
         out=$($POLDEK --shcmd "$line" 2>&1)
-        assertNotEquals "$line: exit code ($out)" "0" "$?"
+        assertNotSame "$line: exit code ($out)" "0" "$?"
         assertEquals "$line ($out)" "error: ${cmd%% *}: not available in the shell" "$out"
     done
 }
@@ -825,7 +825,7 @@ testCommandAvailableInShellOnly()
     index
 
     out=$($POLDEK cd 2>&1)
-    assertNotEquals "cd: exit code ($out)" "0" "$?"
+    assertNotSame "cd: exit code ($out)" "0" "$?"
     assertEquals "cd ($out)" "error: cd: available in the shell only" "$out"
 
     out=$(printf 'up\nquit\n' |
