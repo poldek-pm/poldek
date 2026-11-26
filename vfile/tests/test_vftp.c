@@ -352,6 +352,16 @@ START_TEST(test_ftp_retr_125)
 }
 END_TEST
 
+/* and end it with 250 as well as with 226 */
+START_TEST(test_ftp_retr_end_250)
+{
+    fail_if(ftp_port == 0);
+
+    fail_if(fetch_ftp("retr-end-250/" TEST_FILE_SMALL) == 0);
+    fail_if(!file_as_served(TEST_FILE_SMALL));
+}
+END_TEST
+
 static Suite *vftp_suite(void)
 {
     Suite *s = suite_create("vftp");
@@ -372,6 +382,7 @@ static Suite *vftp_suite(void)
     tcase_add_test(tc, test_ftp_retr_450_retried);
     tcase_add_test(tc, test_ftp_retr_421_retried);
     tcase_add_test(tc, test_ftp_retr_125);
+    tcase_add_test(tc, test_ftp_retr_end_250);
     suite_add_tcase(s, tc);
 
     return s;

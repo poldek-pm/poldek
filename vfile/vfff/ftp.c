@@ -781,7 +781,8 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
     cn->sockfd = tmp_sockfd;
     close(sockfd);
 
-    if (!vftpcn_resp(cn) || resp_code(cn) != 226)
+    /* 250 ends a transfer as 226 does (RFC 959, 5.4) */
+    if (!vftpcn_resp(cn) || (resp_code(cn) != 226 && resp_code(cn) != 250))
         goto l_err;
 
     return 1;

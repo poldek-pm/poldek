@@ -22,6 +22,7 @@ SIZE/MDTM, which poldek sends before PASV):
                         - reply to RETR with a line longer than vfff's
                           4096-byte line buffer
   /retr-125/<name>      - begin the transfer with 125 rather than 150
+  /retr-end-250/<name>  - end the transfer with 250 rather than 226
   /retr-busy/<name>     - reply 450 to RETR; fires once per path
   /retr-421/<name>      - reply 421 to RETR and close the control
                           connection; fires once per path
@@ -241,7 +242,10 @@ class FTPSession:
             self.dropped = True
             return
 
-        self.send("226 Transfer complete\r\n")
+        if 'retr-end-250' in self.path:
+            self.send("250 Requested file action okay, completed\r\n")
+        else:
+            self.send("226 Transfer complete\r\n")
 
         if 'ctrl-close-idle' in self.path:
             self.log("!! closing control connection after 226")
