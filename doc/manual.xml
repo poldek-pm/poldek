@@ -2,12 +2,9 @@
 <!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
 <!ENTITY poldek "<application>poldek</application>">
 <!ENTITY poldekcmd "<command>poldek</command>">
-<!ENTITY ipoldek "<application>ipoldek</application>">
-<!ENTITY ipoldekcmd "<command>ipoldek</command>">
 <!ENTITY rpm "<application>rpm</application>">
 <!ENTITY prompt "<prompt>$</prompt>">
 <!ENTITY poldek-prompt "<prompt>$</prompt> <command>poldek</command>">
-<!ENTITY ipoldek-prompt "<prompt>$</prompt> <command>ipoldek</command>">
 <!ENTITY apt-get "<application>apt-get</application>">
 <!ENTITY apt-rpm "<application>apt-get</application>">
 <!ENTITY yum "<application>yum</application>">
@@ -247,50 +244,51 @@ Writing /home/me/rpm/RPMS/packages.ndir.gz...
 
 <sect2 id="quickstart.use"> <title>Step #3 - Use the program</title>
 <para>
-&poldek; provides two commands: &poldekcmd; with rpm-like command line interface
-and &ipoldekcmd; with interactive mode command interface. Invoking syntax is:
+&poldekcmd; takes rpm-like options or, after the options, a command of the
+interactive mode. Invoking syntax is:
 <screen>
 &poldek-prompt; [OPTION...] [PACKAGE...]
-&ipoldek-prompt; [OPTION...] [COMMAND] [COMMAND_OPTION...] [PACKAGE...]
+&poldek-prompt; [OPTION...] [COMMAND] [COMMAND_OPTION...] [PACKAGE...]
 </screen>
 
 For example to install or upgrade Apache HTTP server:
 <screen>
 &poldek-prompt; -uv apache 
-&ipoldek-prompt; install apache
+&poldek-prompt; install apache
 </screen>     
  <!-- See also <url name="sample interactive mode session" url="screenshoots.html">. -->
 
 Selection of particular sources may be done by <option>-n</option> option:
 <screen>
-&ipoldek-prompt; -n fc4 ls foo\*
+&poldek-prompt; -n fc4 ls foo\*
 &poldek-prompt; -n home -uv foo-3.1-2
-&ipoldek-prompt; -n home -s http://foo.bar/RPMS/ install foo-3.1\*
+&poldek-prompt; -n home -s http://foo.bar/RPMS/ install foo-3.1\*
 </screen>
 
 Most used &poldek; command options are compliant with &rpm;: 
 <option>--install</option> (<option>-i</option>), 
 <option>--upgrade</option> (<option>-u</option>,<option>-U</option>),
-<option>--erase</option> (<option>-e</option>), etc. Their &ipoldek; equivalents
+<option>--erase</option> (<option>-e</option>), etc. The equivalent commands
 are: <option>install -IN</option> (--install), <option>install</option> (--upgrade) 
-and <option>uninstall</option> (--erase). Notice that &ipoldek; <option>install</option>
-command it more general -- equivalent of <option>--install</option> is 
+and <option>uninstall</option> (--erase). Notice that the <option>install</option>
+command is more general -- equivalent of <option>--install</option> is 
 <option>install -IN</option>.
 </para>
 <para>
 
-Extensive help is available for all commands, for &poldekcmd; by using the <option>--help</option> switch, for &ipoldekcmd; by using the <option>help</option> command and 
-<option>--help</option> switch for individual commands:
+Extensive help is available: the options by the <option>--help</option> switch,
+the commands by the <option>help</option> command and the
+<option>--help</option> switch of each command:
 <screen>
 &poldek-prompt; --help
-&ipoldek-prompt; help
-&ipoldek-prompt; install --help
+&poldek-prompt; help
+&poldek-prompt; install --help
 </screen>
 
-&ipoldekcmd; provides comfortable shell-like mode which puts you into 
-a readline interface. To enter it, execute &ipoldekcmd; without any command:
+&poldekcmd; provides comfortable shell-like mode which puts you into 
+a readline interface. To enter it, execute &poldekcmd; without any command:
 <screen id="screen.shell-start">
-&ipoldek-prompt; -n ac
+&poldek-prompt; -n ac
 Loading [pdir]ac...
 10998 packages read
 Loading [rpmdbcache]/var/lib/rpm...
@@ -646,9 +644,10 @@ called <emphasis>interactive</emphasis> mode with simplified and
 intuitive command set. </para>
 
 <para>
-Interactive mode commands is available from both command line (&ipoldek; command) 
-and shell like interface with auto-completion and history. To enter shell interface
-execute &ipoldek; without any "command" options like "install", "erase", etc. 
+Interactive mode commands are available from both the command line (after the
+options of &poldekcmd;) and the shell like interface with auto-completion and
+history. To enter the shell interface execute &poldekcmd; without any command
+like "install", "erase", etc. 
 See also an <link linkend="screen.shell-start">example</link>.
 </para>
 
@@ -724,7 +723,7 @@ pdksh
 To install packages in &rpm; sense, i.e. do not upgrade even if older version is already installed:
 <screen>
 &poldek-prompt;  [OPTION..] --install                 (command line mode)
-&ipoldek-prompt; [OPTION..] install -IN               (interactive mode)
+&poldek-prompt; [OPTION..] install -IN               (interactive mode)
 </screen>
 
 It is useful when installation of multiple instance of package is needed (kernel for example).
@@ -748,11 +747,11 @@ Preparing...                ########################################### [100%]
 To install or upgrade package if older version is already installed:
 <screen>
 &poldek-prompt;  [OPTION..] --upgrade                 (command line mode)
-&ipoldek-prompt; [OPTION..] install                   (interactive mode)
+&poldek-prompt; [OPTION..] install                   (interactive mode)
 </screen>
 This is most used installation type. Example:
 <screen>
-&prompt; &ipoldek; install vim
+&prompt; &poldek; install vim
 Loading [pdir]ac...
 10998 packages read
 Processing dependencies...
@@ -792,7 +791,7 @@ Preparing...                ########################################### [100%]
 To upgrade packages, i.e. install only if older version is already installed:
 <screen>
 &poldek-prompt;  [OPTION..] --upgrade --fresh         (command line mode)
-&ipoldek-prompt; [OPTION..] upgrade                   (interactive mode)
+&poldek-prompt; [OPTION..] upgrade                   (interactive mode)
 </screen>
 </para>
 <para>
@@ -809,8 +808,8 @@ Examples:
 <screen>
 &poldek-prompt; -v --upgrade-dist
 
-&ipoldek-prompt; -v upgrade '*'    
-&ipoldek-prompt; -v install -F '*' (the same, "upgrade" is just an alias for "install -F")
+&poldek-prompt; -v upgrade '*'    
+&poldek-prompt; -v install -F '*' (the same, "upgrade" is just an alias for "install -F")
 </screen>
 </para>
 </sect2>
@@ -850,7 +849,7 @@ removed in the right order following <emphasis>Requires(un)</emphasis>
 To remove installed packages:
 <screen>
 &poldek-prompt;  [OPTION..] --erase                      (command line mode)
-&ipoldek-prompt; [OPTION..] uninstall [ERASE_OPTION...]  (interactive mode)
+&poldek-prompt; [OPTION..] uninstall [ERASE_OPTION...]  (interactive mode)
 </screen>
 </para>
 <para>
@@ -859,7 +858,7 @@ Examples:
 &poldek-prompt; -e apache 
 &poldek-prompt; -e kernel-2.6.11.5-3
 &poldek-prompt; -e kernel-3:2.6.11.5-3
-&ipoldek-prompt; uninstall kernel-2.6.11.5-3
+&poldek-prompt; uninstall kernel-2.6.11.5-3
 </screen>
 </para>
 
@@ -906,7 +905,7 @@ Perl regular expression.
 
 For instance to find the packages that contains <filename>/usr/sbin/ab</filename> file:
 <screen>
-&ipoldek-prompt; search -l /usr/sbin/ab
+&poldek-prompt; search -l /usr/sbin/ab
 2 package(s) found:
 apache-2.0.53-4
 apache1-tools-1.3.33-4
@@ -914,7 +913,7 @@ apache1-tools-1.3.33-4
 
 Try to find something for audio files manipulation:
 <screen>
-&ipoldek-prompt; search --perlre /audio.+editor/
+&poldek-prompt; search --perlre /audio.+editor/
 3 package(s) found:
 ecawave-0.6.1-3
 piave-0.2.4-2

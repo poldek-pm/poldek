@@ -140,9 +140,6 @@ static struct argp_option common_options[] = {
 { 0, 0, 0, 0, 0, 0 },
 };
 
-#define RUNMODE_POLDEK       0
-#define RUNMODE_APT          1
-
 #define MODE_NULL         0
 #define MODE_VERIFY       1
 #define MODE_MKIDX        2
@@ -171,7 +168,6 @@ struct args {
 
     struct poclidek_op_ctx *opctx;
 
-    int       mode;
     int       mjrmode;
     unsigned  mnrmode;
 
@@ -241,7 +237,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_SHCMD:
             logn(LOGWARN, _("--cmd is deprecated, poldek COMMAND runs COMMAND "
                             "as well"));
-            argsp->mode = RUNMODE_APT;
             break;
 
         case 'v':
@@ -331,28 +326,21 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     	    break;
 
         case ARGP_KEY_ARG:
-            /* auto detect apt mode */
-            if (!poclidek_op_ctx_has_major_mode(argsp->opctx)) {
-                //int has_command = poclidek_has_batch_command(argsp->cctx, arg);
-                //if (has_command) {
-                //printf("AUTOAPT %s\n", arg);
-                argsp->mode = RUNMODE_APT;
-                //}
-            }
+            /* the first argument that is no option begins the command and
+               the rest are its own, unless they are of a major mode (-i) */
+            if (poclidek_op_ctx_has_major_mode(argsp->opctx))
+                return ARGP_ERR_UNKNOWN;
 
-            if (argsp->mode == RUNMODE_APT) { /* eat all args and keep it for shell */
-                disable_version_opt_and_bug_address();
+            disable_version_opt_and_bug_address();
 
-                argsp->argv[argsp->argc++] = arg;
-                while (state->next < state->argc) {
-                    char *a = state->argv[state->next++];
-                    argsp->argv[argsp->argc++] = a;
-                }
-                argsp->argv[argsp->argc] = NULL;
-                n_assert(state->next = state->argc);
-                break;
+            argsp->argv[argsp->argc++] = arg;
+            while (state->next < state->argc) {
+                char *a = state->argv[state->next++];
+                argsp->argv[argsp->argc++] = a;
             }
-            /* fallthru */
+            argsp->argv[argsp->argc] = NULL;
+            n_assert(state->next = state->argc);
+            break;
 
         default:
             return ARGP_ERR_UNKNOWN;
@@ -429,7 +417,7 @@ static int load_conf(struct args *argsp)
 }
 
 static void args_init(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                      int argc, char **argv, int mode)
+                      int argc, char **argv)
 {
     memset(&g_args, 0, sizeof(g_args));
 
@@ -440,7 +428,6 @@ static void args_init(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     g_args.argv = n_malloc(sizeof(*argv) * argc);
     g_args.argv[0] = NULL;
 
-    g_args.mode = mode;
     g_args.ts = ts;
     g_args.opctx = poclidek_op_ctx_new();
 }
@@ -457,7 +444,7 @@ static void preset_quiet(int argc, char **argv)
 
 static
 void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                   int argc, char **argv, int mode)
+                   int argc, char **argv)
 {
     struct argp argp = { common_options, parse_opt, args_doc, 0, 0, 0, 0 };
     int n, i, index, hide_child_opts = 0;
@@ -466,7 +453,7 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     poldek_set_verbose(0);
     preset_quiet(argc, argv); /* be quiet early (w/o for -v ... -q) */
 
-    args_init(cctx, ts, argc, argv, mode);
+    args_init(cctx, ts, argc, argv);
 
     n = 0;
     while (poclidek_opgroup_tab[n])
@@ -658,35 +645,12 @@ static int run_poldek(struct poclidek_ctx *cctx)
     return rc;
 }
 
-static int run_ipoldek(struct poclidek_ctx *cctx)
-{
-    int rc = 1;
-#if ENABLE_TRACE
-    int i = 0;
-    printf("run_ipoldek argc = %d\n", g_args.argc);
-    while (g_args.argv[i])
-        printf(" %s", g_args.argv[i++]);
-    printf("\n");
-#endif
-
-    if (g_args.argc > 0) { // batch mode
-        rc = poclidek_exec(cctx, g_args.ts, g_args.argc,
-                           (const char **)g_args.argv);
-    } else { /* lonely ipoldek -> run shell as poldek does */
-        rc = run_poldek(cctx);
-    }
-
-    return rc;
-}
-
-
 int main(int argc, char **argv)
 {
     struct poldek_ctx    *ctx;
     struct poclidek_ctx  *cctx;
     struct poldek_ts     *ts;
-    int  rc = 1, rrc, mode = RUNMODE_POLDEK;
-    const char *bn;
+    int  rc = 1, rrc;
 
     /* an inherited SIG_IGN would lose the exit status of the commands run */
     signal(SIGCHLD, SIG_DFL);
@@ -700,22 +664,16 @@ int main(int argc, char **argv)
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
 
-    bn = n_basenam(argv[0]);
-    if (strcmp(bn, "apoldek") == 0 || strcmp(bn, "ipoldek") == 0) {
-        mode = RUNMODE_APT;
-    }
-    /* else if (argc > 1 && *argv[1] != '-') {
-        mode = RUNMODE_APT;
-    }*/
-
-    DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
+    /* a symlink to poldek in PLD */
+    if (strcmp(n_basenam(argv[0]), "ipoldek") == 0)
+        logn(LOGWARN, _("ipoldek is deprecated, use poldek"));
 
     ctx = poldek_new(0);
 
     ts = poldek_ts_new(ctx, 0);
     cctx = poclidek_new(ctx);
 
-    parse_options(cctx, ts, argc, argv, mode);
+    parse_options(cctx, ts, argc, argv);
 
     if (!poldek_setup(ctx))
         exit(EXIT_FAILURE);
@@ -733,7 +691,7 @@ int main(int argc, char **argv)
 #define ENABLE_TRACE 0
 #if ENABLE_TRACE
     int i = 0;
-    printf("mode %d, argc = %d\n", g_args.mode, g_args.argc);
+    printf("argc = %d\n", g_args.argc);
     while (g_args.argv[i])
         printf(" %s", g_args.argv[i++]);
     printf("\n");
@@ -751,10 +709,12 @@ int main(int argc, char **argv)
        disabling it here prevents argp from adding it to all commands */
     disable_version_opt_and_bug_address();
 
-    if (g_args.mode == RUNMODE_POLDEK)
+    /* the command after the options, else the shell */
+    if (g_args.argc > 0)
+        rc = poclidek_exec(cctx, g_args.ts, g_args.argc,
+                           (const char **)g_args.argv);
+    else
         rc = run_poldek(cctx);
-    else if (g_args.mode == RUNMODE_APT)
-        rc = run_ipoldek(cctx);
 
 out:
     poldek_ts_free(ts);

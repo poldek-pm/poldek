@@ -456,6 +456,28 @@ testCmdDeprecated()
     assertEquals "--cmd ls ($out)" \
         "warn: --cmd is deprecated, poldek COMMAND runs COMMAND as well a-1-1.noarch" \
         "$(echo "$out" | xargs)"
+
+    # and it makes no command of the packages of an option (-i) any more
+    out=$($POLDEK --noask --cmd -i a 2>&1)
+    assertEquals "--cmd -i a: exit code ($out)" "0" "$?"
+    rpm_state_check "a" ""
+}
+
+# ipoldek, a symlink to poldek in PLD, is poldek, saying it is deprecated
+testIpoldekDeprecated()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    local bin=${POLDEK%% *}
+    ln -sf $bin $TMPDIR/ipoldek
+    out=$($TMPDIR/ipoldek ${POLDEK#$bin} -q ls -q a 2>&1)
+    assertEquals "ipoldek ls: exit code ($out)" "0" "$?"
+    assertEquals "ipoldek ls ($out)" \
+        "warn: ipoldek is deprecated, use poldek a-1-1.noarch" "$(echo "$out" | xargs)"
+    rm -f $TMPDIR/ipoldek
 }
 
 # a quoted argument may begin with | or ;
