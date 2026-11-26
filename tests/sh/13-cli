@@ -798,6 +798,17 @@ testShcmdRunsShellCommands()
     assertEquals "help without cd ($out)" "0" "$?"
     echo "$out" | grep -q '^up '
     assertEquals "help with up ($out)" "1" "$?"
+
+    # alias lists the aliases of ! too, which direct mode does not
+    out=$($POLDEK -q --shcmd alias 2>&1)
+    echo "$out" | grep -q '^grep *= !grep$'
+    assertEquals "alias without grep ($out)" "0" "$?"
+    out=$($POLDEK -q alias 2>&1)
+    echo "$out" | grep -q '= !'
+    assertEquals "direct alias with grep ($out)" "1" "$?"
+
+    out=$($POLDEK -q --shcmd reload 2>&1)
+    assertEquals "reload: exit code ($out)" "0" "$?"
 }
 
 # and refuses the ones the shell does not have, wherever on the line

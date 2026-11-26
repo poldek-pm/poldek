@@ -868,9 +868,10 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
 
-    /* lazy load packages; in the shell every command but a COMMAND_NOSETUP
-       one gets them, as --shcmd has not set the shell up */
-    bool setup = ent->cmd->flags & COMMAND_NEEDAVAIL;
+    /* lazy load packages; with the shell's commands (the shell, --shcmd)
+       every one but a COMMAND_NOSETUP one gets them: the shell is set up
+       before it starts, --shcmd is not */
+    int setup = ent->cmd->flags & COMMAND_NEEDAVAIL;
     if (cctx->_flags & POLDEKCLI_UNDERIMODE)
         setup = (ent->cmd->flags & COMMAND_NOSETUP) == 0;
 
