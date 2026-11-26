@@ -68,5 +68,5 @@ int cmd_help(struct cmdctx *cmdctx)
     }
     printf(_("\nType COMMAND -? for details.\n"));
     n_array_sort(cmdctx->cctx->commands);
-    return 0;
+    return 1;
 }

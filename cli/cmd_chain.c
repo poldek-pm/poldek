@@ -105,7 +105,11 @@ static const char *break_name(unsigned brk)
 {
     if (brk == CMD_CHAIN_ENT_AND)
         return "&&";
-    return brk == CMD_CHAIN_ENT_OR ? "||" : "|";
+    if (brk == CMD_CHAIN_ENT_OR)
+        return "||";
+
+    n_assert(brk == CMD_CHAIN_ENT_PIPE);
+    return "|";
 }
 
 static

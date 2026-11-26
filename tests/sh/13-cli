@@ -883,6 +883,17 @@ testCommandsAfterAndOr()
     out=$($POLDEK -q --shcmd "ls -q a || !echo x && !echo y" 2>&1)
     assertEquals "|| then && ($out)" "a-1-1.noarch y" "$(echo "$out" | xargs)"
 
+    # of a pipeline, the status is that of its last command
+    out=$($POLDEK -q --shcmd "ls -q | !grep b || !echo x" 2>&1)
+    assertEquals "pipeline || ($out)" "b-1-1.noarch" "$(echo "$out" | xargs)"
+    out=$($POLDEK -q --shcmd "cd /nope && ls -q | !grep a" 2>&1)
+    assertEquals "&& pipeline ($out)" "error: /nope: no such directory" "$out"
+
+    # help succeeds
+    out=$($POLDEK -q --shcmd "help && !echo x" 2>&1)
+    assertEquals "help: exit code ($out)" "0" "$?"
+    assertEquals "help && !echo ($out)" "x" "$(echo "$out" | tail -n 1)"
+
     # in direct mode, in a line and as words
     out=$($POLDEK -q "ls -q a && ls -q b" 2>&1)
     assertEquals "direct && ($out)" "a-1-1.noarch b-1-1.noarch" "$(echo "$out" | xargs)"

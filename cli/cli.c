@@ -969,11 +969,12 @@ static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
             continue;
         }
 
-        /* a pipeline skipped by && or || leaves rc as it is, as in sh */
-        bool run = true;
+        /* rc is true on success; a pipeline skipped by && or || leaves it
+           as it is, as in sh */
+        int run = 1;
         if (ent->flags & CMD_CHAIN_ENT_AND)
             run = rc != 0;
-        if (ent->flags & CMD_CHAIN_ENT_OR)
+        else if (ent->flags & CMD_CHAIN_ENT_OR)
             run = rc == 0;
 
         if (run)
