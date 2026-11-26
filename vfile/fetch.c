@@ -121,6 +121,28 @@ char *next_token(char **str, char delim, int *toklen)
     return token;
 }
 
+static int is_ascii_letter(int c)
+{
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+/* length of the scheme url begins with, 0 if it has none: a letter, then
+   letters, digits, '+', '-' and '.', then "://" (RFC 3986, 3.1). ASCII only:
+   isalpha() follows the locale */
+static int url_scheme_len(const char *url)
+{
+    const char *p = url;
+
+    if (!is_ascii_letter(*p))
+        return 0;
+
+    while (is_ascii_letter(*p) || (*p >= '0' && *p <= '9') ||
+           *p == '+' || *p == '-' || *p == '.')
+        p++;
+
+    return strncmp(p, "://", 3) == 0 ? p - url : 0;
+}
+
 static unsigned protocols_to_urltypes(const tn_array *protocols)
 {
     char proto[64];
@@ -695,8 +717,6 @@ char *vf_url_proto(char *proto, int size, const char *url)
 
 int vf_url_type(const char *url)
 {
-    const char *p;
-
     if (*url == '/')
         return VFURL_PATH;
 
@@ -712,21 +732,8 @@ int vf_url_type(const char *url)
     if (strncmp(url, "rsync://", 8) == 0)
         return VFURL_RSYNC;
 
-    if ((p = strstr(url, "://"))) {
-        int is_url = 1;
-
-        while (url != p) {
-            if (!isalpha(*url)) {
-                is_url = 0;
-                break;
-            }
-            url++;
-        }
-
-        if (is_url)
-            return VFURL_UNKNOWN;
-    }
-
+    if (url_scheme_len(url) > 0)
+        return VFURL_UNKNOWN;
 
     return VFURL_PATH;
 }

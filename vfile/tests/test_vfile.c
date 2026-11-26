@@ -163,6 +163,10 @@ START_TEST (test_url_type_scheme) {
     fail_unless(vf_url_type("relative/path") == VFURL_PATH);
     fail_unless(vf_url_type("http://host/x") == VFURL_HTTP);
     fail_unless(vf_url_type("custom://host/x") == VFURL_UNKNOWN);
+    fail_unless(vf_url_type("s3://host/x") == VFURL_UNKNOWN);
+    fail_unless(vf_url_type("git+ssh://host/x") == VFURL_UNKNOWN);
+    fail_unless(vf_url_type("3s://host/x") == VFURL_PATH,
+                "a scheme begins with a letter");
     fail_unless(vf_url_type("./dir/a://b") == VFURL_PATH,
                 "a path containing '://' is not a URL");
 }
