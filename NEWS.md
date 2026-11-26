@@ -64,6 +64,7 @@
 * Fix: rpm runs in a session of its own, so `^\`, `^Z` and a closed terminal no longer kill it, and installs in sets are much faster (@arekm [#69](https://github.com/poldek-pm/poldek/pull/69), [#124](https://github.com/poldek-pm/poldek/pull/124))
 * Fix: `--fetch` and `--destination` fail when a copy fails (@arekm [#75](https://github.com/poldek-pm/poldek/pull/75), [#76](https://github.com/poldek-pm/poldek/pull/76))
 * Fix: a quoted argument beginning with `|` or `;` no longer aborts the shell or `--cmd`; several commands leaked memory (@arekm [#107](https://github.com/poldek-pm/poldek/pull/107), [#108](https://github.com/poldek-pm/poldek/pull/108), [#111](https://github.com/poldek-pm/poldek/pull/111), [#112](https://github.com/poldek-pm/poldek/pull/112), [#114](https://github.com/poldek-pm/poldek/pull/114))
+* Fix: a command asked for help as `--hel` or `-q?` no longer runs after the help, and `!cmd -h` or `!cmd --help` runs the program (@arekm [#202](https://github.com/poldek-pm/poldek/pull/202))
 * Fix: `up REPO` no longer crashes on a `-s` source with no name (@arekm [#113](https://github.com/poldek-pm/poldek/pull/113), [#115](https://github.com/poldek-pm/poldek/pull/115))
 * Fix: removing a package with a very large file list no longer overflows the stack (@arekm [#121](https://github.com/poldek-pm/poldek/pull/121))
 * Fix: `use sudo` no longer makes root run removal through sudo, and a missing sudo is reported as an error for removal too (@arekm [#73](https://github.com/poldek-pm/poldek/pull/73))
