@@ -17,6 +17,8 @@ check_PROGRAMS += test_dent
 check_PROGRAMS += test_term
 # --greedy argument parsing
 check_PROGRAMS += test_greedy
+# a command of the CLI library's user that parses its own options
+check_PROGRAMS += test_cli_cmd
 # depdirs lifetime
 check_PROGRAMS += test_depdirs
 # the file conflict report of a path of many owners
@@ -49,6 +51,7 @@ test_pkgdir_clean_CPPFLAGS = -I$(top_srcdir)/pkgdir
 
 # pkg_dent_cmp_bday() is part of the CLI library
 test_dent_LDADD = $(top_builddir)/cli/libpoclidek.la @CHECK_LIBS@
+test_cli_cmd_LDADD = $(top_builddir)/cli/libpoclidek.la @CHECK_LIBS@
 
 # poclidek__parse_greedy() is internal to the CLI library (hidden), so link
 # the translation unit that defines it

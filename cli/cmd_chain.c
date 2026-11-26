@@ -128,6 +128,7 @@ static
 tn_array *a_argv_split(tn_array *a_argv, const char *brk)
 {
     int               i, rc = 1;
+    int               noprogram = 0; /* "!" seen, its program not yet */
     tn_array          *cmds, *tl;
 
 
@@ -138,19 +139,30 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
         char *arg = n_array_nth(a_argv, i);
 
         if (!is_break(arg, brk)) {
-            int external = 0;
+            int program = 0;
 
             /* !command, as the first word of a command only */
             if (n_array_size(tl) == 0 && is_external(arg)) {
                 n_array_push(tl, n_strdup("!"));
                 arg++;
-                external = 1;
+                program = 1;
+                noprogram = 0;
+
+            } else if (n_array_size(tl) == 0) {
+                noprogram = strcmp(arg, "!") == 0;
+
+            /* "! [options of !] command": the first word that is no option */
+            } else if (noprogram) {
+                program = *arg != '-';
+                if (program || strcmp(arg, "--") == 0)
+                    noprogram = 0;
             }
 
-            n_array_push(tl, n_strdup(arg));
+            /* the program and its arguments are no options of "!" */
+            if (program)
+                n_array_push(tl, n_strdup("--"));
 
-            if (external)
-                n_array_push(tl, n_strdup("--")); /* pass opt to external cmd */
+            n_array_push(tl, n_strdup(arg));
 
         } else {
             if (n_array_size(tl)) {
@@ -382,13 +394,6 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
     n_assert(a_argv_contains_break(a_argv) == 0);
 
     acmd = n_array_nth(a_argv, 0);
-    if (is_external(acmd)) {
-        char *p = n_array_shift(a_argv);
-        n_array_unshift(a_argv, n_strdup("--"));
-        n_array_unshift(a_argv, n_strdup(p + 1));
-        n_array_unshift(a_argv, n_strdup("!"));
-        acmd = n_array_nth(a_argv, 0);
-    }
 
     if ((cmd = find_command(cctx, acmd)) == NULL)
         return NULL;

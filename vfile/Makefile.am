@@ -19,7 +19,7 @@ pkgincludedir = $(includedir)/vfile
 pkginclude_HEADERS = vfile.h p_open.h vopen3.h
 
 noinst_PROGRAMS = vfget
-TEST_LDADDS    = libvfile.la -lutil
+TEST_LDADDS    = libvfile.la
 
 vfget_SOURCES  = vfget.c
 vfget_LDADD    = $(TEST_LDADDS)

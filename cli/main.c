@@ -107,7 +107,11 @@ static struct argp_option common_options[] = {
                           "let user choose among equivalent packages"), OPT_GID },
 {"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), OPT_GID },
 
+#ifdef ENABLE_INTERACTIVE_MODE
 {"shell", OPT_SHELL, 0, 0, N_("Run in interactive mode (default)"), OPT_GID },
+#else  /* refused with a message */
+{"shell", OPT_SHELL, 0, OPTION_HIDDEN, 0, OPT_GID },
+#endif
 
 {"shcmd", OPT_SHELL_CMD, "COMMAND", OPTION_HIDDEN,
                  N_("Run poldek shell COMMAND and exit"), OPT_GID },
