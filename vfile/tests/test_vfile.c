@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <dlfcn.h>
+#include <locale.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -162,6 +163,9 @@ START_TEST (test_url_type_scheme) {
     fail_unless(vf_url_type("/abs/path") == VFURL_PATH);
     fail_unless(vf_url_type("relative/path") == VFURL_PATH);
     fail_unless(vf_url_type("http://host/x") == VFURL_HTTP);
+    fail_unless(vf_url_type("HTTP://host/x") == VFURL_HTTP);
+    fail_unless(vf_url_type("Https://host/x") == VFURL_HTTPS);
+    fail_unless(vf_url_type("https:/host/x") == VFURL_PATH);
     fail_unless(vf_url_type("custom://host/x") == VFURL_UNKNOWN);
     fail_unless(vf_url_type("s3://host/x") == VFURL_UNKNOWN);
     fail_unless(vf_url_type("git+ssh://host/x") == VFURL_UNKNOWN);
@@ -169,6 +173,84 @@ START_TEST (test_url_type_scheme) {
                 "a scheme begins with a letter");
     fail_unless(vf_url_type("./dir/a://b") == VFURL_PATH,
                 "a path containing '://' is not a URL");
+}
+END_TEST
+
+
+/* a scheme is the same in any case and in any locale: tr_TR has its own
+   lower case of 'I' */
+START_TEST (test_url_scheme_case) {
+    char proto[64], path[PATH_MAX];
+
+    setlocale(LC_ALL, "tr_TR.UTF-8");   /* in "C" where there is none */
+    ck_assert_str_eq(vf_url_proto(proto, sizeof(proto), "GIT://host/x"), "git");
+    setlocale(LC_ALL, "C");
+
+    /* the name of a cached file is not to change with a new poldek */
+    fail_unless(vf_url_as_path(path, sizeof(path), "MixProto://Host/Dir/f") > 0);
+    ck_assert_str_eq(path, "MixProto_Host.Dir/f");
+}
+END_TEST
+
+
+/* a protocol is the same in any case where a fetcher is defined, where it is
+   made the default one and in a URL; the fetch command gets the scheme in
+   lower case and the rest of the URL as it was given */
+START_TEST (test_ext_fetcher_scheme_case) {
+    char dir[] = "/tmp/vfile-scheme-case-XXXXXX";
+    char script[PATH_MAX], seen[PATH_MAX], cmd[PATH_MAX + 64], buf[512];
+    int verbose = -1, n = 0, nfetched = 0;
+    tn_array *protos, *urls;
+    FILE *f;
+
+    vfile_configure(VFILE_CONF_VERBOSE, &verbose);
+
+    /* the command is run by /bin/sh: in a directory of our own */
+    fail_if(mkdtemp(dir) == NULL, "mkdtemp %s: %m", dir);
+    snprintf(script, sizeof(script), "%s/fetch.sh", dir);
+    snprintf(seen, sizeof(seen), "%s/urls", dir);
+    fail_if((f = fopen(script, "w")) == NULL, "%s: %m", script);
+    fprintf(f, "d=$1; shift; for u; do echo \"$u\" >> \"$d/urls\"; done\n");
+    fclose(f);
+
+    snprintf(cmd, sizeof(cmd), "/bin/sh %s %%d %%Pn", script);
+    protos = n_array_new(2, NULL, NULL);
+    n_array_push(protos, "UpFetch");
+    n_array_push(protos, "S3");
+    fail_unless(vfile_register_ext_handler("upfetch", protos, cmd),
+                "cannot register the test fetcher");
+    n_array_free(protos);
+    vfile_configure(VFILE_CONF_DEFAULT_CLIENT, "UpDef", "upfetch");
+
+    nfetched += vf_fetch("UPFETCH://Host/Dir/A.txt", dir, VF_FETCH_NOPROGRESS,
+                         NULL, NULL);
+    nfetched += vf_fetch("upfetch://Host/Dir/B.txt", dir, VF_FETCH_NOPROGRESS,
+                         NULL, NULL);
+    nfetched += vf_fetch("UPDEF://Host/Dir/C.txt", dir, VF_FETCH_NOPROGRESS,
+                         NULL, NULL);
+
+    urls = n_array_new(2, NULL, NULL);
+    n_array_push(urls, "S3://Host/Dir/D.txt");
+    n_array_push(urls, "s3://Host/Dir/E.txt");
+    nfetched += vf_fetcha(urls, dir, VF_FETCH_NOPROGRESS, NULL, 1, 2);
+    n_array_free(urls);
+
+    if ((f = fopen(seen, "r")) != NULL) {
+        n = fread(buf, 1, sizeof(buf) - 1, f);
+        fclose(f);
+    }
+    buf[n] = '\0';
+
+    unlink(script);
+    unlink(seen);
+    fail_if(rmdir(dir) != 0, "rmdir %s: %m", dir);
+
+    fail_unless(nfetched == 4, "%d of 4 fetches succeeded", nfetched);
+    ck_assert_str_eq(buf, "upfetch://Host/Dir/A.txt\n"
+                          "upfetch://Host/Dir/B.txt\n"
+                          "updef://Host/Dir/C.txt\n"
+                          "s3://Host/Dir/D.txt\n"
+                          "s3://Host/Dir/E.txt\n");
 }
 END_TEST
 
@@ -1001,7 +1083,8 @@ END_TEST
 NTEST_RUNNER("vfile", test_vfile_append, test_valid_path,
              test_url_as_path_percent, test_url_hidepasswd,
              test_url_hidepasswd_short_buffer, test_fetcha_ext_multi_dirbn,
-             test_url_type_scheme, test_open_errno,
+             test_url_type_scheme, test_url_scheme_case,
+             test_ext_fetcher_scheme_case, test_open_errno,
              test_lock_mkdir_made_meanwhile, test_cachedir_prefix,
              test_cachedir_clean_opendir_error,
              test_lock_taken_at_release, test_lock_opened_before_release,

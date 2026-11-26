@@ -304,12 +304,12 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
                          cn->proto == VCN_PROTO_HTTPS ? "s" : "",
                          req->host, to);
             topathp = topath;
-        } else if (strncmp(to, "http://", 7) != 0 && strncmp(to, "https://", 8) != 0) {
+        } else if ((vf_url_type(to) & (VFURL_HTTP | VFURL_HTTPS)) == 0) {
             foreign_proto = 1;
         }
 
         /* denied HTTPS => HTTP */
-        if (cn->proto == VCN_PROTO_HTTPS && strncmp(topathp, "http://", 7) == 0) {
+        if (cn->proto == VCN_PROTO_HTTPS && vf_url_type(topathp) == VFURL_HTTP) {
             vfff_set_err(EPROTO, "redirect to %s: HTTPS to HTTP downgrade not allowed",
                          CL_URL(topathp));
             rc = 0;

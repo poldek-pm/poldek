@@ -423,6 +423,29 @@ START_TEST(test_http_redirect_302)
 }
 END_TEST
 
+/* the scheme of a URL is the same in any case: in a redirect and in a URL
+   poldek is given */
+START_TEST(test_http_scheme_upper_case)
+{
+    char url[512], dest[PATH_MAX];
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/upper-scheme/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0, "redirect to HTTP://");
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest)) ck_abort_msg("path truncated");
+    fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
+    unlink(dest);
+
+    snprintf(url, sizeof(url), "HTTP://%s:%d/file/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0, "fetch of HTTP://");
+    fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
+}
+END_TEST
+
 START_TEST(test_http_redirect_chain)
 {
     char url[512], dest[PATH_MAX];
@@ -989,6 +1012,29 @@ START_TEST(test_https_downgrade_one_error_line)
 }
 END_TEST
 
+/* so HTTPS to HTTP:// is the downgrade it is */
+START_TEST(test_https_downgrade_upper_case_scheme)
+{
+    char url[512];
+
+    fail_if(https_port == 0);
+
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 1);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "https://%s:%d/https-downgrade-upper",
+             server_host, https_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    ck_assert_str_eq(logged(logged_err),
+                     "vfff: redirect to HTTP://127.0.0.1/force-http: "
+                     "HTTPS to HTTP downgrade not allowed\n");
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 0);
+}
+END_TEST
+
 START_TEST(test_https_downgrade_not_retried)
 {
     char url[512];
@@ -1097,6 +1143,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_response_line_too_long);
     tcase_add_test(tc_http, test_http_redirect_302);
     tcase_add_test(tc_http, test_http_redirect_chain);
+    tcase_add_test(tc_http, test_http_scheme_upper_case);
     tcase_add_test(tc_http, test_http_stat_redirect_failed);
     tcase_add_test(tc_http, test_http_server_control_bytes_escaped);
     tcase_add_test(tc_http, test_http_control_bytes_c1_del_tab);
@@ -1123,6 +1170,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_https, test_https_get);
     tcase_add_test(tc_https, test_https_noverify);
     tcase_add_test(tc_https, test_https_downgrade_redirect);
+    tcase_add_test(tc_https, test_https_downgrade_upper_case_scheme);
     tcase_add_test(tc_https, test_https_downgrade_one_error_line);
     tcase_add_test(tc_https, test_https_downgrade_not_retried);
     tcase_add_test(tc_https, test_https_redirect_ok);

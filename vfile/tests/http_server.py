@@ -157,6 +157,22 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             return
 
+        # a redirect with the scheme in upper case, to this server's own file
+        if path.startswith("/upper-scheme/"):
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "HTTP://127.0.0.1:%d/file/%s"
+                             % (self.server.server_address[1],
+                                path[len("/upper-scheme/"):]))
+            self.end_headers()
+            return
+
+        # the downgrade above, the scheme in upper case
+        if path == "/https-downgrade-upper":
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "HTTP://127.0.0.1/force-http")
+            self.end_headers()
+            return
+
         # terminal escape sequences in a status line and a header
         if path == "/ctl-status":
             self.wfile.write(b"HTTP/1.1 500 \x1b[31mRED\x1b[0m\r\n"
