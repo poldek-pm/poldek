@@ -762,6 +762,92 @@ testExternalCommandOnlyAsCommand()
     assertEquals "POSIXLY_CORRECT: ! echo -- ($out)" "1" "$(echo "$out" | grep -cx -- '-- tenth')"
 }
 
+# --shcmd runs its line as the shell does: with the commands of the shell
+testShcmdRunsShellCommands()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    index
+
+    out=$($POLDEK -q --shcmd "ls -q a; !echo x" 2>&1)
+    assertEquals "ls; !echo: exit code ($out)" "0" "$?"
+    assertEquals "ls before !echo ($out)" "a-1-1.noarch x" "$(echo "$out" | xargs)"
+
+    out=$($POLDEK -q --shcmd "ls -q | !grep b" 2>&1)
+    assertEquals "ls | !grep: exit code ($out)" "0" "$?"
+    assertEquals "ls | !grep ($out)" "b-1-1.noarch" "$(echo "$out" | xargs)"
+
+    out=$($POLDEK -q --shcmd "cd /installed; pwd" 2>&1)
+    assertEquals "cd; pwd: exit code ($out)" "0" "$?"
+    assertEquals "cd; pwd ($out)" "/installed" "$out"
+
+    # in the directory the shell starts in, and back to it
+    out=$($POLDEK -q --shcmd pwd 2>&1)
+    assertEquals "pwd ($out)" "/all-avail" "$out"
+    out=$($POLDEK -q --shcmd "cd /installed; cd; pwd" 2>&1)
+    assertEquals "cd home: exit code ($out)" "0" "$?"
+    assertEquals "cd home ($out)" "/all-avail" "$out"
+
+    # help needs no packages
+    out=$($POLDEK --shcmd help 2>&1)
+    echo "$out" | grep -q '^Loading'
+    assertEquals "help loaded the packages ($out)" "1" "$?"
+    echo "$out" | grep -q '^cd '
+    assertEquals "help without cd ($out)" "0" "$?"
+    echo "$out" | grep -q '^up '
+    assertEquals "help with up ($out)" "1" "$?"
+
+    # alias lists the aliases of ! too, which direct mode does not
+    out=$($POLDEK -q --shcmd alias 2>&1)
+    echo "$out" | grep -q '^grep *= !grep$'
+    assertEquals "alias without grep ($out)" "0" "$?"
+    out=$($POLDEK -q alias 2>&1)
+    echo "$out" | grep -q '= !'
+    assertEquals "direct alias with grep ($out)" "1" "$?"
+
+    out=$($POLDEK -q --shcmd reload 2>&1)
+    assertEquals "reload: exit code ($out)" "0" "$?"
+}
+
+# and refuses the ones the shell does not have, wherever on the line
+testShcmdRefusesBatchCommands()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    for line in up clean "repo ls" "ls -q; repo ls"; do
+        cmd=${line##*; }
+        out=$($POLDEK --shcmd "$line" 2>&1)
+        assertNotSame "$line: exit code ($out)" "0" "$?"
+        assertEquals "$line ($out)" "error: ${cmd%% *}: not available in the shell" "$out"
+    done
+}
+
+# a command of the shell only, or of no shell, is refused saying so
+testCommandAvailableInShellOnly()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    out=$($POLDEK cd 2>&1)
+    assertNotSame "cd: exit code ($out)" "0" "$?"
+    assertEquals "cd ($out)" "error: cd: available in the shell only" "$out"
+
+    out=$(printf 'up\nquit\n' |
+          timeout 60 script -qec "$POLDEK --noask --shell" /dev/null |
+          tr -d '\r' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')
+    # the shell is not in every build
+    echo "$out" | grep -q 'built without interactive mode' && return
+    echo "$out" | grep -q 'up: not available in the shell'
+    assertEquals "up in the shell ($out)" "0" "$?"
+}
+
 # TAB after "--" in the shell completes the options of the command the
 # line's first word leads to, and offers none where there is no such command
 testShellOptionCompletion()

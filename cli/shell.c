@@ -47,7 +47,7 @@
 
 static int cmd_quit(struct cmdctx *cmdctx);
 struct poclidek_cmd command_quit = {
-    COMMAND_NOARGS | COMMAND_NOOPTS | COMMAND_INTERACTIVE,
+    COMMAND_NOARGS | COMMAND_NOOPTS | COMMAND_NOSETUP | COMMAND_INTERACTIVE,
     "quit", NULL, N_("Exit poldek"),
     NULL, NULL, NULL, cmd_quit,
     NULL, NULL, NULL, NULL, NULL, 0, 0,
