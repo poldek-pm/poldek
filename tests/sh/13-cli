@@ -811,6 +811,21 @@ testShcmdRunsShellCommands()
     assertEquals "reload: exit code ($out)" "0" "$?"
 }
 
+# cd to a directory that is not there stays where it was
+testCdFailureStaysPut()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    index
+
+    for dir in /nope /all-avail/nope nope ../nope; do
+        out=$($POLDEK -q --shcmd "cd /installed; cd $dir; pwd" 2>&1)
+        assertEquals "cd $dir ($out)" "error: $dir: no such directory /installed" \
+                     "$(echo "$out" | xargs)"
+    done
+}
+
 # and refuses the ones the shell does not have, wherever on the line
 testShcmdRefusesBatchCommands()
 {

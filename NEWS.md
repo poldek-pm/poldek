@@ -73,6 +73,7 @@
 * Fix: the `--enable-strict` build failed with gcc 16 (@arekm [#105](https://github.com/poldek-pm/poldek/pull/105))
 * Fix: `poldek -e` listed a package twice when two arguments named it (@arekm [#93](https://github.com/poldek-pm/poldek/pull/93))
 * Fix: shell `uninstall name` with several installed versions failed with "ambiguous name"; it now removes all of them (@arekm [#92](https://github.com/poldek-pm/poldek/pull/92))
+* Fix: `cd` to a directory that is not there stays where it was instead of going to `/` ([#205](https://github.com/poldek-pm/poldek/pull/205))
 * Fix: multilib: masks without an arch (`install a-1-1`) match again (@arekm [#91](https://github.com/poldek-pm/poldek/pull/91))
 * Fix: metadata repositories with SHA-1 checksums did not load (@arekm [#89](https://github.com/poldek-pm/poldek/pull/89))
 * Fix: `--upa` of a changed pndir repository said it was up to date after fetching the whole index (@arekm [#88](https://github.com/poldek-pm/poldek/pull/88))
