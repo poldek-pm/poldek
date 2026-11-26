@@ -397,15 +397,66 @@ static void repo_match_free(void *ptr)
     n_free(m);
 }
 
-/* RET: the repositories the origin names: one whose _origin (or file name)
-   is origin, else those whose _origin contains it */
-static tn_array *find_repos_by_origin(const char *reposd, const char *origin)
+/* a URL is shown as typed/saved, but without the password */
+static const char *url_for_display(char *buf, size_t size, const char *url)
 {
-    tn_array *matches = n_array_new(2, repo_match_free, NULL);
+    return vf_url_hidepasswd(buf, size, url);
+}
+
+/* how well arg names a repository: as repo ls shows it (the URL, also as
+   given, or the file name), by the beginning of the URL's last part or of
+   a source name, or by a part of the URL only (which removes nothing) */
+#define MATCH_NONE      0
+#define MATCH_FRAGMENT  1
+#define MATCH_NAME      2
+#define MATCH_EXACT     3
+
+static int str_begins(const char *s, const char *prefix)
+{
+    return strncmp(s, prefix, strlen(prefix)) == 0;
+}
+
+static int repo_match_rank(const char *origin, const char *path,
+                            tn_array *sources, const char *arg)
+{
+    char buf[PATH_MAX];
+    const char *shown = NULL;
+
+    if (n_str_eq(n_basenam(path), arg))
+        return MATCH_EXACT;
+
+    if (origin) {
+        shown = url_for_display(buf, sizeof(buf), origin);
+        if (n_str_eq(origin, arg) || n_str_eq(shown, arg))
+            return MATCH_EXACT;
+
+        if (str_begins(n_basenam(origin), arg))
+            return MATCH_NAME;
+    }
+
+    for (int i = 0; sources && i < n_array_size(sources); i++) {
+        const char *name = poldek_conf_get(n_array_nth(sources, i), "name", NULL);
+
+        if (name && str_begins(name, arg))
+            return MATCH_NAME;
+    }
+
+    if (shown && strstr(shown, arg))
+        return MATCH_FRAGMENT;
+
+    return MATCH_NONE;
+}
+
+/* RET: the repositories arg names best, *best_rank how (MATCH_*) */
+static tn_array *find_repos(const char *reposd, const char *arg,
+                            int *best_rank)
+{
+    tn_array *re = n_array_new(2, repo_match_free, NULL);
     tn_array *files = poldek_util_readdir(reposd, "*.conf");
 
+    *best_rank = MATCH_NONE;
     if (files == NULL)
-        return matches;
+        return re;
 
     for (int i = 0; i < n_array_size(files); i++) {
         const char *path = n_array_nth(files, i);
@@ -413,7 +464,7 @@ static tn_array *find_repos_by_origin(const char *reposd, const char *origin)
         tn_hash *ht_global;
         const char *o;
         tn_array *sources;
-        int nsources;
+        int nsources, rank;
 
         htconf = poldek_conf_load(path, POLDEK_LDCONF_NOVALIDATE |
                                   POLDEK_LDCONF_NOINCLUDE);
@@ -426,28 +477,37 @@ static tn_array *find_repos_by_origin(const char *reposd, const char *origin)
         sources = poldek_conf_get_sections(htconf, "source");
         nsources = sources ? n_array_size(sources) : 0;
 
-        if ((o && strcmp(o, origin) == 0) || strcmp(n_basenam(path), origin) == 0) {
-            n_array_clean(matches);
-            n_array_push(matches, repo_match_new(o, path, nsources));
-            n_hash_free(htconf);
-            break;
-
-        } else if (o && strstr(o, origin)) {
-            n_array_push(matches, repo_match_new(o, path, nsources));
+        rank = repo_match_rank(o, path, sources, arg);
+        if (rank > *best_rank) {
+            n_array_clean(re);
+            *best_rank = rank;
         }
 
+        if (rank != MATCH_NONE && rank == *best_rank)
+            n_array_push(re, repo_match_new(o, path, nsources));
+
         n_hash_free(htconf);
+
+        if (rank == MATCH_EXACT)
+            break;
     }
 
     n_array_free(files);
 
-    return matches;
+    return re;
 }
 
-/* a URL is shown as typed/saved, but without the password */
-static const char *url_for_display(char *buf, size_t size, const char *url)
+/* the repositories of matches, each in a line of its own */
+static void list_matches(tn_array *matches)
 {
-    return vf_url_hidepasswd(buf, size, url);
+    char shown[PATH_MAX];
+
+    for (int i = 0; i < n_array_size(matches); i++) {
+        struct repo_match *m = n_array_nth(matches, i);
+
+        msgn(0, "  %s", url_for_display(shown, sizeof(shown),
+                                        m->origin ? m->origin : m->path));
+    }
 }
 
 int poldek_reposd_del(struct poldek_ctx *ctx, const char *url, unsigned flags)
@@ -455,7 +515,7 @@ int poldek_reposd_del(struct poldek_ctx *ctx, const char *url, unsigned flags)
     char reposd[PATH_MAX];
     struct repo_match *m;
     tn_array *matches;
-    int i;
+    int rank;
 
     (void) ctx;
 
@@ -464,7 +524,7 @@ int poldek_reposd_del(struct poldek_ctx *ctx, const char *url, unsigned flags)
         return 0;
     }
 
-    matches = find_repos_by_origin(reposd, url);
+    matches = find_repos(reposd, url, &rank);
 
     if (n_array_size(matches) == 0) {
         char shown[PATH_MAX];
@@ -475,18 +535,23 @@ int poldek_reposd_del(struct poldek_ctx *ctx, const char *url, unsigned flags)
         return 0;
     }
 
+    /* a part of a URL is not what a repository is known by */
+    if (rank == MATCH_FRAGMENT) {
+        char shown[PATH_MAX];
+
+        logn(LOGERR, _("%s: not a URL or name of a repository, a part of:"),
+             url_for_display(shown, sizeof(shown), url));
+        list_matches(matches);
+        n_array_free(matches);
+        return 0;
+    }
+
     if (n_array_size(matches) > 1) {
         char shown[PATH_MAX];
 
         logn(LOGERR, _("%s: ambiguous name, matches %d repositories:"),
              url_for_display(shown, sizeof(shown), url), n_array_size(matches));
-
-        for (i = 0; i < n_array_size(matches); i++) {
-            m = n_array_nth(matches, i);
-            msgn(0, "  %s", url_for_display(shown, sizeof(shown),
-                                            m->origin ? m->origin : m->path));
-        }
-
+        list_matches(matches);
         n_array_free(matches);
         return 0;
     }

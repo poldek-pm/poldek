@@ -1,6 +1,6 @@
 ## 0.46 (TBD)
 ### Changes
-* New `repo` command: `repo add URL`, `repo ls` and `repo del URL` manage repositories kept in `repos.d` ([#145](https://github.com/poldek-pm/poldek/pull/145))
+* New `repo` command: `repo add URL`, `repo ls` and `repo del NAME` (its URL, or the beginning of its last part or of a source name: `repo del foo` for `https://example.com/foo-bar.repo`) manage repositories kept in `repos.d` ([#145](https://github.com/poldek-pm/poldek/pull/145), [#206](https://github.com/poldek-pm/poldek/pull/206))
 * A source name defined twice is an error that names both places ([#145](https://github.com/poldek-pm/poldek/pull/145))
 * `repo add` imports dnf `.repo` files; `-s foo.repo` is no longer read as an index ([#145](https://github.com/poldek-pm/poldek/pull/145))
 * A configuration is no longer read from a URL (`%include` of a remote file, `--conf URL`, `--upconf`); use `repo add` ([#150](https://github.com/poldek-pm/poldek/pull/150))

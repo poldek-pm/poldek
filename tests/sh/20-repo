@@ -143,7 +143,7 @@ EOF
 
     out=$($POLDEK repo ls 2>&1)
     assertEquals "repo ls of an empty configuration failed" "0" "$?"
-    echo "$out" | grep -q "empty.conf (0 sources)" || \
+    echo "$out" | grep -qx "empty.conf (no sources)" || \
         fail "the empty repository not listed: $out"
 }
 
@@ -228,7 +228,7 @@ EOF
 # the same, with the credentials left out of it
 testRepoAddWithPassword()
 {
-    local out fn
+    local out fn shown
     export POLDEK_TESTING_REPOSDIR=$REPOSD
     SHLIBDIR="$PWD/sh/lib"
     CACHEDIR=${TMPDIR:-/tmp}/poldek-cache
@@ -257,6 +257,15 @@ testRepoAddWithPassword()
         fail "source not listed: $out"
     echo "$out" | grep -q "secret" && \
         fail "the password is shown by repo ls: $out"
+
+    # the password is no name, the URL as repo ls shows it is
+    out=$($POLDEK repo del secret 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "repo del by the password should remove nothing"
+    fi
+    shown=$($POLDEK --cachedir $CACHEDIR repo ls 2>&1 | grep -o '^cred://[^ ]*')
+    out=$($POLDEK repo del "$shown" 2>&1)
+    assertEquals "repo del by the URL as repo ls shows it ($shown) failed: $out" "0" "$?"
     return 0
 }
 
@@ -290,9 +299,10 @@ EOF
     assertEquals "no .conf expected after delete by URL" "0" "$n"
 }
 
-# A part of the URL that only one repository has names it too; a part
-# that more than one has removes nothing
-testRepoDeleteByUrlFragment()
+# A repository is named by the beginning of its URL's last part or of a
+# source's name; one that begins more than one, or a part of the URL
+# elsewhere, removes nothing
+testRepoDeleteByName()
 {
     local tmp=${TMPDIR:-/tmp}
     export POLDEK_TESTING_REPOSDIR=$REPOSD
@@ -318,7 +328,7 @@ EOF
 
     out=$($POLDEK repo del repo-frag- 2>&1)
     if [ "$?" -eq 0 ]; then
-        fail "a fragment of more than one repo should remove nothing"
+        fail "a name of more than one repo should remove nothing"
     fi
     echo "$out" | grep -q "matches 2 repositories" || \
         fail "the ambiguity not named: $out"
@@ -327,20 +337,31 @@ EOF
     echo "$out" | grep -q "$tmp/repo-frag-b.conf" || \
         fail "the second repository not listed: $out"
 
+    out=$($POLDEK repo del frag-a.conf 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "a part of the URL should remove nothing"
+    fi
+    echo "$out" | grep -q "frag-a.conf: not a URL or name of a repository, a part of:" || \
+        fail "a part of the URL not refused: $out"
+    echo "$out" | grep -q "^  $tmp/repo-frag-a.conf$" || \
+        fail "the repository it is a part of not listed: $out"
+
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "both repositories expected to stay" "2" "$n"
 
-    out=$($POLDEK repo del frag-a.conf 2>&1)
-    assertEquals "repo del by a unique fragment failed" "0" "$?"
+    out=$($POLDEK repo del frag-a-s 2>&1)
+    assertEquals "repo del by the beginning of a source name failed: $out" "0" "$?"
     echo "$out" | grep -q "$tmp/repo-frag-a.conf: repository removed (1 source)" || \
         fail "the removed repository's origin not named: $out"
-
-    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
-    assertEquals "one repository expected to stay" "1" "$n"
 
     out=$($POLDEK repo ls 2>&1)
     echo "$out" | grep -q "frag-b-src" || fail "the other repository is gone: $out"
     echo "$out" | grep -q "frag-a-src" && fail "the removed repository is listed: $out"
+
+    out=$($POLDEK repo del repo-frag-b 2>&1)
+    assertEquals "repo del by the beginning of the URL's last part failed: $out" "0" "$?"
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no repository expected to stay" "0" "$n"
     return 0
 }
 

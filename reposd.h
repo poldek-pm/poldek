@@ -20,7 +20,8 @@ struct poldek_ctx;
 #define POLDEK_REPOSD_FORCE         (1 << 0)
 
 /* the built-in repos.d: one repository there is the configuration added
-   from one URL, and it may define several sources */
+   from one URL, and it may define several sources. ctx is not used yet; it
+   is there for a repos.d set in the configuration. */
 EXPORT int poldek_reposd_add(struct poldek_ctx *ctx, const char *url,
                              unsigned flags);
 EXPORT int poldek_reposd_del(struct poldek_ctx *ctx, const char *url,
