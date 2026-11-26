@@ -21,6 +21,7 @@
 #include "compiler.h"
 #include "i18n.h"
 #include "cli.h"
+#include "cmd_chain.h"
 
 static int cmd_help(struct cmdctx *cmdctx);
 
@@ -55,13 +56,8 @@ int cmd_help(struct cmdctx *cmdctx)
         if (cmd->flags & (COMMAND_IS_ALIAS | COMMAND_HIDDEN | COMMAND_SYSALIAS))
             continue;
 
-        if ((cmdctx->cctx->_flags & POLDEKCLI_UNDERIMODE)) {
-            if (cmd->flags & COMMAND_BATCH)
-                continue;
-        } else {
-            if (cmd->flags & COMMAND_INTERACTIVE)
-                continue;
-        }
+        if (poclidek__cmd_unavailable(cmdctx->cctx, cmd))
+            continue;
 
         p = cmd->arg ? cmd->arg : "";
         if (cmd->argp_opts) {

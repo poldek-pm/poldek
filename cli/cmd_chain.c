@@ -202,18 +202,24 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
     return cmds;
 }
 
+const char *poclidek__cmd_unavailable(const struct poclidek_ctx *cctx,
+                                      const struct poclidek_cmd *cmd)
+{
+    if (cctx->_flags & POLDEKCLI_UNDERIMODE) {
+        if (cmd->flags & COMMAND_BATCH)
+            return _("not available in the shell");
+    } else {
+        if (cmd->flags & COMMAND_INTERACTIVE)
+            return _("available in the shell only");
+    }
+
+    return NULL;
+}
+
 static
 inline bool skip_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
 {
-    if ((cctx->_flags & POLDEKCLI_UNDERIMODE)) {
-        if (cmd->flags & COMMAND_BATCH)
-            return true;
-    } else {
-        if (cmd->flags & COMMAND_INTERACTIVE)
-            return true;
-    }
-
-    return false;
+    return poclidek__cmd_unavailable(cctx, cmd) != NULL;
 }
 
 static
@@ -224,6 +230,7 @@ static
 struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name)
 {
     struct poclidek_cmd *cmd, tmpcmd;
+    const char *why = NULL;
     int ambiguous;
 
     cmd = command_by_name(cctx, name, &ambiguous);
@@ -233,13 +240,13 @@ struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name)
     /* a command of that name is one skip_command() hides */
     tmpcmd.name = (char*)name;
     cmd = n_array_bsearch(cctx->commands, &tmpcmd);
+    if (cmd)
+        why = poclidek__cmd_unavailable(cctx, cmd);
 
     if (ambiguous)
         logn(LOGERR, _("%s: ambiguous command"), name);
-    else if (cmd && (cmd->flags & COMMAND_BATCH))
-        logn(LOGERR, _("%s: not available in the shell"), name);
-    else if (cmd)
-        logn(LOGERR, _("%s: available in the shell only"), name);
+    else if (why)
+        logn(LOGERR, "%s: %s", name, why);
     else
         logn(LOGERR, _("%s: no such command"), name);
 

@@ -34,6 +34,12 @@ struct cmd_chain_ent {
 };
 
 struct poclidek_ctx;
+struct poclidek_cmd;
+
+/* why cmd does not run where the commands run from (the shell or not),
+   NULL if it does */
+const char *poclidek__cmd_unavailable(const struct poclidek_ctx *cctx,
+                                      const struct poclidek_cmd *cmd);
 
 tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line);
 tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,

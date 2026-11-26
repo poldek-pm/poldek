@@ -50,11 +50,9 @@ static int alias(struct cmdctx *cmdctx)
         if ((cmd->flags & COMMAND_IS_ALIAS) == 0)
             continue;
 
-        /* skip external commands aliases in non-interactive mode */
-        if ((cmdctx->cctx->_flags & POLDEKCLI_UNDERIMODE) == 0) {
-            if ((cmd->flags & COMMAND_INTERACTIVE))
-                continue;
-        }
+        /* the aliases of ! are the shell's only */
+        if (poclidek__cmd_unavailable(cmdctx->cctx, cmd))
+            continue;
 
         cmdctx_printf(cmdctx, "%-18s = %s\n", cmd->name, cmd->cmdline);
     }
