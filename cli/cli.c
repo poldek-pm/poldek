@@ -274,8 +274,9 @@ static struct argp_option common_options[] = {
 };
 
 
-#define OPT_USAGE    1024
-#define OPT_PROGNAME 1025
+/* argp's own keys: negative ones are long options only */
+#define OPT_PROGNAME -2
+#define OPT_USAGE    -3
 
 /* argp's own --help, --usage and --program-name, with its texts */
 static struct argp_option help_options[] = {
@@ -389,6 +390,10 @@ int poclidek_argv_is_help(int argc, const char **argv)
     int i, is_help = 0;
 
     for (i=0; i < argc; i++) {
+        /* past "--" they are arguments, however they are spelled */
+        if (strcmp(argv[i], "--") == 0)
+            break;
+
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-?") == 0 ||
             strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--usage") == 0) {
 

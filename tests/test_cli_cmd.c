@@ -4,7 +4,7 @@
 #include "cli/cli.h"
 #include "cli/cmd.h"
 
-static int probe_ishelp, probe_ran;
+static int probe_ishelp, probe_ran, probe_parse_rc;
 
 /* a command that parses its options itself, with the argp it is given */
 static int probe_cmd(struct cmdctx *cmdctx, int argc, const char **argv,
@@ -12,7 +12,8 @@ static int probe_cmd(struct cmdctx *cmdctx, int argc, const char **argv,
 {
     probe_ishelp = (cmdctx->rtflags & CMDCTX_ISHELP) != 0;
     probe_ran = 1;
-    argp_parse(argp, argc, (char**)argv, ARGP_NO_EXIT, 0, cmdctx);
+    probe_parse_rc = argp_parse(argp, argc, (char**)argv, ARGP_NO_EXIT, 0,
+                                cmdctx);
     return 1;
 }
 
@@ -34,14 +35,27 @@ START_TEST (test_cmd_fn_knows_help) {
     fail_unless(poclidek_add_command(cctx, &command_probe));
 
     probe_ran = 0;
+    probe_parse_rc = -1;
     poclidek_execline(cctx, NULL, "probe --help");
     fail_unless(probe_ran, "probe --help: not called");
     fail_unless(probe_ishelp, "probe --help: no CMDCTX_ISHELP");
+    fail_unless(probe_parse_rc == 0, "probe --help: argp_parse() failed");
 
     probe_ran = 0;
+    probe_parse_rc = -1;
     poclidek_execline(cctx, NULL, "probe x");
     fail_unless(probe_ran, "probe x: not called");
     fail_if(probe_ishelp, "probe x: CMDCTX_ISHELP");
+    fail_unless(probe_parse_rc == 0, "probe x: argp_parse() failed");
+
+    /* past "--" it is an argument of the command, as for the argp commands */
+    probe_ran = 0;
+    probe_ishelp = 1;
+    probe_parse_rc = -1;
+    poclidek_execline(cctx, NULL, "probe -- --help");
+    fail_unless(probe_ran, "probe -- --help: not called");
+    fail_if(probe_ishelp, "probe -- --help: CMDCTX_ISHELP");
+    fail_unless(probe_parse_rc == 0, "probe -- --help: argp_parse() failed");
 
     poclidek_free(cctx);
     poldek_free(ctx);
