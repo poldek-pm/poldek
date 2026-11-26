@@ -47,9 +47,9 @@ jobs:
       - name: fetch full history and checkout tag
         run: |
           git config --global --add safe.directory "$(pwd)"
-          # Full history is required for generate_release_notes (diffs against
-          # previous tag). In act, --unshallow fails because the local repo
-          # is already complete; the fallback `--tags` is enough there.
+          # The tags are needed to check the tag out. In act, --unshallow
+          # fails because the local repo is already complete; the fallback
+          # `--tags` is enough there.
           if [ -f "$(git rev-parse --git-dir)/shallow" ]; then
             git fetch --unshallow --tags origin
           fi
@@ -83,6 +83,21 @@ jobs:
             echo "::error::tag $TAG does not match configure.ac version ($CONFIG_VERSION)"
             exit 1
           fi
+
+      - name: release notes from NEWS.md
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          # 0.46.0 is "## 0.46 (date)" in NEWS.md, 0.46.1 "## 0.46.1 (date)"
+          VERSION="${TAG#v}"
+          VERSION="${VERSION%.0}"
+          awk -v v="$VERSION" '$1 == "##" && p { exit }
+                               $1 == "##" && $2 == v { p = 1; next }
+                               p' NEWS.md > /tmp/release-notes.md
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "::error::no section of $VERSION in NEWS.md"
+            exit 1
+          fi
+          head -n 20 /tmp/release-notes.md
 
       - name: autogen
         run: ./autogen.sh
@@ -128,5 +143,5 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: ${{ steps.dist.outputs.archive }}
-          generate_release_notes: true
+          body_path: /tmp/release-notes.md
           draft: true

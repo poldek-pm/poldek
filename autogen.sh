@@ -20,9 +20,13 @@ runcmd () {
 CONFOPTS="--enable-maintainer-mode --enable-compile-warnings"
 CONFOPTS="$CONFOPTS $@"
 
-#runcmd git submodule init
-#runcmd git submodule update
-runcmd git submodule update --init --remote
+# the submodules at the commits this tree pins, as a release and CI need;
+# AUTOGEN_SUBMODULES=remote takes the tips of their branches instead
+if [ "$AUTOGEN_SUBMODULES" = "remote" ]; then
+    runcmd git submodule update --init --remote
+else
+    runcmd git submodule update --init
+fi
 
 # run autogen in submodules
 (cd trurlib && ./autogen.sh --no-configure)
