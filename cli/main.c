@@ -140,17 +140,6 @@ static struct argp_option common_options[] = {
 { 0, 0, 0, 0, 0, 0 },
 };
 
-#define MODE_NULL         0
-#define MODE_VERIFY       1
-#define MODE_MKIDX        2
-#define MODE_INSTALL      4
-#define MODE_INSTALLDIST  5
-#define MODE_UNINSTALL    6
-#define MODE_SRCLIST      8
-#define MODE_SHELL        9
-
-#define MODE_F_LDSOURCES  (1 << 0)
-
 static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
     &poclidek_opgroup_source,
     &poclidek_opgroup_packages,
@@ -167,9 +156,6 @@ struct args {
     struct poldek_ts     *ts;
 
     struct poclidek_op_ctx *opctx;
-
-    int       mjrmode;
-    unsigned  mnrmode;
 
     unsigned  cnflags;
 
@@ -235,8 +221,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SHCMD:
-            logn(LOGWARN, _("--cmd is deprecated, poldek COMMAND runs COMMAND "
-                            "as well"));
+            logn(LOGWARN, _("--cmd is deprecated, poldek COMMAND does the same"));
             break;
 
         case 'v':
@@ -265,13 +250,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SHELL:         /* default */
-            argsp->mjrmode = MODE_SHELL;
             argsp->cnflags |= OPT_AS_FLAG(OPT_SHELL);
             break;
 
         case OPT_SHELL_CMD:
             argsp->shcmd = arg;
-            argsp->mjrmode = MODE_SHELL;
             argsp->cnflags |= OPT_AS_FLAG(OPT_SHELL);
             break;
 
@@ -339,7 +322,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 argsp->argv[argsp->argc++] = a;
             }
             argsp->argv[argsp->argc] = NULL;
-            n_assert(state->next = state->argc);
+            state->next = state->argc; /* they are the command's, not argp's */
             break;
 
         default:
