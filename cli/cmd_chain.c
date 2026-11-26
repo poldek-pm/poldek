@@ -84,30 +84,49 @@ void cmd_chain_ent_free(struct cmd_chain_ent *ent)
     free(ent);
 }
 
-/* the tokenizer returns each unquoted ; and | as a token of its own, and a
-   quoted or escaped lone one the same way */
+/* the CMD_CHAIN_ENT_* separator arg is, 0 for a word. The tokenizer
+   returns each unquoted ; and | as a token of its own (|| as two), and a
+   quoted or escaped lone one the same way; && is a word of its own. */
 static
-int is_break(const char *arg, const char *brk)
+unsigned break_of(const char *arg)
 {
-    return *arg != '\0' && *(arg + 1) == '\0' && strchr(brk, *arg) != NULL;
+    if (n_str_eq(arg, ";"))
+        return CMD_CHAIN_ENT_SEMICOLON;
+    if (n_str_eq(arg, "|"))
+        return CMD_CHAIN_ENT_PIPE;
+    if (n_str_eq(arg, "&&"))
+        return CMD_CHAIN_ENT_AND;
+    if (n_str_eq(arg, "||"))
+        return CMD_CHAIN_ENT_OR;
+    return 0;
+}
+
+static const char *break_name(unsigned brk)
+{
+    if (brk == CMD_CHAIN_ENT_AND)
+        return "&&";
+    if (brk == CMD_CHAIN_ENT_OR)
+        return "||";
+
+    n_assert(brk == CMD_CHAIN_ENT_PIPE);
+    return "|";
 }
 
 static
 int a_argv_contains_break(tn_array *a_argv)
 {
-    char              *brk = ";|";
     int               i;
 
     for (i=0; i < n_array_size(a_argv); i++) {
         char *arg = n_array_nth(a_argv, i);
-        if (is_break(arg, brk))
+        if (break_of(arg))
             return 1;
     }
     return 0;
 }
 
 struct a_argv_ent {
-    char      brk;
+    unsigned  brk;              /* CMD_CHAIN_ENT_*, 0 for a command */
     tn_array  *a_argv;
 };
 
@@ -124,8 +143,32 @@ static int is_external(const char *arg)
     return *arg == '!' && strlen(arg) > 1;
 }
 
+/* the last of cmds, NULL if there is none */
 static
-tn_array *a_argv_split(tn_array *a_argv, const char *brk)
+struct a_argv_ent *last_ent(tn_array *cmds)
+{
+    if (n_array_size(cmds) == 0)
+        return NULL;
+
+    return n_array_nth(cmds, n_array_size(cmds) - 1);
+}
+
+/* 1 if the last of cmds is a && or || with no command after it */
+static
+int no_command_after(tn_array *cmds)
+{
+    struct a_argv_ent *ent = last_ent(cmds);
+    unsigned brk = ent ? ent->brk : 0;
+
+    if ((brk & (CMD_CHAIN_ENT_AND | CMD_CHAIN_ENT_OR)) == 0)
+        return 0;
+
+    logn(LOGERR, _("%s: no command after it"), break_name(brk));
+    return 1;
+}
+
+static
+tn_array *a_argv_split(tn_array *a_argv)
 {
     int               i, rc = 1;
     int               noprogram = 0; /* "!" seen, its program not yet */
@@ -137,8 +180,9 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
 
     for (i=0; i < n_array_size(a_argv); i++) {
         char *arg = n_array_nth(a_argv, i);
+        unsigned brk = break_of(arg);
 
-        if (!is_break(arg, brk)) {
+        if (!brk) {
             int program = 0;
 
             /* !command, as the first word of a command only */
@@ -164,24 +208,42 @@ tn_array *a_argv_split(tn_array *a_argv, const char *brk)
 
             n_array_push(tl, n_strdup(arg));
 
-        } else {
-            if (n_array_size(tl)) {
-                struct a_argv_ent *ent;
+        } else if (n_array_size(tl)) {
+            struct a_argv_ent *ent;
 
-                ent = n_malloc(sizeof(*ent));
-                ent->brk = 0;
-                ent->a_argv = tl;
-                n_array_push(cmds, ent);
+            ent = n_malloc(sizeof(*ent));
+            ent->brk = 0;
+            ent->a_argv = tl;
+            n_array_push(cmds, ent);
 
-                ent = n_malloc(sizeof(*ent));
-                ent->brk = *arg;
-                ent->a_argv = NULL;
-                n_array_push(cmds, ent);
+            ent = n_malloc(sizeof(*ent));
+            ent->brk = brk;
+            ent->a_argv = NULL;
+            n_array_push(cmds, ent);
 
-                tl = n_array_new(4, free, NULL);
+            tl = n_array_new(4, free, NULL);
+
+        } else {                /* no command since the last separator */
+            struct a_argv_ent *last = last_ent(cmds);
+            unsigned last_brk = last ? last->brk : 0;
+
+            if (brk == CMD_CHAIN_ENT_PIPE && last_brk == CMD_CHAIN_ENT_PIPE) {
+                last->brk = CMD_CHAIN_ENT_OR; /* || comes as two | */
+
+            } else if (no_command_after(cmds)) {
+                rc = 0;
+                break;
+
+            } else if (brk != CMD_CHAIN_ENT_SEMICOLON) {
+                logn(LOGERR, _("%s: no command before it"), break_name(brk));
+                rc = 0;
+                break;
             }
         }
     }
+
+    if (rc && n_array_size(tl) == 0)
+        rc = !no_command_after(cmds);
 
     if (rc && n_array_size(tl)) {
         struct a_argv_ent *ent;
@@ -459,7 +521,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
     return cmd_chain;
 }
 
-/* the commands of the words in tl, where a lone ; or | parts them */
+/* the commands of the words in tl, where a lone ;, |, && or || parts them */
 static
 tn_array *prepare_words(struct poclidek_ctx *cctx, tn_array *cmd_chain,
                         tn_array *tl, const struct alias_path *path)
@@ -475,7 +537,7 @@ tn_array *prepare_words(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         printf("tl[%d] = %s\n", i, (char*)n_array_nth(tl, i));
 #endif
 
-    if ((arr = a_argv_split(tl, ";|")) == NULL) {
+    if ((arr = a_argv_split(tl)) == NULL) {
         is_err = 1;
         goto l_end;
     }
@@ -485,13 +547,11 @@ tn_array *prepare_words(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         struct cmd_chain_ent *cent = NULL;
 
         switch (ent->brk) {
-            case ';':
-                cent = cmd_chain_ent_new(CMD_CHAIN_ENT_SEMICOLON, NULL, NULL);
-                n_array_push(cmd_chain, cent);
-                break;
-
-            case '|':
-                cent = cmd_chain_ent_new(CMD_CHAIN_ENT_PIPE, NULL, NULL);
+            case CMD_CHAIN_ENT_SEMICOLON:
+            case CMD_CHAIN_ENT_PIPE:
+            case CMD_CHAIN_ENT_AND:
+            case CMD_CHAIN_ENT_OR:
+                cent = cmd_chain_ent_new(ent->brk, NULL, NULL);
                 n_array_push(cmd_chain, cent);
                 break;
 
@@ -552,11 +612,18 @@ tn_array *divide_into_pipelines(tn_array *cmd_chain)
 {
     tn_array *cmd_chain2;
     int is_err = 0;
+    unsigned cond = 0;          /* the && or || before the next pipeline */
 
     cmd_chain2 = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
     while (n_array_size(cmd_chain)) {
         struct cmd_chain_ent *ent = n_array_shift(cmd_chain);
         if (ent->flags & CMD_CHAIN_ENT_SEMICOLON) {
+            cmd_chain_ent_free(ent);
+            continue;
+        }
+
+        if (ent->flags & (CMD_CHAIN_ENT_AND | CMD_CHAIN_ENT_OR)) {
+            cond = ent->flags;
             cmd_chain_ent_free(ent);
             continue;
         }
@@ -600,6 +667,8 @@ tn_array *divide_into_pipelines(tn_array *cmd_chain)
             //printf("prev3= %p %p\n", prev, prev->next_piped);
             continue;
         }
+        ent->flags |= cond;
+        cond = 0;
         n_array_push(cmd_chain2, ent);
     }
 
@@ -656,9 +725,9 @@ tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
                             prepare_cmdline(cctx, cmd_chain, line) == NULL);
 }
 
-/* The first argument, and one after a lone ; or |, is parsed as a line: it
-   may hold a command with its options, or all the commands. Each of the
-   others is one word of the command before it, whatever it holds. */
+/* The first argument, and one after a lone ;, |, && or ||, is parsed as a
+   line: it may hold a command with its options, or all the commands. Each
+   of the others is one word of the command before it, whatever it holds. */
 tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,
                                     const char **argv)
 {
@@ -686,7 +755,7 @@ tn_array *poclidek_prepare_cmd_argv(struct poclidek_ctx *cctx, int argc,
         }
 
         if (n_array_size(tl) > 0)
-            is_line = is_break(n_array_nth(tl, n_array_size(tl) - 1), ";|");
+            is_line = break_of(n_array_nth(tl, n_array_size(tl) - 1)) != 0;
     }
 
     cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
@@ -711,7 +780,7 @@ static tn_array *line_commands(const char *line)
     for (i=0; i < n_array_size(tl); i++) {
         const char *arg = n_array_nth(tl, i);
 
-        if (is_break(arg, ";|")) {
+        if (break_of(arg)) {
             begins = 1;
 
         } else if (begins) {
