@@ -14,8 +14,8 @@ mkidx() {
 
 ls_expect() {
     local expected=$1
-    is_verbose_mode && $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test --cmd ls
-    n=$($POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test --cmd ls | grep -P '^\w+-\d+-\d+\.\w+$' | wc -l)
+    is_verbose_mode && $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test ls
+    n=$($POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test ls | grep -P '^\w+-\d+-\d+\.\w+$' | wc -l)
 
     assertEquals "ls: invalid number of packages found (expected $expected, got $n)" "$n" "$expected"
     [ "$n" == "$expected" ]

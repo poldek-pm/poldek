@@ -701,7 +701,7 @@ testUninstallOrPathOwnerAfterRepoLoad() {
 
     local dest="--dt dir --destination $DESTINATION_REPO"
     [ "$INSTALL_MODE" = "rpm" ] && dest="--root $DESTINATION_REPO"
-    local out=$($RAW_POLDEK --st dir -s $REPO $dest --noask --cmd "ls; uninstall --test a" 2>&1)
+    local out=$($RAW_POLDEK --st dir -s $REPO $dest --noask "ls; uninstall --test a" 2>&1)
     echo "$out" | grep -q 'marks b-1-1' && fail "b marked although c still owns the path"
 
     try_uninstall a "a-1-1"

@@ -20,13 +20,6 @@
   <listitem>
 <xi:include  href="manual/ref.cmdl.cachedir.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.cmd">--cmd </option></term>
-  <listitem>
-   <para>
-      Run in command mode (like ipoldek does by default)
-   </para>
-  </listitem>
-</varlistentry>
 <varlistentry><term><option id="ref.cmdl.ask">--ask </option></term>
   <listitem>
    <para>

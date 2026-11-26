@@ -21,7 +21,7 @@ url="https://${host}:${TEST_HTTPS_PORT}/"
 echo "Testing poldek CLI SSL verification..."
 
 # Without --no-ssl-verify the self-signed cert must be rejected.
-out=$("$POLDEK_BIN" --noconf -s "$url" --st pndir --cmd ls 2>&1) || true
+out=$("$POLDEK_BIN" --noconf -s "$url" --st pndir ls 2>&1) || true
 if ! echo "$out" | grep -qi "certificate verify failed"; then
     echo "FAIL: poldek without --no-ssl-verify did not reject self-signed cert"
     echo "$out"
@@ -30,7 +30,7 @@ fi
 echo "  without --no-ssl-verify: rejected self-signed cert (OK)"
 
 # With --no-ssl-verify the certificate check must be bypassed.
-out=$("$POLDEK_BIN" --noconf --no-ssl-verify -s "$url" --st pndir --cmd ls 2>&1) || true
+out=$("$POLDEK_BIN" --noconf --no-ssl-verify -s "$url" --st pndir ls 2>&1) || true
 if echo "$out" | grep -qi "certificate verify failed"; then
     echo "FAIL: poldek --no-ssl-verify still failed on self-signed cert"
     echo "$out"

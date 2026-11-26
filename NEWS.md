@@ -16,6 +16,7 @@
 * Without a terminal a removal that needs a confirmation fails instead of doing nothing; a default answer is shown (@arekm [#133](https://github.com/poldek-pm/poldek/pull/133))
 * `up NAME` works as `-n NAME --up` ([#156](https://github.com/poldek-pm/poldek/pull/156))
 * `--shcmd` runs its line as the shell does: `cd`, `pwd`, `reload` and `!cmd` work, `up`, `clean` and `repo` are refused; a command of the shell only, or not of the shell, says so ([#203](https://github.com/poldek-pm/poldek/pull/203))
+* `--cmd` is deprecated and hidden: `poldek COMMAND` runs COMMAND as well; `ipoldek` is deprecated too, use `poldek`; `ipoldek -i foo` and `--cmd -i foo` install foo, as `poldek -i foo` does ([#207](https://github.com/poldek-pm/poldek/pull/207))
 * `&&` and `||` between commands, with spaces around them: `cd /installed && ls foo*` ([#204](https://github.com/poldek-pm/poldek/pull/204))
 * `$releasever_major` and `${VAR}` are taken from the environment in a `.repo` file; `${a.b}` and `${x:=w}` stay as written, and an escaped `$` in `${name:-word}` no longer starts a nested expansion ([#187](https://github.com/poldek-pm/poldek/pull/187), [#195](https://github.com/poldek-pm/poldek/pull/195))
 * A `.repo` line longer than 4 KB refuses the file, and a read error no longer imports the part before it ([#195](https://github.com/poldek-pm/poldek/pull/195))
