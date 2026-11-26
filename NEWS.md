@@ -1,4 +1,4 @@
-## 0.46 (TBD)
+## 0.46 (2026/11/27)
 ### Changes
 * New `repo` command: `repo add URL`, `repo ls` and `repo del NAME` (its URL, or the beginning of its last part or of a source name: `repo del foo` for `https://example.com/foo-bar.repo`) manage repositories kept in `repos.d` ([#145](https://github.com/poldek-pm/poldek/pull/145), [#206](https://github.com/poldek-pm/poldek/pull/206))
 * A source name defined twice is an error that names both places ([#145](https://github.com/poldek-pm/poldek/pull/145))
@@ -43,6 +43,7 @@
 * Fix: a hangup, SIGTERM, `^\` or a broken output no longer ends poldek while rpm runs, and the shell keeps its history when a signal ends it (@arekm [#127](https://github.com/poldek-pm/poldek/pull/127), [#128](https://github.com/poldek-pm/poldek/pull/128), [#129](https://github.com/poldek-pm/poldek/pull/129))
 * Fix: `hold` in a source section and hold masks of a name-version-release work, and an upgrade skips a held installed version instead of failing (@arekm [#130](https://github.com/poldek-pm/poldek/pull/130), [#131](https://github.com/poldek-pm/poldek/pull/131))
 * Fix: HTTP: odd status lines and empty headers are read, a refused redirect is not retried, a server's control characters are not printed (@arekm [#134](https://github.com/poldek-pm/poldek/pull/134), [#135](https://github.com/poldek-pm/poldek/pull/135), [#136](https://github.com/poldek-pm/poldek/pull/136), [#137](https://github.com/poldek-pm/poldek/pull/137), [#138](https://github.com/poldek-pm/poldek/pull/138), [#139](https://github.com/poldek-pm/poldek/pull/139), [#160](https://github.com/poldek-pm/poldek/pull/160))
+* Fix: a URL with a scheme in capitals (`HTTP://`) or with a digit, `+`, `-` or `.` in it (`s3://`, `git+ssh://`) is no longer taken for a path or refused; an HTTPS redirect to HTTP is refused also through a proxy; FTP retries a busy server instead of reporting "no such file", and accepts a transfer begun with 125 or ended with 250 (@arekm [#208](https://github.com/poldek-pm/poldek/pull/208))
 * Fix: a command that failed or could not start is no longer taken for successful, and none outlives poldek (@arekm [#140](https://github.com/poldek-pm/poldek/pull/140), [#141](https://github.com/poldek-pm/poldek/pull/141), [#142](https://github.com/poldek-pm/poldek/pull/142), [#143](https://github.com/poldek-pm/poldek/pull/143))
 * Fix: an alias with a parameter no longer garbles a long argument, its arguments are no longer read as parts of its line, a redefined alias no longer keeps flags of the old one, and one that refers to itself no longer crashes poldek (@arekm [#144](https://github.com/poldek-pm/poldek/pull/144), [#146](https://github.com/poldek-pm/poldek/pull/146), [#193](https://github.com/poldek-pm/poldek/pull/193))
 * Fix: the `greedy-upgrade` alias of `cli.conf` named `-G`, an option `install` no longer has (@arekm [#198](https://github.com/poldek-pm/poldek/pull/198))
@@ -135,6 +136,8 @@
 * Documentation and comments were updated, and dead code is gone ([#196](https://github.com/poldek-pm/poldek/pull/196))
 * A package file is closed as soon as rpm has read its headers, and the unused `fd` parameter of `rpm_signatures()` is gone (@arekm [#104](https://github.com/poldek-pm/poldek/pull/104))
 * Fix: a duplicate `PKG_NEVRA_MAX` definition broke the build (@arekm [#199](https://github.com/poldek-pm/poldek/pull/199))
+* An installed trurlib (0.52 or later) and tndb (0.2.0 or later) are found through pkg-config; libpoldek is `libpoldek.so.5` and libpoclidek `libpoclidek.so.3`
+* `autogen.sh` checks the submodules out at the commits the tree pins (`AUTOGEN_SUBMODULES=remote` for the tips of their branches), and a release takes its notes from NEWS.md
 
 ## 0.45 (2025/12/16)
 * Fixed issue where poldek doesn't try to install other packages from cmdline if one is going to be skipped ([#27](https://github.com/poldek-pm/poldek/pull/27))

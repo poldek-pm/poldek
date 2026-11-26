@@ -7,7 +7,7 @@ AM_CFLAGS = @AM_CFLAGS@
 
 SHELL_MOD = shell.c
 
-libVERINFO         = 2:1:0
+libVERINFO         = 3:0:0
 lib_LTLIBRARIES    = libpoclidek.la
 
 libpoclidek_la_LDFLAGS = -version-info $(libVERINFO)
