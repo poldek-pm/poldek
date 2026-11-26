@@ -510,6 +510,8 @@ int poclidek_chdir(struct poclidek_ctx *cctx, const char *path)
         }
     }
 
+    struct pkg_dent *currdir = cctx->currdir; /* where a failed cd stays */
+
     if (*path == '/')
         cctx->currdir = cctx->rootdir;
 
@@ -522,6 +524,9 @@ int poclidek_chdir(struct poclidek_ctx *cctx, const char *path)
         tl++;
     }
     n_str_tokl_free(tl_save);
+
+    if (!rc)
+        cctx->currdir = currdir;
     return rc;
 }
 
