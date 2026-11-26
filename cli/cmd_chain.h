@@ -18,7 +18,9 @@
 #define CMD_CHAIN_ENT_CMD        (1 << 0)
 #define CMD_CHAIN_ENT_PIPE       (1 << 1)
 #define CMD_CHAIN_ENT_SEMICOLON  (1 << 2)
+/* && and ||; of a pipeline, it runs after a success or a failure only */
 #define CMD_CHAIN_ENT_AND        (1 << 3)
+#define CMD_CHAIN_ENT_OR         (1 << 5)
 /* the last command of the line: the tail of its last pipeline, the one that
    runs on the transaction the caller gave and leaves it the result */
 #define CMD_CHAIN_ENT_LAST       (1 << 4)

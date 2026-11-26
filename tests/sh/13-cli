@@ -848,6 +848,62 @@ testCommandAvailableInShellOnly()
     assertEquals "up in the shell ($out)" "0" "$?"
 }
 
+# a command after && runs if the one before succeeded, after || if it
+# failed; a skipped one leaves the status as it was, as in sh
+testCommandsAfterAndOr()
+{
+    skip_if_rpm_testing_off && return
+
+    build a
+    build b
+    index
+
+    out=$($POLDEK -q --shcmd "cd /installed && pwd" 2>&1)
+    assertEquals "cd && pwd: exit code ($out)" "0" "$?"
+    assertEquals "cd && pwd ($out)" "/installed" "$out"
+
+    out=$($POLDEK -q --shcmd "cd /nope && !echo x" 2>&1)
+    assertNotSame "failed cd && !echo: exit code ($out)" "0" "$?"
+    assertEquals "failed cd && !echo ($out)" "error: /nope: no such directory" "$out"
+
+    out=$($POLDEK -q --shcmd "cd /nope && !echo x; !echo y" 2>&1)
+    assertEquals "&& before ; ($out)" "y" "$(echo "$out" | grep -v error)"
+
+    out=$($POLDEK -q --shcmd "cd /nope || !echo x" 2>&1)
+    assertEquals "failed cd || !echo: exit code ($out)" "0" "$?"
+    assertEquals "failed cd || !echo ($out)" "x" "$(echo "$out" | grep -v error)"
+
+    out=$($POLDEK -q --shcmd "cd /installed || !echo x" 2>&1)
+    assertEquals "cd || !echo: exit code ($out)" "0" "$?"
+    assertEquals "cd || !echo ($out)" "" "$out"
+
+    out=$($POLDEK -q --shcmd "cd /nope && !echo x || !echo y" 2>&1)
+    assertEquals "&& then || ($out)" "y" "$(echo "$out" | grep -v error)"
+
+    out=$($POLDEK -q --shcmd "ls -q a || !echo x && !echo y" 2>&1)
+    assertEquals "|| then && ($out)" "a-1-1.noarch y" "$(echo "$out" | xargs)"
+
+    # in direct mode, in a line and as words
+    out=$($POLDEK -q "ls -q a && ls -q b" 2>&1)
+    assertEquals "direct && ($out)" "a-1-1.noarch b-1-1.noarch" "$(echo "$out" | xargs)"
+    out=$($POLDEK -q ls -q a '||' ls -q b 2>&1)
+    assertEquals "direct || ($out)" "a-1-1.noarch" "$(echo "$out" | xargs)"
+
+    # and in an alias
+    mkdir -p $TMPDIR/home
+    printf '[aliases]\nab = ls -q a && ls -q b\n' > $TMPDIR/home/.poclidekrc
+    out=$(HOME=$TMPDIR/home $POLDEK -q --shcmd ab 2>&1)
+    assertEquals "alias with && ($out)" "a-1-1.noarch b-1-1.noarch" "$(echo "$out" | xargs)"
+    rm -f $TMPDIR/home/.poclidekrc
+
+    for line in "ls &&" "&& ls" "ls && && ls" "ls || ; ls" "|| ls"; do
+        out=$($POLDEK -q --shcmd "$line" 2>&1)
+        assertNotSame "$line: exit code ($out)" "0" "$?"
+        echo "$out" | grep -qE '^error: (&&|\|\||\|): no command (before|after) it$'
+        assertEquals "$line ($out)" "0" "$?"
+    done
+}
+
 # TAB after "--" in the shell completes the options of the command the
 # line's first word leads to, and offers none where there is no such command
 testShellOptionCompletion()

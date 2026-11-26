@@ -969,7 +969,15 @@ static int exec_cmd_chain(struct poclidek_ctx *cctx, struct poldek_ts *ts,
             continue;
         }
 
-        rc = poclidek_exec_cmd_ent(cctx, ts, ent, cmd_pipe);
+        /* a pipeline skipped by && or || leaves rc as it is, as in sh */
+        bool run = true;
+        if (ent->flags & CMD_CHAIN_ENT_AND)
+            run = rc != 0;
+        if (ent->flags & CMD_CHAIN_ENT_OR)
+            run = rc == 0;
+
+        if (run)
+            rc = poclidek_exec_cmd_ent(cctx, ts, ent, cmd_pipe);
     }
 
     n_array_free(cmd_chain);

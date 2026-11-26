@@ -98,8 +98,8 @@ static struct argp_option common_options[] = {
      N_("Store downloaded files and co. under DIR"), OPT_GID },
 
 /* no value of its own: the arguments left after the options are the
-   command, the first (and one after a lone ";" or "|") split as a line and
-   every other one word (poclidek_prepare_cmd_argv()) */
+   command, the first (and one after a lone ";", "|", "&&" or "||") split as
+   a line and every other one word (poclidek_prepare_cmd_argv()) */
 {"cmd", OPT_SHCMD, 0, 0,
      N_("Run in command mode (like ipoldek does by default)"), OPT_GID },
 
