@@ -253,7 +253,7 @@ testUpRefreshesStubIndex()
     $POLDEK_RAW_UP -Osource="$src" --up || fail "up failed"
 
     # ls reads the stub index, which --up refreshes
-    n=$($POLDEK_RAW_UP -q -Osource="$src" --cmd ls | grep -c '^fake_zsh-')
+    n=$($POLDEK_RAW_UP -q -Osource="$src" ls | grep -c '^fake_zsh-')
     assertEquals "ls should list the renamed package" "1" "$n"
 }
 

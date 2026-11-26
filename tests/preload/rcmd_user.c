@@ -1,7 +1,7 @@
 /*
   Preloaded into poldek by sh/13-cli: a program that runs its commands
   through rcmd, as the Python binding does, with the transaction poldek made
-  for them (--cmd and --shcmd), with the mask in RCMD_MASK added to it
+  for them (direct mode and --shcmd), with the mask in RCMD_MASK added to it
   first. What they leave in the caller's pipe is printed, the packages as
   "rcmd package: <id>" and the text as "rcmd output: <line>", and the
   arguments the transaction is left with as "rcmd argument: <mask>".

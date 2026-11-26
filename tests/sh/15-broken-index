@@ -21,14 +21,14 @@ ls_count() {
     # without the stub index poldek loads the index itself
     find $CACHEDIR -name stubindex.pndir.zst -delete
     $POLDEK_RAW_UP -q --skip-installed -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
-        --cmd ls 2>/dev/null | grep -cP '^\w+-\d+-\d+\.\w+$'
+        ls 2>/dev/null | grep -cP '^\w+-\d+-\d+\.\w+$'
 }
 
 desc_sh() {
     # descriptions are loaded lazily, only by desc
     find $CACHEDIR -name stubindex.pndir.zst -delete
     $POLDEK_RAW_UP -q --skip-installed -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
-        --cmd "desc -L sh" 2>&1
+        "desc -L sh" 2>&1
 }
 
 # cut the cached index to $1 bytes ("half": half of it), change the
@@ -155,7 +155,7 @@ testCachedIndexRecordPastOffsets()
     [ -f "$index" ] || fail "no cached index"
     find $CACHEDIR -name stubindex.pndir.zst -delete
     out=$($POLDEK_RAW_UP -q --skip-installed -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
-          --cmd ls 2>&1)
+          ls 2>&1)
     echo "$out" | grep -qx 'a-1-1.noarch' || fail "a-1-1.noarch not listed: $out"
 
     # "a" comes before "m" in the index
@@ -164,7 +164,7 @@ testCachedIndexRecordPastOffsets()
 
     find $CACHEDIR -name stubindex.pndir.zst -delete
     out=$($POLDEK_RAW_UP -q --skip-installed -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test \
-          --cmd ls 2>&1)
+          ls 2>&1)
     echo "$out" | grep -q 'iteration error, broken file' ||
         fail "no error for the broken record: $out"
     if echo "$out" | grep -qx 'a-1-1.noarch'; then

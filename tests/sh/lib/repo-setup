@@ -285,11 +285,11 @@ check_repo_content() {
     fi
 
     msgn "check_repo_content $repo limit=$limit"
-    msg "$POLDEK_NOCONF -v -s $repo --skip-installed --cmd \"ls --qf '%{NAME}\n'\""
+    msg "$POLDEK_NOCONF -v -s $repo --skip-installed \"ls --qf '%{NAME}\n'\""
 
     local packages=$($POLDEK_NOCONF -q -s $repo --skip-installed ls --qf '%{NAME}\n');
-    msg "$POLDEK_NOCONF -v -s $repo --skip-installed --cmd 'desc -L *'"
-    $POLDEK_NOCONF -q --skip-installed -s $repo --cmd 'desc -L *' > $TMPDIR/changelogs
+    msg "$POLDEK_NOCONF -v -s $repo --skip-installed 'desc -L *'"
+    $POLDEK_NOCONF -q --skip-installed -s $repo 'desc -L *' > $TMPDIR/changelogs
 
     local n=0
     for p in $packages; do
@@ -301,7 +301,7 @@ check_repo_content() {
         # check changelog
         grep -qP "^\- $p package changelog entry" $TMPDIR/changelogs
         if [ $? -ne 0 ]; then
-          msgn "$POLDEK_UP -q --skip-installed -s $repo --cmd 'desc -L $p'"
+          msgn "$POLDEK_UP -q --skip-installed -s $repo 'desc -L $p'"
           fail "$p: missing changelog"
           break
         fi

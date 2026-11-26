@@ -45,9 +45,9 @@ expect_count() {
     local expected=$1
     shift
 
-    is_verbose_mode && echo "$RAW_POLDEK -v -s $REPO -s $REPO2 $@ --cmd ls"
-    is_verbose_mode && $RAW_POLDEK -v -s $REPO -s $REPO2 $@ --cmd ls
-    n=$($RAW_POLDEK -q -s $REPO -s $REPO2 $@ --cmd ls | grep -P '^\w+-\d+-\d+\.\w+$' | wc -l)
+    is_verbose_mode && echo "$RAW_POLDEK -v -s $REPO -s $REPO2 $@ ls"
+    is_verbose_mode && $RAW_POLDEK -v -s $REPO -s $REPO2 $@ ls
+    n=$($RAW_POLDEK -q -s $REPO -s $REPO2 $@ ls | grep -P '^\w+-\d+-\d+\.\w+$' | wc -l)
 
     assertEquals "invalid number of packages found (expected $expected, got $n)" "$n" "$expected"
     [ "$n" == "$expected" ]
@@ -57,9 +57,9 @@ expect_package() {
     local expected=$1
     shift
 
-    is_verbose_mode && echo "$RAW_POLDEK -v -s $REPO -s $REPO2 --cmd ls"
-    is_verbose_mode && $RAW_POLDEK -v -s $REPO -s $REPO2 --cmd ls
-    n=$($RAW_POLDEK -q -s $REPO -s $REPO2 $@ --cmd ls | grep "^$expected" | wc -l)
+    is_verbose_mode && echo "$RAW_POLDEK -v -s $REPO -s $REPO2 ls"
+    is_verbose_mode && $RAW_POLDEK -v -s $REPO -s $REPO2 ls
+    n=$($RAW_POLDEK -q -s $REPO -s $REPO2 $@ ls | grep "^$expected" | wc -l)
 
     assertEquals "$expected package not found" "$n" "1"
     [ "$n" == "1" ]
@@ -168,7 +168,7 @@ testThreadedLoadKeepsMessages()
     msgn "Testing..."
     for i in 1 2 3; do
         find $CACHEDIR -name stubindex.pndir.zst -delete # each load writes them again
-        LC_ALL=C $RAW_POLDEK $sources --cmd ls 2>&1 | grep -qx '8 packages read' ||
+        LC_ALL=C $RAW_POLDEK $sources ls 2>&1 | grep -qx '8 packages read' ||
             missing=$((missing + 1))
     done
     assertEquals "no '8 packages read' after the load in $missing of 3 runs" "0" "$missing"

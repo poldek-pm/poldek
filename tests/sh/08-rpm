@@ -44,8 +44,8 @@ testRPMdbcache() {
     is_verbose_mode && op="-v"
 
     msgn "create rpmdb cache with dirindex"
-    msgn "$RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO $op --cmd ls"
-    $RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO $op --cmd ls >/dev/null
+    msgn "$RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO $op ls"
+    $RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO $op ls >/dev/null
     local rpmdb_cachedirname="$(echo $DESTINATION_REPO | sed -e 's|^/||' -e 's|/|.|g').var.lib.rpm"
     local suffix="rpmdbcache$(echo $DESTINATION_REPO | sed 's|/|.|g').var.lib.rpm"
 
@@ -66,7 +66,7 @@ testRPMdbcache() {
 
 
     # will die (we're in test mode) if dirindex is missing
-    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO --root $DESTINATION_REPO $op --cmd ls -u >/dev/null
+    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO --root $DESTINATION_REPO $op ls -u >/dev/null
     assertEquals "died" "$?" "0"
     msgn "install a"
     local md=$(md5sum $dirindex_path | cut -f1 -d' ')
@@ -78,7 +78,7 @@ testRPMdbcache() {
 
     msgn "update dirindex"
     # should load rpmdb and update dirindex
-    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO --root $DESTINATION_REPO $op --cmd ls -u >/dev/null
+    $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO --root $DESTINATION_REPO $op ls -u >/dev/null
 
     local md=$(md5sum $dirindex_path | cut -f1 -d' ')
     if [ "$md5" = "$md" ]; then
@@ -449,7 +449,7 @@ testRPMformat6SignedNoKeyWarning() {
     signkey_test_prepare 6
 
     local out
-    out=$($POLDEK_NOCONF --st dir -s "$REPO" --cmd ls 2>&1)
+    out=$($POLDEK_NOCONF --st dir -s "$REPO" ls 2>&1)
     echo "$out" | grep -q "^poldek-signkey-test-1-1" ||
         fail "signed v6 package not listed: $out"
     if echo "$out" | grep -q "NOKEY"; then
@@ -668,7 +668,7 @@ testRPMdbcacheDirindexSameSecond() {
     touch -d @$mtime $dbfiles || fail "cannot touch rpmdb files"
 
     $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO \
-        --root $DESTINATION_REPO --cmd ls -u >/dev/null
+        --root $DESTINATION_REPO ls -u >/dev/null
 
     local dirindex_path="$CACHEDIR/$rpmdb_cachedirname/dirindex.rpmdb.tndb"
     [ -f "$dirindex_path" ] || fail "missing dirindex $dirindex_path"
@@ -683,7 +683,7 @@ testRPMdbcacheDirindexSameSecond() {
     touch -d @$mtime $dbfiles || fail "cannot touch rpmdb files"
 
     $RAW_POLDEK -Oauto_directory_dependencies=y --st dir -s $REPO \
-        --root $DESTINATION_REPO --cmd ls -u >/dev/null
+        --root $DESTINATION_REPO ls -u >/dev/null
 
     local md=$(md5sum "$dirindex_path" | cut -f1 -d' ')
     if [ "$md5" = "$md" ]; then
@@ -705,14 +705,14 @@ testRPMdbcacheDirindexBrokenRecord() {
 
     # so that its directories follow the key map
     rpm_build_installed a 1-1 -f /opt/zzdir/data
-    $RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO --cmd ls -I >/dev/null
+    $RAW_POLDEK -Oauto_directory_dependencies=y --root $DESTINATION_REPO ls -I >/dev/null
     [ -L "$link" ] || fail "no $link"
     python3 -I $SHLIBDIR/tndb-set-vlen $dirindex_path '_\a#' 0xffffffff ||
         fail "tndb-set-vlen failed"
 
     # in testing mode poldek aborts at a broken dirindex
     local out=$(env -u POLDEK_TESTING $RAW_POLDEK -Oauto_directory_dependencies=y \
-                    --root $DESTINATION_REPO --cmd ls -I 2>&1)
+                    --root $DESTINATION_REPO ls -I 2>&1)
     echo "$out" | grep -q 'invalid directory index' ||
         fail "no error for the broken record: $out"
     if [ -L "$link" ]; then
@@ -730,12 +730,12 @@ testRPMdbcacheSameSecond() {
     local mtime=$(( $(date +%s) + 3600 ))
     touch -d @$mtime $dbfiles
 
-    $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
+    $RAW_POLDEK --root $DESTINATION_REPO ls -I >/dev/null  # caches it
 
     rpm_build_installed b 1-1
     touch -d @$mtime $dbfiles  # changed within the same second
 
-    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-1-1')
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO ls -I | grep -c '^b-1-1')
     assertEquals "b-1-1 not listed as installed" "1" "$n"
 }
 
@@ -758,7 +758,7 @@ testRPMdbcacheChangedWhileRunning() {
         timeout 60 script -qec "$RAW_POLDEK --root $DESTINATION_REPO --shell" /dev/null >/dev/null
     $RPM --quiet -q b || fail "b: rpm installation failed"
 
-    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-1-1')
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO ls -I | grep -c '^b-1-1')
     assertEquals "b-1-1 not listed as installed" "1" "$n"
 }
 
@@ -768,7 +768,7 @@ testRPMdbcacheOwnInstallAfterChange() {
     skip_if_rpm_testing_off && return
 
     build c 1-1
-    $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
+    $RAW_POLDEK --root $DESTINATION_REPO ls -I >/dev/null  # caches it
 
     mkdir -p $DESTINATION_REPO/RPMS/
     rm -f $DESTINATION_REPO/RPMS/*.rpm
@@ -783,7 +783,7 @@ testRPMdbcacheOwnInstallAfterChange() {
         timeout 60 script -qec "$RAW_POLDEK --st dir -s $REPO --root $DESTINATION_REPO --shell" /dev/null >/dev/null
     $RPM --quiet -q b c || fail "b, c: installation failed"
 
-    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -cE '^(b|c)-1-1')
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO ls -I | grep -cE '^(b|c)-1-1')
     assertEquals "b-1-1 and c-1-1 not listed as installed" "2" "$n"
 }
 
@@ -793,14 +793,14 @@ testRPMdbcacheRebuilddb() {
     skip_if_rpm_testing_off && return
 
     rpm_build_installed b 1-1
-    $RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I >/dev/null  # caches it
+    $RAW_POLDEK --root $DESTINATION_REPO ls -I >/dev/null  # caches it
 
     rm -f $DESTINATION_REPO/RPMS/*.rpm
     build_package $DESTINATION_REPO/RPMS/ b 2-1
     $RPM -U --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm
     $RPM --rebuilddb
 
-    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-2-1')
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO ls -I | grep -c '^b-2-1')
     assertEquals "b-2-1 not listed as installed" "1" "$n"
 }
 
@@ -818,7 +818,7 @@ testRPMdbcacheInterruptedLoad() {
     assertEquals "the interrupted load not reported: $out" "1" \
                  "$(echo "$out" | grep -c 'Load installed packages failed')"
 
-    local n=$($RAW_POLDEK --root $DESTINATION_REPO --cmd ls -I | grep -c '^b-1-1')
+    local n=$($RAW_POLDEK --root $DESTINATION_REPO ls -I | grep -c '^b-1-1')
     assertEquals "b-1-1 not listed as installed" "1" "$n"
 }
 
@@ -979,11 +979,11 @@ testChangelogAfterInstalledBuildDay() {
     build b 2-1 -l "'Sun Apr 26 2020|fix for CVE-2020-0002'"
 
     local P="$RAW_POLDEK --st dir -s $REPO --root $DESTINATION_REPO"
-    local out=$($P --cmd desc -L a 2>&1)
+    local out=$($P desc -L a 2>&1)
     echo "$out" | grep -q 'a 2 entry' || fail "a-2-1: the new entry not shown: $out"
     echo "$out" | grep -q 'CVE-2020-0001' && fail "a-2-1: a-1-1's own entry shown as new: $out"
 
-    out=$($P --cmd ls -S 2>&1)
+    out=$($P ls -S 2>&1)
     echo "$out" | grep -q '^a-2-1' && fail "a-2-1 listed for a fix a-1-1 has: $out"
     echo "$out" | grep -q '^b-2-1' || fail "b-2-1 not listed for its new fix: $out"
 }

@@ -533,13 +533,13 @@ testCreateTranslatedDescriptions()
     $POLDEK_NOCONF --st dir -s $REPO --mkidx=$idx --mt pndir || fail "mkidx failed"
 
     out=$(env LC_ALL=pl_PL.UTF-8 $POLDEK_NOCONF --skip-installed --st pndir -s $idx \
-              -q --cmd "desc a" 2>&1)
+              -q "desc a" 2>&1)
     echo "$out" | grep -q '^Summary: *pl a$' || fail "no Polish summary: $out"
     echo "$out" | grep -q '^(pl)Package build by .*langPL$' ||
         fail "no Polish description: $out"
 
     out=$(env LC_ALL=C $POLDEK_NOCONF --skip-installed --st pndir -s $idx \
-              -q --cmd "desc a" 2>&1)
+              -q "desc a" 2>&1)
     echo "$out" | grep -q '^Summary: *a$' || fail "no summary in C: $out"
 }
 

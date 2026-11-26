@@ -1262,7 +1262,7 @@ testUninstallShellAllVersions() {
     build_installed b 1-1
 
     local out rc
-    out=$($POLDEK_UNINSTALL --noask --parsable-tr-summary --cmd "uninstall --test a" 2>&1)
+    out=$($POLDEK_UNINSTALL --noask --parsable-tr-summary "uninstall --test a" 2>&1)
     rc=$?
     assertEquals "uninstall failed" "0" "$rc"
     out=$(echo "$out" | grep -E '^%[RD]|ambiguous' | sort | tr '\n' ' ')
