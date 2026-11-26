@@ -25,23 +25,23 @@ INVALID_CONF=
 
 setUp() {
     local tmp=${TMPDIR:-/tmp}
-    REPOSD=$tmp/reposd-19
-    REMOTE_CONF=$tmp/remote-19.conf
-    INVALID_CONF=$tmp/invalid-19.conf
+    REPOSD=$tmp/reposd
+    REMOTE_CONF=$tmp/remote.conf
+    INVALID_CONF=$tmp/invalid.conf
 
     rm -rf $REPOSD
     mkdir -p $REPOSD
 
     cat > $REMOTE_CONF <<EOF
 [source]
-name = poldekrepo-test-19
+name = poldekrepo-test-src
 path = http://example.com/poldek
 type = pndir
 EOF
 
     cat > $INVALID_CONF <<EOF
 [source]
-name = invalid-test-19
+name = invalid-test-src
 path = http://example.com/invalid
 foo = bar
 EOF
@@ -58,7 +58,7 @@ testRepoAddListDelete()
     assertEquals "one managed .conf expected" "1" "$n"
 
     out=$($POLDEK repo ls)
-    echo "$out" | grep -q "poldekrepo-test-19" || \
+    echo "$out" | grep -q "poldekrepo-test-src" || \
         fail "repo ls does not show the added source: $out"
 
     fn=$(basename $(ls $REPOSD/*.conf))
@@ -111,7 +111,7 @@ testRepoDuplicateNameAcrossFiles()
     cat > $REPOSD/first.conf <<EOF
 # remote repository managed by poldek http://example.com/first
 [source]
-name = duplicate-test-19
+name = duplicate-test-src
 path = http://example.com/first
 type = pndir
 EOF
@@ -119,7 +119,7 @@ EOF
     cat > $REPOSD/second.conf <<EOF
 # remote repository managed by poldek http://example.com/second
 [source]
-name = duplicate-test-19
+name = duplicate-test-src
 path = http://example.com/second
 type = pndir
 EOF
@@ -136,14 +136,14 @@ testRepoLsEmptyConfiguration()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    cat > $REPOSD/empty-19.conf <<EOF
+    cat > $REPOSD/empty.conf <<EOF
 [global]
 foo = bar
 EOF
 
     out=$($POLDEK repo ls 2>&1)
     assertEquals "repo ls of an empty configuration failed" "0" "$?"
-    echo "$out" | grep -q "empty-19.conf (0 sources)" || \
+    echo "$out" | grep -qx "empty.conf (no sources)" || \
         fail "the empty repository not listed: $out"
 }
 
@@ -154,7 +154,7 @@ EOF
 testRepoAddDuplicateNameOfLegacySource()
 {
     local tmp=${TMPDIR:-/tmp}
-    local home=$tmp/home-legacy-19
+    local home=$tmp/home-legacy
     local out
 
     export POLDEK_TESTING_REPOSDIR=$REPOSD
@@ -164,7 +164,7 @@ testRepoAddDuplicateNameOfLegacySource()
     cat > $home/.poldekrc <<EOF
 [global]
 cachedir = $home/cache
-source = poldekrepo-test-19,type=pndir /nonexistent/legacy-19/
+source = poldekrepo-test-src,type=pndir /nonexistent/legacy/
 EOF
 
     out=$(HOME=$home $POLDEK repo add $REMOTE_CONF 2>&1)
@@ -185,13 +185,13 @@ testRepoBaseUrlMacro()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
     SHLIBDIR="$PWD/sh/lib"
-    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache-19
+    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache
     rm -rf $CACHEDIR
     mkdir -p $CACHEDIR
 
     cat > $REMOTE_CONF <<EOF
 [source]
-name = baseurl-test-19
+name = baseurl-test-src
 path = %{_baseurl}/%{_arch}/
 type = pndir
 EOF
@@ -217,7 +217,7 @@ EOF
     # path below is whatever TMPDIR the run got, so keep it from being elided
     out=$(env COLUMNS=500 $POLDEK --cachedir $CACHEDIR repo ls 2>&1)
 
-    echo "$out" | grep -q "baseurl-test-19" || fail "source not listed: $out"
+    echo "$out" | grep -q "baseurl-test-src" || fail "source not listed: $out"
     echo "$out" | grep -q "test:/$REMOTE_CONF" || fail "_origin URL not listed: $out"
 
     local arch=$(rpm --eval '%{_target_cpu}')
@@ -228,10 +228,10 @@ EOF
 # the same, with the credentials left out of it
 testRepoAddWithPassword()
 {
-    local out fn
+    local out fn shown
     export POLDEK_TESTING_REPOSDIR=$REPOSD
     SHLIBDIR="$PWD/sh/lib"
-    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache-19
+    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache
     rm -rf $CACHEDIR
     mkdir -p $CACHEDIR
 
@@ -241,22 +241,31 @@ testRepoAddWithPassword()
     export PATH
 
     out=$($POLDEK --cachedir $CACHEDIR repo add \
-              "cred://user:secret-19@$REMOTE_CONF" 2>&1)
+              "cred://user:secret@$REMOTE_CONF" 2>&1)
     assertEquals "repo add of a URL with a password failed: $out" "0" "$?"
 
     fn=$(ls $REPOSD/*.conf)
     case "$fn" in
-        *secret-19*) fail "the password is a part of the file name: $fn" ;;
+        *secret*) fail "the password is a part of the file name: $fn" ;;
     esac
 
-    grep -q '^name = poldekrepo-test-19$' $fn || \
+    grep -q '^name = poldekrepo-test-src$' $fn || \
         fail "source not saved: $(cat $fn)"
 
     out=$($POLDEK --cachedir $CACHEDIR repo ls 2>&1)
-    echo "$out" | grep -q "poldekrepo-test-19" || \
+    echo "$out" | grep -q "poldekrepo-test-src" || \
         fail "source not listed: $out"
-    echo "$out" | grep -q "secret-19" && \
+    echo "$out" | grep -q "secret" && \
         fail "the password is shown by repo ls: $out"
+
+    # the password is no name, the URL as repo ls shows it is
+    out=$($POLDEK repo del secret 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "repo del by the password should remove nothing"
+    fi
+    shown=$($POLDEK --cachedir $CACHEDIR repo ls 2>&1 | grep -o '^cred://[^ ]*')
+    out=$($POLDEK repo del "$shown" 2>&1)
+    assertEquals "repo del by the URL as repo ls shows it ($shown) failed: $out" "0" "$?"
     return 0
 }
 
@@ -264,13 +273,13 @@ testRepoDeleteByUrl()
 {
     export POLDEK_TESTING_REPOSDIR=$REPOSD
     SHLIBDIR="$PWD/sh/lib"
-    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache-19
+    CACHEDIR=${TMPDIR:-/tmp}/poldek-cache
     rm -rf $CACHEDIR
     mkdir -p $CACHEDIR
 
     cat > $REMOTE_CONF <<EOF
 [source]
-name = del-by-url-test-19
+name = del-by-url-test-src
 path = %{_baseurl}/%{_arch}/
 type = pndir
 EOF
@@ -290,57 +299,69 @@ EOF
     assertEquals "no .conf expected after delete by URL" "0" "$n"
 }
 
-# A part of the URL that only one repository has names it too; a part
-# that more than one has removes nothing
-testRepoDeleteByUrlFragment()
+# A repository is named by the beginning of its URL's last part or of a
+# source's name; one that begins more than one, or a part of the URL
+# elsewhere, removes nothing
+testRepoDeleteByName()
 {
     local tmp=${TMPDIR:-/tmp}
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    cat > $tmp/repo-frag-a-19.conf <<EOF
+    cat > $tmp/repo-frag-a.conf <<EOF
 [source]
-name = frag-a-19
+name = frag-a-src
 path = http://example.com/frag/a
 type = pndir
 EOF
 
-    cat > $tmp/repo-frag-b-19.conf <<EOF
+    cat > $tmp/repo-frag-b.conf <<EOF
 [source]
-name = frag-b-19
+name = frag-b-src
 path = http://example.com/frag/b
 type = pndir
 EOF
 
-    run_poldek $POLDEK repo add $tmp/repo-frag-a-19.conf
+    run_poldek $POLDEK repo add $tmp/repo-frag-a.conf
     assertEquals "repo add a failed" "0" "$?"
-    run_poldek $POLDEK repo add $tmp/repo-frag-b-19.conf
+    run_poldek $POLDEK repo add $tmp/repo-frag-b.conf
     assertEquals "repo add b failed" "0" "$?"
 
     out=$($POLDEK repo del repo-frag- 2>&1)
     if [ "$?" -eq 0 ]; then
-        fail "a fragment of more than one repo should remove nothing"
+        fail "a name of more than one repo should remove nothing"
     fi
     echo "$out" | grep -q "matches 2 repositories" || \
         fail "the ambiguity not named: $out"
-    echo "$out" | grep -q "$tmp/repo-frag-a-19.conf" || \
+    echo "$out" | grep -q "$tmp/repo-frag-a.conf" || \
         fail "the first repository not listed: $out"
-    echo "$out" | grep -q "$tmp/repo-frag-b-19.conf" || \
+    echo "$out" | grep -q "$tmp/repo-frag-b.conf" || \
         fail "the second repository not listed: $out"
+
+    out=$($POLDEK repo del frag-a.conf 2>&1)
+    if [ "$?" -eq 0 ]; then
+        fail "a part of the URL should remove nothing"
+    fi
+    echo "$out" | grep -q "frag-a.conf: not a URL or name of a repository, a part of:" || \
+        fail "a part of the URL not refused: $out"
+    echo "$out" | grep -q "^  $tmp/repo-frag-a.conf$" || \
+        fail "the repository it is a part of not listed: $out"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "both repositories expected to stay" "2" "$n"
 
-    out=$($POLDEK repo del frag-a-19 2>&1)
-    assertEquals "repo del by a unique fragment failed" "0" "$?"
-    echo "$out" | grep -q "$tmp/repo-frag-a-19.conf: repository removed (1 source)" || \
+    out=$($POLDEK repo del frag-a-s 2>&1)
+    assertEquals "repo del by the beginning of a source name failed: $out" "0" "$?"
+    echo "$out" | grep -q "$tmp/repo-frag-a.conf: repository removed (1 source)" || \
         fail "the removed repository's origin not named: $out"
 
-    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
-    assertEquals "one repository expected to stay" "1" "$n"
-
     out=$($POLDEK repo ls 2>&1)
-    echo "$out" | grep -q "frag-b-19" || fail "the other repository is gone: $out"
-    echo "$out" | grep -q "frag-a-19" && fail "the removed repository is listed: $out"
+    echo "$out" | grep -q "frag-b-src" || fail "the other repository is gone: $out"
+    echo "$out" | grep -q "frag-a-src" && fail "the removed repository is listed: $out"
+
+    out=$($POLDEK repo del repo-frag-b 2>&1)
+    assertEquals "repo del by the beginning of the URL's last part failed: $out" "0" "$?"
+    n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
+    assertEquals "no repository expected to stay" "0" "$n"
     return 0
 }
 
@@ -352,7 +373,7 @@ testRepoDeleteUnmarkedFile()
 
     cat > $REPOSD/unmarked.conf <<EOF
 [source]
-name = unmarked-test-19
+name = unmarked-test-src
 path = http://example.com/unmarked
 type = pndir
 EOF
@@ -368,7 +389,7 @@ EOF
 testRepoDeleteMissingReposd()
 {
     local tmp=${TMPDIR:-/tmp}
-    export POLDEK_TESTING_REPOSDIR=$tmp/no-reposd-19
+    export POLDEK_TESTING_REPOSDIR=$tmp/no-reposd
     rm -rf $POLDEK_TESTING_REPOSDIR
 
     out=$($POLDEK repo del anything 2>&1)
@@ -386,7 +407,7 @@ testRepoDeleteUnknownUrl()
     run_poldek $POLDEK repo add $REMOTE_CONF
     assertEquals "repo add failed" "0" "$?"
 
-    run_poldek $POLDEK repo del http://example.com/not-there-19
+    run_poldek $POLDEK repo del http://example.com/not-there
     if [ "$?" -eq 0 ]; then
         fail "repo del of an unknown URL should fail"
     fi
@@ -456,12 +477,12 @@ testRepoWithoutCommandLists()
 
     out=$($POLDEK repo 2>&1)
     assertEquals "repo without a command failed" "0" "$?"
-    echo "$out" | grep -q "poldekrepo-test-19" || \
+    echo "$out" | grep -q "poldekrepo-test-src" || \
         fail "repository not listed: $out"
 
     out=$($POLDEK repo ls 2>&1)
     assertEquals "repo ls failed" "0" "$?"
-    echo "$out" | grep -q "poldekrepo-test-19" || \
+    echo "$out" | grep -q "poldekrepo-test-src" || \
         fail "repository not listed by ls: $out"
 }
 
@@ -473,7 +494,7 @@ testRepoAddStripsLocalPolicy()
 
     cat > $REMOTE_CONF <<EOF
 [source]
-name = policy-test-19
+name = policy-test-src
 path = http://example.com/policy
 type = pndir
 ignore = *
@@ -501,57 +522,57 @@ testRepoAddIncludeSkipped()
     local out
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    rm -rf $tmp/conf-inc-19
-    mkdir -p $tmp/conf-inc-19/include
+    rm -rf $tmp/conf-inc
+    mkdir -p $tmp/conf-inc/include
 
-    cat > $tmp/conf-inc-19/other.conf <<EOF
+    cat > $tmp/conf-inc/other.conf <<EOF
 [source]
-name = included-19
+name = included-src
 path = http://example.com/included/
 type = metadata
 EOF
 
-    cat > $tmp/conf-inc-19/inc-19.conf <<EOF
-%include $tmp/conf-inc-19/other.conf
+    cat > $tmp/conf-inc/inc.conf <<EOF
+%include $tmp/conf-inc/other.conf
 [source]
-name = inc-19
+name = inc-src
 path = http://example.com/x/
 type = metadata
 EOF
 
-    out=$($POLDEK repo add $tmp/conf-inc-19/inc-19.conf 2>&1)
+    out=$($POLDEK repo add $tmp/conf-inc/inc.conf 2>&1)
     assertEquals "repo add failed: $out" "0" "$?"
     echo "$out" | grep -q '%include is ignored' || \
         fail "no warning about a skipped include: $out"
 
-    grep -q '^name = inc-19$' $REPOSD/*.conf || \
+    grep -q '^name = inc-src$' $REPOSD/*.conf || \
         fail "source not saved: $(cat $REPOSD/*.conf)"
-    grep -q 'included-19' $REPOSD/*.conf && \
+    grep -q 'included-src' $REPOSD/*.conf && \
         fail "the include was followed: $(cat $REPOSD/*.conf)"
 
-    cat > $tmp/conf-inc-19/include/extra.conf <<EOF
+    cat > $tmp/conf-inc/include/extra.conf <<EOF
 [source]
-name = extra-19
+name = extra-src
 path = http://example.com/extra/
 type = metadata
 EOF
 
-    cat > $tmp/conf-inc-19/dir-19.conf <<EOF
-%includedir $tmp/conf-inc-19/include
+    cat > $tmp/conf-inc/dir.conf <<EOF
+%includedir $tmp/conf-inc/include
 [source]
-name = dir-19
+name = dir-src
 path = http://example.com/x/
 type = metadata
 EOF
 
-    out=$($POLDEK repo add $tmp/conf-inc-19/dir-19.conf 2>&1)
+    out=$($POLDEK repo add $tmp/conf-inc/dir.conf 2>&1)
     assertEquals "repo add failed: $out" "0" "$?"
     echo "$out" | grep -q '%includedir is ignored' || \
         fail "no warning about a skipped includedir: $out"
 
-    grep -q '^name = dir-19$' $REPOSD/*.conf || \
+    grep -q '^name = dir-src$' $REPOSD/*.conf || \
         fail "source not saved: $(cat $REPOSD/*.conf)"
-    grep -q 'extra-19' $REPOSD/*.conf && \
+    grep -q 'extra-src' $REPOSD/*.conf && \
         fail "the includedir was followed: $(cat $REPOSD/*.conf)"
 
     return 0
@@ -565,25 +586,25 @@ testRepoAddDnfRepo()
     local fn n out
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    rm -rf $tmp/dnf-19
-    mkdir -p $tmp/dnf-19/repo-a
+    rm -rf $tmp/dnf
+    mkdir -p $tmp/dnf/repo-a
 
-    cat > $tmp/dnf-19/my-19.repo <<EOF
+    cat > $tmp/dnf/my.repo <<EOF
 # a dnf repository file
-[one-19]
+[one-src]
 name = One
 enabled = 1
-baseurl = http://example.com/one/ $tmp/dnf-19/repo-a/
+baseurl = http://example.com/one/ $tmp/dnf/repo-a/
 gpgcheck = 1
 gpgkey = https://example.com/key.asc
 priority = 10
 exclude = foo bar,baz
 
-[disabled-19]
+[disabled-src]
 enabled = 0
 baseurl = http://example.com/disabled/
 
-[last-19]
+[last-src]
 baseurl = http://example.com/first/
 baseurl = http://example.com/second/
 
@@ -592,14 +613,14 @@ enabled = 1
 baseurl = http://example.com/main/
 EOF
 
-    out=$($POLDEK repo add $tmp/dnf-19/my-19.repo 2>&1)
+    out=$($POLDEK repo add $tmp/dnf/my.repo 2>&1)
     assertEquals "repo add of a .repo failed" "0" "$?"
 
     echo "$out" | grep -q "2 baseurls, only the first" || \
         fail "the second baseurl not reported: $out"
     echo "$out" | grep -q "exclude is not supported, ignored" || \
         fail "an unsupported exclude not reported: $out"
-    echo "$out" | grep -q "disabled-19.*disabled" || \
+    echo "$out" | grep -q "disabled-src.*disabled" || \
         fail "the disabled repository not reported: $out"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
@@ -611,8 +632,8 @@ EOF
         *) fail "the converted file is not a .conf: $fn" ;;
     esac
 
-    grep -q '^name = one-19$' $fn || fail "name not mapped: $(cat $fn)"
-    grep -q '^name = last-19$' $fn || fail "the second section not saved"
+    grep -q '^name = one-src$' $fn || fail "name not mapped: $(cat $fn)"
+    grep -q '^name = last-src$' $fn || fail "the second section not saved"
     grep -q '^path = http://example.com/second/$' $fn || \
         fail "a repeated baseurl should keep the last value: $(cat $fn)"
     grep -q '^type = metadata$' $fn || fail "type not metadata: $(cat $fn)"
@@ -624,18 +645,18 @@ EOF
     grep -q '^pri = 10$' $fn || fail "priority not mapped"
     grep -q '^ignore' $fn && fail "exclude should not be mapped: $(cat $fn)"
     grep -q '^auto = no$' $fn || fail "auto = no not forced"
-    grep -q "^_origin = $tmp/dnf-19/my-19.repo$" $fn || \
+    grep -q "^_origin = $tmp/dnf/my.repo$" $fn || \
         fail "_origin not the .repo URL: $(cat $fn)"
 
-    grep -q '^name = disabled-19$' $fn && fail "disabled repository saved"
+    grep -q '^name = disabled-src$' $fn && fail "disabled repository saved"
     grep -q 'should/not' $fn && fail "the [main] section was saved"
 
     out=$($POLDEK repo ls 2>&1)
-    echo "$out" | grep -q 'one-19' || fail "the source not listed: $out"
-    echo "$out" | grep -q 'disabled-19' && fail "disabled source listed: $out"
+    echo "$out" | grep -q 'one-src' || fail "the source not listed: $out"
+    echo "$out" | grep -q 'disabled-src' && fail "disabled source listed: $out"
 
     # the configuration defines two sources, so removing it needs --force
-    out=$($POLDEK repo del $tmp/dnf-19/my-19.repo 2>&1)
+    out=$($POLDEK repo del $tmp/dnf/my.repo 2>&1)
     if [ "$?" -eq 0 ]; then
         fail "removing a two-source repository should need --force"
     fi
@@ -645,7 +666,7 @@ EOF
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "the .conf expected to stay" "1" "$n"
 
-    out=$($POLDEK repo del --force $tmp/dnf-19/my-19.repo 2>&1)
+    out=$($POLDEK repo del --force $tmp/dnf/my.repo 2>&1)
     assertEquals "repo del --force failed: $out" "0" "$?"
     echo "$out" | grep -q "repository removed (2 sources)" || \
         fail "the number of removed sources not given: $out"
@@ -664,17 +685,17 @@ testRepoAddDnfRepoWhitespace()
     local fn out
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    rm -rf $tmp/dnf-ws-19
-    mkdir -p $tmp/dnf-ws-19
+    rm -rf $tmp/dnf-ws
+    mkdir -p $tmp/dnf-ws
 
-    printf '\357\273\277[ws-19]   \r\n   \r\n   # an indented comment\r\n\r\nname   =   ws-19   \r\nbaseurl   =   http://example.com/ws/   \r\ngpgkey = https://example.com/key.asc\t\r\n   https://example.com/key2.asc  \r\npriority =   10   \r\n\r\n[empty-19]\r\nenabled =\r\npriority =\r\nbaseurl = http://example.com/empty/\r\n' \
-        > $tmp/dnf-ws-19/ws.repo
+    printf '\357\273\277[ws-src]   \r\n   \r\n   # an indented comment\r\n\r\nname   =   ws-src   \r\nbaseurl   =   http://example.com/ws/   \r\ngpgkey = https://example.com/key.asc\t\r\n   https://example.com/key2.asc  \r\npriority =   10   \r\n\r\n[empty-src]\r\nenabled =\r\npriority =\r\nbaseurl = http://example.com/empty/\r\n' \
+        > $tmp/dnf-ws/ws.repo
 
-    out=$($POLDEK repo add $tmp/dnf-ws-19/ws.repo 2>&1)
+    out=$($POLDEK repo add $tmp/dnf-ws/ws.repo 2>&1)
     assertEquals "repo add of a .repo failed: $out" "0" "$?"
 
     fn=$(ls $REPOSD/*.conf)
-    grep -q '^name = ws-19$' $fn || fail "name not mapped: $(cat $fn)"
+    grep -q '^name = ws-src$' $fn || fail "name not mapped: $(cat $fn)"
     grep -q '^path = http://example.com/ws/$' $fn || \
         fail "trailing blanks of a value kept: $(cat $fn)"
     grep -q '^signkey = https://example.com/key.asc$' $fn || \
@@ -689,10 +710,10 @@ testRepoAddDnfRepoWhitespace()
         fail "an empty value should not be reported as invalid: $out"
     grep -q '^pri = 0$' $fn && \
         fail "an empty priority was applied: $(cat $fn)"
-    grep -q '^name = empty-19$' $fn || \
+    grep -q '^name = empty-src$' $fn || \
         fail "an empty enabled value should not disable the repo: $(cat $fn)"
 
-    run_poldek $POLDEK repo del --force $tmp/dnf-ws-19/ws.repo
+    run_poldek $POLDEK repo del --force $tmp/dnf-ws/ws.repo
 }
 
 # dnf repository variables are expanded when the file is added
@@ -702,27 +723,27 @@ testRepoAddDnfRepoMacros()
     local fn arch out
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    rm -rf $tmp/dnf-macros-19
-    mkdir -p $tmp/dnf-macros-19
+    rm -rf $tmp/dnf-macros
+    mkdir -p $tmp/dnf-macros
 
-    cat > $tmp/dnf-macros-19/macros.repo <<'EOF'
-[mac-19]
+    cat > $tmp/dnf-macros/macros.repo <<'EOF'
+[mac-src]
 baseurl=http://example.com/$arch/${arch}/$basearch/${unset19:-fallback}/repo/
 
-[rel-19]
-baseurl=repo\ dir-19
+[rel-src]
+baseurl=repo\ dir-src
 
-[unknown-19]
+[unknown-src]
 baseurl=http://example.com/$HOME/${nosuchvar19}/$basearch/repo/
 
-[alt-19]
+[alt-src]
 baseurl=http://example.com/${arch:+plus19}/${nosuchvar19:+never19}/repo/
 
-[pct-19]
+[pct-src]
 baseurl=repo%20dir/$baseos/
 EOF
 
-    out=$($POLDEK repo add $tmp/dnf-macros-19/macros.repo 2>&1)
+    out=$($POLDEK repo add $tmp/dnf-macros/macros.repo 2>&1)
     assertEquals "repo add of a .repo failed" "0" "$?"
 
     fn=$(ls $REPOSD/*.conf)
@@ -736,7 +757,7 @@ EOF
         fail "a variable left unexpanded: $(cat $fn)"
     grep -q '/fallback/repo/$' $fn || \
         fail "\${var:-word} not expanded: $(cat $fn)"
-    grep -q "^path = $tmp/dnf-macros-19/repo dir-19$" $fn || \
+    grep -q "^path = $tmp/dnf-macros/repo dir-src$" $fn || \
         fail "a relative baseurl with an escaped space not resolved: $(cat $fn)"
     grep -q '^path = http://example.com/%{_HOME}/%{_nosuchvar19}/' $fn || \
         fail "an unknown variable not left as a macro: $(cat $fn)"
@@ -745,7 +766,7 @@ EOF
     fi
     grep -q '^path = http://example.com/plus19//repo/$' $fn || \
         fail "\${var:+word} not expanded: $(cat $fn)"
-    grep -q "^path = $tmp/dnf-macros-19/repo%20dir/linux/$" $fn || \
+    grep -q "^path = $tmp/dnf-macros/repo%20dir/linux/$" $fn || \
         fail "a '%' in a baseurl expanded or \$baseos not expanded: $(cat $fn)"
 }
 
@@ -779,11 +800,11 @@ testRepoAddHiddenName()
     local out
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    rm -rf $tmp/upath-19
-    mkdir -p $tmp/upath-19/_x
-    cp $PWD/metadata/02.repo $tmp/upath-19/_x/ || fail "cp failed"
+    rm -rf $tmp/upath
+    mkdir -p $tmp/upath/_x
+    cp $PWD/metadata/02.repo $tmp/upath/_x/ || fail "cp failed"
 
-    ( cd $tmp/upath-19 && run_poldek $POLDEK repo add _x/02.repo ) || \
+    ( cd $tmp/upath && run_poldek $POLDEK repo add _x/02.repo ) || \
         fail "repo add failed"
 
     out=$(ls -A $REPOSD)
@@ -798,15 +819,15 @@ testRepoAddDnfRepoInvalid()
     local n out
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    rm -rf $tmp/dnf-bad-19
-    mkdir -p $tmp/dnf-bad-19
+    rm -rf $tmp/dnf-bad
+    mkdir -p $tmp/dnf-bad
 
-    cat > $tmp/dnf-bad-19/metalink.repo <<EOF
-[bad-19]
+    cat > $tmp/dnf-bad/metalink.repo <<EOF
+[bad-src]
 metalink = https://example.com/metalink?repo=bad
 EOF
 
-    out=$($POLDEK repo add $tmp/dnf-bad-19/metalink.repo 2>&1)
+    out=$($POLDEK repo add $tmp/dnf-bad/metalink.repo 2>&1)
     if [ "$?" -eq 0 ]; then
         fail "a metalink-only .repo should fail"
     fi
@@ -815,8 +836,8 @@ EOF
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "no .conf expected" "0" "$n"
 
-    printf '[broken-19]\nbaseurl\n' > $tmp/dnf-bad-19/broken.repo
-    out=$($POLDEK repo add $tmp/dnf-bad-19/broken.repo 2>&1)
+    printf '[broken]\nbaseurl\n' > $tmp/dnf-bad/broken.repo
+    out=$($POLDEK repo add $tmp/dnf-bad/broken.repo 2>&1)
     if [ "$?" -eq 0 ]; then
         fail "a broken .repo should fail"
     fi
@@ -826,9 +847,9 @@ EOF
     assertEquals "no .conf expected after a broken .repo" "0" "$n"
 
     # a line longer than poldek reads (4094 bytes) is refused, not cut
-    printf '[long-19]\nbaseurl = http://example.com/long/\ngpgkey = https://example.com/%s.asc\n' \
-        "$(head -c 5000 /dev/zero | tr '\0' k)" > $tmp/dnf-bad-19/long.repo
-    out=$($POLDEK repo add $tmp/dnf-bad-19/long.repo 2>&1)
+    printf '[long]\nbaseurl = http://example.com/long/\ngpgkey = https://example.com/%s.asc\n' \
+        "$(head -c 5000 /dev/zero | tr '\0' k)" > $tmp/dnf-bad/long.repo
+    out=$($POLDEK repo add $tmp/dnf-bad/long.repo 2>&1)
     if [ "$?" -eq 0 ]; then
         fail "a .repo with a too long line should fail"
     fi
@@ -845,43 +866,43 @@ testRepoAddDnfRepoBadId()
     local n out fn
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    rm -rf $tmp/dnf-id-19
-    mkdir -p $tmp/dnf-id-19
+    rm -rf $tmp/dnf-id
+    mkdir -p $tmp/dnf-id
 
-    printf '[bad id-19]\nbaseurl = http://example.com/space/\n' \
-        > $tmp/dnf-id-19/space.repo
+    printf '[bad id]\nbaseurl = http://example.com/space/\n' \
+        > $tmp/dnf-id/space.repo
 
-    out=$($POLDEK repo add $tmp/dnf-id-19/space.repo 2>&1)
+    out=$($POLDEK repo add $tmp/dnf-id/space.repo 2>&1)
     if [ "$?" -eq 0 ]; then
         fail "a .repo with a space in an id should fail"
     fi
-    echo "$out" | grep -q "invalid repository id 'bad id-19'" || \
+    echo "$out" | grep -q "invalid repository id 'bad id'" || \
         fail "a space in an id not reported: $out"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "no .conf expected" "0" "$n"
 
-    printf '[bad#id-19]\nbaseurl = http://example.com/hash/\n' \
-        > $tmp/dnf-id-19/hash.repo
+    printf '[bad#id]\nbaseurl = http://example.com/hash/\n' \
+        > $tmp/dnf-id/hash.repo
 
-    out=$($POLDEK repo add $tmp/dnf-id-19/hash.repo 2>&1)
+    out=$($POLDEK repo add $tmp/dnf-id/hash.repo 2>&1)
     if [ "$?" -eq 0 ]; then
         fail "a .repo with a '#' in an id should fail"
     fi
-    echo "$out" | grep -q "invalid repository id 'bad#id-19'" || \
+    echo "$out" | grep -q "invalid repository id 'bad#id'" || \
         fail "a '#' in an id not reported: $out"
 
     n=$(ls $REPOSD/*.conf 2>/dev/null | wc -l)
     assertEquals "still no .conf expected" "0" "$n"
 
-    printf '[good.id:X-19]\nbaseurl = http://example.com/allowed/\n' \
-        > $tmp/dnf-id-19/good.repo
+    printf '[good.id:X]\nbaseurl = http://example.com/allowed/\n' \
+        > $tmp/dnf-id/good.repo
 
-    out=$($POLDEK repo add $tmp/dnf-id-19/good.repo 2>&1)
+    out=$($POLDEK repo add $tmp/dnf-id/good.repo 2>&1)
     assertEquals "repo add failed" "0" "$?"
 
     fn=$(ls $REPOSD/*.conf)
-    grep -q '^name = good.id:X-19$' $fn || \
+    grep -q '^name = good.id:X$' $fn || \
         fail "dnf's allowed id characters rejected: $(cat $fn)"
 
     return 0
@@ -895,12 +916,12 @@ testRepoAddRelativePath()
     local out fn dir
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
-    rm -rf $tmp/dnf-rel-19
-    mkdir -p $tmp/dnf-rel-19
-    dir=$(cd $tmp/dnf-rel-19 && pwd -P)
+    rm -rf $tmp/dnf-rel
+    mkdir -p $tmp/dnf-rel
+    dir=$(cd $tmp/dnf-rel && pwd -P)
 
-    printf '[rel-19]\nbaseurl = sub/dir/\n' > $tmp/dnf-rel-19/dnfrel.repo
-    out=$(cd $tmp/dnf-rel-19 && $POLDEK repo add dnfrel.repo 2>&1)
+    printf '[rel-src]\nbaseurl = sub/dir/\n' > $tmp/dnf-rel/dnfrel.repo
+    out=$(cd $tmp/dnf-rel && $POLDEK repo add dnfrel.repo 2>&1)
     assertEquals "repo add of a relative .repo failed: $out" "0" "$?"
 
     fn=$REPOSD/dnfrel.conf
@@ -909,9 +930,9 @@ testRepoAddRelativePath()
     grep -q "^path = $dir/sub/dir/$" $fn || \
         fail "a relative baseurl is not resolved against the .repo: $(cat $fn)"
 
-    printf '[source]\nname = confrel-19\npath = http://example.com/x/\ntype = metadata\n' \
-        > $tmp/dnf-rel-19/confrel.conf
-    out=$(cd $tmp/dnf-rel-19 && $POLDEK repo add confrel.conf 2>&1)
+    printf '[source]\nname = confrel-src\npath = http://example.com/x/\ntype = metadata\n' \
+        > $tmp/dnf-rel/confrel.conf
+    out=$(cd $tmp/dnf-rel && $POLDEK repo add confrel.conf 2>&1)
     assertEquals "repo add of a relative .conf failed: $out" "0" "$?"
 
     fn=$REPOSD/confrel.conf
@@ -926,7 +947,7 @@ testRepoAddRelativePath()
 testRepoManagedSourcesListed()
 {
     local tmp=${TMPDIR:-/tmp}
-    local home=$tmp/home-19
+    local home=$tmp/home
     export POLDEK_TESTING_REPOSDIR=$REPOSD
 
     rm -rf $home
@@ -937,8 +958,8 @@ testRepoManagedSourcesListed()
 cachedir = $home/cache
 
 [source]
-name = plain-test-19
-path = $tmp/plain-19/
+name = plain-test-src
+path = $tmp/plain/
 type = pndir
 EOF
 
@@ -948,12 +969,12 @@ EOF
     out=$(HOME=$home $POLDEK up -l 2>&1)
     assertEquals "up -l failed" "0" "$?"
 
-    echo "$out" | grep -q '^plain-test-19 ' || fail "user source not listed: $out"
-    echo "$out" | grep -q 'poldekrepo-test-19.*(managed' || \
+    echo "$out" | grep -q '^plain-test-src ' || fail "user source not listed: $out"
+    echo "$out" | grep -q 'poldekrepo-test-src.*(managed' || \
         fail "managed source not flagged: $out"
 
-    plain=$(echo "$out" | grep -n 'plain-test-19' | cut -d: -f1)
-    managed=$(echo "$out" | grep -n 'poldekrepo-test-19' | cut -d: -f1)
+    plain=$(echo "$out" | grep -n 'plain-test-src' | cut -d: -f1)
+    managed=$(echo "$out" | grep -n 'poldekrepo-test-src' | cut -d: -f1)
     if [ -n "$plain" ] && [ -n "$managed" ] && [ "$managed" -le "$plain" ]; then
         fail "managed sources should be listed last: $out"
     fi
@@ -969,7 +990,7 @@ testRepoGlobalIgnored()
 source = global-hijack,compr=zst /nonexistent/repo/
 
 [source]
-name = managed-test-19
+name = managed-test-src
 path = /nonexistent/repo/
 type = pndir
 EOF
@@ -978,8 +999,8 @@ EOF
     echo "$out" | grep -q "global-hijack" && \
         fail "[global] from repos.d should be ignored, but global-hijack was listed: $out"
 
-    echo "$out" | grep -q "managed-test-19" || \
-        fail "managed-test-19 source not listed: $out"
+    echo "$out" | grep -q "managed-test-src" || \
+        fail "managed-test-src source not listed: $out"
 }
 
 . ./sh/lib/shunit2

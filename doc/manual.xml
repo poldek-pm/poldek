@@ -415,13 +415,18 @@ repositories directory, so that later reads need no network access:
 <screen>
 &prompt; <command>poldek repo add</command> <replaceable>URL</replaceable>
 &prompt; <command>poldek repo add --force</command> <replaceable>URL</replaceable>
-&prompt; <command>poldek repo del</command> <replaceable>URL</replaceable>
+&prompt; <command>poldek repo del</command> <replaceable>NAME</replaceable>
 &prompt; <command>poldek repo ls</command>
 </screen>
 
 A repository is identified by the URL it was added with;
-<command>repo del</command> takes that URL, or a fragment of it as long
-as the fragment is unambiguous. <command>repo ls</command> lists the
+<command>repo del</command> takes that URL (also as <command>repo ls</command>
+shows it, with the password hidden), the beginning of its last part or of
+the name of one of its sources (<command>repo del foo</command> for
+<filename>https://example.com/foo-bar.repo</filename>), or the name of its file
+in <filename>repos.d</filename>; a name that begins more than one repository
+removes nothing, and neither does another part of the URL, which only
+lists the repositories it is a part of. <command>repo ls</command> lists the
 added repositories together with the sources each of them defines, and
 <command>repo</command> alone does the same. Those sources are listed
 after the user's own, are marked <option>managed</option>, and are not

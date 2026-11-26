@@ -182,7 +182,7 @@ static int list_repos(struct poldek_ctx *ctx)
 {
     char reposd[PATH_MAX];
     tn_array *files;
-    int i, nerr = 0;
+    int i, nerr = 0, nlisted = 0;
 
     (void)ctx;
 
@@ -231,19 +231,26 @@ static int list_repos(struct poldek_ctx *ctx)
         }
 
         /* the URL is what the repository is known by, a password in it is
-           not for the screen; the number of sources tells one repository
-           from one source */
+           not for the screen; its sources are listed below it, the number
+           is said where it is not one */
         int nsources = sources ? n_array_size(sources) : 0;
 
-        poldek_term_printf_c(PRCOLOR_CYAN, "%s ",
+        if (nlisted > 0)        /* a blank line between repositories */
+            printf("\n");
+        nlisted++;
+
+        poldek_term_printf_c(PRCOLOR_CYAN, "%s",
                              vf_url_hidepasswd(origin_url, sizeof(origin_url),
                                                origin));
-        poldek_term_printf_c(PRCOLOR_CYAN,
-                             ngettext("(%d source)\n", "(%d sources)\n",
-                                      nsources),
-                             nsources);
+        if (nsources > 1)
+            poldek_term_printf_c(PRCOLOR_CYAN,
+                                 ngettext(" (%d source)", " (%d sources)",
+                                          nsources), nsources);
+        else if (nsources == 0)
+            poldek_term_printf_c(PRCOLOR_RED, _(" (no sources)"));
+        printf("\n");
 
-        if (sources && n_array_size(sources) > 0)
+        if (nsources > 0)
             poclidek__print_source_list(ctx, sources, 0);
 
         n_array_cfree(&sources);
@@ -294,7 +301,9 @@ struct poclidek_cmd command_repo = {
     NULL, repo, NULL, arg_s_free,
     N_("Commands:\n"
        "  add URL      add a repository from the configuration at URL\n"
-       "  del URL      remove it and all its sources (--force if several)\n"
+       "  del NAME     remove it and all its sources (--force if several);\n"
+       "               NAME is its URL, the beginning of the URL's last part\n"
+       "               or of a source's name, or its file name in repos.d\n"
        "  ls           list the repositories and their sources"),
     NULL, NULL, 0, 0,
     NULL
