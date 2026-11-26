@@ -294,14 +294,14 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
 
         n_assert(cn->proto == VCN_PROTO_HTTP || cn->proto == VCN_PROTO_HTTPS);
 
+        /* the scheme is the request's: cn is the proxy's connection when the
+           request went through one */
         if (*to == '/') {
             if (req->port > 0)
-                snprintf(topath, sizeof(topath), "http%s://%s:%d%s",
-                         cn->proto == VCN_PROTO_HTTPS ? "s" : "",
+                snprintf(topath, sizeof(topath), "%s://%s:%d%s", req->proto,
                          req->host, req->port, to);
             else
-                snprintf(topath, sizeof(topath), "http%s://%s%s",
-                         cn->proto == VCN_PROTO_HTTPS ? "s" : "",
+                snprintf(topath, sizeof(topath), "%s://%s%s", req->proto,
                          req->host, to);
             topathp = topath;
         } else if ((vf_url_type(to) & (VFURL_HTTP | VFURL_HTTPS)) == 0) {
@@ -309,7 +309,7 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
         }
 
         /* denied HTTPS => HTTP */
-        if (cn->proto == VCN_PROTO_HTTPS && vf_url_type(topathp) == VFURL_HTTP) {
+        if (strcmp(req->proto, "https") == 0 && vf_url_type(topathp) == VFURL_HTTP) {
             vfff_set_err(EPROTO, "redirect to %s: HTTPS to HTTP downgrade not allowed",
                          CL_URL(topathp));
             rc = 0;

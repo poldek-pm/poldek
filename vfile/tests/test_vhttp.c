@@ -687,6 +687,56 @@ START_TEST(test_http_proxy_keeps_port)
 }
 END_TEST
 
+/* an HTTPS request is one also when it goes through an HTTP proxy: a
+   redirect to HTTP is the downgrade it is without the proxy, and one to a
+   path leads to an HTTPS URL */
+START_TEST(test_https_via_http_proxy_redirect)
+{
+    char url[512], proxy[256], expect[512], line[1024];
+    const char *proxy_log = getenv("TEST_PROXY_LOG");
+    FILE *f;
+    int found = 0;
+
+    fail_if(http_port == 0);
+    fail_if(proxy_log == NULL || *proxy_log == '\0', "TEST_PROXY_LOG not set");
+
+    if ((size_t)snprintf(proxy, sizeof(proxy), "http://%s:%d",
+                         server_host, http_port) >= sizeof(proxy))
+        ck_abort_msg("proxy url truncated");
+    setenv("https_proxy", proxy, 1);
+    setenv("no_proxy", "", 1);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "https://%s:%d/to-http/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0, "followed to HTTP");
+    fail_if(strstr(logged(logged_err),
+                   "HTTPS to HTTP downgrade not allowed") == NULL,
+            "%s", logged(logged_err));
+
+    snprintf(url, sizeof(url), "https://%s:%d/to-path/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    unsetenv("https_proxy");
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+
+    /* proxy.log format is "<fileno> <uri>" */
+    snprintf(expect, sizeof(expect), " https://%s:%d/file/%s\n",
+             server_host, http_port, TEST_FILE_SMALL);
+    f = fopen(proxy_log, "r");
+    fail_if(f == NULL, "cannot read proxy log %s", proxy_log);
+    while (fgets(line, sizeof(line), f) != NULL) {
+        char *uri = strchr(line, ' ');
+        if (uri && strcmp(uri, expect) == 0)
+            found = 1;
+    }
+    fclose(f);
+
+    fail_if(found == 0, "the proxy was not asked for '%s'", expect);
+}
+END_TEST
+
 /* After dropping the HTTP keep-alive liveness probe, a pooled connection
    through a proxy should be reused instead of opening a new one every time. */
 START_TEST(test_http_proxy_keepalive_reuse)
@@ -1156,6 +1206,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_auth_fail);
     tcase_add_test(tc_http, test_http_upgrade_redirect);
     tcase_add_test(tc_http, test_http_proxy_keeps_port);
+    tcase_add_test(tc_http, test_https_via_http_proxy_redirect);
     tcase_add_test(tc_http, test_http_proxy_keepalive_reuse);
     tcase_add_test(tc_http, test_http_keepalive_dropped);
     tcase_add_test(tc_http, test_http_keepalive_reset);

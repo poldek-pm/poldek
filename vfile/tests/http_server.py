@@ -300,6 +300,17 @@ class TestHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         path = rest[slash:]
         if path.startswith("/file/"):
             self._serve_file(path[6:])
+        # redirects of the origin passed on: to plain HTTP, and to a path
+        elif path.startswith("/to-http/"):
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "http://127.0.0.1:%d/file/%s"
+                             % (self.server.server_address[1],
+                                path[len("/to-http/"):]))
+            self.end_headers()
+        elif path.startswith("/to-path/"):
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "/file/" + path[len("/to-path/"):])
+            self.end_headers()
         else:
             self.send_error(HTTPStatus.NOT_FOUND)
 
