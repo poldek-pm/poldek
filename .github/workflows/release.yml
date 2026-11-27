@@ -49,9 +49,10 @@ jobs:
           git config --global --add safe.directory "$(pwd)"
           # The tags are needed to check the tag out. In act, --unshallow
           # fails because the local repo is already complete; the fallback
-          # `--tags` is enough there.
+          # `--tags` is enough there. --force: checkout fetched an annotated
+          # tag as a lightweight one.
           if [ -f "$(git rev-parse --git-dir)/shallow" ]; then
-            git fetch --unshallow --tags origin
+            git fetch --unshallow --tags --force origin
           fi
           git checkout "${{ steps.tag.outputs.tag }}"
           git describe --tags --exact-match HEAD   # sanity: HEAD is the tag
@@ -126,10 +127,11 @@ jobs:
       - name: verify tarball build
         run: |
           cd /tmp/dist-test/${{ steps.dist.outputs.basename }}
-          ./configure
+          # as autogen.sh does
+          ./configure --sysconfdir=/etc
           make CFLAGS="-O0"
           make CFLAGS="-O0" check-all
-          make CFLAGS="-O0" check-sh
+          make CFLAGS="-O0" CHECK_SH_JOBS=$(nproc) check-sh
 
       - name: upload tarball as artifact
         uses: actions/upload-artifact@v4
