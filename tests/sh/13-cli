@@ -735,7 +735,9 @@ testCmdArgumentsAreWords()
     assertEquals "ab-1-1 not found ($out)" "ab-1-1" "$(echo "$out" | $shown)"
 
     # an alias gets the words as they are
-    out=$($POLDEK upgrade --test 'a b' 2>&1)
+    mkdir -p $TMPDIR/home
+    cp ../conf/cli.conf $TMPDIR/home/.poclidekrc
+    out=$(HOME=$TMPDIR/home $POLDEK upgrade --test 'a b' 2>&1)
     echo "$out" | grep -q 'a b: no such package'
     assertEquals "the alias did not get 'a b' as one argument ($out)" "0" "$?"
 
@@ -846,10 +848,12 @@ testShcmdRunsShellCommands()
     assertEquals "help with up ($out)" "1" "$?"
 
     # alias lists the aliases of ! too, which direct mode does not
-    out=$($POLDEK -q --shcmd alias 2>&1)
+    mkdir -p $TMPDIR/home
+    cp ../conf/cli.conf $TMPDIR/home/.poclidekrc
+    out=$(HOME=$TMPDIR/home $POLDEK -q --shcmd alias 2>&1)
     echo "$out" | grep -q '^grep *= !grep$'
     assertEquals "alias without grep ($out)" "0" "$?"
-    out=$($POLDEK -q alias 2>&1)
+    out=$(HOME=$TMPDIR/home $POLDEK -q alias 2>&1)
     echo "$out" | grep -q '= !'
     assertEquals "direct alias with grep ($out)" "1" "$?"
 

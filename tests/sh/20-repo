@@ -32,6 +32,11 @@ setUp() {
     rm -rf $REPOSD
     mkdir -p $REPOSD
 
+    # the default configuration is ours, not /etc/poldek/poldek.conf
+    export HOME=$tmp/home-default
+    mkdir -p $HOME
+    : > $HOME/.poldekrc
+
     cat > $REMOTE_CONF <<EOF
 [source]
 name = poldekrepo-test-src
