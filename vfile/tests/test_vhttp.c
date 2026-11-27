@@ -703,7 +703,8 @@ START_TEST(test_https_via_http_proxy_redirect)
     if ((size_t)snprintf(proxy, sizeof(proxy), "http://%s:%d",
                          server_host, http_port) >= sizeof(proxy))
         ck_abort_msg("proxy url truncated");
-    setenv("https_proxy", proxy, 1);
+    /* the protocol in capitals, as a config file may have it */
+    vfile_configure(VFILE_CONF_PROXY, "HTTPS", proxy);
     setenv("no_proxy", "", 1);
     vfile_configure(VFILE_CONF_LOGCB, log_cb);
 
@@ -718,7 +719,6 @@ START_TEST(test_https_via_http_proxy_redirect)
              server_host, http_port, TEST_FILE_SMALL);
     fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
 
-    unsetenv("https_proxy");
     vfile_configure(VFILE_CONF_LOGCB, NULL);
 
     /* proxy.log format is "<fileno> <uri>" */
