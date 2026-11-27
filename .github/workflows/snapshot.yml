@@ -1,0 +1,137 @@
+name: snapshot
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required to create and delete releases
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    container: ghcr.io/poldek-pm/pld-devel:latest
+    env:
+      LANG: C
+      LC_ALL: C
+      TERM: xterm
+      POLDEK_TEST_RPM_CACHE: /var/cache/poldek-test-rpm-cache
+      SNAPSHOT_DAYS: 14
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # make dist writes ChangeLog from git log
+
+      - name: git safe dir
+        run: git config --global --add safe.directory "$(pwd)"
+
+      - name: is HEAD already a snapshot
+        id: head
+        run: |
+          SHA=$(git rev-parse HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          if git ls-remote --tags origin 'refs/tags/snapshot-*' | grep -q "^$SHA"; then
+            echo "$SHA is already published"
+            echo "new=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: get image digest
+        if: steps.head.outputs.new == 'yes'
+        id: image-digest
+        run: |
+          DIGEST=$(docker buildx imagetools inspect ghcr.io/poldek-pm/pld-devel:latest --format '{{.Manifest.Digest}}')
+          if [ -z "$DIGEST" ]; then
+            echo "::error::image digest failed"
+            exit 1
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      # the test packages built by build.yml; saved only there
+      - name: restore rpm cache
+        if: steps.head.outputs.new == 'yes'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.POLDEK_TEST_RPM_CACHE }}
+          key: rpm-cache-${{ steps.image-digest.outputs.digest }}-${{ hashFiles('tests/sh/**', 'tests/build-test-rpm.sh') }}
+          restore-keys: |
+            rpm-cache-${{ steps.image-digest.outputs.digest }}-
+
+      - name: autogen
+        if: steps.head.outputs.new == 'yes'
+        run: ./autogen.sh
+
+      - name: make snapshot-tarball
+        if: steps.head.outputs.new == 'yes'
+        id: dist
+        run: |
+          make snapshot-tarball
+          ARCHIVE=$(ls *-snap*.tar.xz | head -n1)
+          if [ -z "$ARCHIVE" ]; then
+            echo "::error::make snapshot-tarball did not produce a .tar.xz archive"
+            exit 1
+          fi
+          BASENAME="${ARCHIVE%.tar.xz}"
+          # poldek-0.46.0-snap20261127.SHA -> snapshot-0.46.0-20261127.SHA,
+          # as make snapshot names it
+          VERSION=$(echo "${BASENAME#poldek-}" | sed 's/-snap.*//')
+          ID=${BASENAME##*-snap}
+          TAG=snapshot-$VERSION-$ID
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "basename=$BASENAME" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "title=poldek $VERSION snapshot $ID" >> "$GITHUB_OUTPUT"
+          mkdir -p /tmp/dist-test
+          tar -xf "$ARCHIVE" -C /tmp/dist-test
+
+      - name: verify tarball build
+        if: steps.head.outputs.new == 'yes'
+        run: |
+          cd /tmp/dist-test/${{ steps.dist.outputs.basename }}
+          ./configure
+          make CFLAGS="-O0"
+          make CFLAGS="-O0" check-all
+          make CFLAGS="-O0" CHECK_SH_JOBS=$(nproc) check-sh
+
+      - name: save sh tests log
+        if: failure() && steps.dist.outputs.basename != ''
+        uses: actions/upload-artifact@v6
+        with:
+          name: sh-tests.log
+          path: /tmp/dist-test/${{ steps.dist.outputs.basename }}/tests/sh-tests.log
+          retention-days: 7
+
+      - name: create release
+        if: steps.head.outputs.new == 'yes'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.dist.outputs.tag }}
+          target_commitish: ${{ steps.head.outputs.sha }}
+          name: ${{ steps.dist.outputs.title }}
+          files: ${{ steps.dist.outputs.archive }}
+          generate_release_notes: true
+          prerelease: true
+          make_latest: false
+
+      # the new snapshot is never older than SNAPSHOT_DAYS, so one always stays
+      - name: delete old snapshots
+        if: steps.head.outputs.new == 'yes'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const cutoff = Date.now() - process.env.SNAPSHOT_DAYS * 24 * 3600 * 1000;
+            const releases = await github.paginate(github.rest.repos.listReleases, context.repo);
+            for (const r of releases) {
+              if (!r.tag_name.startsWith('snapshot-') || Date.parse(r.created_at) >= cutoff)
+                continue;
+              core.info(`deleting ${r.tag_name}`);
+              await github.rest.repos.deleteRelease({ ...context.repo, release_id: r.id });
+              await github.rest.git.deleteRef({ ...context.repo, ref: `tags/${r.tag_name}` });
+            }

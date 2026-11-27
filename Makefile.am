@@ -142,6 +142,39 @@ lint:
 lint-full:
 	$(MAKE) -C tests lint-full
 
+# a snapshot of HEAD, published as a GitHub prerelease
+SNAPSHOT_REPO = poldek-pm/poldek
+SNAPSHOT_REMOTE = origin
+snapshot_id = `git log -1 --date=format:%Y%m%d --format=%cd`.`git rev-parse --short HEAD`
+
+.PHONY: snapshot snapshot-tarball
+snapshot-tarball:
+	@if test -n "`git status --porcelain --untracked-files=no`"; then \
+		echo "snapshot: commit or stash the changes first" >&2; exit 1; \
+	fi
+	rm -rf $(distdir)
+	$(MAKE) distdir
+	id=snap$(snapshot_id); name=$(PACKAGE)-$(VERSION)-$$id; \
+	for f in configure.ac configure; do \
+		sed -i -E "s/^#?VERSION_STATUS=.*/VERSION_STATUS=\"$$id\"/" $(distdir)/$$f && \
+		touch -r $(srcdir)/$$f $(distdir)/$$f || exit 1; \
+	done; \
+	rm -rf $$name && mv $(distdir) $$name && \
+	tar -cf - $$name | xz -c > $$name.tar.xz && rm -rf $$name && \
+	echo "$$name.tar.xz"
+
+# the tag must not start with "v", it would trigger release.yml
+snapshot:
+	@sha=`git rev-parse HEAD`; \
+	if ! git branch -r --contains $$sha | grep -q " $(SNAPSHOT_REMOTE)/"; then \
+		echo "snapshot: push $$sha to $(SNAPSHOT_REMOTE) first" >&2; exit 1; \
+	fi
+	$(MAKE) snapshot-tarball
+	@id=$(snapshot_id); name=$(PACKAGE)-$(VERSION)-snap$$id; sha=`git rev-parse HEAD`; \
+	gh release create --repo $(SNAPSHOT_REPO) --prerelease --target $$sha \
+		--title "$(PACKAGE) $(VERSION) snapshot $$id" --generate-notes \
+		snapshot-$(VERSION)-$$id $$name.tar.xz
+
 dist-hook:
 	@if test -d "$(srcdir)/.git"; then \
 		echo "Creating ChangeLog" && \
