@@ -127,10 +127,11 @@ jobs:
       - name: verify tarball build
         run: |
           cd /tmp/dist-test/${{ steps.dist.outputs.basename }}
-          ./configure
+          # as autogen.sh does
+          ./configure --sysconfdir=/etc
           make CFLAGS="-O0"
           make CFLAGS="-O0" check-all
-          make CFLAGS="-O0" check-sh
+          make CFLAGS="-O0" CHECK_SH_JOBS=$(nproc) check-sh
 
       - name: upload tarball as artifact
         uses: actions/upload-artifact@v4
