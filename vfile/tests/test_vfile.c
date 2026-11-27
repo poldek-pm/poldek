@@ -182,7 +182,8 @@ END_TEST
 START_TEST (test_url_scheme_case) {
     char proto[64], path[PATH_MAX];
 
-    setlocale(LC_ALL, "tr_TR.UTF-8");   /* in "C" where there is none */
+    if (setlocale(LC_ALL, "tr_TR.UTF-8") == NULL)
+        fprintf(stderr, "test_url_scheme_case: no tr_TR.UTF-8, checked in \"C\" only\n");
     ck_assert_str_eq(vf_url_proto(proto, sizeof(proto), "GIT://host/x"), "git");
     setlocale(LC_ALL, "C");
 

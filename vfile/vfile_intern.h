@@ -24,10 +24,10 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
                     const char *counter, const char *urlabel,
                     enum vf_fetchrc *ftrc);
 
-/* only external handlers are used */
 /* scheme[0..len) to its canonical, lower case form */
 void vf_scheme_tolower(char *scheme, int len);
 
+/* only external handlers are used */
 int vf_fetch_ext(const char *url, const char *destdir);
 int vf_fetcha_ext(tn_array *urls, const char *destdir);
 
