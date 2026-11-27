@@ -121,6 +121,43 @@ char *next_token(char **str, char delim, int *toklen)
     return token;
 }
 
+/* a scheme is ASCII and the same in any case (RFC 3986, 3.1); tolower() and
+   strncasecmp() follow the locale */
+static int scheme_lc(int c)
+{
+    return (c >= 'A' && c <= 'Z') ? c + ('a' - 'A') : c;
+}
+
+void vf_scheme_tolower(char *scheme, int len)
+{
+    int i;
+
+    for (i = 0; i < len; i++)
+        scheme[i] = scheme_lc(scheme[i]);
+}
+
+static int is_ascii_letter(int c)
+{
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+/* length of the scheme url begins with, 0 if it has none: a letter, then
+   letters, digits, '+', '-' and '.', then "://" (RFC 3986, 3.1). ASCII only:
+   isalpha() follows the locale */
+static int url_scheme_len(const char *url)
+{
+    const char *p = url;
+
+    if (!is_ascii_letter(*p))
+        return 0;
+
+    while (is_ascii_letter(*p) || (*p >= '0' && *p <= '9') ||
+           *p == '+' || *p == '-' || *p == '.')
+        p++;
+
+    return strncmp(p, "://", 3) == 0 ? p - url : 0;
+}
+
 static unsigned protocols_to_urltypes(const tn_array *protocols)
 {
     char proto[64];
@@ -265,6 +302,10 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
         memset(ftch, 0, sizeof(*ftch));
 
         ftch->protocols = n_array_dup(protocols, (tn_fn_dup)n_strdup);
+        for (int i = 0; i < n_array_size(ftch->protocols); i++) {
+            char *proto = n_array_nth(ftch->protocols, i);
+            vf_scheme_tolower(proto, strlen(proto));
+        }
         ftch->args     = args;
         ftch->is_multi = is_multi;
         ftch->urltypes = protocols_to_urltypes(protocols);
@@ -349,6 +390,27 @@ static void process_output(struct p_open_st *st, const char *prefix)
     }
 }
 
+/* url with its scheme in lower case, as fetch commands compare it: url itself
+   when it is so already, else a copy kept in copies */
+static const char *url_for_cmd(const char *url, tn_array *copies)
+{
+    int i, len = url_scheme_len(url);
+    char *copy;
+
+    for (i = 0; i < len; i++) {
+        if (url[i] != scheme_lc(url[i]))
+            break;
+    }
+
+    if (i == len)
+        return url;
+
+    copy = n_strdup(url);
+    vf_scheme_tolower(copy, len);
+    n_array_push(copies, copy);
+    return copy;
+}
+
 static
 int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 const char *url /* or */, tn_array *urls)
@@ -356,11 +418,14 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     char              *bn = NULL, **argv;
     struct vflock     *vflock = NULL;
     struct p_open_st  pst;
+    tn_array          *url_copies;
     int               i, n, ec;
 
 
     if ((vflock = vf_lock_mkdir(destdir)) == NULL)
         return 0;
+
+    url_copies = n_array_new(4, free, NULL);
 
     if (url)
         n_assert(urls == NULL);
@@ -412,10 +477,11 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 
             case FETCHFMT_FN:
                 if (url) {
-                    argv[n++] = (char*)url;
+                    argv[n++] = (char*)url_for_cmd(url, url_copies);
                 } else {
                     for (int ii = 0; ii < n_array_size(urls); ii++)
-                        argv[n++] = n_array_nth(urls, ii);
+                        argv[n++] = (char*)url_for_cmd(n_array_nth(urls, ii),
+                                                       url_copies);
                 }
                 break;
 
@@ -464,6 +530,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     }
 
     p_st_destroy(&pst);
+    n_array_free(url_copies);
     if (vflock)
         vf_lock_release(vflock);
     return ec == 0;
@@ -493,8 +560,8 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
 
         n_hash_insert(ffetchers, name, ftch);
 
-        for (i=0; i < n_array_size(protocols); i++) {
-            const char *proto = n_array_nth(protocols, i);
+        for (i=0; i < n_array_size(ftch->protocols); i++) {
+            const char *proto = n_array_nth(ftch->protocols, i);
             tn_array *arr = NULL;
 
             if ((arr = n_hash_get(ffetchers_proto_idx, proto)) == NULL) {
@@ -687,46 +754,42 @@ char *vf_url_proto(char *proto, int size, const char *url)
 
         memcpy(proto, url, len);
         proto[len] = '\0';
+        vf_scheme_tolower(proto, len);
     }
 
     return *proto ? proto : NULL;
 }
 
+/* does url begin with the scheme, in any case, and "://"? */
+static int scheme_is(const char *url, const char *scheme)
+{
+    while (*scheme) {
+        if (scheme_lc(*url++) != *scheme++)
+            return 0;
+    }
+
+    return strncmp(url, "://", 3) == 0;
+}
 
 int vf_url_type(const char *url)
 {
-    const char *p;
-
     if (*url == '/')
         return VFURL_PATH;
 
-    if (strncmp(url, "ftp://", 6) == 0)
+    if (scheme_is(url, "ftp"))
         return VFURL_FTP;
 
-    if (strncmp(url, "http://", 7) == 0)
+    if (scheme_is(url, "http"))
         return VFURL_HTTP;
 
-    if (strncmp(url, "https://", 7) == 0)
+    if (scheme_is(url, "https"))
         return VFURL_HTTPS;
 
-    if (strncmp(url, "rsync://", 8) == 0)
+    if (scheme_is(url, "rsync"))
         return VFURL_RSYNC;
 
-    if ((p = strstr(url, "://"))) {
-        int is_url = 1;
-
-        while (url != p) {
-            if (!isalpha(*url)) {
-                is_url = 0;
-                break;
-            }
-            url++;
-        }
-
-        if (is_url)
-            return VFURL_UNKNOWN;
-    }
-
+    if (url_scheme_len(url) > 0)
+        return VFURL_UNKNOWN;
 
     return VFURL_PATH;
 }

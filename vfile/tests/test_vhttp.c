@@ -423,6 +423,29 @@ START_TEST(test_http_redirect_302)
 }
 END_TEST
 
+/* the scheme of a URL is the same in any case: in a redirect and in a URL
+   poldek is given */
+START_TEST(test_http_scheme_upper_case)
+{
+    char url[512], dest[PATH_MAX];
+
+    fail_if(http_port == 0);
+
+    snprintf(url, sizeof(url), "http://%s:%d/upper-scheme/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0, "redirect to HTTP://");
+
+    if ((size_t)snprintf(dest, sizeof(dest), "%s/%s", tmpdir, TEST_FILE_SMALL) >= sizeof(dest)) ck_abort_msg("path truncated");
+    fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
+    unlink(dest);
+
+    snprintf(url, sizeof(url), "HTTP://%s:%d/file/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0, "fetch of HTTP://");
+    fail_if(compare_with_expected(dest, TEST_FILE_SMALL) != 0);
+}
+END_TEST
+
 START_TEST(test_http_redirect_chain)
 {
     char url[512], dest[PATH_MAX];
@@ -661,6 +684,56 @@ START_TEST(test_http_proxy_keeps_port)
     fclose(f);
 
     fail_if(found == 0, "proxy did not receive '%s'", expect);
+}
+END_TEST
+
+/* an HTTPS request is one also when it goes through an HTTP proxy: a
+   redirect to HTTP is the downgrade it is without the proxy, and one to a
+   path leads to an HTTPS URL */
+START_TEST(test_https_via_http_proxy_redirect)
+{
+    char url[512], proxy[256], expect[512], line[1024];
+    const char *proxy_log = getenv("TEST_PROXY_LOG");
+    FILE *f;
+    int found = 0;
+
+    fail_if(http_port == 0);
+    fail_if(proxy_log == NULL || *proxy_log == '\0', "TEST_PROXY_LOG not set");
+
+    if ((size_t)snprintf(proxy, sizeof(proxy), "http://%s:%d",
+                         server_host, http_port) >= sizeof(proxy))
+        ck_abort_msg("proxy url truncated");
+    /* the protocol in capitals, as a config file may have it */
+    vfile_configure(VFILE_CONF_PROXY, "HTTPS", proxy);
+    setenv("no_proxy", "", 1);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "https://%s:%d/to-http/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0, "followed to HTTP");
+    fail_if(strstr(logged(logged_err),
+                   "HTTPS to HTTP downgrade not allowed") == NULL,
+            "%s", logged(logged_err));
+
+    snprintf(url, sizeof(url), "https://%s:%d/to-path/%s",
+             server_host, http_port, TEST_FILE_SMALL);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) == 0);
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+
+    /* proxy.log format is "<fileno> <uri>" */
+    snprintf(expect, sizeof(expect), " https://%s:%d/file/%s\n",
+             server_host, http_port, TEST_FILE_SMALL);
+    f = fopen(proxy_log, "r");
+    fail_if(f == NULL, "cannot read proxy log %s", proxy_log);
+    while (fgets(line, sizeof(line), f) != NULL) {
+        char *uri = strchr(line, ' ');
+        if (uri && strcmp(uri, expect) == 0)
+            found = 1;
+    }
+    fclose(f);
+
+    fail_if(found == 0, "the proxy was not asked for '%s'", expect);
 }
 END_TEST
 
@@ -989,6 +1062,29 @@ START_TEST(test_https_downgrade_one_error_line)
 }
 END_TEST
 
+/* so HTTPS to HTTP:// is the downgrade it is */
+START_TEST(test_https_downgrade_upper_case_scheme)
+{
+    char url[512];
+
+    fail_if(https_port == 0);
+
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 1);
+    vfile_configure(VFILE_CONF_LOGCB, log_cb);
+
+    snprintf(url, sizeof(url), "https://%s:%d/https-downgrade-upper",
+             server_host, https_port);
+    fail_if(vf_fetch(url, tmpdir, 0, NULL, NULL) != 0);
+
+    ck_assert_str_eq(logged(logged_err),
+                     "vfff: redirect to HTTP://127.0.0.1/force-http: "
+                     "HTTPS to HTTP downgrade not allowed\n");
+
+    vfile_configure(VFILE_CONF_LOGCB, NULL);
+    vfile_configure(VFILE_CONF_SSL_VERIFY_NONE, 0);
+}
+END_TEST
+
 START_TEST(test_https_downgrade_not_retried)
 {
     char url[512];
@@ -1097,6 +1193,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_response_line_too_long);
     tcase_add_test(tc_http, test_http_redirect_302);
     tcase_add_test(tc_http, test_http_redirect_chain);
+    tcase_add_test(tc_http, test_http_scheme_upper_case);
     tcase_add_test(tc_http, test_http_stat_redirect_failed);
     tcase_add_test(tc_http, test_http_server_control_bytes_escaped);
     tcase_add_test(tc_http, test_http_control_bytes_c1_del_tab);
@@ -1109,6 +1206,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_http, test_http_auth_fail);
     tcase_add_test(tc_http, test_http_upgrade_redirect);
     tcase_add_test(tc_http, test_http_proxy_keeps_port);
+    tcase_add_test(tc_http, test_https_via_http_proxy_redirect);
     tcase_add_test(tc_http, test_http_proxy_keepalive_reuse);
     tcase_add_test(tc_http, test_http_keepalive_dropped);
     tcase_add_test(tc_http, test_http_keepalive_reset);
@@ -1123,6 +1221,7 @@ static Suite *vhttp_suite(void)
     tcase_add_test(tc_https, test_https_get);
     tcase_add_test(tc_https, test_https_noverify);
     tcase_add_test(tc_https, test_https_downgrade_redirect);
+    tcase_add_test(tc_https, test_https_downgrade_upper_case_scheme);
     tcase_add_test(tc_https, test_https_downgrade_one_error_line);
     tcase_add_test(tc_https, test_https_downgrade_not_retried);
     tcase_add_test(tc_https, test_https_redirect_ok);

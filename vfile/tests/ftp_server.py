@@ -21,6 +21,11 @@ SIZE/MDTM, which poldek sends before PASV):
   /retr-long-reply/<name>
                         - reply to RETR with a line longer than vfff's
                           4096-byte line buffer
+  /retr-125/<name>      - begin the transfer with 125 rather than 150
+  /retr-end-250/<name>  - end the transfer with 250 rather than 226
+  /retr-busy/<name>     - reply 450 to RETR; fires once per path
+  /retr-421/<name>      - reply 421 to RETR and close the control
+                          connection; fires once per path
   /ctrl-close-idle/<name>
                         - reply 226, then close the control connection
                           without a 421, like a server dropping it as idle
@@ -184,6 +189,23 @@ class FTPSession:
             self.dropped = True
             return
 
+        if 'retr-busy' in self.path and self.path not in FIRED:
+            FIRED.add(self.path)
+            self.send("450 File busy\r\n")
+            self.datasock.close()
+            self.datasock = None
+            return
+
+        if 'retr-421' in self.path and self.path not in FIRED:
+            FIRED.add(self.path)
+            self.send("421 Too many users, closing control connection\r\n")
+            self.stream.close()
+            self.sock.close()
+            self.datasock.close()
+            self.datasock = None
+            self.dropped = True
+            return
+
         if 'retr-long-reply' in self.path:
             self.log("!! a reply line longer than vfff's buffer")
             self.send("150 %s\r\n" % ("a" * 5000))
@@ -192,7 +214,10 @@ class FTPSession:
             return
 
         size = os.path.getsize(self.localpath())
-        self.send("150 Opening BINARY mode data connection (%d bytes)\r\n" % size)
+        if 'retr-125' in self.path:
+            self.send("125 Data connection already open; transfer starting\r\n")
+        else:
+            self.send("150 Opening BINARY mode data connection (%d bytes)\r\n" % size)
         conn, _ = self.datasock.accept()
 
         if 'data-reset' in self.path:
@@ -217,7 +242,10 @@ class FTPSession:
             self.dropped = True
             return
 
-        self.send("226 Transfer complete\r\n")
+        if 'retr-end-250' in self.path:
+            self.send("250 Requested file action okay, completed\r\n")
+        else:
+            self.send("226 Transfer complete\r\n")
 
         if 'ctrl-close-idle' in self.path:
             self.log("!! closing control connection after 226")

@@ -180,6 +180,14 @@ static void vfile_conf_free(void)
 }
 
 
+/* a protocol named in the configuration, spelled as vf_url_proto() gives it */
+static char *proto_key(char *dst, const char *proto)
+{
+    strcpy(dst, proto);
+    vf_scheme_tolower(dst, strlen(dst));
+    return dst;
+}
+
 int vfile_configure(int param, ...)
 {
     va_list  ap;
@@ -256,6 +264,7 @@ int vfile_configure(int param, ...)
                 client = va_arg(ap, char *);
 
             if (proto && client) {
+                proto = proto_key(alloca(strlen(proto) + 1), proto);
 
                 if (strcmp(client, "internal") == 0) {
                     if (n_hash_exists(vfile_conf.default_clients_ht, proto))
@@ -275,6 +284,8 @@ int vfile_configure(int param, ...)
                 url = va_arg(ap, char *);
 
             if (proto && *proto && url && *url) {
+                proto = proto_key(alloca(strlen(proto) + 1), proto);
+
                 if (!n_hash_exists(vfile_conf.proxies_ht, proto))
                     n_hash_insert(vfile_conf.proxies_ht, proto, n_strdup(url));
                 else

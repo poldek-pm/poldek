@@ -740,9 +740,16 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
     if (!vftpcn_resp_readln(cn))
         goto l_err;
 
-    if (resp_code(cn) != 150) {
-        vfff_set_err(ENOENT, _("%s: no such file (serv said: %s)"),
-                     req->uri, resp_msg(cn));
+    /* 125: over the data connection that is open already */
+    if (resp_code(cn) != 150 && resp_code(cn) != 125) {
+        /* 4yz: not now, the request may be sent again (RFC 959, 4.2) */
+        if (CODE_BETWEEN(resp_code(cn), 400, 499)) {
+            vfff_set_err(EIO, "%s: FTP %d %s", req->uri, resp_code(cn),
+                         resp_msg(cn));
+        } else {
+            vfff_set_err(ENOENT, _("%s: no such file (serv said: %s)"),
+                         req->uri, resp_msg(cn));
+        }
         goto l_err;
     }
 
@@ -774,7 +781,8 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
     cn->sockfd = tmp_sockfd;
     close(sockfd);
 
-    if (!vftpcn_resp(cn) || resp_code(cn) != 226)
+    /* 250 ends a transfer as 226 does (RFC 959, 5.4) */
+    if (!vftpcn_resp(cn) || (resp_code(cn) != 226 && resp_code(cn) != 250))
         goto l_err;
 
     return 1;

@@ -64,6 +64,7 @@ int vf_parse_url(char *url, struct vf_request *req)
         return 0;
 
     req->proto = url;
+    vf_scheme_tolower(url, p - url);
     *p = '\0';
     p += 3;
     req->host = p;
