@@ -49,9 +49,10 @@ jobs:
           git config --global --add safe.directory "$(pwd)"
           # The tags are needed to check the tag out. In act, --unshallow
           # fails because the local repo is already complete; the fallback
-          # `--tags` is enough there.
+          # `--tags` is enough there. --force: checkout fetched an annotated
+          # tag as a lightweight one.
           if [ -f "$(git rev-parse --git-dir)/shallow" ]; then
-            git fetch --unshallow --tags origin
+            git fetch --unshallow --tags --force origin
           fi
           git checkout "${{ steps.tag.outputs.tag }}"
           git describe --tags --exact-match HEAD   # sanity: HEAD is the tag
